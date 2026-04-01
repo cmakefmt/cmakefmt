@@ -1,11 +1,11 @@
 /// A parsed CMake source file.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
     pub statements: Vec<Statement>,
 }
 
 /// A top-level statement in a CMake file.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
     /// A command invocation, e.g. `target_link_libraries(foo PUBLIC bar)`.
     Command(CommandInvocation),
@@ -17,7 +17,7 @@ pub enum Statement {
 }
 
 /// A CMake command invocation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandInvocation {
     /// The command name, e.g. "target_link_libraries". Case as written in source.
     pub name: String,
@@ -30,7 +30,7 @@ pub struct CommandInvocation {
 }
 
 /// A single argument (or inline comment) in an argument list.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Argument {
     /// `[[...]]`, `[=[...]=]`, etc. Content is verbatim.
     Bracket(BracketArgument),
@@ -58,7 +58,7 @@ impl Argument {
 }
 
 /// A bracket argument with its "=" nesting level.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BracketArgument {
     /// Number of `=` characters between the outer brackets. 0 = `[[...]]`.
     pub level: usize,
@@ -67,7 +67,7 @@ pub struct BracketArgument {
 }
 
 /// A CMake comment.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Comment {
     /// `# text to end of line` (stored without the leading `#`).
     Line(String),

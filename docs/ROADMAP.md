@@ -11,9 +11,9 @@ until all criteria for the current phase are met.
 
 ### Tasks
 
-- [ ] `cargo new cmfmt --lib` + binary target in `Cargo.toml`
-- [ ] Add all dependencies (pest, pretty, clap, serde, toml, thiserror, insta, criterion)
-- [ ] Write `src/parser/cmake.pest` — full CMake grammar covering:
+- [x] `cargo new cmfmt --lib` + binary target in `Cargo.toml`
+- [x] Add all dependencies (pest, pretty, clap, serde, toml, thiserror, insta, criterion)
+- [x] Write `src/parser/cmake.pest` — full CMake grammar covering:
   - File, command invocation
   - Bracket arguments `[=[...]=]`
   - Quoted arguments with escape sequences
@@ -23,18 +23,18 @@ until all criteria for the current phase are met.
   - Variable references `${...}`, `$ENV{...}`, `$CACHE{...}`
   - Generator expressions `$<...>` (treat as opaque unquoted content)
   - Continuation lines (backslash at end of line inside arguments)
-- [ ] Write `src/parser/ast.rs` — CST → AST conversion
-- [ ] Unit tests: parse every construct, assert no panics, check node types
+- [x] Write `src/parser/ast.rs` — CST → AST conversion
+- [x] Unit tests: parse every construct, assert no panics, check node types
 
 ### Acceptance criteria
 
-- [ ] All fixture files in `tests/fixtures/` parse without error
+- [x] All fixture files in `tests/fixtures/` parse without error
 - [ ] The following real-world files parse correctly:
   - CMake's own `CMakeLists.txt`
   - LLVM's top-level `CMakeLists.txt`
   - A Qt module `CMakeLists.txt`
-- [ ] `cargo clippy -- -D warnings` passes
-- [ ] `cargo fmt --check` passes
+- [x] `cargo clippy -- -D warnings` passes
+- [x] `cargo fmt --check` passes
 
 ---
 
@@ -44,8 +44,8 @@ until all criteria for the current phase are met.
 
 ### Tasks
 
-- [ ] Define `src/spec/mod.rs` — `NArgs`, `PosSpec`, `KwargSpec`, `CommandForm`, `CommandSpec`
-- [ ] Create `src/spec/builtins.toml` — specs for all ~150 CMake built-in commands,
+- [x] Define `src/spec/mod.rs` — `NArgs`, `PosSpec`, `KwargSpec`, `CommandForm`, `CommandSpec`
+- [x] Create `src/spec/builtins.toml` — specs for all ~150 CMake built-in commands,
       covering at minimum:
   - Core: `cmake_minimum_required`, `project`, `set`, `unset`, `message`
   - Targets: `add_executable`, `add_library`, `add_custom_target`, `add_custom_command`
@@ -59,17 +59,17 @@ until all criteria for the current phase are met.
     `while`/`endwhile`, `function`/`endfunction`, `macro`/`endmacro`, `return`
   - Misc: `list`, `string`, `math`, `option`, `include_guard`, `cmake_language`,
     `block`/`endblock`, `execute_process`, `external_project_add`
-- [ ] Implement `src/spec/registry.rs` — loads builtins + merges user overrides
-- [ ] Unit tests: registry returns correct spec for a variety of commands;
+- [x] Implement `src/spec/registry.rs` — loads builtins + merges user overrides
+- [x] Unit tests: registry returns correct spec for a variety of commands;
       returns fallback spec for unknown commands
 
 ### Acceptance criteria
 
-- [ ] `registry.get("target_link_libraries")` returns a spec with PUBLIC/PRIVATE/INTERFACE kwargs
-- [ ] `registry.get("install")` returns a `Discriminated` spec
-- [ ] `registry.get("my_unknown_command")` returns the default fallback spec (no crash)
-- [ ] All built-in specs deserialise from TOML without error
-- [ ] User config entries merge correctly with built-ins
+- [x] `registry.get("target_link_libraries")` returns a spec with PUBLIC/PRIVATE/INTERFACE kwargs
+- [x] `registry.get("install")` returns a `Discriminated` spec
+- [x] `registry.get("my_unknown_command")` returns the default fallback spec (no crash)
+- [x] All built-in specs deserialise from TOML without error
+- [x] User config entries merge correctly with built-ins
 
 ---
 
@@ -80,19 +80,19 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Implement `src/formatter/node.rs` — AST → Doc IR
-- [ ] Implement argument list layout (inline vs multi-line, see ARCHITECTURE.md)
-- [ ] Implement blank line preservation between statements
-- [ ] Wire up `src/lib.rs`: `format_source(src: &str, config: &Config) -> Result<String>`
-- [ ] Snapshot tests for basic formatting cases
-- [ ] Idempotency tests (`tests/idempotency.rs`)
+- [x] Implement `src/formatter/node.rs` — AST → Doc IR
+- [x] Implement argument list layout (inline vs multi-line, see ARCHITECTURE.md)
+- [x] Implement blank line preservation between statements
+- [x] Wire up `src/lib.rs`: `format_source(src: &str, config: &Config) -> Result<String>`
+- [x] Snapshot tests for basic formatting cases
+- [x] Idempotency tests (`tests/idempotency.rs`)
 
 ### Acceptance criteria
 
-- [ ] All snapshot tests pass
-- [ ] All fixtures pass idempotency: `format(format(x)) == format(x)`
-- [ ] Line length limit is respected for all fixture files
-- [ ] Formatter does not alter the semantic meaning of any file
+- [x] All snapshot tests pass
+- [x] All fixtures pass idempotency: `format(format(x)) == format(x)`
+- [x] Line length limit is respected for all fixture files
+- [x] Formatter does not alter the semantic meaning of any file
   (parse tree of formatted output equals parse tree of input, modulo whitespace)
 
 ---
