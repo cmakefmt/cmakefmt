@@ -224,7 +224,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - Include results table in `README.md`
 - [ ] Write a `README.md` with installation, usage, config reference
 - [ ] Add pre-commit hook config example (`.pre-commit-hooks.yaml`)
-- [ ] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS/Windows)
+- [x] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS/Windows)
 - [ ] Version `1.0.0-alpha.1` release on crates.io
 
 ### Acceptance criteria
