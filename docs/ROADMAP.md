@@ -179,8 +179,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Acceptance criteria
 
-- [ ] `cmake-format --check` in CI workflow on a correctly formatted file returns 0
-- [ ] `cmake-format --check` on an unformatted file returns 1 (not 2)
+- [ ] `cmfmt --check` in CI workflow on a correctly formatted file returns 0
+- [ ] `cmfmt --check` on an unformatted file returns 1 (not 2)
 - [ ] `-i` modifies file and leaves it idempotent
 - [ ] Formatting 100 files in one invocation works correctly
 
