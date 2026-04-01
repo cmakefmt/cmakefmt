@@ -1,0 +1,773 @@
+[commands.cmake_minimum_required]
+pargs = 0
+flags = ["FATAL_ERROR"]
+
+[commands.cmake_minimum_required.kwargs.VERSION]
+nargs = 1
+
+[commands.project]
+pargs = 1
+flags = ["VERSION", "DESCRIPTION", "HOMEPAGE_URL", "LANGUAGES"]
+
+[commands.set]
+pargs = "2+"
+flags = ["PARENT_SCOPE"]
+
+[commands.set.kwargs.CACHE]
+nargs = "3+"
+
+[commands.unset]
+pargs = 1
+flags = ["CACHE", "PARENT_SCOPE"]
+
+[commands.message]
+pargs = "1+"
+flags = [
+  "STATUS",
+  "WARNING",
+  "AUTHOR_WARNING",
+  "SEND_ERROR",
+  "FATAL_ERROR",
+  "DEPRECATION",
+  "NOTICE",
+  "VERBOSE",
+  "DEBUG",
+  "TRACE",
+  "CHECK_START",
+  "CHECK_PASS",
+  "CHECK_FAIL",
+]
+
+[commands.option]
+pargs = "2+"
+
+[commands.include_guard]
+pargs = "?"
+flags = ["DIRECTORY", "GLOBAL"]
+
+[commands.include]
+pargs = 1
+flags = ["OPTIONAL", "RESULT_VARIABLE", "NO_POLICY_SCOPE"]
+
+[commands.add_subdirectory]
+pargs = "1+"
+flags = ["EXCLUDE_FROM_ALL", "SYSTEM"]
+
+[commands.configure_file]
+pargs = 2
+flags = ["COPYONLY", "ESCAPE_QUOTES", "@ONLY"]
+
+[commands.configure_file.kwargs.NEWLINE_STYLE]
+nargs = 1
+
+[commands.add_executable]
+pargs = "2+"
+flags = ["WIN32", "MACOSX_BUNDLE", "EXCLUDE_FROM_ALL", "IMPORTED", "ALIAS"]
+
+[commands.add_library]
+pargs = "2+"
+flags = [
+  "STATIC",
+  "SHARED",
+  "MODULE",
+  "OBJECT",
+  "INTERFACE",
+  "UNKNOWN",
+  "IMPORTED",
+  "ALIAS",
+  "EXCLUDE_FROM_ALL",
+]
+
+[commands.add_custom_target]
+pargs = "1+"
+flags = ["ALL", "VERBATIM", "USES_TERMINAL", "COMMAND_EXPAND_LISTS"]
+
+[commands.add_custom_target.kwargs.BYPRODUCTS]
+nargs = "*"
+
+[commands.add_custom_target.kwargs.COMMAND]
+nargs = "+"
+
+[commands.add_custom_target.kwargs.COMMENT]
+nargs = 1
+
+[commands.add_custom_target.kwargs.DEPENDS]
+nargs = "*"
+
+[commands.add_custom_target.kwargs.JOB_POOL]
+nargs = 1
+
+[commands.add_custom_target.kwargs.SOURCES]
+nargs = "*"
+
+[commands.add_custom_target.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.add_custom_command]
+pargs = "*"
+flags = [
+  "APPEND",
+  "VERBATIM",
+  "USES_TERMINAL",
+  "COMMAND_EXPAND_LISTS",
+  "CODEGEN",
+]
+
+[commands.add_custom_command.kwargs.BYPRODUCTS]
+nargs = "*"
+
+[commands.add_custom_command.kwargs.COMMAND]
+nargs = "+"
+
+[commands.add_custom_command.kwargs.COMMENT]
+nargs = 1
+
+[commands.add_custom_command.kwargs.DEPENDS]
+nargs = "*"
+
+[commands.add_custom_command.kwargs.DEPFILE]
+nargs = 1
+
+[commands.add_custom_command.kwargs.IMPLICIT_DEPENDS]
+nargs = "*"
+
+[commands.add_custom_command.kwargs.JOB_POOL]
+nargs = 1
+
+[commands.add_custom_command.kwargs.JOB_SERVER_AWARE]
+nargs = 1
+
+[commands.add_custom_command.kwargs.MAIN_DEPENDENCY]
+nargs = 1
+
+[commands.add_custom_command.kwargs.OUTPUT]
+nargs = "+"
+
+[commands.add_custom_command.kwargs.POST_BUILD]
+nargs = "*"
+
+[commands.add_custom_command.kwargs.PRE_BUILD]
+nargs = "*"
+
+[commands.add_custom_command.kwargs.PRE_LINK]
+nargs = "*"
+
+[commands.add_custom_command.kwargs.TARGET]
+nargs = 1
+
+[commands.add_custom_command.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.target_compile_definitions]
+pargs = 1
+
+[commands.target_compile_definitions.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_compile_definitions.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_compile_definitions.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.target_compile_options]
+pargs = 1
+flags = ["BEFORE"]
+
+[commands.target_compile_options.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_compile_options.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_compile_options.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.target_include_directories]
+pargs = 1
+flags = ["BEFORE", "AFTER", "SYSTEM"]
+
+[commands.target_include_directories.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_include_directories.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_include_directories.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.target_link_directories]
+pargs = 1
+flags = ["BEFORE"]
+
+[commands.target_link_directories.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_link_directories.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_link_directories.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.target_link_libraries]
+pargs = 1
+flags = ["LINK_INTERFACE_LIBRARIES", "LINK_PRIVATE", "debug", "optimized", "general"]
+
+[commands.target_link_libraries.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_link_libraries.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_link_libraries.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.target_link_options]
+pargs = 1
+flags = ["BEFORE"]
+
+[commands.target_link_options.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_link_options.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_link_options.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.target_precompile_headers]
+pargs = 1
+
+[commands.target_precompile_headers.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_precompile_headers.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_precompile_headers.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.target_sources]
+pargs = 1
+flags = ["FILE_SET"]
+
+[commands.target_sources.kwargs.INTERFACE]
+nargs = "*"
+
+[commands.target_sources.kwargs.PRIVATE]
+nargs = "*"
+
+[commands.target_sources.kwargs.PUBLIC]
+nargs = "*"
+
+[commands.set_target_properties]
+pargs = "+"
+
+[commands.set_target_properties.kwargs.PROPERTIES]
+nargs = "*"
+
+[commands.find_package]
+pargs = "1+"
+flags = [
+  "EXACT",
+  "QUIET",
+  "REQUIRED",
+  "MODULE",
+  "CONFIG",
+  "NO_MODULE",
+  "NO_POLICY_SCOPE",
+  "BYPASS_PROVIDER",
+  "GLOBAL",
+  "UNWIND_INCLUDE",
+]
+
+[commands.find_package.kwargs.COMPONENTS]
+nargs = "+"
+
+[commands.find_package.kwargs.HINTS]
+nargs = "*"
+
+[commands.find_package.kwargs.NAMES]
+nargs = "*"
+
+[commands.find_package.kwargs.OPTIONAL_COMPONENTS]
+nargs = "+"
+
+[commands.find_package.kwargs.PATHS]
+nargs = "*"
+
+[commands.find_package.kwargs.REGISTRY_VIEW]
+nargs = 1
+
+[commands.find_package.kwargs.VERSION]
+nargs = 1
+
+[commands.find_file]
+pargs = "1+"
+flags = ["NO_CACHE", "REQUIRED"]
+
+[commands.find_file.kwargs.DOC]
+nargs = 1
+
+[commands.find_file.kwargs.HINTS]
+nargs = "*"
+
+[commands.find_file.kwargs.NAMES]
+nargs = "+"
+
+[commands.find_file.kwargs.PATHS]
+nargs = "*"
+
+[commands.find_library]
+pargs = "1+"
+flags = ["NO_CACHE", "REQUIRED"]
+
+[commands.find_library.kwargs.DOC]
+nargs = 1
+
+[commands.find_library.kwargs.HINTS]
+nargs = "*"
+
+[commands.find_library.kwargs.NAMES]
+nargs = "+"
+
+[commands.find_library.kwargs.PATHS]
+nargs = "*"
+
+[commands.find_path]
+pargs = "1+"
+flags = ["NO_CACHE", "REQUIRED"]
+
+[commands.find_path.kwargs.DOC]
+nargs = 1
+
+[commands.find_path.kwargs.HINTS]
+nargs = "*"
+
+[commands.find_path.kwargs.NAMES]
+nargs = "+"
+
+[commands.find_path.kwargs.PATHS]
+nargs = "*"
+
+[commands.find_program]
+pargs = "1+"
+flags = ["NO_CACHE", "REQUIRED"]
+
+[commands.find_program.kwargs.DOC]
+nargs = 1
+
+[commands.find_program.kwargs.HINTS]
+nargs = "*"
+
+[commands.find_program.kwargs.NAMES]
+nargs = "+"
+
+[commands.find_program.kwargs.PATHS]
+nargs = "*"
+
+[commands.file]
+pargs = "*"
+
+[commands.list]
+pargs = "*"
+
+[commands.string]
+pargs = "*"
+
+[commands.math]
+pargs = "*"
+
+[commands.execute_process]
+pargs = "*"
+flags = [
+  "COMMAND_ERROR_IS_FATAL",
+  "ECHO_OUTPUT_VARIABLE",
+  "ECHO_ERROR_VARIABLE",
+  "COMMAND_ECHO",
+]
+
+[commands.execute_process.kwargs.COMMAND]
+nargs = "+"
+
+[commands.execute_process.kwargs.ERROR_FILE]
+nargs = 1
+
+[commands.execute_process.kwargs.ERROR_VARIABLE]
+nargs = 1
+
+[commands.execute_process.kwargs.INPUT_FILE]
+nargs = 1
+
+[commands.execute_process.kwargs.OUTPUT_FILE]
+nargs = 1
+
+[commands.execute_process.kwargs.OUTPUT_VARIABLE]
+nargs = 1
+
+[commands.execute_process.kwargs.RESULT_VARIABLE]
+nargs = 1
+
+[commands.execute_process.kwargs.RESULTS_VARIABLE]
+nargs = 1
+
+[commands.execute_process.kwargs.TIMEOUT]
+nargs = 1
+
+[commands.execute_process.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.export]
+pargs = "*"
+
+[commands.install]
+[commands.install.forms.TARGETS]
+pargs = "+"
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+
+[commands.install.forms.TARGETS.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.TARGETS.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.FILES]
+pargs = "+"
+flags = ["OPTIONAL"]
+
+[commands.install.forms.FILES.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.FILES.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.FILES.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.FILES.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.DIRECTORY]
+pargs = "+"
+flags = ["OPTIONAL", "USE_SOURCE_PERMISSIONS"]
+
+[commands.install.forms.DIRECTORY.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.DIRECTORY.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.DIRECTORY.kwargs.FILE_PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.DIRECTORY.kwargs.PATTERN]
+nargs = "*"
+
+[commands.install.forms.EXPORT]
+pargs = "+"
+
+[commands.install.forms.EXPORT.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.SCRIPT]
+pargs = 1
+
+[commands.install.forms.CODE]
+pargs = 1
+
+[commands.install.forms.RUNTIME_DEPENDENCY_SET]
+pargs = 1
+
+[commands.if]
+pargs = "*"
+
+[commands.elseif]
+pargs = "*"
+
+[commands.else]
+pargs = "*"
+
+[commands.endif]
+pargs = "?"
+
+[commands.foreach]
+pargs = "*"
+
+[commands.endforeach]
+pargs = "?"
+
+[commands.while]
+pargs = "*"
+
+[commands.endwhile]
+pargs = "?"
+
+[commands.function]
+pargs = "1+"
+
+[commands.endfunction]
+pargs = "?"
+
+[commands.macro]
+pargs = "1+"
+
+[commands.endmacro]
+pargs = "?"
+
+[commands.return]
+pargs = "*"
+
+[commands.block]
+pargs = "*"
+
+[commands.endblock]
+pargs = "?"
+
+[commands.cmake_language]
+pargs = "*"
+
+[commands.external_project_add]
+pargs = "1+"
+
+[commands.aux_source_directory]
+pargs = "*"
+
+[commands.add_compile_definitions]
+pargs = "*"
+
+[commands.add_compile_options]
+pargs = "*"
+
+[commands.add_definitions]
+pargs = "*"
+
+[commands.add_dependencies]
+pargs = "*"
+
+[commands.add_link_options]
+pargs = "*"
+
+[commands.add_test]
+pargs = "*"
+
+[commands.break]
+pargs = "*"
+
+[commands.build_command]
+pargs = "*"
+
+[commands.build_name]
+pargs = "*"
+
+[commands.cmake_file_api]
+pargs = "*"
+
+[commands.cmake_host_system_information]
+pargs = "*"
+
+[commands.cmake_instrumentation]
+pargs = "*"
+
+[commands.cmake_parse_arguments]
+pargs = "*"
+
+[commands.cmake_path]
+pargs = "*"
+
+[commands.cmake_pkg_config]
+pargs = "*"
+
+[commands.cmake_policy]
+pargs = "*"
+
+[commands.continue]
+pargs = "*"
+
+[commands.create_test_sourcelist]
+pargs = "*"
+
+[commands.ctest_build]
+pargs = "*"
+
+[commands.ctest_configure]
+pargs = "*"
+
+[commands.ctest_coverage]
+pargs = "*"
+
+[commands.ctest_empty_binary_directory]
+pargs = "*"
+
+[commands.ctest_memcheck]
+pargs = "*"
+
+[commands.ctest_read_custom_files]
+pargs = "*"
+
+[commands.ctest_run_script]
+pargs = "*"
+
+[commands.ctest_sleep]
+pargs = "*"
+
+[commands.ctest_start]
+pargs = "*"
+
+[commands.ctest_submit]
+pargs = "*"
+
+[commands.ctest_test]
+pargs = "*"
+
+[commands.ctest_update]
+pargs = "*"
+
+[commands.ctest_upload]
+pargs = "*"
+
+[commands.define_property]
+pargs = "*"
+
+[commands.enable_language]
+pargs = "*"
+
+[commands.enable_testing]
+pargs = "*"
+
+[commands.exec_program]
+pargs = "*"
+
+[commands.export_library_dependencies]
+pargs = "*"
+
+[commands.fltk_wrap_ui]
+pargs = "*"
+
+[commands.get_cmake_property]
+pargs = "*"
+
+[commands.get_directory_property]
+pargs = "*"
+
+[commands.get_filename_component]
+pargs = "*"
+
+[commands.get_property]
+pargs = "*"
+
+[commands.get_source_file_property]
+pargs = "*"
+
+[commands.get_target_property]
+pargs = "*"
+
+[commands.get_test_property]
+pargs = "*"
+
+[commands.include_directories]
+pargs = "*"
+
+[commands.include_external_msproject]
+pargs = "*"
+
+[commands.include_regular_expression]
+pargs = "*"
+
+[commands.install_files]
+pargs = "*"
+
+[commands.install_programs]
+pargs = "*"
+
+[commands.install_targets]
+pargs = "*"
+
+[commands.link_directories]
+pargs = "*"
+
+[commands.link_libraries]
+pargs = "*"
+
+[commands.load_cache]
+pargs = "*"
+
+[commands.load_command]
+pargs = "*"
+
+[commands.make_directory]
+pargs = "*"
+
+[commands.mark_as_advanced]
+pargs = "*"
+
+[commands.output_required_files]
+pargs = "*"
+
+[commands.qt_wrap_cpp]
+pargs = "*"
+
+[commands.qt_wrap_ui]
+pargs = "*"
+
+[commands.remove]
+pargs = "*"
+
+[commands.remove_definitions]
+pargs = "*"
+
+[commands.separate_arguments]
+pargs = "*"
+
+[commands.set_directory_properties]
+pargs = "*"
+
+[commands.set_property]
+pargs = "*"
+
+[commands.set_source_files_properties]
+pargs = "*"
+
+[commands.set_tests_properties]
+pargs = "*"
+
+[commands.site_name]
+pargs = "*"
+
+[commands.source_group]
+pargs = "*"
+
+[commands.subdir_depends]
+pargs = "*"
+
+[commands.subdirs]
+pargs = "*"
+
+[commands.target_compile_features]
+pargs = "*"
+
+[commands.try_compile]
+pargs = "*"
+
+[commands.try_run]
+pargs = "*"
+
+[commands.use_mangled_mesa]
+pargs = "*"
+
+[commands.utility_source]
+pargs = "*"
+
+[commands.variable_requires]
+pargs = "*"
+
+[commands.variable_watch]
+pargs = "*"
+
+[commands.write_file]
+pargs = "*"

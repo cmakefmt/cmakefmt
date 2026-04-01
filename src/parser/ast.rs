@@ -23,6 +23,8 @@ pub struct CommandInvocation {
     pub name: String,
     /// The argument list, in source order.
     pub arguments: Vec<Argument>,
+    /// A comment that appears after the closing paren on the same line.
+    pub trailing_comment: Option<Comment>,
     /// Byte span (start, end) in the original source.
     pub span: (usize, usize),
 }

@@ -11,24 +11,21 @@
 
 // ── Top-level ────────────────────────────────────────────────────────────────
 
-file = { SOI ~ file_element* ~ EOI }
+file = { SOI ~ file_item* ~ EOI }
 
-file_element = {
-    command_invocation ~ line_ending
-  | (bracket_comment | space)* ~ line_ending
-}
+file_item = { command_invocation | bracket_comment | line_comment | newline | space }
 
 // ── Command invocation ────────────────────────────────────────────────────────
 
 command_invocation = {
-    space* ~ identifier ~ space* ~ "(" ~ arguments ~ ")"
+    identifier ~ space* ~ "(" ~ arguments ~ ")"
 }
 
-identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
-arguments = { (argument ~ (_sep ~ argument)* ~ _sep?)? }
+arguments = { argument_part* }
 
-_sep = _{ (space | line_ending)+ }
+argument_part = { argument | bracket_comment | line_ending | space }
 
 argument = { bracket_argument | quoted_argument | unquoted_argument }
 

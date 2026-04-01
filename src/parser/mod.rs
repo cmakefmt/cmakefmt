@@ -12,161 +12,249 @@ use ast::{Argument, BracketArgument, CommandInvocation, Comment, File, Statement
 
 /// Parse CMake source text into an AST.
 pub fn parse(source: &str) -> Result<File> {
-    let pairs = CmakeParser::parse(Rule::file, source)
-        .map_err(|e| Error::Parse(Box::new(e)))?;
+    let mut pairs =
+        CmakeParser::parse(Rule::file, source).map_err(|e| Error::Parse(Box::new(e)))?;
+    let file_pair = pairs
+        .next()
+        .ok_or_else(|| Error::Formatter("parser did not return a file pair".to_owned()))?;
 
-    let file_pair = pairs.into_iter().next().expect("file rule always produces one pair");
-    Ok(build_file(file_pair))
+    build_file(file_pair)
 }
 
-fn build_file(pair: pest::iterators::Pair<Rule>) -> File {
+fn build_file(pair: pest::iterators::Pair<'_, Rule>) -> Result<File> {
     debug_assert_eq!(pair.as_rule(), Rule::file);
 
     let mut statements = Vec::new();
+    let mut pending_blank_lines = 0usize;
+    let mut line_has_content = false;
 
-    for element in pair.into_inner() {
-        match element.as_rule() {
-            Rule::file_element => {
-                collect_file_element(element, &mut statements);
-            }
-            Rule::EOI => {}
-            _ => {}
-        }
+    for item in pair.into_inner() {
+        collect_file_item(
+            item,
+            &mut statements,
+            &mut pending_blank_lines,
+            &mut line_has_content,
+        )?;
     }
 
-    File { statements }
+    flush_blank_lines(&mut statements, &mut pending_blank_lines);
+    Ok(File { statements })
 }
 
-/// Recursively extract statements from a file_element pair.
-/// line_comment may be nested inside line_ending, so we descend.
-fn collect_file_element(pair: pest::iterators::Pair<Rule>, out: &mut Vec<Statement>) {
-    for inner in pair.into_inner() {
-        match inner.as_rule() {
-            Rule::command_invocation => {
-                out.push(Statement::Command(build_command(inner)));
+fn collect_file_item(
+    item: pest::iterators::Pair<'_, Rule>,
+    statements: &mut Vec<Statement>,
+    pending_blank_lines: &mut usize,
+    line_has_content: &mut bool,
+) -> Result<()> {
+    match item.as_rule() {
+        Rule::file_item => {
+            for inner in item.into_inner() {
+                collect_file_item(inner, statements, pending_blank_lines, line_has_content)?;
             }
-            Rule::bracket_comment => {
-                out.push(Statement::Comment(Comment::Bracket(inner.as_str().to_owned())));
-            }
-            Rule::line_comment => {
-                out.push(Statement::Comment(Comment::Line(inner.as_str().to_owned())));
-            }
-            Rule::newline => {
-                // A bare newline (with no comment) at the file-element level
-                // contributes to blank line counting. We accumulate these.
-                // For now, a single newline is just a line separator — not blank.
-                // Multiple newlines in a row become BlankLines nodes.
-                // (Handled when we see consecutive newline file_elements.)
-            }
-            Rule::line_ending | Rule::space => {
-                // Descend to find any line_comment inside.
-                collect_file_element(inner, out);
-            }
-            _ => {}
+            Ok(())
         }
+        Rule::command_invocation => {
+            flush_blank_lines(statements, pending_blank_lines);
+            statements.push(Statement::Command(build_command(item)?));
+            *line_has_content = true;
+            Ok(())
+        }
+        Rule::bracket_comment => {
+            let comment = Comment::Bracket(item.as_str().to_owned());
+            if !attach_trailing_comment(statements, &comment, *line_has_content) {
+                flush_blank_lines(statements, pending_blank_lines);
+                statements.push(Statement::Comment(comment));
+            }
+            *line_has_content = true;
+            Ok(())
+        }
+        Rule::line_comment => {
+            let comment = Comment::Line(item.as_str().to_owned());
+            if !attach_trailing_comment(statements, &comment, *line_has_content) {
+                flush_blank_lines(statements, pending_blank_lines);
+                statements.push(Statement::Comment(comment));
+            }
+            *line_has_content = true;
+            Ok(())
+        }
+        Rule::newline => {
+            if *line_has_content {
+                *line_has_content = false;
+            } else {
+                *pending_blank_lines += 1;
+            }
+            Ok(())
+        }
+        Rule::space | Rule::EOI => Ok(()),
+        other => Err(Error::Formatter(format!(
+            "unexpected top-level parser rule: {other:?}"
+        ))),
     }
 }
 
-fn build_command(pair: pest::iterators::Pair<Rule>) -> CommandInvocation {
+fn attach_trailing_comment(
+    statements: &mut [Statement],
+    comment: &Comment,
+    line_has_content: bool,
+) -> bool {
+    if !line_has_content {
+        return false;
+    }
+
+    match statements.last_mut() {
+        Some(Statement::Command(command)) if command.trailing_comment.is_none() => {
+            command.trailing_comment = Some(comment.clone());
+            true
+        }
+        _ => false,
+    }
+}
+
+fn flush_blank_lines(statements: &mut Vec<Statement>, pending_blank_lines: &mut usize) {
+    if *pending_blank_lines == 0 {
+        return;
+    }
+
+    match statements.last_mut() {
+        Some(Statement::BlankLines(count)) => *count += *pending_blank_lines,
+        _ => statements.push(Statement::BlankLines(*pending_blank_lines)),
+    }
+
+    *pending_blank_lines = 0;
+}
+
+fn build_command(pair: pest::iterators::Pair<'_, Rule>) -> Result<CommandInvocation> {
     debug_assert_eq!(pair.as_rule(), Rule::command_invocation);
 
     let span = pair.as_span();
-    let mut inner = pair.into_inner();
+    let mut name = None;
+    let mut arguments = Vec::new();
 
-    // Skip leading space if any (the grammar allows space* before identifier).
-    let name_pair = inner
-        .find(|p| p.as_rule() == Rule::identifier)
-        .expect("command_invocation always has an identifier");
-    let name = name_pair.as_str().to_owned();
-
-    let args_pair = inner
-        .find(|p| p.as_rule() == Rule::arguments)
-        .expect("command_invocation always has arguments");
-    let arguments = build_arguments(args_pair);
-
-    CommandInvocation {
-        name,
-        arguments,
-        span: (span.start(), span.end()),
+    for inner in pair.into_inner() {
+        match inner.as_rule() {
+            Rule::identifier => {
+                name = Some(inner.as_str().to_owned());
+            }
+            Rule::arguments => {
+                arguments = build_arguments(inner)?;
+            }
+            Rule::space => {}
+            other => {
+                return Err(Error::Formatter(format!(
+                    "unexpected command parser rule: {other:?}"
+                )));
+            }
+        }
     }
+
+    Ok(CommandInvocation {
+        name: name.ok_or_else(|| Error::Formatter("command missing identifier".to_owned()))?,
+        arguments,
+        trailing_comment: None,
+        span: (span.start(), span.end()),
+    })
 }
 
-fn build_arguments(pair: pest::iterators::Pair<Rule>) -> Vec<Argument> {
+fn build_arguments(pair: pest::iterators::Pair<'_, Rule>) -> Result<Vec<Argument>> {
     debug_assert_eq!(pair.as_rule(), Rule::arguments);
 
     let mut args = Vec::new();
 
     for p in pair.into_inner() {
-        match p.as_rule() {
-            Rule::argument => {
-                let inner = p.into_inner().next().expect("argument has one child");
-                args.push(build_argument(inner));
-            }
-            // Comments that appear between arguments are attached as inline comments.
-            Rule::bracket_comment => {
-                args.push(Argument::InlineComment(Comment::Bracket(
-                    p.as_str().to_owned(),
-                )));
-            }
-            Rule::line_comment => {
-                args.push(Argument::InlineComment(Comment::Line(
-                    p.as_str().to_owned(),
-                )));
-            }
-            _ => {}
-        }
+        collect_argument_part(p, &mut args)?;
     }
 
-    args
+    Ok(args)
 }
 
-fn build_argument(pair: pest::iterators::Pair<Rule>) -> Argument {
+fn collect_argument_part(
+    pair: pest::iterators::Pair<'_, Rule>,
+    out: &mut Vec<Argument>,
+) -> Result<()> {
+    match pair.as_rule() {
+        Rule::argument_part => {
+            for inner in pair.into_inner() {
+                collect_argument_part(inner, out)?;
+            }
+            Ok(())
+        }
+        Rule::argument => {
+            let mut inner = pair.into_inner();
+            let argument = inner
+                .next()
+                .ok_or_else(|| Error::Formatter("argument missing child node".to_owned()))?;
+            out.push(build_argument(argument)?);
+            Ok(())
+        }
+        Rule::bracket_comment => {
+            out.push(Argument::InlineComment(Comment::Bracket(
+                pair.as_str().to_owned(),
+            )));
+            Ok(())
+        }
+        Rule::line_ending => {
+            collect_line_ending_comments(pair, out);
+            Ok(())
+        }
+        Rule::space => Ok(()),
+        other => Err(Error::Formatter(format!(
+            "unexpected argument parser rule: {other:?}"
+        ))),
+    }
+}
+
+fn collect_line_ending_comments(pair: pest::iterators::Pair<'_, Rule>, out: &mut Vec<Argument>) {
+    for inner in pair.into_inner() {
+        if inner.as_rule() == Rule::line_comment {
+            out.push(Argument::InlineComment(Comment::Line(
+                inner.as_str().to_owned(),
+            )));
+        }
+    }
+}
+
+fn build_argument(pair: pest::iterators::Pair<'_, Rule>) -> Result<Argument> {
     match pair.as_rule() {
         Rule::bracket_argument => {
             let raw = pair.as_str().to_owned();
-            // Validate that open/close bracket "=" counts match.
-            let arg = validate_bracket_argument(raw);
-            Argument::Bracket(arg)
+            Ok(Argument::Bracket(validate_bracket_argument(raw)?))
         }
-        Rule::quoted_argument => {
-            Argument::Quoted(pair.as_str().to_owned())
-        }
-        Rule::unquoted_argument => {
-            Argument::Unquoted(pair.as_str().to_owned())
-        }
-        r => panic!("unexpected argument rule: {r:?}"),
+        Rule::quoted_argument => Ok(Argument::Quoted(pair.as_str().to_owned())),
+        Rule::unquoted_argument => Ok(Argument::Unquoted(pair.as_str().to_owned())),
+        other => Err(Error::Formatter(format!(
+            "unexpected argument rule: {other:?}"
+        ))),
     }
 }
 
 /// Validate that a bracket argument's opening and closing "=" counts match.
-/// Panics if they don't (the grammar guarantees they are balanced structurally,
-/// but this double-checks correctness during development).
-fn validate_bracket_argument(raw: String) -> BracketArgument {
-    // raw looks like: [=*[ ... ]=*]
+fn validate_bracket_argument(raw: String) -> Result<BracketArgument> {
     let open_equals = raw
         .strip_prefix('[')
-        .expect("bracket argument starts with [")
+        .ok_or_else(|| Error::Formatter("bracket argument missing '[' prefix".to_owned()))?
         .bytes()
         .take_while(|&b| b == b'=')
         .count();
 
     let close_equals = raw
         .strip_suffix(']')
-        .expect("bracket argument ends with ]")
+        .ok_or_else(|| Error::Formatter("bracket argument missing ']' suffix".to_owned()))?
         .bytes()
         .rev()
         .take_while(|&b| b == b'=')
         .count();
 
-    debug_assert_eq!(
-        open_equals, close_equals,
-        "bracket argument open/close = count mismatch in: {raw}"
-    );
+    if open_equals != close_equals {
+        return Err(Error::Formatter(format!(
+            "invalid bracket argument delimiter: {raw}"
+        )));
+    }
 
-    BracketArgument {
+    Ok(BracketArgument {
         level: open_equals,
         raw,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -187,79 +275,116 @@ mod tests {
     fn simple_command() {
         let f = parse_ok("cmake_minimum_required(VERSION 3.20)\n");
         assert_eq!(f.statements.len(), 1);
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert_eq!(cmd.name, "cmake_minimum_required");
         assert_eq!(cmd.arguments.len(), 2);
+        assert!(cmd.trailing_comment.is_none());
     }
 
     #[test]
     fn command_no_args() {
         let f = parse_ok("some_command()\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert!(cmd.arguments.is_empty());
     }
 
     #[test]
     fn quoted_argument() {
         let f = parse_ok("message(\"hello world\")\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert!(matches!(&cmd.arguments[0], Argument::Quoted(_)));
     }
 
     #[test]
     fn bracket_argument_zero_equals() {
         let f = parse_ok("set(VAR [[hello]])\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
-        let Argument::Bracket(b) = &cmd.arguments[1] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        let Argument::Bracket(b) = &cmd.arguments[1] else {
+            panic!()
+        };
         assert_eq!(b.level, 0);
     }
 
     #[test]
     fn bracket_argument_one_equals() {
         let f = parse_ok("set(VAR [=[hello]=])\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
-        let Argument::Bracket(b) = &cmd.arguments[1] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        let Argument::Bracket(b) = &cmd.arguments[1] else {
+            panic!()
+        };
         assert_eq!(b.level, 1);
     }
 
     #[test]
     fn bracket_argument_two_equals() {
         let f = parse_ok("set(VAR [==[contains ]= inside]==])\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
-        let Argument::Bracket(b) = &cmd.arguments[1] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        let Argument::Bracket(b) = &cmd.arguments[1] else {
+            panic!()
+        };
         assert_eq!(b.level, 2);
+    }
+
+    #[test]
+    fn invalid_bracket_argument_returns_error() {
+        let err = parse("set(VAR [=[hello]==])\n").unwrap_err();
+        assert!(matches!(err, Error::Formatter(_)));
     }
 
     #[test]
     fn line_comment_standalone() {
         let f = parse_ok("# this is a comment\n");
-        assert!(matches!(&f.statements[0], Statement::Comment(Comment::Line(_))));
+        assert!(matches!(
+            &f.statements[0],
+            Statement::Comment(Comment::Line(_))
+        ));
     }
 
     #[test]
     fn bracket_comment() {
         let f = parse_ok("#[[ multi\nline ]]\n");
-        assert!(matches!(&f.statements[0], Statement::Comment(Comment::Bracket(_))));
+        assert!(matches!(
+            &f.statements[0],
+            Statement::Comment(Comment::Bracket(_))
+        ));
     }
 
     #[test]
     fn variable_reference_in_unquoted() {
         let f = parse_ok("message(${MY_VAR})\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert!(matches!(&cmd.arguments[0], Argument::Unquoted(_)));
     }
 
     #[test]
     fn env_variable_reference() {
         let f = parse_ok("message($ENV{PATH})\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert!(matches!(&cmd.arguments[0], Argument::Unquoted(_)));
     }
 
     #[test]
     fn generator_expression() {
         let f = parse_ok("target_link_libraries(foo $<TARGET_FILE:bar>)\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert_eq!(cmd.arguments.len(), 2);
     }
 
@@ -267,9 +392,64 @@ mod tests {
     fn multiline_argument_list() {
         let src = "target_link_libraries(mylib\n    PUBLIC dep1\n    PRIVATE dep2\n)\n";
         let f = parse_ok(src);
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert_eq!(cmd.name, "target_link_libraries");
         assert_eq!(cmd.arguments.len(), 5); // mylib PUBLIC dep1 PRIVATE dep2
+    }
+
+    #[test]
+    fn inline_bracket_comment_in_arguments() {
+        let src = "message(\"First\" #[[inline comment]] \"Second\")\n";
+        let f = parse_ok(src);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(cmd.arguments.len(), 3);
+        assert!(matches!(
+            &cmd.arguments[1],
+            Argument::InlineComment(Comment::Bracket(_))
+        ));
+    }
+
+    #[test]
+    fn line_comment_between_arguments() {
+        let src = "target_sources(foo\n  PRIVATE a.cc # keep grouping\n  b.cc\n)\n";
+        let f = parse_ok(src);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert!(cmd.arguments.iter().any(Argument::is_comment));
+    }
+
+    #[test]
+    fn trailing_comment_after_command() {
+        let src = "message(STATUS \"hello\") # trailing\n";
+        let f = parse_ok(src);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert!(matches!(cmd.trailing_comment, Some(Comment::Line(_))));
+    }
+
+    #[test]
+    fn file_without_final_newline() {
+        let f = parse_ok("project(MyProject)");
+        assert_eq!(f.statements.len(), 1);
+    }
+
+    #[test]
+    fn blank_lines_are_preserved() {
+        let f = parse_ok("message(foo)\n\nproject(bar)\n");
+        assert_eq!(f.statements.len(), 3);
+        assert!(matches!(f.statements[1], Statement::BlankLines(1)));
+    }
+
+    #[test]
+    fn leading_blank_lines_are_preserved() {
+        let f = parse_ok("\nmessage(foo)\n");
+        assert!(matches!(f.statements[0], Statement::BlankLines(1)));
     }
 
     #[test]
@@ -288,7 +468,18 @@ mod tests {
     #[test]
     fn nested_variable_reference() {
         let f = parse_ok("message(${${OUTER}})\n");
-        let Statement::Command(cmd) = &f.statements[0] else { panic!() };
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
         assert_eq!(cmd.arguments.len(), 1);
+    }
+
+    #[test]
+    fn underscore_command_name_is_valid() {
+        let f = parse_ok("_my_command(ARG)\n");
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(cmd.name, "_my_command");
     }
 }

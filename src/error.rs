@@ -11,6 +11,12 @@ pub enum Error {
         source: toml::de::Error,
     },
 
+    #[error("spec error in {path}: {source}")]
+    Spec {
+        path: std::path::PathBuf,
+        source: toml::de::Error,
+    },
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
