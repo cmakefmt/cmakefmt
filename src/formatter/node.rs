@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::formatter::comment;
 use crate::parser::ast::{Argument, CommandInvocation};
 use crate::spec::registry::CommandRegistry;
-use crate::spec::CommandForm;
+use crate::spec::{CommandForm, NArgs};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum HeaderKind {
@@ -98,6 +98,15 @@ fn split_sections<'a>(
 
         let token = argument.as_str();
         let normalized = token.to_ascii_uppercase();
+        if nested_token_belongs_to_current_section(&sections, form, &normalized) {
+            sections
+                .last_mut()
+                .expect("section list contains at least one section")
+                .arguments
+                .push(argument);
+            continue;
+        }
+
         let header_kind = if form.kwargs.contains_key(&normalized) {
             Some(HeaderKind::Keyword)
         } else if form.flags.contains(&normalized) {
@@ -133,6 +142,28 @@ fn split_sections<'a>(
     Ok(sections)
 }
 
+fn nested_token_belongs_to_current_section(
+    sections: &[Section<'_>],
+    form: &CommandForm,
+    normalized: &str,
+) -> bool {
+    let Some(section) = sections.last() else {
+        return false;
+    };
+    let Some(HeaderKind::Keyword) = section.header_kind else {
+        return false;
+    };
+    let Some(header) = section.header else {
+        return false;
+    };
+    let Some(spec) = form.kwargs.get(&header.to_ascii_uppercase()) else {
+        return false;
+    };
+
+    matches!(spec.nargs, NArgs::Fixed(0))
+        && (spec.kwargs.contains_key(normalized) || spec.flags.contains(normalized))
+}
+
 fn try_format_inline(
     command: &CommandInvocation,
     sections: &[Section<'_>],
@@ -142,6 +173,13 @@ fn try_format_inline(
 ) -> Option<String> {
     if command.arguments.iter().any(argument_has_newline)
         || command.arguments.iter().any(Argument::is_comment)
+    {
+        return None;
+    }
+
+    if sections
+        .iter()
+        .any(|section| section.arguments.len() > cmd_config.max_pargs_hwrap())
     {
         return None;
     }
@@ -251,13 +289,22 @@ fn format_command_vertical(
     for section in sections {
         match section.header {
             None => {
-                write_packed_arguments(
-                    &mut output,
-                    &section.arguments,
-                    &indent,
-                    cmd_config.global,
-                    cmd_config.line_width(),
-                );
+                if section.arguments.len() > cmd_config.max_pargs_hwrap() {
+                    write_vertical_arguments(
+                        &mut output,
+                        &section.arguments,
+                        &indent,
+                        cmd_config.global,
+                    );
+                } else {
+                    write_packed_arguments(
+                        &mut output,
+                        &section.arguments,
+                        &indent,
+                        cmd_config.global,
+                        cmd_config.line_width(),
+                    );
+                }
             }
             Some(header) => {
                 let header = apply_case(cmd_config.keyword_case(), header);
@@ -268,24 +315,10 @@ fn format_command_vertical(
                     continue;
                 }
 
-                if let Some(line) = format_section_inline(
-                    &header,
-                    section.header_kind,
-                    &section.arguments,
-                    &indent,
-                    cmd_config.global,
-                    cmd_config.line_width(),
-                ) {
-                    output.push_str(&indent);
-                    output.push_str(&line);
-                    output.push('\n');
-                    continue;
-                }
-
                 output.push_str(&indent);
                 output.push_str(&header);
-                output.push('\n');
                 if section.arguments.len() > cmd_config.max_pargs_hwrap() {
+                    output.push('\n');
                     write_vertical_arguments(
                         &mut output,
                         &section.arguments,
@@ -293,13 +326,27 @@ fn format_command_vertical(
                         cmd_config.global,
                     );
                 } else {
-                    write_packed_arguments(
-                        &mut output,
+                    if let Some(line) = format_section_inline(
+                        &header,
+                        section.header_kind,
                         &section.arguments,
-                        &nested_indent,
+                        &indent,
                         cmd_config.global,
                         cmd_config.line_width(),
-                    );
+                    ) {
+                        output.truncate(output.len() - header.len());
+                        output.push_str(&line);
+                        output.push('\n');
+                    } else {
+                        output.push('\n');
+                        write_packed_arguments(
+                            &mut output,
+                            &section.arguments,
+                            &nested_indent,
+                            cmd_config.global,
+                            cmd_config.line_width(),
+                        );
+                    }
                 }
             }
         }

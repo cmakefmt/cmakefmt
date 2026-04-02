@@ -26,22 +26,58 @@ add_tablegen(llvm-min-tblgen LLVM_HEADERS llvm-min-tblgen.cpp
 set(LLVM_LINK_COMPONENTS CodeGenTypes Support)
 
 add_tablegen(
-  llvm-tblgen LLVM DESTINATION "${LLVM_TOOLS_INSTALL_DIR}" EXPORT LLVM
-  AsmMatcherEmitter.cpp AsmWriterEmitter.cpp CallingConvEmitter.cpp
-  CodeEmitterGen.cpp CodeGenMapTable.cpp CompressInstEmitter.cpp
-  CTagsEmitter.cpp DAGISelEmitter.cpp DAGISelMatcher.cpp
-  DAGISelMatcherEmitter.cpp DAGISelMatcherGen.cpp DAGISelMatcherOpt.cpp
-  DecoderEmitter.cpp DecoderTableEmitter.cpp DecoderTree.cpp DFAEmitter.cpp
-  DFAPacketizerEmitter.cpp DisassemblerEmitter.cpp DXILEmitter.cpp
-  ExegesisEmitter.cpp FastISelEmitter.cpp GlobalISelCombinerEmitter.cpp
-  GlobalISelEmitter.cpp InstrDocsEmitter.cpp InstrInfoEmitter.cpp
-  llvm-tblgen.cpp MacroFusionPredicatorEmitter.cpp OptionParserEmitter.cpp
-  OptionRSTEmitter.cpp PseudoLoweringEmitter.cpp RegisterBankEmitter.cpp
-  RegisterInfoEmitter.cpp SDNodeInfoEmitter.cpp SearchableTableEmitter.cpp
-  SubtargetEmitter.cpp WebAssemblyDisassemblerEmitter.cpp
-  X86InstrMappingEmitter.cpp X86DisassemblerTables.cpp X86FoldTablesEmitter.cpp
-  X86MnemonicTables.cpp X86ModRMFilters.cpp X86RecognizableInstr.cpp
+  llvm-tblgen
+  LLVM
+  DESTINATION
+  "${LLVM_TOOLS_INSTALL_DIR}"
+  EXPORT
+  LLVM
+  AsmMatcherEmitter.cpp
+  AsmWriterEmitter.cpp
+  CallingConvEmitter.cpp
+  CodeEmitterGen.cpp
+  CodeGenMapTable.cpp
+  CompressInstEmitter.cpp
+  CTagsEmitter.cpp
+  DAGISelEmitter.cpp
+  DAGISelMatcher.cpp
+  DAGISelMatcherEmitter.cpp
+  DAGISelMatcherGen.cpp
+  DAGISelMatcherOpt.cpp
+  DecoderEmitter.cpp
+  DecoderTableEmitter.cpp
+  DecoderTree.cpp
+  DFAEmitter.cpp
+  DFAPacketizerEmitter.cpp
+  DisassemblerEmitter.cpp
+  DXILEmitter.cpp
+  ExegesisEmitter.cpp
+  FastISelEmitter.cpp
+  GlobalISelCombinerEmitter.cpp
+  GlobalISelEmitter.cpp
+  InstrDocsEmitter.cpp
+  InstrInfoEmitter.cpp
+  llvm-tblgen.cpp
+  MacroFusionPredicatorEmitter.cpp
+  OptionParserEmitter.cpp
+  OptionRSTEmitter.cpp
+  PseudoLoweringEmitter.cpp
+  RegisterBankEmitter.cpp
+  RegisterInfoEmitter.cpp
+  SDNodeInfoEmitter.cpp
+  SearchableTableEmitter.cpp
+  SubtargetEmitter.cpp
+  WebAssemblyDisassemblerEmitter.cpp
+  X86InstrMappingEmitter.cpp
+  X86DisassemblerTables.cpp
+  X86FoldTablesEmitter.cpp
+  X86MnemonicTables.cpp
+  X86ModRMFilters.cpp
+  X86RecognizableInstr.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
-  $<TARGET_OBJECTS:obj.LLVMTableGenCommon> PARTIAL_SOURCES_INTENDED DEPENDS
-  intrinsics_gen # via llvm-min-tablegen
+  $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
+  PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  intrinsics_gen
+  # via llvm-min-tablegen
 )

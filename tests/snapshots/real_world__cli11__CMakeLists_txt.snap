@@ -123,7 +123,8 @@ if(NOT CLI11_FULL_INSTALL AND CLI11_PRECOMPILED AND CLI11_SINGLE_FILE)
     FATAL_ERROR "CLI11_PRECOMPILE and CLI11_SINGLE_FILE are mutually exclusive")
 endif()
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND NOT DEFINED CMAKE_CXX_STANDARD)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME
+   AND NOT DEFINED CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 11)
 endif()
 
@@ -150,24 +151,36 @@ endif()
 set(CLI11_headerLoc "${PROJECT_SOURCE_DIR}/include/CLI")
 
 set(
-  CLI11_headers ${CLI11_headerLoc}/App.hpp ${CLI11_headerLoc}/Config.hpp
-  ${CLI11_headerLoc}/ConfigFwd.hpp ${CLI11_headerLoc}/Error.hpp
-  ${CLI11_headerLoc}/Formatter.hpp ${CLI11_headerLoc}/FormatterFwd.hpp
-  ${CLI11_headerLoc}/Macros.hpp ${CLI11_headerLoc}/Option.hpp
-  ${CLI11_headerLoc}/Split.hpp ${CLI11_headerLoc}/StringTools.hpp
-  ${CLI11_headerLoc}/TypeTools.hpp ${CLI11_headerLoc}/Validators.hpp
-  ${CLI11_headerLoc}/ExtraValidators.hpp ${CLI11_headerLoc}/Version.hpp
-  ${CLI11_headerLoc}/Encoding.hpp ${CLI11_headerLoc}/Argv.hpp)
+  CLI11_headers
+  ${CLI11_headerLoc}/App.hpp
+  ${CLI11_headerLoc}/Config.hpp
+  ${CLI11_headerLoc}/ConfigFwd.hpp
+  ${CLI11_headerLoc}/Error.hpp
+  ${CLI11_headerLoc}/Formatter.hpp
+  ${CLI11_headerLoc}/FormatterFwd.hpp
+  ${CLI11_headerLoc}/Macros.hpp
+  ${CLI11_headerLoc}/Option.hpp
+  ${CLI11_headerLoc}/Split.hpp
+  ${CLI11_headerLoc}/StringTools.hpp
+  ${CLI11_headerLoc}/TypeTools.hpp
+  ${CLI11_headerLoc}/Validators.hpp
+  ${CLI11_headerLoc}/ExtraValidators.hpp
+  ${CLI11_headerLoc}/Version.hpp
+  ${CLI11_headerLoc}/Encoding.hpp
+  ${CLI11_headerLoc}/Argv.hpp)
 
 set(
-  CLI11_impl_headers ${CLI11_headerLoc}/impl/App_inl.hpp
+  CLI11_impl_headers
+  ${CLI11_headerLoc}/impl/App_inl.hpp
   ${CLI11_headerLoc}/impl/Config_inl.hpp
   ${CLI11_headerLoc}/impl/Formatter_inl.hpp
-  ${CLI11_headerLoc}/impl/Option_inl.hpp ${CLI11_headerLoc}/impl/Split_inl.hpp
+  ${CLI11_headerLoc}/impl/Option_inl.hpp
+  ${CLI11_headerLoc}/impl/Split_inl.hpp
   ${CLI11_headerLoc}/impl/StringTools_inl.hpp
   ${CLI11_headerLoc}/impl/Validators_inl.hpp
   ${CLI11_headerLoc}/impl/ExtraValidators_inl.hpp
-  ${CLI11_headerLoc}/impl/Encoding_inl.hpp ${CLI11_headerLoc}/impl/Argv_inl.hpp)
+  ${CLI11_headerLoc}/impl/Encoding_inl.hpp
+  ${CLI11_headerLoc}/impl/Argv_inl.hpp)
 
 set(CLI11_library_headers ${CLI11_headerLoc}/CLI.hpp
     ${CLI11_headerLoc}/Timer.hpp)
@@ -260,9 +273,23 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
   # CPack collects *everything* except what's listed here.
   set(
-    CPACK_SOURCE_IGNORE_FILES /.git /dist /.*build.* /\.DS_Store /.*\.egg-info
-    /var /azure-pipelines.yml /.ci /docs /examples /test_package /book
-    /.travis.yml .swp /.all-contributorsrc /.pre-commit.*yaml)
+    CPACK_SOURCE_IGNORE_FILES
+    /.git
+    /dist
+    /.*build.*
+    /\.DS_Store
+    /.*\.egg-info
+    /var
+    /azure-pipelines.yml
+    /.ci
+    /docs
+    /examples
+    /test_package
+    /book
+    /.travis.yml
+    .swp
+    /.all-contributorsrc
+    /.pre-commit.*yaml)
 
   set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "all")
   set(CPACK_DEBIAN_COMPRESSION_TYPE "xz")

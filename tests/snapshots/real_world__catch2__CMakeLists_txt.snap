@@ -201,7 +201,8 @@ if(NOT_SUBPROJECT)
     JOIN
     "
 "
-    install_script "set(install_pkgconfdir "${PKGCONFIG_INSTALL_DIR}")"
+    install_script
+    "set(install_pkgconfdir "${PKGCONFIG_INSTALL_DIR}")"
     "set(impl_pc_file "${CMAKE_CURRENT_SOURCE_DIR}/CMake/catch2.pc.in")"
     "set(main_pc_file "${CMAKE_CURRENT_SOURCE_DIR}/CMake/catch2-with-main.pc.in")"
     "set(Catch2_VERSION ${Catch2_VERSION})"

@@ -1,6 +1,9 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
+use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{format_source, CaseStyle, Config, DangleAlign, PerCommandConfig};
+use cmakefmt::{formatter, parser};
 
 // --- Comment tests ---
 
@@ -148,11 +151,27 @@ fn discriminated_commands_use_selected_form() {
 
     insta::assert_snapshot!(formatted, @"
     install(
-      TARGETS cmakefmt helper RUNTIME
-      DESTINATION bin LIBRARY
-      DESTINATION lib ARCHIVE
+      TARGETS cmakefmt helper
+      RUNTIME
+      DESTINATION bin
+      LIBRARY
+      DESTINATION lib
+      ARCHIVE
       DESTINATION lib/static)
     ");
+}
+
+#[test]
+fn install_targets_recognizes_export_and_includes_sections() {
+    let src = "install(TARGETS ${NLOHMANN_JSON_TARGET_NAME} EXPORT ${NLOHMANN_JSON_TARGETS_EXPORT_NAME} INCLUDES DESTINATION ${NLOHMANN_JSON_INCLUDE_INSTALL_DIR})\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    install(
+      TARGETS ${NLOHMANN_JSON_TARGET_NAME}
+      EXPORT ${NLOHMANN_JSON_TARGETS_EXPORT_NAME}
+      INCLUDES DESTINATION ${NLOHMANN_JSON_INCLUDE_INSTALL_DIR})
+    "#);
 }
 
 #[test]
@@ -215,6 +234,78 @@ fn if_condition_breaks_before_boolean_operator() {
        AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/book")
       add_subdirectory(book)
     endif()
+    "#);
+}
+
+#[test]
+fn anonymous_sections_go_vertical_after_max_pargs_hwrap() {
+    let src = "my_custom_command(one two three four five six seven)\n";
+    let config = Config {
+        max_pargs_hwrap: 6,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    my_custom_command(
+      one
+      two
+      three
+      four
+      five
+      six
+      seven)
+    "#);
+}
+
+#[test]
+fn custom_function_spec_sections_are_honored() {
+    let src = "my_custom_command(mylib ARG_TYPES networkaccess networkinformation tls SOURCES a.cpp a.h b.cpp b.h c.cpp c.h d.cpp LIBRARIES spdlog::spdlog HIDDEN_LIBRARIES special_hidden_library)\n";
+    let file = parser::parse(src).unwrap();
+    let config = Config {
+        max_pargs_hwrap: 2,
+        ..Config::default()
+    };
+    let mut registry = CommandRegistry::load().unwrap();
+    let overrides = r#"
+[commands.my_custom_command]
+pargs = 1
+
+[commands.my_custom_command.kwargs.ARG_TYPES]
+nargs = "+"
+
+[commands.my_custom_command.kwargs.SOURCES]
+nargs = "+"
+
+[commands.my_custom_command.kwargs.LIBRARIES]
+nargs = "+"
+
+[commands.my_custom_command.kwargs.HIDDEN_LIBRARIES]
+nargs = "+"
+"#;
+    registry
+        .merge_override_str(overrides, PathBuf::from("test-custom-spec.toml"))
+        .unwrap();
+
+    let formatted = formatter::format_file(&file, &config, &registry).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    my_custom_command(
+      mylib
+      ARG_TYPES
+        networkaccess
+        networkinformation
+        tls
+      SOURCES
+        a.cpp
+        a.h
+        b.cpp
+        b.h
+        c.cpp
+        c.h
+        d.cpp
+      LIBRARIES spdlog::spdlog
+      HIDDEN_LIBRARIES special_hidden_library)
     "#);
 }
 

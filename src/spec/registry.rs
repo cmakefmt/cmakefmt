@@ -412,6 +412,22 @@ mod tests {
     }
 
     #[test]
+    fn registry_knows_install_targets_export_and_includes_sections() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("TARGETS"));
+        assert!(form.kwargs.contains_key("EXPORT"));
+        assert!(form.kwargs.contains_key("INCLUDES"));
+        assert!(form
+            .kwargs
+            .get("INCLUDES")
+            .is_some_and(|spec| spec.kwargs.contains_key("DESTINATION")));
+        assert!(form.kwargs.contains_key("RUNTIME_DEPENDENCY_SET"));
+        assert!(form.flags.contains("RUNTIME"));
+        assert!(form.flags.contains("LIBRARY"));
+        assert!(form.flags.contains("ARCHIVE"));
+    }
+
+    #[test]
     fn registry_knows_cmake_language_trace_form() {
         let registry = CommandRegistry::load().unwrap();
         let form = registry.get("cmake_language").form_for(Some("TRACE"));
