@@ -167,9 +167,13 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Implement `src/main.rs` with `clap` derive API
 - [x] Commands/flags:
   - `cmfmt [FILE]...` — format and print to stdout
+  - `cmfmt` — recursively find CMake files under the current working directory
   - `cmfmt -i [FILE]...` — format in-place
   - `cmfmt --check [FILE]...` — exit 1 if any file would change
+  - `cmfmt --list-files [FILE|DIR]...` / `cmfmt --dry-run ...` — list files that would be reformatted
+  - `cmfmt -f, --file-regex <REGEX>` — filter recursively discovered CMake files
   - `cmfmt -` — read from stdin, write to stdout
+  - `cmfmt --dump-config` — print a default config template
   - `cmfmt --config <PATH>` — explicit config file
   - `cmfmt --line-width <N>` — override config
   - `cmfmt --version` — print version
@@ -216,6 +220,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [ ] Add `criterion` benchmarks for parsing and formatting
 - [ ] Profile with `cargo flamegraph` if benchmarks are unexpectedly slow
 - [ ] Target: format a 1000-line `CMakeLists.txt` in < 10ms
+- [ ] Add `cmfmt --debug` mode to print config resolution, file discovery matches,
+      parser locations, and formatter layout decisions for diagnostics
 - [ ] **Head-to-head benchmark: `cmfmt` vs `cmake-format`**
   - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
   - Run both tools against every file in `tests/fixtures/real_world/`
