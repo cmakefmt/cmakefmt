@@ -223,7 +223,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - Report speedup factor for each file and overall geometric mean
   - Include results table in `README.md`
 - [ ] Write a `README.md` with installation, usage, config reference
-- [ ] Add pre-commit hook config example (`.pre-commit-hooks.yaml`)
+- [x] Add pre-commit hook config example (`.pre-commit-config.yaml`)
 - [x] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS/Windows)
 - [ ] Version `1.0.0-alpha.1` release on crates.io
 
