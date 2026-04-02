@@ -126,6 +126,36 @@ Keep these aligned:
 - `.pre-commit-config.yaml` if local hygiene should enforce it
 - `README.md` if users should know about it
 
+## If You Add Or Change User Docs
+
+Keep these aligned:
+
+- `README.md`
+- `site/`
+- `CHANGELOG.md`
+- `docs/README.md`
+- any relevant long-form docs under `docs/`
+
+If the change affects contributor workflow or repo structure, also update:
+
+- `src/README.md`
+- `tests/README.md`
+- `tests/fixtures/README.md`
+- `tests/snapshots/README.md`
+- `benches/README.md`
+
+If you add a new primary docs page, add it to:
+
+- `site/src/SUMMARY.md`
+- `site/src/README.md` or another appropriate chapter
+- `scripts/check-docs.sh`
+
+The docs site is an `mdBook`. Before you finish a docs-heavy change, run:
+
+```bash
+bash scripts/check-docs.sh
+```
+
 ## Before You Finish A Change
 
 Run:
@@ -141,6 +171,12 @@ If you changed CLI behavior, also check:
 ```bash
 cargo run -- --help
 cargo run -- --dump-config
+```
+
+If you changed docs, also check:
+
+```bash
+bash scripts/check-docs.sh
 ```
 
 ## Summary

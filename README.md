@@ -23,6 +23,18 @@ not complete yet.
 The command spec version and audit date are stored in
 `src/spec/builtins.toml` under `[metadata]`.
 
+## Documentation
+
+Primary docs entry points:
+
+- [Documentation Book Source](site/src/README.md)
+- [Repository Docs Index](docs/README.md)
+- [Contributing Guide](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+
+The user docs are authored as an `mdBook` under `site/` and published to
+GitHub Pages from the built book output.
+
 ## Build
 
 ```bash
@@ -203,7 +215,7 @@ Head-to-head real-world corpus results:
 
 The full methodology, profiler notes, and serial-versus-parallel memory
 measurements live in
-[docs/PERFORMANCE.md](/Users/PuneetMatharu/Dropbox/programming/rust/cmake-format-rust/docs/PERFORMANCE.md).
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 ## Configuration
 
@@ -334,13 +346,19 @@ cargo bench --bench formatter -- --baseline local
 ```
 
 Benchmark methodology and profiling notes live in
-[docs/PERFORMANCE.md](/Users/PuneetMatharu/Dropbox/programming/rust/cmake-format-rust/docs/PERFORMANCE.md).
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 If you use pre-commit:
 
 ```bash
 pre-commit install
 pre-commit install --hook-type pre-push
+```
+
+Validate the docs structure:
+
+```bash
+bash scripts/check-docs.sh
 ```
 
 ## Current limitations

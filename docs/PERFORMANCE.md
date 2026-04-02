@@ -14,7 +14,7 @@ Phase 8 performance work is trying to answer four questions:
 
 ## Benchmark suites
 
-The benchmark target is [benches/formatter.rs](/Users/PuneetMatharu/Dropbox/programming/rust/cmake-format-rust/benches/formatter.rs).
+The benchmark target is [benches/formatter.rs](../benches/formatter.rs).
 
 It currently covers:
 
