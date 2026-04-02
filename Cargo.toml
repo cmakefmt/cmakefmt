@@ -27,6 +27,7 @@ walkdir = "2"
 [dev-dependencies]
 insta = "1"
 criterion = { version = "0.8.2", features = ["html_reports"] }
+tempfile = "3"
 
 [[bench]]
 name = "formatter"

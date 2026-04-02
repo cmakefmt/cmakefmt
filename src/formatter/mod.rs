@@ -65,7 +65,6 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
 fn format_comment_text(comment: &crate::parser::ast::Comment) -> String {
     use crate::parser::ast::Comment;
     match comment {
-        // Line comments include the leading "#" from the parser.
         Comment::Line(text) => text.clone(),
         Comment::Bracket(raw) => raw.clone(),
     }

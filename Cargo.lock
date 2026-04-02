@@ -216,6 +216,7 @@ dependencies = [
  "pest_derive",
  "pretty",
  "serde",
+ "tempfile",
  "thiserror",
  "toml",
  "walkdir",

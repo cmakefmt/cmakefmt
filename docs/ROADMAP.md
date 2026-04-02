@@ -128,33 +128,33 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Define `Config` struct with all options (see ARCHITECTURE.md)
-- [ ] Implement config file loading + directory-walk resolution
+- [x] Define `Config` struct with all options (see ARCHITECTURE.md)
+- [x] Implement config file loading + directory-walk resolution
 - [ ] Implement CLI flag overrides
-- [ ] `command_case` option (lower/upper/unchanged)
-- [ ] `keyword_case` option (lower/upper/unchanged)
-- [ ] `line_length` option
-- [ ] `tab_size` option
-- [ ] `use_tabchars` option
-- [ ] `max_empty_lines` option
-- [ ] `dangle_parens` + `dangle_align` options
-- [ ] `separate_ctrl_name_with_space` option
-- [ ] `separate_fn_name_with_space` option
-- [ ] `max_lines_hwrap`, `max_pargs_hwrap`, `max_subgroups_hwrap` options
-- [ ] `min_prefix_chars`, `max_prefix_chars` options
-- [ ] `[markup]` section: `enable_markup`, `first_comment_is_literal`,
+- [x] `command_case` option (lower/upper/unchanged)
+- [x] `keyword_case` option (lower/upper/unchanged)
+- [x] `line_length` option
+- [x] `tab_size` option
+- [x] `use_tabchars` option
+- [x] `max_empty_lines` option
+- [x] `dangle_parens` + `dangle_align` options
+- [x] `separate_ctrl_name_with_space` option
+- [x] `separate_fn_name_with_space` option
+- [x] `max_lines_hwrap`, `max_pargs_hwrap`, `max_subgroups_hwrap` options
+- [x] `min_prefix_chars`, `max_prefix_chars` options
+- [x] `[markup]` section: `enable_markup`, `first_comment_is_literal`,
       `literal_comment_pattern`, `bullet_char`, `enum_char`,
       `fence_pattern`, `ruler_pattern`, `hashruler_min_length`,
       `canonicalize_hashrulers`
-- [ ] `[per_command.<name>]` overrides — let users tune any option per-command
+- [x] `[per_command.<name>]` overrides — let users tune any option per-command
       (e.g. always uppercase `SET`, wider lines for `message`)
-- [ ] Tests for config resolution precedence
+- [x] Tests for config resolution precedence
 
 ### Acceptance criteria
 
-- [ ] All config options are exercised by at least one test
-- [ ] Config file not found → built-in defaults used (no error)
-- [ ] Invalid TOML → clear error message with file path and line number
+- [x] All config options are exercised by at least one test
+- [x] Config file not found → built-in defaults used (no error)
+- [x] Invalid TOML → clear error message with file path and line number
 
 ---
 
