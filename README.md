@@ -11,11 +11,14 @@ The project currently supports:
   references, and generator expressions
 - formatting CMake files via CLI or library API
 - preserving comments and blank lines
+- respecting `cmake-format: off` / `cmake-format: on`,
+  `cmakefmt: off` / `cmakefmt: on`, and `# ~~~` fence regions
 - configuration via `.cmake-format.toml`
 - a built-in command registry audited through CMake 4.3.1
 
 The formatter is still under active development. Real-world corpus coverage and
-performance benchmarking are not complete yet.
+full built-in/module command coverage and final performance work are not
+complete yet.
 
 The command spec version and audit date are stored in
 `src/spec/builtins.toml` under `[metadata]`.
@@ -51,6 +54,18 @@ Format in place:
 
 ```bash
 cmakefmt -i CMakeLists.txt
+```
+
+Format files in parallel with two workers:
+
+```bash
+cmakefmt --parallel 2 -i .
+```
+
+Use all available CPUs explicitly:
+
+```bash
+cmakefmt --parallel --check .
 ```
 
 Check formatting in CI or pre-push hooks:
@@ -96,6 +111,12 @@ Print the default config template:
 cmakefmt --dump-config
 ```
 
+Print debug diagnostics while checking a file:
+
+```bash
+cmakefmt --debug --check CMakeLists.txt
+```
+
 Current CLI flags:
 
 ```text
@@ -107,6 +128,8 @@ cmakefmt [OPTIONS] [FILES]...
       --dry-run
   -f, --file-regex <REGEX>
       --dump-config
+      --debug
+      --parallel [<JOBS>]
       --config <PATH>
       --line-width <N>
       --tab-size <N>
@@ -122,6 +145,34 @@ Exit codes:
 - `0`: success
 - `1`: `--check` or `--list-files` found files that would change
 - `2`: parse, config, or I/O error
+
+## Formatter barriers
+
+`cmakefmt` supports selectively disabling formatting for regions of a file.
+These barrier lines are preserved verbatim:
+
+```cmake
+# cmakefmt: off
+# cmakefmt: on
+```
+
+It also recognizes the existing `cmake-format` spellings:
+
+```cmake
+# cmake-format: off
+# cmake-format: on
+```
+
+Fence regions are supported with `# ~~~`:
+
+```cmake
+# ~~~
+# everything in here is passed through unchanged
+# ~~~
+```
+
+Disabled regions are emitted unchanged, even if they would not parse as valid
+CMake on their own.
 
 ## Configuration
 
@@ -248,8 +299,12 @@ pre-commit install --hook-type pre-push
 
 ## Current limitations
 
-- The real-world validation corpus is still small.
-- Benchmarking and release packaging are not finished.
+- The real-world validation corpus is still limited to the checked-in sample
+  set, even though the current outputs are in a good place for that corpus.
+- Full built-in and module command coverage in `src/spec/builtins.toml` is
+  still being audited and expanded.
+- Benchmarking, release packaging, and package-manager distribution are not
+  finished.
 - Comment reflow is opt-in via `markup.reflow_comments`, and only line comments
   are wrapped today. More advanced markup-aware comment formatting is still
   less mature than the core formatting path.

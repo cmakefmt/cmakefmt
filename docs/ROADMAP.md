@@ -199,14 +199,14 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Collect 10+ real-world `CMakeLists.txt` files from popular projects
   (CMake, LLVM, Qt, OpenCV, Boost, abseil, googletest, etc.)
 - [x] Add them to `tests/fixtures/real_world/`
-- [ ] Run formatter on all of them; manually review output
-- [ ] Fix any formatting regressions found
+- [x] Run formatter on all of them; manually review output
+- [x] Fix any formatting regressions found
 - [x] Snapshot all real-world outputs
 
 ### Acceptance criteria
 
 - [x] All real-world files pass idempotency
-- [ ] Formatted output is reviewed and judged reasonable by a human
+- [x] Formatted output is reviewed and judged reasonable by a human
 - [x] No panics or errors on any real-world input
 
 ---
@@ -217,17 +217,19 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Add `criterion` benchmarks for parsing and formatting
-- [ ] Extend the benchmark suite to cover each major `cmakefmt` capability
+- [x] Add `criterion` benchmarks for parsing and formatting
+- [x] Extend the benchmark suite to cover each major `cmakefmt` capability
   (parser, formatter, CLI file discovery, config loading, check mode, in-place mode)
 - [ ] Profile with `cargo flamegraph` if benchmarks are unexpectedly slow
 - [ ] Target: format a 1000-line `CMakeLists.txt` in < 10ms
-- [ ] Add `cmakefmt --debug` mode to print config resolution, file discovery matches,
+- [x] Add `cmakefmt --debug` mode to print config resolution, file discovery matches,
       parser locations, and formatter layout decisions for diagnostics
-- [ ] Add `cmakefmt --parallel [<JOBS>]` to parallelise file formatting when explicitly requested
+- [x] Add `cmakefmt --parallel [<JOBS>]` to parallelise file formatting when explicitly requested
       while keeping the default execution mode single-threaded
-- [ ] Respect `cmake-format: off` / `cmake-format: on` barriers and `# ~~~` fence regions,
+- [x] Respect `cmake-format: off` / `cmake-format: on` barriers and `# ~~~` fence regions,
       and support `cmakefmt: off` / `cmakefmt: on` as native aliases
+- [ ] Audit `src/spec/builtins.toml` to a full built-in and supported module command surface,
+      including the utility/deprecated modules we intend to recognize and format well
 - [ ] **Head-to-head benchmark: `cmakefmt` vs `cmake-format`**
   - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
   - Run both tools against every file in `tests/fixtures/real_world/`
@@ -242,6 +244,12 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Add pre-commit hook config example (`.pre-commit-config.yaml`)
 - [x] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS/Windows)
 - [ ] Version `1.0.0-alpha.1` release on crates.io
+- [ ] Publish `cmakefmt` to package managers as the final distribution step
+  - Homebrew
+  - Other relevant package managers
+- [ ] Survey `cmakefmt --parallel` on very large codebases for RAM and system impact
+      before ever considering a change from the default single-threaded execution
+      model to a CPU-count default
 
 ### Acceptance criteria
 

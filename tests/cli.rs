@@ -380,6 +380,69 @@ fn dump_config_prints_template() {
     assert!(stdout.contains("# [per_command.message]"));
 }
 
+#[test]
+fn debug_mode_reports_config_and_barriers() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join(".git")).unwrap();
+    std::fs::write(
+        dir.path().join(".cmake-format.toml"),
+        "[format]\nline_width = 40\n",
+    )
+    .unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "set(  BEFORE  value )\n# cmakefmt: off\nthis is not valid cmake\n# cmakefmt: on\nset(  AFTER  value )\n",
+    );
+
+    let output = cmakefmt()
+        .args(["--debug", "--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("debug: processing"));
+    assert!(stderr.contains("debug: config sources:"));
+    assert!(stderr.contains("formatter: disabled formatting"));
+    assert!(stderr.contains("formatter: enabled formatting"));
+}
+
+#[test]
+fn parallel_in_place_formats_multiple_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let file_a = dir.path().join("a.cmake");
+    let file_b = dir.path().join("b.cmake");
+
+    write_file(&file_a, "set(  A  value )\n");
+    write_file(&file_b, "set(  B  value )\n");
+
+    let output = cmakefmt()
+        .args(["--parallel", "2", "-i", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(std::fs::read_to_string(&file_a).unwrap(), "set(A value)\n");
+    assert_eq!(std::fs::read_to_string(&file_b).unwrap(), "set(B value)\n");
+}
+
+#[test]
+fn parallel_without_value_uses_default_jobs() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  value )\n");
+
+    let output = cmakefmt()
+        .args(["--parallel", "--check", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("would be reformatted"));
+}
+
 // ── Version ─────────────────────────────────────────────────────────────────
 
 #[test]

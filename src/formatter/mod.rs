@@ -7,9 +7,32 @@ use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
 pub fn format_source(source: &str, config: &Config) -> Result<String> {
-    let file = parser::parse(source)?;
     let registry = CommandRegistry::load()?;
-    format_file(&file, config, &registry)
+    format_source_with_registry(source, config, &registry)
+}
+
+pub fn format_source_with_debug(source: &str, config: &Config) -> Result<(String, Vec<String>)> {
+    let registry = CommandRegistry::load()?;
+    format_source_with_registry_debug(source, config, &registry)
+}
+
+pub fn format_source_with_registry(
+    source: &str,
+    config: &Config,
+    registry: &CommandRegistry,
+) -> Result<String> {
+    Ok(format_source_impl(source, config, registry, &mut DebugLog::disabled())?.0)
+}
+
+pub fn format_source_with_registry_debug(
+    source: &str,
+    config: &Config,
+    registry: &CommandRegistry,
+) -> Result<(String, Vec<String>)> {
+    let mut lines = Vec::new();
+    let mut debug = DebugLog::enabled(&mut lines);
+    let (formatted, _) = format_source_impl(source, config, registry, &mut debug)?;
+    Ok((formatted, lines))
 }
 
 pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> Result<String> {
@@ -86,6 +109,173 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
     }
 
     Ok(output)
+}
+
+fn format_source_impl(
+    source: &str,
+    config: &Config,
+    registry: &CommandRegistry,
+    debug: &mut DebugLog<'_>,
+) -> Result<(String, usize)> {
+    let mut output = String::new();
+    let mut enabled_chunk = String::new();
+    let mut total_statements = 0usize;
+    let mut mode = BarrierMode::Enabled;
+
+    for (line_index, line) in split_lines_preserving_terminators(source)
+        .into_iter()
+        .enumerate()
+    {
+        let line_no = line_index + 1;
+        match detect_barrier(line) {
+            Some(BarrierEvent::DisableByDirective(kind)) => {
+                let statements =
+                    flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+                total_statements += statements;
+                debug.log(format!(
+                    "formatter: disabled formatting at line {line_no} via {kind}: off"
+                ));
+                output.push_str(line);
+                mode = BarrierMode::DisabledByDirective;
+            }
+            Some(BarrierEvent::EnableByDirective(kind)) => {
+                let statements =
+                    flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+                total_statements += statements;
+                debug.log(format!(
+                    "formatter: enabled formatting at line {line_no} via {kind}: on"
+                ));
+                output.push_str(line);
+                if matches!(mode, BarrierMode::DisabledByDirective) {
+                    mode = BarrierMode::Enabled;
+                }
+            }
+            Some(BarrierEvent::Fence) => {
+                let statements =
+                    flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+                total_statements += statements;
+                let next_mode = if matches!(mode, BarrierMode::DisabledByFence) {
+                    BarrierMode::Enabled
+                } else {
+                    BarrierMode::DisabledByFence
+                };
+                debug.log(format!(
+                    "formatter: toggled fence region at line {line_no} -> {}",
+                    next_mode.as_str()
+                ));
+                output.push_str(line);
+                mode = next_mode;
+            }
+            None => {
+                if matches!(mode, BarrierMode::Enabled) {
+                    enabled_chunk.push_str(line);
+                } else {
+                    output.push_str(line);
+                }
+            }
+        }
+    }
+
+    total_statements +=
+        flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+    Ok((output, total_statements))
+}
+
+fn flush_enabled_chunk(
+    output: &mut String,
+    enabled_chunk: &mut String,
+    config: &Config,
+    registry: &CommandRegistry,
+    debug: &mut DebugLog<'_>,
+) -> Result<usize> {
+    if enabled_chunk.is_empty() {
+        return Ok(0);
+    }
+
+    let file = parser::parse(enabled_chunk)?;
+    let statement_count = file.statements.len();
+    debug.log(format!(
+        "formatter: formatting enabled chunk with {statement_count} statement(s)"
+    ));
+    let formatted = format_file(&file, config, registry)?;
+    output.push_str(&formatted);
+    enabled_chunk.clear();
+    Ok(statement_count)
+}
+
+fn split_lines_preserving_terminators(source: &str) -> Vec<&str> {
+    if source.is_empty() {
+        return Vec::new();
+    }
+
+    source.split_inclusive('\n').collect()
+}
+
+fn detect_barrier(line: &str) -> Option<BarrierEvent<'_>> {
+    let trimmed = line.trim_start();
+    if !trimmed.starts_with('#') {
+        return None;
+    }
+
+    let body = trimmed[1..].trim_start().trim_end();
+    if body.starts_with("~~~") {
+        return Some(BarrierEvent::Fence);
+    }
+
+    for kind in ["cmake-format", "cmakefmt"] {
+        if body == format!("{kind}: off") {
+            return Some(BarrierEvent::DisableByDirective(kind));
+        }
+        if body == format!("{kind}: on") {
+            return Some(BarrierEvent::EnableByDirective(kind));
+        }
+    }
+
+    None
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BarrierMode {
+    Enabled,
+    DisabledByDirective,
+    DisabledByFence,
+}
+
+impl BarrierMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            BarrierMode::Enabled => "enabled",
+            BarrierMode::DisabledByDirective => "disabled-by-directive",
+            BarrierMode::DisabledByFence => "disabled-by-fence",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BarrierEvent<'a> {
+    DisableByDirective(&'a str),
+    EnableByDirective(&'a str),
+    Fence,
+}
+
+struct DebugLog<'a> {
+    lines: Option<&'a mut Vec<String>>,
+}
+
+impl<'a> DebugLog<'a> {
+    fn disabled() -> Self {
+        Self { lines: None }
+    }
+
+    fn enabled(lines: &'a mut Vec<String>) -> Self {
+        Self { lines: Some(lines) }
+    }
+
+    fn log(&mut self, message: impl Into<String>) {
+        if let Some(lines) = self.lines.as_deref_mut() {
+            lines.push(message.into());
+        }
+    }
 }
 
 fn block_dedent_before(command_name: &str) -> usize {

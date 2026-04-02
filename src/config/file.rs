@@ -162,6 +162,12 @@ impl Config {
         Ok(config)
     }
 
+    /// Return the config files that would be merged for the given file, ordered
+    /// closest-first to match the runtime search order.
+    pub fn config_sources_for(file_path: &Path) -> Vec<PathBuf> {
+        find_config_files(file_path)
+    }
+
     fn apply(&mut self, fc: FileConfig) {
         // Format section
         if let Some(v) = fc.format.line_width {

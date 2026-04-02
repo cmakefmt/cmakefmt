@@ -118,6 +118,72 @@ fn comment_separated_by_blank_lines() {
     ");
 }
 
+#[test]
+fn cmakefmt_off_on_preserves_disabled_region() {
+    let src = "set(  BEFORE  value )\n# cmakefmt: off\nset(   BROKEN    value )\nthis is not valid cmake\n# cmakefmt: on\nset(  AFTER  value )\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set(BEFORE value)
+    # cmakefmt: off
+    set(   BROKEN    value )
+    this is not valid cmake
+    # cmakefmt: on
+    set(AFTER value)
+    "#);
+}
+
+#[test]
+fn cmake_format_off_on_alias_preserves_disabled_region() {
+    let src = "set(  BEFORE  value )\n# cmake-format: off\nset(   BROKEN    value )\n# cmake-format: on\nset(  AFTER  value )\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set(BEFORE value)
+    # cmake-format: off
+    set(   BROKEN    value )
+    # cmake-format: on
+    set(AFTER value)
+    "#);
+}
+
+#[test]
+fn cmakefmt_off_without_on_preserves_rest_of_file() {
+    let src = "set(  BEFORE  value )\n# cmakefmt: off\nset(   BROKEN    value )\nthis is not valid cmake\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set(BEFORE value)
+    # cmakefmt: off
+    set(   BROKEN    value )
+    this is not valid cmake
+    "#);
+}
+
+#[test]
+fn cmake_format_off_without_on_preserves_rest_of_file() {
+    let src = "set(  BEFORE  value )\n# cmake-format: off\nset(   BROKEN    value )\nthis is not valid cmake\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set(BEFORE value)
+    # cmake-format: off
+    set(   BROKEN    value )
+    this is not valid cmake
+    "#);
+}
+
+#[test]
+fn fence_region_preserves_contents_verbatim() {
+    let src = "set(  BEFORE  value )\n# ~~~\nset(   BROKEN    value )\nif(  BROKEN )\nmessage( STATUS   \"x\" )\n# ~~~\nset(  AFTER  value )\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set(BEFORE value)
+    # ~~~
+    set(   BROKEN    value )
+    if(  BROKEN )
+    message( STATUS   "x" )
+    # ~~~
+    set(AFTER value)
+    "#);
+}
+
 // --- Existing tests ---
 
 #[test]
