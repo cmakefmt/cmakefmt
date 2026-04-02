@@ -314,11 +314,89 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Expand the project documentation into a full user guide, API reference,
-      and changelog suitable for publication to GitHub Pages
-- [ ] Add directory-level contributor readmes explaining the repo structure,
-      especially `src/`, `tests/fixtures/`, `tests/snapshots/`, and the purpose
-      of each test module
+- [ ] Define the published documentation structure and navigation for GitHub Pages
+  - landing page / project overview
+  - installation page
+  - CLI usage reference
+  - configuration reference
+  - formatter behavior guide
+  - migration / compatibility guide
+  - library API guide
+  - architecture / implementation overview
+  - changelog / release notes
+- [ ] Expand the user-facing docs into a full guide set
+  - installation from Cargo and supported package managers
+  - quick-start workflow for local formatting, `--check`, and `-i`
+  - file discovery, `--file-regex`, `--list-files`, and `--parallel`
+  - barriers and fence regions
+  - debug mode and troubleshooting
+  - benchmark / performance guide
+- [ ] Write a complete CLI reference
+  - every flag with behavior, defaults, and exit-code semantics
+  - examples for single-file, recursive, stdin, in-place, and CI usage
+  - examples for config overrides and `--dump-config`
+  - note which flags are operational-only versus config-backed
+- [ ] Write a complete configuration reference
+  - document every config section and option
+  - show the built-in defaults
+  - explain config resolution precedence
+  - explain per-command overrides
+  - explain which markup features are opt-in and what they do today
+- [ ] Write a formatter behavior guide
+  - blank-line preservation
+  - comment preservation and comment reflow behavior
+  - control-flow indentation rules
+  - horizontal wrap versus vertical layout heuristics
+  - barriers / disabled regions / fence passthrough
+  - known formatting differences from `cmake-format`
+- [ ] Write a migration and compatibility guide for `cmake-format` users
+  - command-line invocation mapping
+  - config-file compatibility and differences
+  - unsupported or intentionally different options
+  - output-style differences that users should expect
+  - rollout advice for CI / pre-commit migration
+- [ ] Write a library/API guide for embedders
+  - public crate entry points
+  - config construction and override flow
+  - error model
+  - examples for `format_source` and related helpers
+  - expectations around stability before and after `1.0`
+- [ ] Keep an explicit changelog and release-note process
+  - choose the changelog format
+  - document categories for user-visible changes
+  - link releases to changelog entries
+  - ensure breaking changes and migration notes are called out clearly
+- [ ] Add directory-level contributor readmes explaining the repo structure
+  - `src/`
+    - parser, formatter, config, spec, and CLI responsibilities
+  - `tests/`
+    - purpose of each Rust test module
+  - `tests/fixtures/`
+    - fixture categories and how to add/update them
+  - `tests/snapshots/`
+    - what snapshot files represent and when they should change
+  - `benches/`
+    - benchmark intent and how to extend the suite
+  - `docs/`
+    - where long-form docs live and how to keep them aligned
+- [ ] Add doc maintenance rules so docs stay in sync with code
+  - update `CONTRIBUTING.md` with doc update requirements where needed
+  - identify which changes must also update `README.md`, docs pages, and changelog
+  - add lightweight validation for docs where practical (link checks or doc build)
+- [ ] Publish the docs site through GitHub Pages
+  - choose the site generator / layout
+  - add the build/deploy workflow
+  - ensure local preview instructions exist
+  - ensure versioned or release-tagged docs policy is clear
+
+### Acceptance criteria
+
+- [ ] A new user can install `cmakefmt`, format a project, and understand the major CLI/config features from the docs alone
+- [ ] A `cmake-format` user can follow a migration guide and understand compatibility gaps before switching
+- [ ] Every public CLI flag and config option is documented in exactly one primary reference page
+- [ ] Contributor readmes exist for the main repo areas and explain where new code, fixtures, snapshots, and docs belong
+- [ ] The GitHub Pages docs site builds cleanly and is linked from `README.md`
+- [ ] User-visible changes have a documented changelog/release-note path
 
 ---
 
