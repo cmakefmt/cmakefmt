@@ -211,51 +211,142 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ---
 
-## Phase 8 — Performance & Polish
+## Phase 8 — Bottlenecks
 
-**Goal**: Fast, reliable, releasable.
+**Goal**: Understand and remove the main performance bottlenecks.
 
 ### Tasks
 
 - [x] Add `criterion` benchmarks for parsing and formatting
 - [x] Extend the benchmark suite to cover each major `cmakefmt` capability
   (parser, formatter, CLI file discovery, config loading, check mode, in-place mode)
-- [ ] Profile with `cargo flamegraph` if benchmarks are unexpectedly slow
-- [ ] Target: format a 1000-line `CMakeLists.txt` in < 10ms
+- [ ] Build a dedicated benchmark corpus with representative inputs:
+  - small synthetic files for parser/layout microbenchmarks
+  - medium real-world files from `tests/fixtures/real_world/`
+  - at least one large stress file (~1000+ lines)
+  - command-heavy cases (`install`, `file`, `string`, `list`, target commands)
+  - comment-heavy files and barrier/fence-heavy files
+- [ ] Benchmark each major internal path separately and keep the benchmark names stable:
+  - parser only
+  - parser + AST construction
+  - formatter only from parsed AST
+  - end-to-end `format_source`
+  - config discovery/loading
+  - file discovery/filtering
+  - check-mode path
+  - in-place write path
+  - debug-mode overhead
+  - opt-in parallel execution overhead and speedup
+- [ ] Add benchmark baselines and compare regressions over time:
+  - save a local baseline before major formatter changes
+  - compare bench runs against the saved baseline
+  - document the expected benchmark commands in `README.md`
+- [ ] Investigate and quantify the hottest bottlenecks:
+  - parser time
+  - AST construction time
+  - command-spec lookup overhead
+  - layout/packing heuristics in `src/formatter/node.rs`
+  - comment/barrier handling overhead
+  - allocation hotspots and repeated string building
+- [ ] Profile with `cargo flamegraph` and/or equivalent profilers when benchmarks are unexpectedly slow
+  - capture parser-only flamegraphs
+  - capture formatter-only flamegraphs
+  - capture end-to-end flamegraphs on a large real-world file
+  - summarize the top hotspots and the changes made to address them
+- [ ] Optimize the hottest paths aggressively but safely:
+  - reduce avoidable allocations/cloning
+  - reduce repeated case conversions / string normalization where measurable
+  - reuse parsed/loaded data where appropriate
+  - simplify expensive formatting heuristics that do not materially improve output
+  - verify that optimizations do not regress semantics, idempotency, or diagnostics
+- [ ] Measure scaling behavior across realistic workloads:
+  - single-file latency on small, medium, and large files
+  - total throughput across many files
+  - startup overhead for short invocations
+  - opt-in parallel speedup versus single-threaded execution
+  - memory footprint under serial and parallel modes
+- [ ] Hit the performance target: format a 1000-line `CMakeLists.txt` in < 10ms
+- [ ] Document the final benchmark methodology and results in the repo
+  - benchmark environment details
+  - hardware / OS notes
+  - corpus description
+  - commands used to reproduce results
+- [ ] Run the head-to-head `cmakefmt` vs `cmake-format` benchmark and publish results in `README.md`
+  - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
+  - Run both tools against every file in `tests/fixtures/real_world/`
+  - Measure wall-clock time (hyperfine or criterion shell benchmark)
+  - Report speedup factor for each file and overall geometric mean
+  - Include results table in `README.md`
 - [x] Add `cmakefmt --debug` mode to print config resolution, file discovery matches,
       parser locations, and formatter layout decisions for diagnostics
 - [x] Add `cmakefmt --parallel [<JOBS>]` to parallelise file formatting when explicitly requested
       while keeping the default execution mode single-threaded
 - [x] Respect `cmake-format: off` / `cmake-format: on` barriers and `# ~~~` fence regions,
       and support `cmakefmt: off` / `cmakefmt: on` as native aliases
-- [ ] Audit `src/spec/builtins.toml` to a full built-in and supported module command surface,
-      including the utility/deprecated modules we intend to recognize and format well
-- [ ] **Head-to-head benchmark: `cmakefmt` vs `cmake-format`**
-  - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
-  - Run both tools against every file in `tests/fixtures/real_world/`
-  - Measure wall-clock time (hyperfine or criterion shell benchmark)
-  - Report speedup factor for each file and overall geometric mean
-  - Include results table in `README.md`
-- [ ] Expand the project documentation into a full user guide, API reference,
-      and changelog suitable for publication to GitHub Pages
-- [ ] Add directory-level contributor readmes explaining the repo structure,
-      especially `src/`, `tests/fixtures/`, `tests/snapshots/`, and the purpose
-      of each test module
 - [x] Add pre-commit hook config example (`.pre-commit-config.yaml`)
 - [x] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS/Windows)
-- [ ] Version `1.0.0-alpha.1` release on crates.io
-- [ ] Publish `cmakefmt` to package managers as the final distribution step
-  - Homebrew
-  - Other relevant package managers
-- [ ] Survey `cmakefmt --parallel` on very large codebases for RAM and system impact
-      before ever considering a change from the default single-threaded execution
-      model to a CPU-count default
 
 ### Acceptance criteria
 
 - [ ] Benchmark target met (< 10ms per 1000-line file)
 - [ ] `cmakefmt` is measurably faster than `cmake-format` on every real-world fixture
+- [ ] Benchmark methodology and reproduction commands are documented
+- [ ] At least one profiling pass was performed on the hottest workloads and acted on
+- [ ] Parallel mode speedup and memory impact are measured and recorded
 - [ ] CI passes on all three platforms
+
+---
+
+## Phase 9 — Completeness
+
+**Goal**: Fill out the supported command surface so the formatter behaves well across the full CMake ecosystem we target.
+
+### Tasks
+
+- [ ] Audit `src/spec/builtins.toml` to a full built-in and supported module-command surface,
+      including the utility/deprecated modules we intend to recognize and format well
+
+---
+
+## Phase 10 — User Friendliness
+
+**Goal**: Make the project easy to adopt, understand, and contribute to.
+
+### Tasks
+
+- [ ] Expand the project documentation into a full user guide, API reference,
+      and changelog suitable for publication to GitHub Pages
+- [ ] Add directory-level contributor readmes explaining the repo structure,
+      especially `src/`, `tests/fixtures/`, `tests/snapshots/`, and the purpose
+      of each test module
+
+---
+
+## Phase 11 — Final Tweaks
+
+**Goal**: Validate late-stage operational behavior before release.
+
+### Tasks
+
+- [ ] Survey `cmakefmt --parallel` on very large codebases for RAM and system impact
+      before ever considering a change from the default single-threaded execution
+      model to a CPU-count default
+
+---
+
+## Phase 12 — Alpha Release
+
+**Goal**: Publish the first alpha and make installation easy.
+
+### Tasks
+
+- [ ] Version `1.0.0-alpha.1` release on crates.io
+- [ ] Publish `cmakefmt` to package managers as the final distribution step
+  - Homebrew
+  - Other relevant package managers
+
+### Acceptance criteria
+
 - [ ] `cargo publish --dry-run` succeeds
 
 ---
