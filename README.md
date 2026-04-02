@@ -1,6 +1,6 @@
 # `cmakefmt`
 
-`cmakefmt` is a Rust CMake formatter intended to replace `cmake-format` with a
+`cmakefmt` is a Rust CMake formatter intended to replace [`cmake-format`](https://github.com/cheshirekow/cmake_format) with a
 single fast binary.
 
 ## Status
