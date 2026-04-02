@@ -406,6 +406,70 @@ nargs = 1
 [commands.file.forms.ARCHIVE_CREATE.kwargs.WORKING_DIRECTORY]
 nargs = 1
 
+[commands.file.forms.STRINGS]
+pargs = 2
+flags = ["NEWLINE_CONSUME", "NO_HEX_CONVERSION"]
+
+[commands.file.forms.STRINGS.kwargs.ENCODING]
+nargs = 1
+
+[commands.file.forms.STRINGS.kwargs.LIMIT_COUNT]
+nargs = 1
+
+[commands.file.forms.STRINGS.kwargs.LIMIT_INPUT]
+nargs = 1
+
+[commands.file.forms.STRINGS.kwargs.LIMIT_OUTPUT]
+nargs = 1
+
+[commands.file.forms.STRINGS.kwargs.LENGTH_MINIMUM]
+nargs = 1
+
+[commands.file.forms.STRINGS.kwargs.LENGTH_MAXIMUM]
+nargs = 1
+
+[commands.file.forms.STRINGS.kwargs.REGEX]
+nargs = 1
+
+[commands.file.forms.GENERATE]
+pargs = 0
+flags = ["CONDITION", "TARGET", "NEWLINE_STYLE", "FILE_PERMISSIONS", "USE_SOURCE_PERMISSIONS", "NO_SOURCE_PERMISSIONS"]
+
+[commands.file.forms.GENERATE.kwargs.OUTPUT]
+nargs = 1
+
+[commands.file.forms.GENERATE.kwargs.INPUT]
+nargs = 1
+
+[commands.file.forms.GENERATE.kwargs.CONTENT]
+nargs = 1
+
+[commands.file.forms.CONFIGURE]
+pargs = 0
+flags = ["@ONLY", "ESCAPE_QUOTES", "NEWLINE_STYLE"]
+
+[commands.file.forms.CONFIGURE.kwargs.OUTPUT]
+nargs = 1
+
+[commands.file.forms.CONFIGURE.kwargs.CONTENT]
+nargs = 1
+
+[commands.file.forms.READ]
+pargs = 2
+flags = ["HEX"]
+
+[commands.file.forms.READ.kwargs.OFFSET]
+nargs = 1
+
+[commands.file.forms.READ.kwargs.LIMIT]
+nargs = 1
+
+[commands.file.forms.WRITE]
+pargs = "2+"
+
+[commands.file.forms.APPEND]
+pargs = "2+"
+
 [commands.file.fallback]
 pargs = "*"
 
@@ -472,6 +536,175 @@ nargs = 1
 nargs = 1
 
 [commands.execute_process.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.configure_package_config_file]
+pargs = 2
+flags = ["NO_SET_AND_CHECK_MACRO", "NO_CHECK_REQUIRED_COMPONENTS_MACRO"]
+
+[commands.configure_package_config_file.kwargs.INSTALL_DESTINATION]
+nargs = 1
+
+[commands.configure_package_config_file.kwargs.PATH_VARS]
+nargs = "+"
+
+[commands.configure_package_config_file.kwargs.INSTALL_PREFIX]
+nargs = 1
+
+[commands.write_basic_package_version_file]
+pargs = 1
+flags = ["ARCH_INDEPENDENT"]
+
+[commands.write_basic_package_version_file.kwargs.VERSION]
+nargs = 1
+
+[commands.write_basic_package_version_file.kwargs.COMPATIBILITY]
+nargs = 1
+
+[commands.cmake_dependent_option]
+pargs = 5
+
+[commands.feature_summary]
+pargs = "*"
+flags = [
+  "DEFAULT_DESCRIPTION",
+  "FILENAME",
+  "APPEND",
+  "VAR",
+  "WHAT",
+  "INCLUDE_QUIET_PACKAGES",
+  "FATAL_ON_MISSING_REQUIRED_PACKAGES",
+  "QUIET_ON_EMPTY",
+]
+
+[commands.set_package_properties]
+pargs = "+"
+
+[commands.set_package_properties.kwargs.PROPERTIES]
+nargs = "*"
+
+[commands.add_feature_info]
+pargs = 3
+
+[commands.check_language]
+pargs = 1
+
+[commands.check_c_compiler_flag]
+pargs = 2
+
+[commands.check_cxx_compiler_flag]
+pargs = 2
+
+[commands.check_fortran_compiler_flag]
+pargs = 2
+
+[commands.check_include_file]
+pargs = "2+"
+
+[commands.check_include_file_cxx]
+pargs = "2+"
+
+[commands.check_include_files]
+pargs = "2+"
+
+[commands.check_function_exists]
+pargs = 2
+
+[commands.check_library_exists]
+pargs = 4
+
+[commands.check_symbol_exists]
+pargs = 3
+
+[commands.check_type_size]
+pargs = "2+"
+
+[commands.check_variable_exists]
+pargs = 2
+
+[commands.check_c_source_compiles]
+pargs = 2
+
+[commands.check_c_source_runs]
+pargs = 2
+
+[commands.check_cxx_source_compiles]
+pargs = 2
+
+[commands.check_cxx_source_runs]
+pargs = 2
+
+[commands.check_fortran_function_exists]
+pargs = 2
+
+[commands.check_fortran_source_compiles]
+pargs = 2
+
+[commands.check_fortran_source_runs]
+pargs = 2
+
+[commands.check_source_compiles]
+pargs = 3
+
+[commands.check_source_compiles.kwargs.SRC_EXT]
+nargs = 1
+
+[commands.check_source_runs]
+pargs = 3
+
+[commands.check_source_runs.kwargs.SRC_EXT]
+nargs = 1
+
+[commands.check_linker_flag]
+pargs = 3
+
+[commands.check_ipo_supported]
+pargs = 0
+
+[commands.check_ipo_supported.kwargs.RESULT]
+nargs = 1
+
+[commands.check_ipo_supported.kwargs.OUTPUT]
+nargs = 1
+
+[commands.check_ipo_supported.kwargs.LANGUAGES]
+nargs = "+"
+
+[commands.cmake_parse_arguments]
+pargs = "4+"
+
+[commands.test_big_endian]
+pargs = 1
+
+[commands.write_compiler_detection_header]
+pargs = 0
+flags = [
+  "ALLOW_UNKNOWN_COMPILERS",
+  "ALLOW_UNKNOWN_COMPILER_VERSIONS",
+]
+
+[commands.write_compiler_detection_header.kwargs.FILE]
+nargs = 1
+
+[commands.write_compiler_detection_header.kwargs.PREFIX]
+nargs = 1
+
+[commands.write_compiler_detection_header.kwargs.COMPILERS]
+nargs = "+"
+
+[commands.write_compiler_detection_header.kwargs.FEATURES]
+nargs = "+"
+
+[commands.write_compiler_detection_header.kwargs.BARE_FEATURES]
+nargs = "+"
+
+[commands.write_compiler_detection_header.kwargs.VERSION]
+nargs = 1
+
+[commands.write_compiler_detection_header.kwargs.PROLOG]
+nargs = 1
+
+[commands.write_compiler_detection_header.kwargs.EPILOG]
 nargs = 1
 
 [commands.export.forms.EXPORT]
@@ -918,9 +1151,6 @@ nargs = 1
 
 [commands.cmake_instrumentation.kwargs.CUSTOM_CONTENT]
 nargs = 3
-
-[commands.cmake_parse_arguments]
-pargs = "*"
 
 [commands.cmake_path]
 pargs = "*"

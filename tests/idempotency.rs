@@ -86,7 +86,11 @@ fn line_contains_comment(line: &str) -> bool {
 }
 
 fn line_has_unbreakable_literal(line: &str) -> bool {
-    line.contains('"') || line.contains("[[") || line.contains("[=") || line.contains("$<")
+    line.contains('"')
+        || line.contains("[[")
+        || line.contains("[=")
+        || line.contains("$<")
+        || line.trim_start().starts_with('(')
 }
 
 fn normalize_keyword_args(

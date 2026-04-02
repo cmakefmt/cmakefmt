@@ -57,6 +57,7 @@ pub struct Config {
 
     // ── Comment markup ──────────────────────────────────────────────────
     pub enable_markup: bool,
+    pub reflow_comments: bool,
     pub first_comment_is_literal: bool,
     pub literal_comment_pattern: String,
     pub bullet_char: String,
@@ -94,7 +95,7 @@ impl Default for Config {
             max_lines_hwrap: 2,
             max_pargs_hwrap: 6,
             max_subgroups_hwrap: 2,
-            dangle_parens: true,
+            dangle_parens: false,
             dangle_align: DangleAlign::Prefix,
             min_prefix_chars: 4,
             max_prefix_chars: 10,
@@ -103,6 +104,7 @@ impl Default for Config {
             command_case: CaseStyle::Lower,
             keyword_case: CaseStyle::Upper,
             enable_markup: true,
+            reflow_comments: false,
             first_comment_is_literal: true,
             literal_comment_pattern: String::new(),
             bullet_char: "*".to_string(),

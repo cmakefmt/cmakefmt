@@ -34,8 +34,12 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                 )?);
 
                 if let Some(trailing) = &command.trailing_comment {
-                    output.push(' ');
-                    output.push_str(&format_comment_text(trailing));
+                    let comment_lines =
+                        comment::format_comment_lines(trailing, config, 0, config.line_width);
+                    if let Some(first) = comment_lines.first() {
+                        output.push(' ');
+                        output.push_str(first);
+                    }
                 }
 
                 previous_was_content = true;
@@ -58,8 +62,20 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                     output.push('\n');
                 }
 
-                output.push_str(&config.indent_str().repeat(block_depth));
-                output.push_str(&format_comment_text(c));
+                let indent = config.indent_str().repeat(block_depth);
+                let comment_lines = comment::format_comment_lines(
+                    c,
+                    config,
+                    indent.chars().count(),
+                    config.line_width,
+                );
+                for (index, line) in comment_lines.iter().enumerate() {
+                    if index > 0 {
+                        output.push('\n');
+                    }
+                    output.push_str(&indent);
+                    output.push_str(line);
+                }
                 previous_was_content = true;
             }
         }
@@ -70,14 +86,6 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
     }
 
     Ok(output)
-}
-
-fn format_comment_text(comment: &crate::parser::ast::Comment) -> String {
-    use crate::parser::ast::Comment;
-    match comment {
-        Comment::Line(text) => text.clone(),
-        Comment::Bracket(raw) => raw.clone(),
-    }
 }
 
 fn block_dedent_before(command_name: &str) -> usize {

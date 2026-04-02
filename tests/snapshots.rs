@@ -12,6 +12,22 @@ fn standalone_line_comment() {
 }
 
 #[test]
+fn standalone_line_comment_reflows_when_enabled() {
+    let src = "# This is a very long comment that should be wrapped when comment reflow is enabled for the formatter.\n";
+    let config = Config {
+        line_width: 50,
+        reflow_comments: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @"
+    # This is a very long comment that should be
+    # wrapped when comment reflow is enabled for the
+    # formatter.
+    ");
+}
+
+#[test]
 fn standalone_empty_comment() {
     let src = "#\nmessage(hello)\n";
     let formatted = format_source(src, &Config::default()).unwrap();
@@ -60,8 +76,7 @@ fn inline_comment_between_arguments() {
       PRIVATE
         a.cc
         # keep this
-        b.cc
-    )
+        b.cc)
     ");
 }
 
@@ -73,8 +88,7 @@ fn inline_bracket_comment_between_arguments() {
     message(
       "First"
       #[[inline comment]]
-      "Second"
-    )
+      "Second")
     "#);
 }
 
@@ -118,8 +132,7 @@ fn wraps_keyword_sections() {
       cmakefmt
       PUBLIC
         fmt::fmt another::very_long_dependency_name
-      PRIVATE helper::runtime_support
-    )
+      PRIVATE helper::runtime_support)
     ");
 }
 
@@ -138,8 +151,7 @@ fn discriminated_commands_use_selected_form() {
       TARGETS cmakefmt helper RUNTIME
       DESTINATION bin LIBRARY
       DESTINATION lib ARCHIVE
-      DESTINATION lib/static
-    )
+      DESTINATION lib/static)
     ");
 }
 
@@ -156,6 +168,52 @@ fn control_blocks_are_indented() {
       else()
         message(STATUS "c")
       endif()
+    endif()
+    "#);
+}
+
+#[test]
+fn project_keyword_value_with_trailing_comment_stays_inline() {
+    let src =
+        "project(Catch2 VERSION 3.13.0 # CML version placeholder, don't delete\n  LANGUAGES CXX)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    project(
+      Catch2
+      VERSION 3.13.0 # CML version placeholder, don't delete
+      LANGUAGES CXX)
+    "#);
+}
+
+#[test]
+fn file_strings_uses_recognized_keywords() {
+    let src = "file(STRINGS \"include/CLI/Version.hpp\" VERSION_STRING REGEX ${VERSION_REGEX})\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"file(STRINGS "include/CLI/Version.hpp" VERSION_STRING REGEX ${VERSION_REGEX})"#);
+}
+
+#[test]
+fn cmake_dependent_option_hwraps_in_two_lines() {
+    let src = "cmake_dependent_option(CLI11_SANITIZERS \"Download the sanitizers CMake config\" OFF \"NOT CMAKE_VERSION VERSION_LESS 3.15\" OFF)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    cmake_dependent_option(CLI11_SANITIZERS "Download the sanitizers CMake config"
+                           OFF "NOT CMAKE_VERSION VERSION_LESS 3.15" OFF)
+    "#);
+}
+
+#[test]
+fn if_condition_breaks_before_boolean_operator() {
+    let src = "if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND EXISTS \"${CMAKE_CURRENT_SOURCE_DIR}/book\")\n  add_subdirectory(book)\nendif()\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME
+       AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/book")
+      add_subdirectory(book)
     endif()
     "#);
 }
@@ -295,8 +353,7 @@ fn tab_size_4() {
     insta::assert_snapshot!(formatted, @"
     target_link_libraries(
         mylib
-        PUBLIC foo bar baz qux quux
-    )
+        PUBLIC foo bar baz qux quux)
     ");
 }
 
@@ -397,7 +454,6 @@ fn bracket_arguments_force_multiline_layout() {
       [==[
     line one
     line two
-    ]==]
-    )
+    ]==])
     ");
 }

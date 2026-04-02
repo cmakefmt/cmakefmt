@@ -437,6 +437,46 @@ mod tests {
     }
 
     #[test]
+    fn registry_knows_file_strings_keywords() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("file").form_for(Some("STRINGS"));
+        assert_eq!(form.pargs, NArgs::Fixed(2));
+        assert!(form.kwargs.contains_key("REGEX"));
+        assert!(form.kwargs.contains_key("LIMIT_COUNT"));
+    }
+
+    #[test]
+    fn registry_knows_cmake_package_config_helpers_commands() {
+        let registry = CommandRegistry::load().unwrap();
+        let configure = registry.get("configure_package_config_file").form_for(None);
+        assert!(configure.kwargs.contains_key("INSTALL_DESTINATION"));
+        assert!(configure.kwargs.contains_key("PATH_VARS"));
+
+        let version = registry
+            .get("write_basic_package_version_file")
+            .form_for(None);
+        assert!(version.kwargs.contains_key("COMPATIBILITY"));
+        assert!(version.kwargs.contains_key("VERSION"));
+    }
+
+    #[test]
+    fn registry_knows_utility_module_commands() {
+        let registry = CommandRegistry::load().unwrap();
+        assert_eq!(
+            registry.get("cmake_dependent_option").form_for(None).pargs,
+            NArgs::Fixed(5)
+        );
+        assert_eq!(
+            registry.get("check_language").form_for(None).pargs,
+            NArgs::Fixed(1)
+        );
+        assert_eq!(
+            registry.get("check_include_file").form_for(None).pargs,
+            NArgs::AtLeast(2)
+        );
+    }
+
+    #[test]
     fn registry_knows_string_json_43_modes() {
         let registry = CommandRegistry::load().unwrap();
         let form = registry.get("string").form_for(Some("JSON"));

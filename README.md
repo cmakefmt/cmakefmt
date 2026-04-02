@@ -152,6 +152,7 @@ keyword_case = "upper"
 
 [markup]
 enable_markup = true
+reflow_comments = true
 first_comment_is_literal = true
 
 [per_command.message]
@@ -190,6 +191,7 @@ Currently supported config sections:
   - `keyword_case`
 - `[markup]`
   - `enable_markup`
+  - `reflow_comments`
   - `first_comment_is_literal`
   - `literal_comment_pattern`
   - `bullet_char`
@@ -248,5 +250,6 @@ pre-commit install --hook-type pre-push
 
 - The real-world validation corpus is still small.
 - Benchmarking and release packaging are not finished.
-- Comment markup options are parsed from config, but advanced comment reflow is
-  still less mature than the core formatting path.
+- Comment reflow is opt-in via `markup.reflow_comments`, and only line comments
+  are wrapped today. More advanced markup-aware comment formatting is still
+  less mature than the core formatting path.

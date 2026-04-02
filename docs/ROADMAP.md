@@ -226,13 +226,19 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
       parser locations, and formatter layout decisions for diagnostics
 - [ ] Add `cmakefmt --parallel [<JOBS>]` to parallelise file formatting when explicitly requested
       while keeping the default execution mode single-threaded
+- [ ] Respect `cmake-format: off` / `cmake-format: on` barriers and `# ~~~` fence regions,
+      and support `cmakefmt: off` / `cmakefmt: on` as native aliases
 - [ ] **Head-to-head benchmark: `cmakefmt` vs `cmake-format`**
   - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
   - Run both tools against every file in `tests/fixtures/real_world/`
   - Measure wall-clock time (hyperfine or criterion shell benchmark)
   - Report speedup factor for each file and overall geometric mean
   - Include results table in `README.md`
-- [ ] Write a `README.md` with installation, usage, config reference
+- [ ] Expand the project documentation into a full user guide, API reference,
+      and changelog suitable for publication to GitHub Pages
+- [ ] Add directory-level contributor readmes explaining the repo structure,
+      especially `src/`, `tests/fixtures/`, `tests/snapshots/`, and the purpose
+      of each test module
 - [x] Add pre-commit hook config example (`.pre-commit-config.yaml`)
 - [x] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS/Windows)
 - [ ] Version `1.0.0-alpha.1` release on crates.io

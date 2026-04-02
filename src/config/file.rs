@@ -48,6 +48,7 @@ struct StyleSection {
 #[serde(default)]
 struct MarkupSection {
     enable_markup: Option<bool>,
+    reflow_comments: Option<bool>,
     first_comment_is_literal: Option<bool>,
     literal_comment_pattern: Option<String>,
     bullet_char: Option<String>,
@@ -88,6 +89,8 @@ pub fn default_config_template() -> String {
             "keyword_case = \"{keyword_case}\"\n\n",
             "[markup]\n",
             "enable_markup = {enable_markup}\n",
+            "# Uncomment to reflow line comments to fit within the configured line width.\n",
+            "# reflow_comments = true\n",
             "first_comment_is_literal = {first_comment_is_literal}\n",
             "# Uncomment to preserve comments matching a custom regex literally.\n",
             "# literal_comment_pattern = \"^\\\\s*NOTE:\"\n",
@@ -212,6 +215,9 @@ impl Config {
         // Markup section
         if let Some(v) = fc.markup.enable_markup {
             self.enable_markup = v;
+        }
+        if let Some(v) = fc.markup.reflow_comments {
+            self.reflow_comments = v;
         }
         if let Some(v) = fc.markup.first_comment_is_literal {
             self.first_comment_is_literal = v;
