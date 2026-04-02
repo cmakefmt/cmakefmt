@@ -130,7 +130,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 - [x] Define `Config` struct with all options (see ARCHITECTURE.md)
 - [x] Implement config file loading + directory-walk resolution
-- [ ] Implement CLI flag overrides
+- [x] Implement CLI flag overrides
 - [x] `command_case` option (lower/upper/unchanged)
 - [x] `keyword_case` option (lower/upper/unchanged)
 - [x] `line_length` option
@@ -164,8 +164,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Implement `src/main.rs` with `clap` derive API
-- [ ] Commands/flags:
+- [x] Implement `src/main.rs` with `clap` derive API
+- [x] Commands/flags:
   - `cmfmt [FILE]...` — format and print to stdout
   - `cmfmt -i [FILE]...` — format in-place
   - `cmfmt --check [FILE]...` — exit 1 if any file would change
@@ -173,16 +173,16 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - `cmfmt --config <PATH>` — explicit config file
   - `cmfmt --line-width <N>` — override config
   - `cmfmt --version` — print version
-- [ ] Correct exit codes (0 = ok, 1 = check failed, 2 = error)
-- [ ] Helpful error messages (file path + line:col for parse errors)
-- [ ] Integration tests for CLI behaviour
+- [x] Correct exit codes (0 = ok, 1 = check failed, 2 = error)
+- [x] Helpful error messages (file path + line:col for parse errors)
+- [x] Integration tests for CLI behaviour
 
 ### Acceptance criteria
 
-- [ ] `cmfmt --check` in CI workflow on a correctly formatted file returns 0
-- [ ] `cmfmt --check` on an unformatted file returns 1 (not 2)
-- [ ] `-i` modifies file and leaves it idempotent
-- [ ] Formatting 100 files in one invocation works correctly
+- [x] `cmfmt --check` in CI workflow on a correctly formatted file returns 0
+- [x] `cmfmt --check` on an unformatted file returns 1 (not 2)
+- [x] `-i` modifies file and leaves it idempotent
+- [x] Formatting 100 files in one invocation works correctly
 
 ---
 
