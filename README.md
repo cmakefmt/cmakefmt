@@ -12,9 +12,13 @@ The project currently supports:
 - formatting CMake files via CLI or library API
 - preserving comments and blank lines
 - configuration via `.cmake-format.toml`
+- a built-in command registry audited through CMake 4.3.1
 
 The formatter is still under active development. Real-world corpus coverage and
 performance benchmarking are not complete yet.
+
+The command spec version and audit date are stored in
+`src/spec/builtins.toml` under `[metadata]`.
 
 ## Build
 

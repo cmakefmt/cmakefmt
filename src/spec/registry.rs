@@ -7,7 +7,8 @@ use crate::error::{Error, Result};
 
 use super::{
     CommandForm, CommandFormOverride, CommandSpec, CommandSpecOverride, KwargSpec,
-    KwargSpecOverride, LayoutOverrides, LayoutOverridesOverride, SpecFile, SpecOverrideFile,
+    KwargSpecOverride, LayoutOverrides, LayoutOverridesOverride, SpecFile, SpecMetadata,
+    SpecOverrideFile,
 };
 
 const BUILTINS_PATH: &str = "src/spec/builtins.toml";
@@ -15,6 +16,7 @@ const BUILTINS_TOML: &str = include_str!("builtins.toml");
 
 #[derive(Debug, Clone)]
 pub struct CommandRegistry {
+    metadata: SpecMetadata,
     commands: IndexMap<String, CommandSpec>,
     fallback: CommandSpec,
 }
@@ -37,6 +39,7 @@ impl CommandRegistry {
     pub fn from_spec_file(mut spec_file: SpecFile) -> Self {
         normalize_spec_file(&mut spec_file);
         Self {
+            metadata: spec_file.metadata,
             commands: spec_file.commands,
             fallback: CommandSpec::Single(CommandForm::default()),
         }
@@ -77,6 +80,10 @@ impl CommandRegistry {
     pub fn contains_builtin(&self, command_name: &str) -> bool {
         self.commands
             .contains_key(&command_name.to_ascii_lowercase())
+    }
+
+    pub fn audited_cmake_version(&self) -> &str {
+        &self.metadata.cmake_version
     }
 }
 
@@ -355,6 +362,77 @@ mod tests {
         assert!(registry.contains_builtin("target_sources"));
         assert!(registry.contains_builtin("while"));
         assert!(registry.contains_builtin("external_project_add"));
+    }
+
+    #[test]
+    fn registry_reports_audited_cmake_version() {
+        let registry = CommandRegistry::load().unwrap();
+        assert_eq!(registry.audited_cmake_version(), "4.3.1");
+    }
+
+    #[test]
+    fn registry_knows_project_43_keywords() {
+        let registry = CommandRegistry::load().unwrap();
+        let CommandSpec::Single(form) = registry.get("project") else {
+            panic!()
+        };
+        assert!(form.flags.contains("COMPAT_VERSION"));
+        assert!(form.flags.contains("SPDX_LICENSE"));
+    }
+
+    #[test]
+    fn registry_knows_export_package_info_form() {
+        let registry = CommandRegistry::load().unwrap();
+        let CommandSpec::Discriminated { .. } = registry.get("export") else {
+            panic!()
+        };
+        let form = registry.get("export").form_for(Some("PACKAGE_INFO"));
+        assert_eq!(form.pargs, NArgs::Fixed(1));
+        assert!(form.kwargs.contains_key("EXPORT"));
+        assert!(form.kwargs.contains_key("CXX_MODULES_DIRECTORY"));
+    }
+
+    #[test]
+    fn registry_knows_install_package_info_form() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("PACKAGE_INFO"));
+        assert_eq!(form.pargs, NArgs::Fixed(1));
+        assert!(form.kwargs.contains_key("DESTINATION"));
+        assert!(form.kwargs.contains_key("COMPAT_VERSION"));
+    }
+
+    #[test]
+    fn registry_knows_cmake_language_trace_form() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("cmake_language").form_for(Some("TRACE"));
+        assert!(form.flags.contains("ON"));
+        assert!(form.flags.contains("OFF"));
+        assert!(form.flags.contains("EXPAND"));
+    }
+
+    #[test]
+    fn registry_knows_cmake_pkg_config_import_keywords() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("cmake_pkg_config").form_for(Some("IMPORT"));
+        assert!(form.kwargs.contains_key("NAME"));
+        assert!(form.kwargs.contains_key("BIND_PC_REQUIRES"));
+    }
+
+    #[test]
+    fn registry_knows_file_archive_create_threads() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("file").form_for(Some("ARCHIVE_CREATE"));
+        assert!(form.kwargs.contains_key("THREADS"));
+        assert!(form.kwargs.contains_key("COMPRESSION_LEVEL"));
+    }
+
+    #[test]
+    fn registry_knows_string_json_43_modes() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("string").form_for(Some("JSON"));
+        assert!(form.flags.contains("GET_RAW"));
+        assert!(form.flags.contains("STRING_ENCODE"));
+        assert!(form.kwargs.contains_key("ERROR_VARIABLE"));
     }
 
     #[test]

@@ -1,3 +1,8 @@
+[metadata]
+cmake_version = "4.3.1"
+audited_at = "2026-04-02"
+notes = "Built-in command spec audited against CMake 4.3.1 documentation and release notes."
+
 [commands.cmake_minimum_required]
 pargs = 0
 flags = ["FATAL_ERROR"]
@@ -7,7 +12,14 @@ nargs = 1
 
 [commands.project]
 pargs = 1
-flags = ["VERSION", "DESCRIPTION", "HOMEPAGE_URL", "LANGUAGES"]
+flags = [
+  "VERSION",
+  "COMPAT_VERSION",
+  "SPDX_LICENSE",
+  "DESCRIPTION",
+  "HOMEPAGE_URL",
+  "LANGUAGES",
+]
 
 [commands.set]
 pargs = "2+"
@@ -366,13 +378,58 @@ nargs = "+"
 [commands.find_program.kwargs.PATHS]
 nargs = "*"
 
-[commands.file]
+[commands.file.forms.ARCHIVE_CREATE]
+pargs = 0
+flags = ["VERBOSE"]
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.OUTPUT]
+nargs = 1
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.PATHS]
+nargs = "+"
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.FORMAT]
+nargs = 1
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.COMPRESSION]
+nargs = 1
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.COMPRESSION_LEVEL]
+nargs = 1
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.MTIME]
+nargs = 1
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.THREADS]
+nargs = 1
+
+[commands.file.forms.ARCHIVE_CREATE.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.file.fallback]
 pargs = "*"
 
 [commands.list]
 pargs = "*"
 
-[commands.string]
+[commands.string.forms.JSON]
+pargs = 1
+flags = [
+  "GET",
+  "GET_RAW",
+  "TYPE",
+  "LENGTH",
+  "REMOVE",
+  "MEMBER",
+  "SET",
+  "EQUAL",
+  "STRING_ENCODE",
+]
+
+[commands.string.forms.JSON.kwargs.ERROR_VARIABLE]
+nargs = 1
+
+[commands.string.fallback]
 pargs = "*"
 
 [commands.math]
@@ -417,7 +474,137 @@ nargs = 1
 [commands.execute_process.kwargs.WORKING_DIRECTORY]
 nargs = 1
 
-[commands.export]
+[commands.export.forms.EXPORT]
+pargs = 1
+
+[commands.export.forms.EXPORT.kwargs.NAMESPACE]
+nargs = 1
+
+[commands.export.forms.EXPORT.kwargs.FILE]
+nargs = 1
+
+[commands.export.forms.TARGETS]
+pargs = "+"
+flags = ["APPEND", "EXPORT_LINK_INTERFACE_LIBRARIES"]
+
+[commands.export.forms.TARGETS.kwargs.NAMESPACE]
+nargs = 1
+
+[commands.export.forms.TARGETS.kwargs.FILE]
+nargs = 1
+
+[commands.export.forms.PACKAGE]
+pargs = 1
+
+[commands.export.forms.SETUP]
+pargs = 1
+flags = ["LOWER_CASE_FILE"]
+
+[commands.export.forms.SETUP.kwargs.VERSION]
+nargs = 1
+
+[commands.export.forms.SETUP.kwargs.COMPAT_VERSION]
+nargs = 1
+
+[commands.export.forms.SETUP.kwargs.VERSION_SCHEMA]
+nargs = 1
+
+[commands.export.forms.SETUP.kwargs.DEFAULT_TARGETS]
+nargs = "*"
+
+[commands.export.forms.SETUP.kwargs.DEFAULT_CONFIGURATIONS]
+nargs = "*"
+
+[commands.export.forms.SETUP.kwargs.LICENSE]
+nargs = 1
+
+[commands.export.forms.SETUP.kwargs.DEFAULT_LICENSE]
+nargs = 1
+
+[commands.export.forms.SETUP.kwargs.DESCRIPTION]
+nargs = 1
+
+[commands.export.forms.SETUP.kwargs.HOMEPAGE_URL]
+nargs = 1
+
+[commands.export.forms.SETUP.kwargs.CXX_MODULES_DIRECTORY]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO]
+pargs = 1
+flags = ["LOWER_CASE_FILE", "NO_PROJECT_METADATA"]
+
+[commands.export.forms.PACKAGE_INFO.kwargs.EXPORT]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.PROJECT]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.APPENDIX]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.VERSION]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.COMPAT_VERSION]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.VERSION_SCHEMA]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.DEFAULT_TARGETS]
+nargs = "*"
+
+[commands.export.forms.PACKAGE_INFO.kwargs.DEFAULT_CONFIGURATIONS]
+nargs = "*"
+
+[commands.export.forms.PACKAGE_INFO.kwargs.LICENSE]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.DEFAULT_LICENSE]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.DESCRIPTION]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.HOMEPAGE_URL]
+nargs = 1
+
+[commands.export.forms.PACKAGE_INFO.kwargs.CXX_MODULES_DIRECTORY]
+nargs = 1
+
+[commands.export.forms.SBOM]
+pargs = 1
+flags = ["NO_PROJECT_METADATA"]
+
+[commands.export.forms.SBOM.kwargs.EXPORT]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.PROJECT]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.APPENDIX]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.VERSION]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.LICENSE]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.DESCRIPTION]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.HOMEPAGE_URL]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.PACKAGE_URL]
+nargs = 1
+
+[commands.export.forms.SBOM.kwargs.FORMAT]
+nargs = 1
+
+[commands.export.fallback]
 pargs = "*"
 
 [commands.install]
@@ -484,6 +671,123 @@ pargs = 1
 [commands.install.forms.RUNTIME_DEPENDENCY_SET]
 pargs = 1
 
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS]
+pargs = "+"
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "LIBRARY", "RUNTIME", "FRAMEWORK", "BUNDLE"]
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.RUNTIME_DEPENDENCY_SET]
+nargs = 1
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO]
+pargs = 1
+flags = ["EXCLUDE_FROM_ALL", "LOWER_CASE_FILE", "NO_PROJECT_METADATA"]
+
+[commands.install.forms.PACKAGE_INFO.kwargs.EXPORT]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.PROJECT]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.APPENDIX]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.VERSION]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.COMPAT_VERSION]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.VERSION_SCHEMA]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.DEFAULT_TARGETS]
+nargs = "*"
+
+[commands.install.forms.PACKAGE_INFO.kwargs.DEFAULT_CONFIGURATIONS]
+nargs = "*"
+
+[commands.install.forms.PACKAGE_INFO.kwargs.LICENSE]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.DEFAULT_LICENSE]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.DESCRIPTION]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.HOMEPAGE_URL]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.CXX_MODULES_DIRECTORY]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.PACKAGE_INFO.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.PACKAGE_INFO.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.PACKAGE_INFO.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.SBOM]
+pargs = 1
+flags = ["NO_PROJECT_METADATA"]
+
+[commands.install.forms.SBOM.kwargs.PROJECT]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.APPENDIX]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.VERSION]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.LICENSE]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.DESCRIPTION]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.HOMEPAGE_URL]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.PACKAGE_URL]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.FORMAT]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.SBOM.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.SBOM.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.SBOM.kwargs.COMPONENT]
+nargs = 1
+
 [commands.if]
 pargs = "*"
 
@@ -529,7 +833,11 @@ pargs = "*"
 [commands.endblock]
 pargs = "?"
 
-[commands.cmake_language]
+[commands.cmake_language.forms.TRACE]
+pargs = 0
+flags = ["ON", "OFF", "EXPAND"]
+
+[commands.cmake_language.fallback]
 pargs = "*"
 
 [commands.external_project_add]
@@ -572,7 +880,25 @@ pargs = "*"
 pargs = "*"
 
 [commands.cmake_instrumentation]
-pargs = "*"
+pargs = 0
+
+[commands.cmake_instrumentation.kwargs.API_VERSION]
+nargs = 1
+
+[commands.cmake_instrumentation.kwargs.DATA_VERSION]
+nargs = 1
+
+[commands.cmake_instrumentation.kwargs.HOOKS]
+nargs = "*"
+
+[commands.cmake_instrumentation.kwargs.OPTIONS]
+nargs = "*"
+
+[commands.cmake_instrumentation.kwargs.CALLBACK]
+nargs = 1
+
+[commands.cmake_instrumentation.kwargs.CUSTOM_CONTENT]
+nargs = 3
 
 [commands.cmake_parse_arguments]
 pargs = "*"
@@ -580,7 +906,109 @@ pargs = "*"
 [commands.cmake_path]
 pargs = "*"
 
-[commands.cmake_pkg_config]
+[commands.cmake_pkg_config.forms.EXTRACT]
+pargs = "1+"
+flags = ["REQUIRED", "EXACT", "QUIET"]
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.SYSTEM_INCLUDE_DIRS]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.SYSTEM_LIBRARY_DIRS]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.ALLOW_SYSTEM_INCLUDES]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.ALLOW_SYSTEM_LIBS]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.STRICTNESS]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.ENV_MODE]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.PC_LIBDIR]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.PC_PATH]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.DISABLE_UNINSTALLED]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.PC_SYSROOT_DIR]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.EXTRACT.kwargs.TOP_BUILD_DIR]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.POPULATE]
+pargs = "1+"
+flags = ["REQUIRED", "EXACT", "QUIET"]
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.PREFIX]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.BIND_PC_REQUIRES]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.STRICTNESS]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.ENV_MODE]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.PC_LIBDIR]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.PC_PATH]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.DISABLE_UNINSTALLED]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.PC_SYSROOT_DIR]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.POPULATE.kwargs.TOP_BUILD_DIR]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.IMPORT]
+pargs = "1+"
+flags = ["REQUIRED", "EXACT", "QUIET"]
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.NAME]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.PREFIX]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.BIND_PC_REQUIRES]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.STRICTNESS]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.ENV_MODE]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.PC_LIBDIR]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.PC_PATH]
+nargs = "*"
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.DISABLE_UNINSTALLED]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.PC_SYSROOT_DIR]
+nargs = 1
+
+[commands.cmake_pkg_config.forms.IMPORT.kwargs.TOP_BUILD_DIR]
+nargs = 1
+
+[commands.cmake_pkg_config.fallback]
 pargs = "*"
 
 [commands.cmake_policy]

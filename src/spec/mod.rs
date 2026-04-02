@@ -143,8 +143,20 @@ impl CommandSpec {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
+pub struct SpecMetadata {
+    #[serde(default)]
+    pub cmake_version: String,
+    #[serde(default)]
+    pub audited_at: String,
+    #[serde(default)]
+    pub notes: String,
+}
+
 #[derive(Debug, Default, Deserialize)]
 pub struct SpecFile {
+    #[serde(default)]
+    pub metadata: SpecMetadata,
     #[serde(default)]
     pub commands: IndexMap<String, CommandSpec>,
 }

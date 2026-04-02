@@ -95,6 +95,16 @@ Spec or built-in command changes usually require coordinated updates across:
 - `src/spec/builtins.toml`
 - spec registry tests
 
+When you update the built-in spec to a newer upstream CMake release, also:
+
+- bump `[metadata].cmake_version` and `[metadata].audited_at` in `src/spec/builtins.toml`
+- update the audited version mention in `README.md`
+- add or adjust registry tests for the new commands, forms, or keywords
+- use the official CMake command docs and release notes as the source of truth
+
+Do not claim support for a newer audited CMake spec version unless the built-in
+registry and tests were updated together.
+
 ## If You Add Benchmarks Or Tooling
 
 Keep these aligned:
