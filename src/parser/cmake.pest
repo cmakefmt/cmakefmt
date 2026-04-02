@@ -27,11 +27,9 @@ identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
 arguments = { argument_part* }
 
-argument_part = { argument | paren_group | bracket_comment | line_ending | space }
+argument_part = { argument | bracket_comment | line_ending | space }
 
-argument = { bracket_argument | quoted_argument | unquoted_argument }
-
-paren_group = { "(" ~ arguments ~ ")" }
+argument = { bracket_argument | mixed_unquoted_argument | quoted_argument | unquoted_argument }
 
 // ── Line ending (may carry a comment) ────────────────────────────────────────
 
@@ -72,6 +70,8 @@ bracket_close_any = _{ "]" ~ "="* ~ "]" }
 // A single leading newline after the opening bracket is discarded (per spec).
 bracket_leading_newline = _{ "\n" | "\r\n" }
 
+mixed_unquoted_argument = { legacy_quoted ~ (unquoted_element | legacy_quoted | legacy_make_var | nested_parens)+ }
+
 // ── Quoted argument ───────────────────────────────────────────────────────────
 
 quoted_argument = { "\"" ~ quoted_element* ~ "\"" }
@@ -92,7 +92,7 @@ quoted_continuation = @{ "\\" ~ newline }
 
 // ── Unquoted argument ─────────────────────────────────────────────────────────
 
-unquoted_argument = { (unquoted_element | legacy_quoted | legacy_make_var)+ }
+unquoted_argument = { (unquoted_element | legacy_quoted | legacy_make_var | nested_parens)+ }
 
 unquoted_element = {
     escape_sequence
@@ -103,6 +103,12 @@ unquoted_element = {
 
 legacy_quoted = @{ "\"" ~ (!("\"" | newline) ~ ANY)* ~ "\"" }
 legacy_make_var = @{ "$(" ~ (!(")" | newline) ~ ANY)* ~ ")" }
+nested_parens = @{ "(" ~ nested_parens_inner* ~ ")" }
+nested_parens_inner = { nested_parens | legacy_quoted | legacy_make_var | escape_sequence | variable_ref | genex | nested_parens_text | space }
+nested_parens_text = @{
+    (!(" " | "\t" | "\r" | "\n" | "(" | ")" | "#" | "\"" | "\\" | "$") ~ ANY)+
+  | "$" ~ !("{" | "ENV{" | "CACHE{" | "<" | "(")
+}
 
 // Characters allowed verbatim in an unquoted argument.
 // Forbidden: whitespace  ( ) # " \

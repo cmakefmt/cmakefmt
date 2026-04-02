@@ -19,6 +19,7 @@ pub fn format_command(
     command: &CommandInvocation,
     config: &Config,
     registry: &CommandRegistry,
+    block_depth: usize,
 ) -> Result<String> {
     let cmd_config = config.for_command(&command.name);
     let form = registry
@@ -31,10 +32,13 @@ pub fn format_command(
         || cmd_config.dangle_align() == DangleAlign::Open;
 
     let output = if force_raw {
-        format_command_with_raw_multiline_args(command, form, &cmd_config)?
+        format_command_with_raw_multiline_args(command, form, &cmd_config, block_depth)?
     } else {
         let doc = command_doc(command, form, &cmd_config)?;
-        doc.pretty(cmd_config.line_width()).to_string()
+        indent_pretty_output(
+            &doc.pretty(cmd_config.line_width()).to_string(),
+            &cmd_config.indent_str().repeat(block_depth),
+        )
     };
 
     if config.use_tabchars {
@@ -176,13 +180,16 @@ fn format_command_with_raw_multiline_args(
     command: &CommandInvocation,
     form: &CommandForm,
     cmd_config: &CommandConfig<'_>,
+    block_depth: usize,
 ) -> Result<String> {
     let sections = split_sections(command, form)?;
-    let indent = cmd_config.indent_str();
-    let nested_indent = indent.repeat(2);
+    let base_indent = cmd_config.indent_str().repeat(block_depth);
+    let indent = format!("{base_indent}{}", cmd_config.indent_str());
+    let nested_indent = format!("{indent}{}", cmd_config.indent_str());
     let mut output = String::new();
 
     let name = format_name(command, cmd_config);
+    output.push_str(&base_indent);
     output.push_str(&name);
     output.push_str("(\n");
 
@@ -230,9 +237,11 @@ fn format_command_with_raw_multiline_args(
     if cmd_config.dangle_parens() {
         match cmd_config.dangle_align() {
             DangleAlign::Prefix | DangleAlign::Close => {
+                output.push_str(&base_indent);
                 output.push(')');
             }
             DangleAlign::Open => {
+                output.push_str(&base_indent);
                 let paren_col = name.len();
                 for _ in 0..paren_col {
                     output.push(' ');
@@ -315,6 +324,26 @@ fn literal_doc(source: &str) -> Doc {
     parts.fold(first, |doc, part| {
         doc.append(RcDoc::hardline()).append(text(part.to_owned()))
     })
+}
+
+fn indent_pretty_output(output: &str, indent: &str) -> String {
+    if indent.is_empty() {
+        return output.to_string();
+    }
+
+    let mut indented = String::with_capacity(output.len() + indent.len());
+    for (index, line) in output.split('\n').enumerate() {
+        if index > 0 {
+            indented.push('\n');
+        }
+
+        if !line.is_empty() {
+            indented.push_str(indent);
+        }
+        indented.push_str(line);
+    }
+
+    indented
 }
 
 fn text(source: impl Into<String>) -> Doc {

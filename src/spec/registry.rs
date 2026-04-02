@@ -402,6 +402,16 @@ mod tests {
     }
 
     #[test]
+    fn registry_knows_install_export_namespace_keyword() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("EXPORT"));
+        assert!(form.kwargs.contains_key("DESTINATION"));
+        assert!(form.kwargs.contains_key("NAMESPACE"));
+        assert!(form.kwargs.contains_key("FILE"));
+        assert!(form.flags.contains("EXCLUDE_FROM_ALL"));
+    }
+
+    #[test]
     fn registry_knows_cmake_language_trace_form() {
         let registry = CommandRegistry::load().unwrap();
         let form = registry.get("cmake_language").form_for(Some("TRACE"));

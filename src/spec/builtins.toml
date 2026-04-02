@@ -658,8 +658,27 @@ nargs = "*"
 
 [commands.install.forms.EXPORT]
 pargs = "+"
+flags = ["EXPORT_LINK_INTERFACE_LIBRARIES", "EXCLUDE_FROM_ALL", "EXPORT_PACKAGE_DEPENDENCIES"]
 
 [commands.install.forms.EXPORT.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.EXPORT.kwargs.NAMESPACE]
+nargs = 1
+
+[commands.install.forms.EXPORT.kwargs.FILE]
+nargs = 1
+
+[commands.install.forms.EXPORT.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.EXPORT.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.EXPORT.kwargs.CXX_MODULES_DIRECTORY]
+nargs = 1
+
+[commands.install.forms.EXPORT.kwargs.COMPONENT]
 nargs = 1
 
 [commands.install.forms.SCRIPT]

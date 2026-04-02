@@ -143,6 +143,23 @@ fn discriminated_commands_use_selected_form() {
     ");
 }
 
+#[test]
+fn control_blocks_are_indented() {
+    let src = "if(FOO)\nmessage(STATUS \"a\")\nif(BAR)\nmessage(STATUS \"b\")\nelse()\nmessage(STATUS \"c\")\nendif()\nendif()\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    if(FOO)
+      message(STATUS "a")
+      if(BAR)
+        message(STATUS "b")
+      else()
+        message(STATUS "c")
+      endif()
+    endif()
+    "#);
+}
+
 // --- Config tests ---
 
 #[test]

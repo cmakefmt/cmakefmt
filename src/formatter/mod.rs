@@ -15,15 +15,23 @@ pub fn format_source(source: &str, config: &Config) -> Result<String> {
 pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> Result<String> {
     let mut output = String::new();
     let mut previous_was_content = false;
+    let mut block_depth = 0usize;
 
     for statement in &file.statements {
         match statement {
             Statement::Command(command) => {
+                block_depth = block_depth.saturating_sub(block_dedent_before(&command.name));
+
                 if previous_was_content {
                     output.push('\n');
                 }
 
-                output.push_str(&node::format_command(command, config, registry)?);
+                output.push_str(&node::format_command(
+                    command,
+                    config,
+                    registry,
+                    block_depth,
+                )?);
 
                 if let Some(trailing) = &command.trailing_comment {
                     output.push(' ');
@@ -31,6 +39,7 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                 }
 
                 previous_was_content = true;
+                block_depth += block_indent_after(&command.name);
             }
             Statement::BlankLines(count) => {
                 let newline_count = if previous_was_content {
@@ -49,6 +58,7 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                     output.push('\n');
                 }
 
+                output.push_str(&config.indent_str().repeat(block_depth));
                 output.push_str(&format_comment_text(c));
                 previous_was_content = true;
             }
@@ -67,5 +77,20 @@ fn format_comment_text(comment: &crate::parser::ast::Comment) -> String {
     match comment {
         Comment::Line(text) => text.clone(),
         Comment::Bracket(raw) => raw.clone(),
+    }
+}
+
+fn block_dedent_before(command_name: &str) -> usize {
+    match command_name.to_ascii_lowercase().as_str() {
+        "elseif" | "else" | "endif" | "endforeach" | "endwhile" | "endfunction" | "endmacro"
+        | "endblock" => 1,
+        _ => 0,
+    }
+}
+
+fn block_indent_after(command_name: &str) -> usize {
+    match command_name.to_ascii_lowercase().as_str() {
+        "if" | "foreach" | "while" | "function" | "macro" | "block" | "elseif" | "else" => 1,
+        _ => 0,
     }
 }

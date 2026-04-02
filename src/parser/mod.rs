@@ -193,14 +193,6 @@ fn collect_argument_part(
             out.push(build_argument(argument)?);
             Ok(())
         }
-        Rule::paren_group => {
-            out.push(Argument::Unquoted("(".to_owned()));
-            for inner in pair.into_inner() {
-                collect_argument_part(inner, out)?;
-            }
-            out.push(Argument::Unquoted(")".to_owned()));
-            Ok(())
-        }
         Rule::bracket_comment => {
             out.push(Argument::InlineComment(Comment::Bracket(
                 pair.as_str().to_owned(),
@@ -235,7 +227,9 @@ fn build_argument(pair: pest::iterators::Pair<'_, Rule>) -> Result<Argument> {
             Ok(Argument::Bracket(validate_bracket_argument(raw)?))
         }
         Rule::quoted_argument => Ok(Argument::Quoted(pair.as_str().to_owned())),
-        Rule::unquoted_argument => Ok(Argument::Unquoted(pair.as_str().to_owned())),
+        Rule::mixed_unquoted_argument | Rule::unquoted_argument => {
+            Ok(Argument::Unquoted(pair.as_str().to_owned()))
+        }
         other => Err(Error::Formatter(format!(
             "unexpected argument rule: {other:?}"
         ))),
@@ -504,7 +498,7 @@ mod tests {
             panic!()
         };
         let args: Vec<&str> = cmd.arguments.iter().map(Argument::as_str).collect();
-        assert_eq!(args, vec!["FALSE", "AND", "(", "FALSE", "OR", "TRUE", ")"]);
+        assert_eq!(args, vec!["FALSE", "AND", "(FALSE OR TRUE)"]);
     }
 
     #[test]
@@ -529,5 +523,29 @@ mod tests {
             panic!()
         };
         assert_eq!(cmd.arguments[1].as_str(), "-Da=$(v)");
+    }
+
+    #[test]
+    fn legacy_unquoted_argument_with_embedded_parens_parses() {
+        let f = parse_ok(r##"set(VERSION_REGEX "#define CLI11_VERSION[ 	]+"(.+)"")"##);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(
+            cmd.arguments[1].as_str(),
+            "\"#define CLI11_VERSION[ \t]+\"(.+)\"\""
+        );
+    }
+
+    #[test]
+    fn legacy_unquoted_argument_starting_with_quoted_segment_parses() {
+        let f = parse_ok(r##"list(APPEND force-libcxx "CMAKE_CXX_COMPILER_ID STREQUAL "Clang"")"##);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(
+            cmd.arguments[2].as_str(),
+            "\"CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\"\""
+        );
     }
 }

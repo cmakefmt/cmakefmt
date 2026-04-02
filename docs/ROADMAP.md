@@ -196,18 +196,18 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Collect 10+ real-world `CMakeLists.txt` files from popular projects
+- [x] Collect 10+ real-world `CMakeLists.txt` files from popular projects
   (CMake, LLVM, Qt, OpenCV, Boost, abseil, googletest, etc.)
-- [ ] Add them to `tests/fixtures/real_world/`
+- [x] Add them to `tests/fixtures/real_world/`
 - [ ] Run formatter on all of them; manually review output
 - [ ] Fix any formatting regressions found
-- [ ] Snapshot all real-world outputs
+- [x] Snapshot all real-world outputs
 
 ### Acceptance criteria
 
-- [ ] All real-world files pass idempotency
+- [x] All real-world files pass idempotency
 - [ ] Formatted output is reviewed and judged reasonable by a human
-- [ ] No panics or errors on any real-world input
+- [x] No panics or errors on any real-world input
 
 ---
 
@@ -218,10 +218,14 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 ### Tasks
 
 - [ ] Add `criterion` benchmarks for parsing and formatting
+- [ ] Extend the benchmark suite to cover each major `cmfmt` capability
+  (parser, formatter, CLI file discovery, config loading, check mode, in-place mode)
 - [ ] Profile with `cargo flamegraph` if benchmarks are unexpectedly slow
 - [ ] Target: format a 1000-line `CMakeLists.txt` in < 10ms
 - [ ] Add `cmfmt --debug` mode to print config resolution, file discovery matches,
       parser locations, and formatter layout decisions for diagnostics
+- [ ] Add `cmfmt --parallel [<JOBS>]` to parallelise file formatting when explicitly requested
+      while keeping the default execution mode single-threaded
 - [ ] **Head-to-head benchmark: `cmfmt` vs `cmake-format`**
   - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
   - Run both tools against every file in `tests/fixtures/real_world/`

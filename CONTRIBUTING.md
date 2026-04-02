@@ -79,6 +79,17 @@ If formatting semantics changed in a meaningful way, review whether
 or `docs/ARCHITECTURE.md`
 should also be updated.
 
+If the change affects real-world behavior, also update:
+
+- `tests/fixtures/real_world/`
+  - add, remove, or refresh corpus files intentionally
+- `tests/fixtures/real_world/SOURCES.md`
+  - keep the fixture manifest and provenance links in sync
+- `tests/real_world.rs`
+  - update coverage rules if the corpus shape changes
+- `tests/snapshots/`
+  - refresh real-world snapshots when formatted output changes
+
 ## If You Change Parsing Or Specs
 
 Parser changes usually require coordinated updates across:
