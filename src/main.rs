@@ -36,7 +36,7 @@ struct Cli {
     check: bool,
 
     /// List the files that would be reformatted without changing them.
-    #[arg(long = "list-files", alias = "dry-run", conflicts_with = "dump_config")]
+    #[arg(long = "list-files", conflicts_with = "dump_config")]
     list_files: bool,
 
     /// Regex filter applied to discovered CMake file paths.
@@ -474,7 +474,6 @@ mod tests {
             "config",
             "debug",
             "dump-config",
-            "dry-run",
             "file-regex",
             "help",
             "in-place",

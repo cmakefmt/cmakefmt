@@ -21,7 +21,7 @@ cmakefmt [OPTIONS] [FILES]...
 | --- | --- |
 | `-i`, `--in-place` | Rewrite files on disk. |
 | `--check` | Exit with code 1 when any file would change. |
-| `--list-files`, `--dry-run` | List files that would change without modifying them. |
+| `--list-files` | List files that would change without modifying them. |
 | `-f`, `--file-regex <REGEX>` | Filter recursively discovered CMake file paths. |
 | `--debug` | Emit diagnostics about discovery, config resolution, barriers, and formatting decisions. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing. If no value is given, use the available CPU count. Default behavior remains single-threaded. |

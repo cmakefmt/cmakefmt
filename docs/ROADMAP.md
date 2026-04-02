@@ -170,7 +170,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - `cmakefmt` — recursively find CMake files under the current working directory
   - `cmakefmt -i [FILE]...` — format in-place
   - `cmakefmt --check [FILE]...` — exit 1 if any file would change
-  - `cmakefmt --list-files [FILE|DIR]...` / `cmakefmt --dry-run ...` — list files that would be reformatted
+  - `cmakefmt --list-files [FILE|DIR]...` — list files that would be reformatted
   - `cmakefmt -f, --file-regex <REGEX>` — filter recursively discovered CMake files
   - `cmakefmt -` — read from stdin, write to stdout
   - `cmakefmt --dump-config` — print a default config template

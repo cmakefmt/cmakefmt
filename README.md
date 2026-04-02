@@ -90,7 +90,7 @@ List the files that would be reformatted without modifying them:
 
 ```bash
 cmakefmt --list-files
-cmakefmt --dry-run path/to/project
+cmakefmt --list-files path/to/project
 ```
 
 Restrict recursive discovery with a regex:
@@ -137,7 +137,6 @@ cmakefmt [OPTIONS] [FILES]...
   -i, --in-place
       --check
       --list-files
-      --dry-run
   -f, --file-regex <REGEX>
       --dump-config
       --debug
