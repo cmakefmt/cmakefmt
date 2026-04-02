@@ -1,8 +1,9 @@
 use std::hint::black_box;
+use std::time::Duration;
 
 use cmakefmt::formatter;
 use cmakefmt::spec::registry::CommandRegistry;
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode};
 use rayon::prelude::*;
 use regex::Regex;
 use tempfile::tempdir;
@@ -68,16 +69,25 @@ fn large_synthetic_source() -> String {
 fn parse_benchmarks(c: &mut Criterion) {
     let real_world = include_str!("../tests/fixtures/real_world/qtbase_network/CMakeLists.txt");
     let large = large_synthetic_source();
+    let mut group = c.benchmark_group("parse");
+    group.warm_up_time(Duration::from_secs(2));
+    group.measurement_time(Duration::from_secs(8));
+    group.sample_size(80);
+    group.sampling_mode(SamplingMode::Flat);
 
-    c.bench_function("parse/small", |b| {
+    group.bench_function(BenchmarkId::from_parameter("small"), |b| {
         b.iter(|| cmakefmt::parser::parse(black_box(small_source())).expect("parse should succeed"))
     });
-    c.bench_function("parse/real_world_qtbase_network", |b| {
-        b.iter(|| cmakefmt::parser::parse(black_box(real_world)).expect("parse should succeed"))
-    });
-    c.bench_function("parse/large_synthetic", |b| {
+    group.bench_function(
+        BenchmarkId::from_parameter("real_world_qtbase_network"),
+        |b| {
+            b.iter(|| cmakefmt::parser::parse(black_box(real_world)).expect("parse should succeed"))
+        },
+    );
+    group.bench_function(BenchmarkId::from_parameter("large_synthetic"), |b| {
         b.iter(|| cmakefmt::parser::parse(black_box(&large)).expect("parse should succeed"))
     });
+    group.finish();
 }
 
 fn formatter_only_benchmarks(c: &mut Criterion) {
@@ -89,18 +99,27 @@ fn formatter_only_benchmarks(c: &mut Criterion) {
     ))
     .expect("parse should succeed");
     let large = cmakefmt::parser::parse(&large_synthetic_source()).expect("parse should succeed");
+    let mut group = c.benchmark_group("format_ast");
+    group.warm_up_time(Duration::from_secs(2));
+    group.measurement_time(Duration::from_secs(8));
+    group.sample_size(70);
+    group.sampling_mode(SamplingMode::Flat);
 
-    c.bench_function("format_ast/small", |b| {
+    group.bench_function(BenchmarkId::from_parameter("small"), |b| {
         b.iter(|| formatter::format_file(black_box(&small), &config, registry).expect("format"))
     });
-    c.bench_function("format_ast/real_world_qtbase_network", |b| {
-        b.iter(|| {
-            formatter::format_file(black_box(&real_world), &config, registry).expect("format")
-        })
-    });
-    c.bench_function("format_ast/large_synthetic", |b| {
+    group.bench_function(
+        BenchmarkId::from_parameter("real_world_qtbase_network"),
+        |b| {
+            b.iter(|| {
+                formatter::format_file(black_box(&real_world), &config, registry).expect("format")
+            })
+        },
+    );
+    group.bench_function(BenchmarkId::from_parameter("large_synthetic"), |b| {
         b.iter(|| formatter::format_file(black_box(&large), &config, registry).expect("format"))
     });
+    group.finish();
 }
 
 fn end_to_end_benchmarks(c: &mut Criterion) {
@@ -108,30 +127,43 @@ fn end_to_end_benchmarks(c: &mut Criterion) {
     let real_world = include_str!("../tests/fixtures/real_world/qtbase_network/CMakeLists.txt");
     let comment_heavy = comment_heavy_source();
     let large = large_synthetic_source();
+    let mut group = c.benchmark_group("format_source");
+    group.warm_up_time(Duration::from_secs(2));
+    group.measurement_time(Duration::from_secs(8));
+    group.sample_size(60);
+    group.sampling_mode(SamplingMode::Flat);
 
-    c.bench_function("format_source/small", |b| {
+    group.bench_function(BenchmarkId::from_parameter("small"), |b| {
         b.iter(|| cmakefmt::format_source(black_box(small_source()), &config).expect("format"))
     });
-    c.bench_function("format_source/real_world_qtbase_network", |b| {
-        b.iter(|| cmakefmt::format_source(black_box(real_world), &config).expect("format"))
-    });
-    c.bench_function("format_source/comment_heavy", |b| {
+    group.bench_function(
+        BenchmarkId::from_parameter("real_world_qtbase_network"),
+        |b| b.iter(|| cmakefmt::format_source(black_box(real_world), &config).expect("format")),
+    );
+    group.bench_function(BenchmarkId::from_parameter("comment_heavy"), |b| {
         b.iter(|| cmakefmt::format_source(black_box(&comment_heavy), &config).expect("format"))
     });
-    c.bench_function("format_source/large_synthetic", |b| {
+    group.bench_function(BenchmarkId::from_parameter("large_synthetic"), |b| {
         b.iter(|| cmakefmt::format_source(black_box(&large), &config).expect("format"))
     });
+    group.finish();
 }
 
 fn debug_and_barrier_benchmarks(c: &mut Criterion) {
     let config = cmakefmt::Config::default();
     let barrier_heavy = barrier_heavy_source();
+    let mut group = c.benchmark_group("format_source_with_debug");
+    group.warm_up_time(Duration::from_secs(2));
+    group.measurement_time(Duration::from_secs(8));
+    group.sample_size(50);
+    group.sampling_mode(SamplingMode::Flat);
 
-    c.bench_function("format_source_with_debug/barrier_heavy", |b| {
+    group.bench_function(BenchmarkId::from_parameter("barrier_heavy"), |b| {
         b.iter(|| {
             cmakefmt::format_source_with_debug(black_box(&barrier_heavy), &config).expect("format")
         })
     });
+    group.finish();
 }
 
 fn discovery_benchmark(c: &mut Criterion) {
@@ -145,9 +177,15 @@ fn discovery_benchmark(c: &mut Criterion) {
     }
     let filter = Regex::new("module_(1|3|5|7)").expect("regex");
 
-    c.bench_function("file_discovery/discover_cmake_files", |b| {
+    let mut group = c.benchmark_group("file_discovery");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(6));
+    group.sample_size(60);
+
+    group.bench_function(BenchmarkId::from_parameter("discover_cmake_files"), |b| {
         b.iter(|| cmakefmt::files::discover_cmake_files(black_box(dir.path()), Some(&filter)))
     });
+    group.finish();
 }
 
 fn config_benchmark(c: &mut Criterion) {
@@ -162,9 +200,15 @@ fn config_benchmark(c: &mut Criterion) {
     std::fs::create_dir_all(nested.parent().expect("parent")).expect("mkdir");
     std::fs::write(&nested, "set(FOO bar)\n").expect("fixture");
 
-    c.bench_function("config/config_for_file", |b| {
+    let mut group = c.benchmark_group("config");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(6));
+    group.sample_size(80);
+
+    group.bench_function(BenchmarkId::from_parameter("config_for_file"), |b| {
         b.iter(|| cmakefmt::Config::for_file(black_box(&nested)).expect("config should load"))
     });
+    group.finish();
 }
 
 fn check_and_write_benchmarks(c: &mut Criterion) {
@@ -173,7 +217,12 @@ fn check_and_write_benchmarks(c: &mut Criterion) {
     let dir = tempdir().expect("tempdir");
     let output_path = dir.path().join("CMakeLists.txt");
 
-    c.bench_function("check_mode/smoke", |b| {
+    let mut group = c.benchmark_group("io_paths");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(6));
+    group.sample_size(60);
+
+    group.bench_function(BenchmarkId::from_parameter("check_mode_smoke"), |b| {
         b.iter(|| {
             let formatted =
                 cmakefmt::format_source(black_box(source), &config).expect("format should succeed");
@@ -181,13 +230,14 @@ fn check_and_write_benchmarks(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("in_place_write/smoke", |b| {
+    group.bench_function(BenchmarkId::from_parameter("in_place_write_smoke"), |b| {
         b.iter(|| {
             let formatted =
                 cmakefmt::format_source(black_box(source), &config).expect("format should succeed");
             std::fs::write(&output_path, formatted).expect("write should succeed");
         })
     });
+    group.finish();
 }
 
 fn batch_scaling_benchmarks(c: &mut Criterion) {
@@ -204,6 +254,10 @@ fn batch_scaling_benchmarks(c: &mut Criterion) {
         .collect();
 
     let mut group = c.benchmark_group("batch_format");
+    group.warm_up_time(Duration::from_secs(2));
+    group.measurement_time(Duration::from_secs(8));
+    group.sample_size(40);
+    group.sampling_mode(SamplingMode::Flat);
     for jobs in [1usize, 4usize] {
         group.bench_with_input(BenchmarkId::from_parameter(jobs), &jobs, |b, &jobs| {
             let pool = rayon::ThreadPoolBuilder::new()
