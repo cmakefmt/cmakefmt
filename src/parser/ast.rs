@@ -69,7 +69,7 @@ pub struct BracketArgument {
 /// A CMake comment.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Comment {
-    /// `# text to end of line` (stored without the leading `#`).
+    /// `# text to end of line` (stored with the leading `#`).
     Line(String),
     /// `#[[...]]` or `#[=[...]=]` (stored as the full raw text including `#`).
     Bracket(String),

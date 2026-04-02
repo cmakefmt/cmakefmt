@@ -1,7 +1,8 @@
 use pretty::RcDoc;
 
 use crate::config::Config;
-use crate::error::{Error, Result};
+use crate::error::Result;
+use crate::formatter::comment;
 use crate::parser::ast::{Argument, CommandInvocation};
 use crate::spec::registry::CommandRegistry;
 use crate::spec::CommandForm;
@@ -23,7 +24,8 @@ pub fn format_command(
         .get(&command.name)
         .form_for(first_argument(command).map(Argument::as_str));
 
-    if command.arguments.iter().any(argument_has_newline) {
+    let has_inline_comments = command.arguments.iter().any(Argument::is_comment);
+    if has_inline_comments || command.arguments.iter().any(argument_has_newline) {
         return format_command_with_raw_multiline_args(command, form, config);
     }
 
@@ -72,9 +74,19 @@ fn split_sections<'a>(
 
     for argument in &command.arguments {
         if argument.is_comment() {
-            return Err(Error::Formatter(
-                "phase 3 formatter does not support comment arguments".to_owned(),
-            ));
+            // Inline comments go into the current section as-is.
+            if sections.is_empty() {
+                sections.push(Section {
+                    header: None,
+                    arguments: Vec::new(),
+                });
+            }
+            sections
+                .last_mut()
+                .expect("section list contains at least one section")
+                .arguments
+                .push(argument);
+            continue;
         }
 
         let token = argument.as_str();
@@ -149,10 +161,11 @@ fn format_command_with_raw_multiline_args(
                     continue;
                 }
 
-                if section
-                    .arguments
-                    .iter()
-                    .all(|argument| !argument_has_newline(argument))
+                if !section_has_comment(&section)
+                    && section
+                        .arguments
+                        .iter()
+                        .all(|argument| !argument_has_newline(argument))
                 {
                     let inline = format_inline_section(Some(header), &section.arguments);
                     if indent.chars().count() + inline.chars().count() <= config.line_width {
@@ -186,14 +199,16 @@ fn argument_doc(argument: &Argument) -> Result<Doc> {
     match argument {
         Argument::Bracket(bracket) => Ok(literal_doc(&bracket.raw)),
         Argument::Quoted(quoted) | Argument::Unquoted(quoted) => Ok(literal_doc(quoted)),
-        Argument::InlineComment(_) => Err(Error::Formatter(
-            "phase 3 formatter does not support inline comments".to_owned(),
-        )),
+        Argument::InlineComment(c) => Ok(comment::inline_comment_doc(c)),
     }
 }
 
 fn argument_has_newline(argument: &Argument) -> bool {
     argument.as_str().contains('\n') || argument.as_str().contains('\r')
+}
+
+fn section_has_comment(section: &Section<'_>) -> bool {
+    section.arguments.iter().any(|a| a.is_comment())
 }
 
 fn format_inline_section(header: Option<&str>, arguments: &[&Argument]) -> String {
@@ -204,6 +219,10 @@ fn format_inline_section(header: Option<&str>, arguments: &[&Argument]) -> Strin
     }
 
     for argument in arguments {
+        if argument.is_comment() {
+            // Comments can't be inlined; caller should have checked.
+            continue;
+        }
         if !output.is_empty() {
             output.push(' ');
         }
@@ -214,6 +233,13 @@ fn format_inline_section(header: Option<&str>, arguments: &[&Argument]) -> Strin
 }
 
 fn write_raw_argument(output: &mut String, indent: &str, argument: &Argument) {
+    if let Argument::InlineComment(c) = argument {
+        output.push_str(indent);
+        output.push_str(&super::format_comment_text(c));
+        output.push('\n');
+        return;
+    }
+
     let normalized = argument.as_str().replace("\r\n", "\n");
     let mut lines = normalized.split('\n');
 

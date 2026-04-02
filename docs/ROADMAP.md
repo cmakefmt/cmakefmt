@@ -103,22 +103,22 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Ensure pest grammar captures comments as positioned tokens
-- [ ] Implement `src/formatter/comment.rs` — comment → Doc IR conversion
-- [ ] Handle all comment positions:
+- [x] Ensure pest grammar captures comments as positioned tokens
+- [x] Implement `src/formatter/comment.rs` — comment → Doc IR conversion
+- [x] Handle all comment positions:
   - Comment on its own line (before a command)
   - Trailing comment on same line as a command or argument
   - Comment inside an argument list (between arguments)
   - Comment after closing paren
   - Bracket comments spanning multiple lines
-- [ ] Add comment fixtures to `tests/fixtures/comments/`
-- [ ] Snapshot tests for all comment positions
+- [x] Add comment fixtures to `tests/fixtures/comments/`
+- [x] Snapshot tests for all comment positions
 
 ### Acceptance criteria
 
-- [ ] No comment is ever lost or moved to a semantically different position
-- [ ] All comment snapshot tests pass
-- [ ] Idempotency holds for all comment fixtures
+- [x] No comment is ever lost or moved to a semantically different position
+- [x] All comment snapshot tests pass
+- [x] Idempotency holds for all comment fixtures
 
 ---
 

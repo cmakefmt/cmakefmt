@@ -14,12 +14,6 @@ fn formatter_fixture_paths(root: &Path) -> Vec<PathBuf> {
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().is_file())
         .filter(|entry| {
-            !entry
-                .path()
-                .components()
-                .any(|component| component.as_os_str() == "comments")
-        })
-        .filter(|entry| {
             entry
                 .path()
                 .extension()

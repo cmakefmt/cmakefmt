@@ -14,19 +14,19 @@ name = "cmfmt"
 path = "src/lib.rs"
 
 [dependencies]
-pest        = "2"
+pest = "2"
 pest_derive = "2"
-pretty      = "0.12"
-clap        = { version = "4", features = ["derive"] }
-serde       = { version = "1", features = ["derive"] }
-toml        = "0.8"
-thiserror   = "1"
-indexmap    = { version = "2", features = ["serde"] }
-walkdir     = "2"
+pretty = "0.12"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+toml = "1.1.2"
+thiserror = "2.0.18"
+indexmap = { version = "2", features = ["serde"] }
+walkdir = "2"
 
 [dev-dependencies]
-insta     = "1"
-criterion = { version = "0.5", features = ["html_reports"] }
+insta = "1"
+criterion = { version = "0.8.2", features = ["html_reports"] }
 
 [[bench]]
 name = "formatter"

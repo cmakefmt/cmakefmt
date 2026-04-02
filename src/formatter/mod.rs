@@ -1,8 +1,9 @@
+pub mod comment;
 pub mod node;
 
 use crate::config::Config;
-use crate::error::{Error, Result};
-use crate::parser::{self, ast::Argument, ast::Comment, ast::File, ast::Statement};
+use crate::error::Result;
+use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
 pub fn format_source(source: &str, config: &Config) -> Result<String> {
@@ -12,8 +13,6 @@ pub fn format_source(source: &str, config: &Config) -> Result<String> {
 }
 
 pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> Result<String> {
-    ensure_comment_free(file)?;
-
     let mut output = String::new();
     let mut previous_was_content = false;
 
@@ -25,6 +24,12 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                 }
 
                 output.push_str(&node::format_command(command, config, registry)?);
+
+                if let Some(trailing) = &command.trailing_comment {
+                    output.push(' ');
+                    output.push_str(&format_comment_text(trailing));
+                }
+
                 previous_was_content = true;
             }
             Statement::BlankLines(count) => {
@@ -39,11 +44,13 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                 }
                 previous_was_content = false;
             }
-            Statement::Comment(comment) => {
-                return Err(Error::Formatter(format!(
-                    "comments are not supported in phase 3 formatter: {}",
-                    comment.as_str()
-                )));
+            Statement::Comment(c) => {
+                if previous_was_content {
+                    output.push('\n');
+                }
+
+                output.push_str(&format_comment_text(c));
+                previous_was_content = true;
             }
         }
     }
@@ -55,37 +62,11 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
     Ok(output)
 }
 
-fn ensure_comment_free(file: &File) -> Result<()> {
-    for statement in &file.statements {
-        match statement {
-            Statement::Command(command) => {
-                if let Some(comment) = &command.trailing_comment {
-                    return unsupported_comment(comment);
-                }
-
-                if let Some(comment) =
-                    command
-                        .arguments
-                        .iter()
-                        .find_map(|argument| match argument {
-                            Argument::InlineComment(comment) => Some(comment),
-                            _ => None,
-                        })
-                {
-                    return unsupported_comment(comment);
-                }
-            }
-            Statement::Comment(comment) => return unsupported_comment(comment),
-            Statement::BlankLines(_) => {}
-        }
+fn format_comment_text(comment: &crate::parser::ast::Comment) -> String {
+    use crate::parser::ast::Comment;
+    match comment {
+        // Line comments include the leading "#" from the parser.
+        Comment::Line(text) => text.clone(),
+        Comment::Bracket(raw) => raw.clone(),
     }
-
-    Ok(())
-}
-
-fn unsupported_comment(comment: &Comment) -> Result<()> {
-    Err(Error::Formatter(format!(
-        "comments are not supported in phase 3 formatter: {}",
-        comment.as_str()
-    )))
 }
