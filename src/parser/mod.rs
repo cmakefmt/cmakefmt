@@ -62,7 +62,7 @@ fn collect_file_item(
         }
         Rule::bracket_comment => {
             let comment = Comment::Bracket(item.as_str().to_owned());
-            if !attach_trailing_comment(statements, &comment, *line_has_content) {
+            if let Some(comment) = attach_trailing_comment(statements, comment, *line_has_content) {
                 flush_blank_lines(statements, pending_blank_lines);
                 statements.push(Statement::Comment(comment));
             }
@@ -71,7 +71,7 @@ fn collect_file_item(
         }
         Rule::line_comment => {
             let comment = Comment::Line(item.as_str().to_owned());
-            if !attach_trailing_comment(statements, &comment, *line_has_content) {
+            if let Some(comment) = attach_trailing_comment(statements, comment, *line_has_content) {
                 flush_blank_lines(statements, pending_blank_lines);
                 statements.push(Statement::Comment(comment));
             }
@@ -95,19 +95,19 @@ fn collect_file_item(
 
 fn attach_trailing_comment(
     statements: &mut [Statement],
-    comment: &Comment,
+    comment: Comment,
     line_has_content: bool,
-) -> bool {
+) -> Option<Comment> {
     if !line_has_content {
-        return false;
+        return Some(comment);
     }
 
     match statements.last_mut() {
         Some(Statement::Command(command)) if command.trailing_comment.is_none() => {
-            command.trailing_comment = Some(comment.clone());
-            true
+            command.trailing_comment = Some(comment);
+            None
         }
-        _ => false,
+        _ => Some(comment),
     }
 }
 
@@ -159,9 +159,10 @@ fn build_command(pair: pest::iterators::Pair<'_, Rule>) -> Result<CommandInvocat
 fn build_arguments(pair: pest::iterators::Pair<'_, Rule>) -> Result<Vec<Argument>> {
     debug_assert_eq!(pair.as_rule(), Rule::arguments);
 
-    let mut args = Vec::new();
+    let inner = pair.into_inner();
+    let mut args = Vec::with_capacity(inner.size_hint().0);
 
-    for p in pair.into_inner() {
+    for p in inner {
         collect_argument_part(p, &mut args)?;
     }
 

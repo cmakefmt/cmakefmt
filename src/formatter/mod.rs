@@ -266,16 +266,32 @@ impl<'a> DebugLog<'a> {
 }
 
 fn block_dedent_before(command_name: &str) -> usize {
-    match command_name.to_ascii_lowercase().as_str() {
-        "elseif" | "else" | "endif" | "endforeach" | "endwhile" | "endfunction" | "endmacro"
-        | "endblock" => 1,
-        _ => 0,
-    }
+    usize::from(matches_ascii_insensitive(
+        command_name,
+        &[
+            "elseif",
+            "else",
+            "endif",
+            "endforeach",
+            "endwhile",
+            "endfunction",
+            "endmacro",
+            "endblock",
+        ],
+    ))
 }
 
 fn block_indent_after(command_name: &str) -> usize {
-    match command_name.to_ascii_lowercase().as_str() {
-        "if" | "foreach" | "while" | "function" | "macro" | "block" | "elseif" | "else" => 1,
-        _ => 0,
-    }
+    usize::from(matches_ascii_insensitive(
+        command_name,
+        &[
+            "if", "foreach", "while", "function", "macro", "block", "elseif", "else",
+        ],
+    ))
+}
+
+fn matches_ascii_insensitive(input: &str, candidates: &[&str]) -> bool {
+    candidates
+        .iter()
+        .any(|candidate| input.eq_ignore_ascii_case(candidate))
 }

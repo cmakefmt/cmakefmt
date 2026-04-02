@@ -81,19 +81,34 @@ impl CommandRegistry {
     }
 
     pub fn get(&self, command_name: &str) -> &CommandSpec {
+        if let Some(spec) = self.commands.get(command_name) {
+            return spec;
+        }
+
+        if !has_ascii_uppercase(command_name) {
+            return &self.fallback;
+        }
+
         self.commands
             .get(&command_name.to_ascii_lowercase())
             .unwrap_or(&self.fallback)
     }
 
     pub fn contains_builtin(&self, command_name: &str) -> bool {
-        self.commands
-            .contains_key(&command_name.to_ascii_lowercase())
+        self.commands.contains_key(command_name)
+            || (has_ascii_uppercase(command_name)
+                && self
+                    .commands
+                    .contains_key(&command_name.to_ascii_lowercase()))
     }
 
     pub fn audited_cmake_version(&self) -> &str {
         &self.metadata.cmake_version
     }
+}
+
+fn has_ascii_uppercase(s: &str) -> bool {
+    s.bytes().any(|byte| byte.is_ascii_uppercase())
 }
 
 fn parse_builtins() -> Result<SpecFile> {

@@ -77,7 +77,7 @@ fn split_sections<'a>(
     command: &'a CommandInvocation,
     form: &'a CommandForm,
 ) -> Result<Vec<Section<'a>>> {
-    let mut sections = Vec::new();
+    let mut sections = Vec::with_capacity(command.arguments.len().min(8));
 
     for argument in &command.arguments {
         if argument.is_comment() {
@@ -97,8 +97,7 @@ fn split_sections<'a>(
         }
 
         let token = argument.as_str();
-        let normalized = token.to_ascii_uppercase();
-        if nested_token_belongs_to_current_section(&sections, form, &normalized) {
+        if nested_token_belongs_to_current_section(&sections, form, token) {
             sections
                 .last_mut()
                 .expect("section list contains at least one section")
@@ -107,9 +106,9 @@ fn split_sections<'a>(
             continue;
         }
 
-        let header_kind = if form.kwargs.contains_key(&normalized) {
+        let header_kind = if contains_kwarg(form, token) {
             Some(HeaderKind::Keyword)
-        } else if form.flags.contains(&normalized) {
+        } else if contains_flag(form, token) {
             Some(HeaderKind::Flag)
         } else {
             None
@@ -145,7 +144,7 @@ fn split_sections<'a>(
 fn nested_token_belongs_to_current_section(
     sections: &[Section<'_>],
     form: &CommandForm,
-    normalized: &str,
+    token: &str,
 ) -> bool {
     let Some(section) = sections.last() else {
         return false;
@@ -156,12 +155,12 @@ fn nested_token_belongs_to_current_section(
     let Some(header) = section.header else {
         return false;
     };
-    let Some(spec) = form.kwargs.get(&header.to_ascii_uppercase()) else {
+    let Some(spec) = lookup_kwarg(form, header) else {
         return false;
     };
 
     matches!(spec.nargs, NArgs::Fixed(0))
-        && (spec.kwargs.contains_key(normalized) || spec.flags.contains(normalized))
+        && (contains_nested_kwarg(spec, token) || contains_nested_flag(spec, token))
 }
 
 fn try_format_inline(
@@ -227,10 +226,7 @@ fn try_format_hanging(
         return None;
     }
 
-    let is_condition_command = matches!(
-        command.name.to_ascii_lowercase().as_str(),
-        "if" | "elseif" | "while"
-    );
+    let is_condition_command = is_condition_command(&command.name);
 
     if !is_condition_command && sections[0].arguments.len() > cmd_config.max_pargs_hwrap() {
         return None;
@@ -239,15 +235,12 @@ fn try_format_hanging(
     let base_indent = cmd_config.indent_str().repeat(block_depth);
     let prefix = format!("{base_indent}{}(", format_name(command, cmd_config));
     let continuation = " ".repeat(prefix.chars().count());
-    let tokens: Vec<String> = sections[0]
+    let tokens: Vec<&str> = sections[0]
         .arguments
         .iter()
-        .map(|argument| argument.as_str().to_owned())
+        .map(|argument| argument.as_str())
         .collect();
-    let break_before = match command.name.to_ascii_lowercase().as_str() {
-        "if" | "elseif" | "while" => &["AND", "OR"][..],
-        _ => &[][..],
-    };
+    let break_before = match_condition_breaks(&command.name);
 
     let mut lines = pack_tokens(
         &prefix,
@@ -407,18 +400,25 @@ fn format_section_inline(
                     return None;
                 }
 
-                let candidate = format!("{line} {}", comment_lines[0]);
+                let mut candidate = String::with_capacity(line.len() + 1 + comment_lines[0].len());
+                candidate.push_str(&line);
+                candidate.push(' ');
+                candidate.push_str(&comment_lines[0]);
                 if indent.chars().count() + candidate.chars().count() > line_width {
                     return None;
                 }
                 line = candidate;
             }
             _ => {
-                let candidate = if line.is_empty() {
-                    argument.as_str().to_owned()
+                let token = argument.as_str();
+                let mut candidate = String::with_capacity(line.len() + token.len() + 1);
+                if line.is_empty() {
+                    candidate.push_str(token);
                 } else {
-                    format!("{line} {}", argument.as_str())
-                };
+                    candidate.push_str(&line);
+                    candidate.push(' ');
+                    candidate.push_str(token);
+                }
                 if indent.chars().count() + candidate.chars().count() > line_width {
                     if matches!(header_kind, Some(HeaderKind::Flag)) && arguments.len() == 1 {
                         return None;
@@ -453,7 +453,11 @@ fn write_packed_arguments(
                 );
                 let is_trailing_comment = index + 1 == arguments.len();
                 if is_trailing_comment && comment_lines.len() == 1 && !current.is_empty() {
-                    let candidate = format!("{current} {}", comment_lines[0]);
+                    let mut candidate =
+                        String::with_capacity(current.len() + 1 + comment_lines[0].len());
+                    candidate.push_str(&current);
+                    candidate.push(' ');
+                    candidate.push_str(&comment_lines[0]);
                     if indent.chars().count() + candidate.chars().count() <= line_width {
                         current = candidate;
                         continue;
@@ -473,11 +477,14 @@ fn write_packed_arguments(
             }
             _ => {
                 let token = argument.as_str();
-                let candidate = if current.is_empty() {
-                    token.to_owned()
+                let mut candidate = String::with_capacity(current.len() + token.len() + 1);
+                if current.is_empty() {
+                    candidate.push_str(token);
                 } else {
-                    format!("{current} {token}")
-                };
+                    candidate.push_str(&current);
+                    candidate.push(' ');
+                    candidate.push_str(token);
+                }
 
                 if current.is_empty()
                     || indent.chars().count() + candidate.chars().count() <= line_width
@@ -554,7 +561,7 @@ fn flush_current_line(output: &mut String, current: &mut String, indent: &str) {
 fn pack_tokens(
     prefix: &str,
     continuation: &str,
-    tokens: &[String],
+    tokens: &[&str],
     line_width: usize,
     max_lines: usize,
     break_before: &[&str],
@@ -565,22 +572,27 @@ fn pack_tokens(
 
     let mut lines = vec![prefix.to_owned()];
 
-    for token in tokens {
-        let normalized = token.to_ascii_uppercase();
-        if break_before.contains(&normalized.as_str())
+    for &token in tokens {
+        if break_before
+            .iter()
+            .any(|candidate| token.eq_ignore_ascii_case(candidate))
             && lines.last().is_some_and(|line| line != prefix)
             && lines.len() < max_lines
         {
-            lines.push(format!("{continuation}{token}"));
+            let mut next = String::with_capacity(continuation.len() + token.len());
+            next.push_str(continuation);
+            next.push_str(token);
+            lines.push(next);
             continue;
         }
 
         let current = lines.last_mut().expect("at least one line");
-        let candidate = if current == prefix || current == continuation {
-            format!("{current}{token}")
-        } else {
-            format!("{current} {token}")
-        };
+        let mut candidate = String::with_capacity(current.len() + token.len() + 1);
+        candidate.push_str(current);
+        if current != prefix && current != continuation {
+            candidate.push(' ');
+        }
+        candidate.push_str(token);
 
         if candidate.chars().count() <= line_width {
             *current = candidate;
@@ -591,7 +603,10 @@ fn pack_tokens(
             return None;
         }
 
-        lines.push(format!("{continuation}{token}"));
+        let mut next = String::with_capacity(continuation.len() + token.len());
+        next.push_str(continuation);
+        next.push_str(token);
+        lines.push(next);
     }
 
     Some(lines)
@@ -636,6 +651,52 @@ fn apply_case(style: CaseStyle, s: &str) -> String {
         CaseStyle::Lower => s.to_ascii_lowercase(),
         CaseStyle::Upper => s.to_ascii_uppercase(),
         CaseStyle::Unchanged => s.to_string(),
+    }
+}
+
+fn has_ascii_lowercase(s: &str) -> bool {
+    s.bytes().any(|byte| byte.is_ascii_lowercase())
+}
+
+fn lookup_kwarg<'a>(form: &'a CommandForm, token: &str) -> Option<&'a crate::spec::KwargSpec> {
+    form.kwargs.get(token).or_else(|| {
+        has_ascii_lowercase(token)
+            .then(|| token.to_ascii_uppercase())
+            .and_then(|normalized| form.kwargs.get(&normalized))
+    })
+}
+
+fn contains_kwarg(form: &CommandForm, token: &str) -> bool {
+    lookup_kwarg(form, token).is_some()
+}
+
+fn contains_flag(form: &CommandForm, token: &str) -> bool {
+    form.flags.contains(token)
+        || (has_ascii_lowercase(token) && form.flags.contains(&token.to_ascii_uppercase()))
+}
+
+fn contains_nested_kwarg(spec: &crate::spec::KwargSpec, token: &str) -> bool {
+    spec.kwargs.get(token).is_some()
+        || (has_ascii_lowercase(token) && spec.kwargs.contains_key(&token.to_ascii_uppercase()))
+}
+
+fn contains_nested_flag(spec: &crate::spec::KwargSpec, token: &str) -> bool {
+    spec.flags.contains(token)
+        || (has_ascii_lowercase(token) && spec.flags.contains(&token.to_ascii_uppercase()))
+}
+
+fn is_condition_command(name: &str) -> bool {
+    !match_condition_breaks(name).is_empty()
+}
+
+fn match_condition_breaks(name: &str) -> &'static [&'static str] {
+    if name.eq_ignore_ascii_case("if")
+        || name.eq_ignore_ascii_case("elseif")
+        || name.eq_ignore_ascii_case("while")
+    {
+        &["AND", "OR"]
+    } else {
+        &[]
     }
 }
 

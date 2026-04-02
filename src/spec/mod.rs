@@ -131,16 +131,28 @@ impl CommandSpec {
         match self {
             CommandSpec::Single(form) => form,
             CommandSpec::Discriminated { forms, fallback } => {
-                let key = first_arg.unwrap_or_default().to_ascii_uppercase();
-                forms.get(&key).or(fallback.as_ref()).unwrap_or_else(|| {
-                    forms
-                        .values()
-                        .next()
-                        .expect("discriminated spec has a form")
-                })
+                let key = first_arg.unwrap_or_default();
+                forms
+                    .get(key)
+                    .or_else(|| {
+                        has_ascii_lowercase(key)
+                            .then(|| key.to_ascii_uppercase())
+                            .and_then(|normalized| forms.get(&normalized))
+                    })
+                    .or(fallback.as_ref())
+                    .unwrap_or_else(|| {
+                        forms
+                            .values()
+                            .next()
+                            .expect("discriminated spec has a form")
+                    })
             }
         }
     }
+}
+
+fn has_ascii_lowercase(s: &str) -> bool {
+    s.bytes().any(|byte| byte.is_ascii_lowercase())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
