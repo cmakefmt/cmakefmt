@@ -1,4 +1,2 @@
 /target
 *.pending-snap
-*.snap
-tests/snapshots
