@@ -1,6 +1,6 @@
-# `cmfmt`
+# `cmakefmt`
 
-`cmfmt` is a Rust CMake formatter intended to replace `cmake-format` with a
+`cmakefmt` is a Rust CMake formatter intended to replace `cmake-format` with a
 single fast binary.
 
 ## Status
@@ -37,69 +37,69 @@ cargo run -- --help
 Format one or more files to stdout:
 
 ```bash
-cmfmt CMakeLists.txt cmake/CompilerWarnings.cmake
+cmakefmt CMakeLists.txt cmake/CompilerWarnings.cmake
 ```
 
 Recursively discover CMake files from the current directory and print the
 formatted output:
 
 ```bash
-cmfmt
+cmakefmt
 ```
 
 Format in place:
 
 ```bash
-cmfmt -i CMakeLists.txt
+cmakefmt -i CMakeLists.txt
 ```
 
 Check formatting in CI or pre-push hooks:
 
 ```bash
-cmfmt --check CMakeLists.txt
+cmakefmt --check CMakeLists.txt
 ```
 
 List the files that would be reformatted without modifying them:
 
 ```bash
-cmfmt --list-files
-cmfmt --dry-run path/to/project
+cmakefmt --list-files
+cmakefmt --dry-run path/to/project
 ```
 
 Restrict recursive discovery with a regex:
 
 ```bash
-cmfmt --list-files --file-regex 'modules|toolchain' .
+cmakefmt --list-files --file-regex 'modules|toolchain' .
 ```
 
 Read from stdin:
 
 ```bash
-cat CMakeLists.txt | cmfmt -
+cat CMakeLists.txt | cmakefmt -
 ```
 
 Use an explicit config file:
 
 ```bash
-cmfmt --config path/to/.cmake-format.toml CMakeLists.txt
+cmakefmt --config path/to/.cmake-format.toml CMakeLists.txt
 ```
 
 Override config values on the command line:
 
 ```bash
-cmfmt --line-width 100 --tab-size 4 --command-case lower --keyword-case upper CMakeLists.txt
+cmakefmt --line-width 100 --tab-size 4 --command-case lower --keyword-case upper CMakeLists.txt
 ```
 
 Print the default config template:
 
 ```bash
-cmfmt --dump-config
+cmakefmt --dump-config
 ```
 
 Current CLI flags:
 
 ```text
-cmfmt [OPTIONS] [FILES]...
+cmakefmt [OPTIONS] [FILES]...
 
   -i, --in-place
       --check
@@ -162,7 +162,7 @@ dangle_parens = false
 You can also generate a full starter config with:
 
 ```bash
-cmfmt --dump-config
+cmakefmt --dump-config
 ```
 
 Optional features that are off by default, such as tab indentation or extra
@@ -211,9 +211,9 @@ Currently supported config sections:
 ## Library usage
 
 ```rust
-use cmfmt::{format_source, Config};
+use cmakefmt::{format_source, Config};
 
-fn main() -> Result<(), cmfmt::Error> {
+fn main() -> Result<(), cmakefmt::Error> {
     let source = r#"target_link_libraries(foo PUBLIC bar)"#;
     let formatted = format_source(source, &Config::default())?;
     println!("{formatted}");

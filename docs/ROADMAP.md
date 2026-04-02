@@ -11,7 +11,7 @@ until all criteria for the current phase are met.
 
 ### Tasks
 
-- [x] `cargo new cmfmt --lib` + binary target in `Cargo.toml`
+- [x] `cargo new cmakefmt --lib` + binary target in `Cargo.toml`
 - [x] Add all dependencies (pest, pretty, clap, serde, toml, thiserror, insta, criterion)
 - [x] Write `src/parser/cmake.pest` — full CMake grammar covering:
   - File, command invocation
@@ -166,25 +166,25 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 - [x] Implement `src/main.rs` with `clap` derive API
 - [x] Commands/flags:
-  - `cmfmt [FILE]...` — format and print to stdout
-  - `cmfmt` — recursively find CMake files under the current working directory
-  - `cmfmt -i [FILE]...` — format in-place
-  - `cmfmt --check [FILE]...` — exit 1 if any file would change
-  - `cmfmt --list-files [FILE|DIR]...` / `cmfmt --dry-run ...` — list files that would be reformatted
-  - `cmfmt -f, --file-regex <REGEX>` — filter recursively discovered CMake files
-  - `cmfmt -` — read from stdin, write to stdout
-  - `cmfmt --dump-config` — print a default config template
-  - `cmfmt --config <PATH>` — explicit config file
-  - `cmfmt --line-width <N>` — override config
-  - `cmfmt --version` — print version
+  - `cmakefmt [FILE]...` — format and print to stdout
+  - `cmakefmt` — recursively find CMake files under the current working directory
+  - `cmakefmt -i [FILE]...` — format in-place
+  - `cmakefmt --check [FILE]...` — exit 1 if any file would change
+  - `cmakefmt --list-files [FILE|DIR]...` / `cmakefmt --dry-run ...` — list files that would be reformatted
+  - `cmakefmt -f, --file-regex <REGEX>` — filter recursively discovered CMake files
+  - `cmakefmt -` — read from stdin, write to stdout
+  - `cmakefmt --dump-config` — print a default config template
+  - `cmakefmt --config <PATH>` — explicit config file
+  - `cmakefmt --line-width <N>` — override config
+  - `cmakefmt --version` — print version
 - [x] Correct exit codes (0 = ok, 1 = check failed, 2 = error)
 - [x] Helpful error messages (file path + line:col for parse errors)
 - [x] Integration tests for CLI behaviour
 
 ### Acceptance criteria
 
-- [x] `cmfmt --check` in CI workflow on a correctly formatted file returns 0
-- [x] `cmfmt --check` on an unformatted file returns 1 (not 2)
+- [x] `cmakefmt --check` in CI workflow on a correctly formatted file returns 0
+- [x] `cmakefmt --check` on an unformatted file returns 1 (not 2)
 - [x] `-i` modifies file and leaves it idempotent
 - [x] Formatting 100 files in one invocation works correctly
 
@@ -218,15 +218,15 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 ### Tasks
 
 - [ ] Add `criterion` benchmarks for parsing and formatting
-- [ ] Extend the benchmark suite to cover each major `cmfmt` capability
+- [ ] Extend the benchmark suite to cover each major `cmakefmt` capability
   (parser, formatter, CLI file discovery, config loading, check mode, in-place mode)
 - [ ] Profile with `cargo flamegraph` if benchmarks are unexpectedly slow
 - [ ] Target: format a 1000-line `CMakeLists.txt` in < 10ms
-- [ ] Add `cmfmt --debug` mode to print config resolution, file discovery matches,
+- [ ] Add `cmakefmt --debug` mode to print config resolution, file discovery matches,
       parser locations, and formatter layout decisions for diagnostics
-- [ ] Add `cmfmt --parallel [<JOBS>]` to parallelise file formatting when explicitly requested
+- [ ] Add `cmakefmt --parallel [<JOBS>]` to parallelise file formatting when explicitly requested
       while keeping the default execution mode single-threaded
-- [ ] **Head-to-head benchmark: `cmfmt` vs `cmake-format`**
+- [ ] **Head-to-head benchmark: `cmakefmt` vs `cmake-format`**
   - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
   - Run both tools against every file in `tests/fixtures/real_world/`
   - Measure wall-clock time (hyperfine or criterion shell benchmark)
@@ -240,7 +240,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 ### Acceptance criteria
 
 - [ ] Benchmark target met (< 10ms per 1000-line file)
-- [ ] `cmfmt` is measurably faster than `cmake-format` on every real-world fixture
+- [ ] `cmakefmt` is measurably faster than `cmake-format` on every real-world fixture
 - [ ] CI passes on all three platforms
 - [ ] `cargo publish --dry-run` succeeds
 

@@ -1,6 +1,6 @@
-# cmfmt — Claude Project Guide
+# cmakefmt — Claude Project Guide
 
-`cmfmt` — a Rust reimplementation of `cmake-format` (from the dead `cmakelang` Python project).
+`cmakefmt` — a Rust reimplementation of `cmake-format` (from the dead `cmakelang` Python project).
 Goal: fast, correct, configurable CMake formatter distributed as a single binary.
 
 ## Key decisions (do not revisit without good reason)
@@ -45,7 +45,7 @@ CI runs both of these — fix before committing.
 ## Project layout
 
 ```
-cmfmt/
+cmakefmt/
 ├── CLAUDE.md                  ← this file
 ├── Cargo.toml
 ├── docs/

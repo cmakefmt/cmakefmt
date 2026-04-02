@@ -1,8 +1,8 @@
 use std::io::Write;
 use std::process::Command;
 
-fn cmfmt() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_cmfmt"))
+fn cmakefmt() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
 }
 
 fn write_file(path: &std::path::Path, contents: &str) {
@@ -20,7 +20,7 @@ fn formats_file_to_stdout() {
     let file = dir.path().join("CMakeLists.txt");
     std::fs::write(&file, "cmake_minimum_required( VERSION   3.20 )\n").unwrap();
 
-    let output = cmfmt().arg(file.to_str().unwrap()).output().unwrap();
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
@@ -30,7 +30,7 @@ fn formats_file_to_stdout() {
 
 #[test]
 fn reads_stdin_with_dash() {
-    let mut child = cmfmt()
+    let mut child = cmakefmt()
         .arg("-")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -57,7 +57,7 @@ fn in_place_modifies_file() {
     let file = dir.path().join("CMakeLists.txt");
     std::fs::write(&file, "set(  FOO  bar )\n").unwrap();
 
-    let output = cmfmt()
+    let output = cmakefmt()
         .args(["-i", file.to_str().unwrap()])
         .output()
         .unwrap();
@@ -76,14 +76,14 @@ fn in_place_is_idempotent() {
     std::fs::write(&file, "set(  FOO  bar )\n").unwrap();
 
     // Format once
-    cmfmt()
+    cmakefmt()
         .args(["-i", file.to_str().unwrap()])
         .output()
         .unwrap();
     let first = std::fs::read_to_string(&file).unwrap();
 
     // Format again
-    cmfmt()
+    cmakefmt()
         .args(["-i", file.to_str().unwrap()])
         .output()
         .unwrap();
@@ -100,7 +100,7 @@ fn check_returns_0_for_formatted_file() {
     let file = dir.path().join("CMakeLists.txt");
     std::fs::write(&file, "cmake_minimum_required(VERSION 3.20)\n").unwrap();
 
-    let output = cmfmt()
+    let output = cmakefmt()
         .args(["--check", file.to_str().unwrap()])
         .output()
         .unwrap();
@@ -113,7 +113,7 @@ fn check_returns_1_for_unformatted_file() {
     let file = dir.path().join("CMakeLists.txt");
     std::fs::write(&file, "cmake_minimum_required(   VERSION   3.20  )\n").unwrap();
 
-    let output = cmfmt()
+    let output = cmakefmt()
         .args(["--check", file.to_str().unwrap()])
         .output()
         .unwrap();
@@ -130,7 +130,7 @@ fn check_does_not_modify_file() {
     let original = "set(  FOO  bar )\n";
     std::fs::write(&file, original).unwrap();
 
-    cmfmt()
+    cmakefmt()
         .args(["--check", file.to_str().unwrap()])
         .output()
         .unwrap();
@@ -143,7 +143,7 @@ fn check_does_not_modify_file() {
 
 #[test]
 fn nonexistent_file_returns_exit_2() {
-    let output = cmfmt().arg("/nonexistent/file.cmake").output().unwrap();
+    let output = cmakefmt().arg("/nonexistent/file.cmake").output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("error:"));
@@ -151,7 +151,7 @@ fn nonexistent_file_returns_exit_2() {
 
 #[test]
 fn invalid_file_regex_returns_exit_2() {
-    let output = cmfmt().args(["--file-regex", "("]).output().unwrap();
+    let output = cmakefmt().args(["--file-regex", "("]).output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("invalid file regex"));
@@ -161,7 +161,7 @@ fn invalid_file_regex_returns_exit_2() {
 
 #[test]
 fn line_width_override() {
-    let mut child = cmfmt()
+    let mut child = cmakefmt()
         .args(["--line-width", "30", "-"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -192,7 +192,7 @@ fn line_width_override() {
 
 #[test]
 fn command_case_override() {
-    let mut child = cmfmt()
+    let mut child = cmakefmt()
         .args(["--command-case", "upper", "-"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -229,7 +229,7 @@ fn multiple_files_in_one_invocation() {
         .chain(paths.iter().map(|p| p.to_str().unwrap()))
         .collect();
 
-    let output = cmfmt().args(&args).output().unwrap();
+    let output = cmakefmt().args(&args).output().unwrap();
     assert!(output.status.success());
 
     for (i, path) in paths.iter().enumerate() {
@@ -244,7 +244,7 @@ fn explicit_non_cmake_file_is_formatted() {
     let file = dir.path().join("toolchain.txt");
     write_file(&file, "set(  FOO  bar )\n");
 
-    let output = cmfmt().arg(file.to_str().unwrap()).output().unwrap();
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
     assert!(output.status.success());
     assert_eq!(String::from_utf8_lossy(&output.stdout), "set(FOO bar)\n");
 }
@@ -260,7 +260,7 @@ fn no_args_discovers_cmake_files_recursively() {
     write_file(&nested, "set(  NESTED  value )\n");
     write_file(&ignored, "set(  IGNORED  value )\n");
 
-    let output = cmfmt()
+    let output = cmakefmt()
         .args(["--list-files"])
         .current_dir(dir.path())
         .output()
@@ -282,7 +282,7 @@ fn directory_input_discovers_only_cmake_files() {
     write_file(&nested, "set(  FOO  bar )\n");
     write_file(&ignored, "set(  NOPE  value )\n");
 
-    let output = cmfmt()
+    let output = cmakefmt()
         .args(["--list-files", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
@@ -302,7 +302,7 @@ fn file_regex_filters_discovered_files() {
     write_file(&keep, "set(  KEEP  value )\n");
     write_file(&skip, "set(  SKIP  value )\n");
 
-    let output = cmfmt()
+    let output = cmakefmt()
         .args([
             "--list-files",
             "--file-regex",
@@ -327,7 +327,7 @@ fn list_files_reports_only_changed_targets() {
     write_file(&changed, "set(  FOO  bar )\n");
     write_file(&clean, "set(FOO bar)\n");
 
-    let output = cmfmt()
+    let output = cmakefmt()
         .args(["--list-files", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
@@ -346,7 +346,7 @@ fn explicit_config_file() {
     let config_path = dir.path().join("custom.toml");
     std::fs::write(&config_path, "[style]\ncommand_case = \"upper\"\n").unwrap();
 
-    let mut child = cmfmt()
+    let mut child = cmakefmt()
         .args(["--config", config_path.to_str().unwrap(), "-"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
@@ -368,11 +368,11 @@ fn explicit_config_file() {
 
 #[test]
 fn dump_config_prints_template() {
-    let output = cmfmt().arg("--dump-config").output().unwrap();
+    let output = cmakefmt().arg("--dump-config").output().unwrap();
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("# Default cmfmt configuration."));
+    assert!(stdout.contains("# Default cmakefmt configuration."));
     assert!(stdout.contains("[format]"));
     assert!(stdout.contains("line_width = 80"));
     assert!(stdout.contains("# use_tabchars = true"));
@@ -384,8 +384,8 @@ fn dump_config_prints_template() {
 
 #[test]
 fn version_flag() {
-    let output = cmfmt().arg("--version").output().unwrap();
+    let output = cmakefmt().arg("--version").output().unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("cmfmt"));
+    assert!(stdout.contains("cmakefmt"));
 }

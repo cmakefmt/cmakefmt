@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use cmfmt::{format_source, Config};
+use cmakefmt::{format_source, Config};
 use walkdir::WalkDir;
 
 fn real_world_fixture_paths() -> Vec<PathBuf> {

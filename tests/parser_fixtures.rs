@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use cmfmt::parser::parse;
+use cmakefmt::parser::parse;
 use walkdir::WalkDir;
 
 fn fixture_paths(root: &Path) -> Vec<std::path::PathBuf> {

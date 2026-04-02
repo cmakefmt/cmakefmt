@@ -63,7 +63,7 @@ const CONFIG_FILE_NAME: &str = ".cmake-format.toml";
 pub fn default_config_template() -> String {
     format!(
         concat!(
-            "# Default cmfmt configuration.\n",
+            "# Default cmakefmt configuration.\n",
             "# Copy this to .cmake-format.toml and uncomment the optional settings\n",
             "# you want to customize.\n\n",
             "[format]\n",

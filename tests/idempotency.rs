@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use cmfmt::{
+use cmakefmt::{
     format_source, parser,
     parser::ast::{Argument, File, Statement},
     spec::{registry::CommandRegistry, CommandForm, KwargSpec},
@@ -90,7 +90,7 @@ fn line_has_unbreakable_literal(line: &str) -> bool {
 }
 
 fn normalize_keyword_args(
-    command: &mut cmfmt::parser::ast::CommandInvocation,
+    command: &mut cmakefmt::parser::ast::CommandInvocation,
     registry: &CommandRegistry,
 ) {
     let spec = registry.get(&command.name);

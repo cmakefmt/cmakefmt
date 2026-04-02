@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cmfmt::{format_source, CaseStyle, Config, DangleAlign, PerCommandConfig};
+use cmakefmt::{format_source, CaseStyle, Config, DangleAlign, PerCommandConfig};
 
 // --- Comment tests ---
 
@@ -105,7 +105,7 @@ fn comment_separated_by_blank_lines() {
 
 #[test]
 fn wraps_keyword_sections() {
-    let src = "target_link_libraries(cmfmt PUBLIC fmt::fmt another::very_long_dependency_name PRIVATE helper::runtime_support)\n";
+    let src = "target_link_libraries(cmakefmt PUBLIC fmt::fmt another::very_long_dependency_name PRIVATE helper::runtime_support)\n";
     let config = Config {
         line_width: 48,
         ..Config::default()
@@ -115,7 +115,7 @@ fn wraps_keyword_sections() {
 
     insta::assert_snapshot!(formatted, @"
     target_link_libraries(
-      cmfmt
+      cmakefmt
       PUBLIC
         fmt::fmt another::very_long_dependency_name
       PRIVATE helper::runtime_support
@@ -125,7 +125,7 @@ fn wraps_keyword_sections() {
 
 #[test]
 fn discriminated_commands_use_selected_form() {
-    let src = "install(TARGETS cmfmt helper RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)\n";
+    let src = "install(TARGETS cmakefmt helper RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)\n";
     let config = Config {
         line_width: 52,
         ..Config::default()
@@ -135,7 +135,7 @@ fn discriminated_commands_use_selected_form() {
 
     insta::assert_snapshot!(formatted, @"
     install(
-      TARGETS cmfmt helper RUNTIME
+      TARGETS cmakefmt helper RUNTIME
       DESTINATION bin LIBRARY
       DESTINATION lib ARCHIVE
       DESTINATION lib/static

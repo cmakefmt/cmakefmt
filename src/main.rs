@@ -5,17 +5,17 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::Parser;
-use cmfmt::{default_config_template, format_source, CaseStyle, Config};
+use cmakefmt::{default_config_template, format_source, CaseStyle, Config};
 use regex::Regex;
 use walkdir::WalkDir;
 
 /// A fast, correct CMake formatter.
 #[derive(Parser, Debug)]
-#[command(name = "cmfmt", version, about)]
+#[command(name = "cmakefmt", version, about)]
 struct Cli {
     /// Files or directories to format. Use `-` for stdin.
     ///
-    /// If omitted, `cmfmt` recursively finds CMake files under the current
+    /// If omitted, `cmakefmt` recursively finds CMake files under the current
     /// working directory.
     files: Vec<String>,
 
@@ -86,7 +86,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(cli: &Cli) -> Result<u8, cmfmt::Error> {
+fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     if cli.dump_config {
         print!("{}", default_config_template());
         return Ok(EXIT_OK);
@@ -102,7 +102,7 @@ fn run(cli: &Cli) -> Result<u8, cmfmt::Error> {
                 let mut source = String::new();
                 io::stdin()
                     .read_to_string(&mut source)
-                    .map_err(cmfmt::Error::Io)?;
+                    .map_err(cmakefmt::Error::Io)?;
 
                 let config = build_config(cli, None)?;
                 let formatted = format_source(&source, &config)?;
@@ -120,18 +120,18 @@ fn run(cli: &Cli) -> Result<u8, cmfmt::Error> {
                 } else {
                     io::stdout()
                         .write_all(formatted.as_bytes())
-                        .map_err(cmfmt::Error::Io)?;
+                        .map_err(cmakefmt::Error::Io)?;
                 }
             }
             InputTarget::Path(path) => {
                 let source = std::fs::read_to_string(&path)
-                    .map_err(|e| cmfmt::Error::Formatter(format!("{}: {e}", path.display())))?;
+                    .map_err(|e| cmakefmt::Error::Formatter(format!("{}: {e}", path.display())))?;
                 let config = build_config(cli, Some(&path))?;
 
                 let formatted = match format_source(&source, &config) {
                     Ok(f) => f,
-                    Err(cmfmt::Error::Parse(parse_err)) => {
-                        return Err(cmfmt::Error::Formatter(format!(
+                    Err(cmakefmt::Error::Parse(parse_err)) => {
+                        return Err(cmakefmt::Error::Formatter(format!(
                             "{}: {parse_err}",
                             path.display()
                         )));
@@ -152,12 +152,12 @@ fn run(cli: &Cli) -> Result<u8, cmfmt::Error> {
                     }
                 } else if cli.in_place {
                     if would_change {
-                        std::fs::write(&path, &formatted).map_err(cmfmt::Error::Io)?;
+                        std::fs::write(&path, &formatted).map_err(cmakefmt::Error::Io)?;
                     }
                 } else {
                     io::stdout()
                         .write_all(formatted.as_bytes())
-                        .map_err(cmfmt::Error::Io)?;
+                        .map_err(cmakefmt::Error::Io)?;
                 }
             }
         }
@@ -170,11 +170,11 @@ fn run(cli: &Cli) -> Result<u8, cmfmt::Error> {
     }
 }
 
-fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmfmt::Error> {
+fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmakefmt::Error> {
     pattern
         .map(|pattern| {
             Regex::new(pattern).map_err(|err| {
-                cmfmt::Error::Formatter(format!("invalid file regex {pattern:?}: {err}"))
+                cmakefmt::Error::Formatter(format!("invalid file regex {pattern:?}: {err}"))
             })
         })
         .transpose()
@@ -183,7 +183,7 @@ fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmfmt::Er
 fn collect_targets(
     cli: &Cli,
     file_filter: Option<&Regex>,
-) -> Result<Vec<InputTarget>, cmfmt::Error> {
+) -> Result<Vec<InputTarget>, cmakefmt::Error> {
     let inputs = if cli.files.is_empty() {
         vec![".".to_owned()]
     } else {
@@ -212,7 +212,7 @@ fn collect_targets(
             continue;
         }
 
-        return Err(cmfmt::Error::Formatter(format!(
+        return Err(cmakefmt::Error::Formatter(format!(
             "{}: no such file or directory",
             path.display()
         )));
@@ -263,7 +263,7 @@ fn matches_filter(path: &Path, file_filter: Option<&Regex>) -> bool {
 }
 
 /// Build a Config by layering: defaults → config file → CLI overrides.
-fn build_config(cli: &Cli, file_path: Option<&Path>) -> Result<Config, cmfmt::Error> {
+fn build_config(cli: &Cli, file_path: Option<&Path>) -> Result<Config, cmakefmt::Error> {
     let mut config = if let Some(config_path) = &cli.config_path {
         Config::from_file(config_path)?
     } else if let Some(path) = file_path {
@@ -301,7 +301,7 @@ mod tests {
     use clap::CommandFactory;
 
     use super::Cli;
-    use cmfmt::default_config_template;
+    use cmakefmt::default_config_template;
 
     #[test]
     fn dump_config_covers_config_backed_long_flags() {

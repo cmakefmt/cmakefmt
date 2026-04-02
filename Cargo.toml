@@ -1,16 +1,16 @@
 [package]
-name = "cmfmt"
+name = "cmakefmt"
 version = "0.1.0"
 edition = "2021"
 description = "A fast, correct CMake formatter"
 license = "MIT"
 
 [[bin]]
-name = "cmfmt"
+name = "cmakefmt"
 path = "src/main.rs"
 
 [lib]
-name = "cmfmt"
+name = "cmakefmt"
 path = "src/lib.rs"
 
 [dependencies]
