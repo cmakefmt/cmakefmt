@@ -16,9 +16,9 @@ The project currently supports:
 - configuration via `.cmake-format.toml`
 - a built-in command registry audited through CMake 4.3.1
 
-The formatter is still under active development. Real-world corpus coverage and
-full built-in/module command coverage and final performance work are not
-complete yet.
+The formatter is still under active development. Full built-in/module command
+coverage, large-codebase parallel surveying, and release/distribution work are
+not complete yet.
 
 The command spec version and audit date are stored in
 `src/spec/builtins.toml` under `[metadata]`.
@@ -174,6 +174,37 @@ Fence regions are supported with `# ~~~`:
 Disabled regions are emitted unchanged, even if they would not parse as valid
 CMake on their own.
 
+## Performance
+
+Current local benchmark signal:
+
+- `format_source/large_synthetic` (1000+ lines): `8.6263 ms .. 8.8934 ms`
+- `cmakefmt` is faster than `cmake-format 0.6.13` on every file in the current
+  real-world corpus
+- geometric-mean speedup across that corpus: `20.77x`
+- `--parallel 8` improves whole-corpus throughput by `3.43x` over the default
+  single-threaded mode on the current synthetic batch workload
+
+Head-to-head real-world corpus results:
+
+| Fixture                         | Lines | `cmakefmt` ms | `cmake-format` ms | Speedup |
+|---------------------------------|------:|--------------:|------------------:|--------:|
+| `abseil/CMakeLists.txt`         |   204 |         4.467 |           114.576 |  25.65x |
+| `catch2/CMakeLists.txt`         |   231 |         4.558 |           101.606 |  22.29x |
+| `cli11/CMakeLists.txt`          |   283 |         4.458 |           118.954 |  26.68x |
+| `cmake_cmbzip2/CMakeLists.txt`  |    25 |         3.957 |            59.156 |  14.95x |
+| `googletest/CMakeLists.txt`     |    36 |         4.138 |            60.558 |  14.64x |
+| `llvm_tablegen/CMakeLists.txt`  |    83 |         4.257 |            73.627 |  17.30x |
+| `monorepo_root.cmake`           |    40 |         4.330 |            69.929 |  16.15x |
+| `nlohmann_json/CMakeLists.txt`  |   237 |         4.717 |           131.813 |  27.95x |
+| `opencv_flann/CMakeLists.txt`   |     2 |         3.899 |            49.754 |  12.76x |
+| `protobuf/CMakeLists.txt`       |   201 |         4.631 |            85.811 |  18.53x |
+| `qtbase_network/CMakeLists.txt` |   420 |         5.557 |           279.420 |  50.28x |
+
+The full methodology, profiler notes, and serial-versus-parallel memory
+measurements live in
+[docs/PERFORMANCE.md](/Users/PuneetMatharu/Dropbox/programming/rust/cmake-format-rust/docs/PERFORMANCE.md).
+
 ## Configuration
 
 The formatter looks for `.cmake-format.toml` in this order:
@@ -318,8 +349,8 @@ pre-commit install --hook-type pre-push
   set, even though the current outputs are in a good place for that corpus.
 - Full built-in and module command coverage in `src/spec/builtins.toml` is
   still being audited and expanded.
-- Benchmarking, release packaging, and package-manager distribution are not
-  finished.
+- Very-large-codebase parallel surveying, release packaging, and
+  package-manager distribution are not finished.
 - Comment reflow is opt-in via `markup.reflow_comments`, and only line comments
   are wrapped today. More advanced markup-aware comment formatting is still
   less mature than the core formatting path.

@@ -241,14 +241,14 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - save a local baseline before major formatter changes
   - compare bench runs against the saved baseline
   - document the expected benchmark commands in `README.md`
-- [ ] Investigate and quantify the hottest bottlenecks:
+- [x] Investigate and quantify the hottest bottlenecks:
   - parser time
   - AST construction time
   - command-spec lookup overhead
   - layout/packing heuristics in `src/formatter/node.rs`
   - comment/barrier handling overhead
   - allocation hotspots and repeated string building
-- [ ] Profile with `cargo flamegraph` and/or equivalent profilers when benchmarks are unexpectedly slow
+- [x] Profile with `cargo flamegraph` and/or equivalent profilers when benchmarks are unexpectedly slow
   - capture parser-only flamegraphs
   - capture formatter-only flamegraphs
   - capture end-to-end flamegraphs on a large real-world file
@@ -259,7 +259,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - reuse parsed/loaded data where appropriate
   - simplify expensive formatting heuristics that do not materially improve output
   - verify that optimizations do not regress semantics, idempotency, or diagnostics
-- [ ] Measure scaling behavior across realistic workloads:
+- [x] Measure scaling behavior across realistic workloads:
   - single-file latency on small, medium, and large files
   - total throughput across many files
   - startup overhead for short invocations
@@ -271,7 +271,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - hardware / OS notes
   - corpus description
   - commands used to reproduce results
-- [ ] Run the head-to-head `cmakefmt` vs `cmake-format` benchmark and publish results in `README.md`
+- [x] Run the head-to-head `cmakefmt` vs `cmake-format` benchmark and publish results in `README.md`
   - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
   - Run both tools against every file in `tests/fixtures/real_world/`
   - Measure wall-clock time (hyperfine or criterion shell benchmark)
@@ -289,10 +289,10 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 ### Acceptance criteria
 
 - [x] Benchmark target met (< 10ms per 1000-line file)
-- [ ] `cmakefmt` is measurably faster than `cmake-format` on every real-world fixture
+- [x] `cmakefmt` is measurably faster than `cmake-format` on every real-world fixture
 - [x] Benchmark methodology and reproduction commands are documented
-- [ ] At least one profiling pass was performed on the hottest workloads and acted on
-- [ ] Parallel mode speedup and memory impact are measured and recorded
+- [x] At least one profiling pass was performed on the hottest workloads and acted on
+- [x] Parallel mode speedup and memory impact are measured and recorded
 - [ ] CI passes on all three platforms
 
 ---
@@ -355,7 +355,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 - `--diff` mode: show unified diff of changes
 - `--files-from <FILE>` mode: read list of files from stdin/file
-- Parallel formatting with `rayon`
+- Revisit whether default parallelism should remain opt-in after very large
+  codebase surveys
 - LSP server mode (long-term)
 - Editor plugins (VS Code, Neovim) using the formatter as a library
 - Linting rules (separate `cmake-lint` subcommand or binary)
