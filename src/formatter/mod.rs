@@ -7,13 +7,11 @@ use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
 pub fn format_source(source: &str, config: &Config) -> Result<String> {
-    let registry = CommandRegistry::load()?;
-    format_source_with_registry(source, config, &registry)
+    format_source_with_registry(source, config, CommandRegistry::builtins())
 }
 
 pub fn format_source_with_debug(source: &str, config: &Config) -> Result<(String, Vec<String>)> {
-    let registry = CommandRegistry::load()?;
-    format_source_with_registry_debug(source, config, &registry)
+    format_source_with_registry_debug(source, config, CommandRegistry::builtins())
 }
 
 pub fn format_source_with_registry(
@@ -122,10 +120,7 @@ fn format_source_impl(
     let mut total_statements = 0usize;
     let mut mode = BarrierMode::Enabled;
 
-    for (line_index, line) in split_lines_preserving_terminators(source)
-        .into_iter()
-        .enumerate()
-    {
+    for (line_index, line) in source.split_inclusive('\n').enumerate() {
         let line_no = line_index + 1;
         match detect_barrier(line) {
             Some(BarrierEvent::DisableByDirective(kind)) => {
@@ -201,14 +196,6 @@ fn flush_enabled_chunk(
     output.push_str(&formatted);
     enabled_chunk.clear();
     Ok(statement_count)
-}
-
-fn split_lines_preserving_terminators(source: &str) -> Vec<&str> {
-    if source.is_empty() {
-        return Vec::new();
-    }
-
-    source.split_inclusive('\n').collect()
 }
 
 fn detect_barrier(line: &str) -> Option<BarrierEvent<'_>> {

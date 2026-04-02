@@ -290,6 +290,21 @@ Run benchmarks:
 cargo bench
 ```
 
+Save a benchmark baseline:
+
+```bash
+cargo bench --bench formatter -- --save-baseline local
+```
+
+Compare against a saved baseline:
+
+```bash
+cargo bench --bench formatter -- --baseline local
+```
+
+Benchmark methodology and profiling notes live in
+[docs/PERFORMANCE.md](/Users/PuneetMatharu/Dropbox/programming/rust/cmake-format-rust/docs/PERFORMANCE.md).
+
 If you use pre-commit:
 
 ```bash

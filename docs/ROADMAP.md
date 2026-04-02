@@ -220,13 +220,13 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Add `criterion` benchmarks for parsing and formatting
 - [x] Extend the benchmark suite to cover each major `cmakefmt` capability
   (parser, formatter, CLI file discovery, config loading, check mode, in-place mode)
-- [ ] Build a dedicated benchmark corpus with representative inputs:
+- [x] Build a dedicated benchmark corpus with representative inputs:
   - small synthetic files for parser/layout microbenchmarks
   - medium real-world files from `tests/fixtures/real_world/`
   - at least one large stress file (~1000+ lines)
   - command-heavy cases (`install`, `file`, `string`, `list`, target commands)
   - comment-heavy files and barrier/fence-heavy files
-- [ ] Benchmark each major internal path separately and keep the benchmark names stable:
+- [x] Benchmark each major internal path separately and keep the benchmark names stable:
   - parser only
   - parser + AST construction
   - formatter only from parsed AST
@@ -237,7 +237,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - in-place write path
   - debug-mode overhead
   - opt-in parallel execution overhead and speedup
-- [ ] Add benchmark baselines and compare regressions over time:
+- [x] Add benchmark baselines and compare regressions over time:
   - save a local baseline before major formatter changes
   - compare bench runs against the saved baseline
   - document the expected benchmark commands in `README.md`
@@ -265,8 +265,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - startup overhead for short invocations
   - opt-in parallel speedup versus single-threaded execution
   - memory footprint under serial and parallel modes
-- [ ] Hit the performance target: format a 1000-line `CMakeLists.txt` in < 10ms
-- [ ] Document the final benchmark methodology and results in the repo
+- [x] Hit the performance target: format a 1000-line `CMakeLists.txt` in < 10ms
+- [x] Document the final benchmark methodology and results in the repo
   - benchmark environment details
   - hardware / OS notes
   - corpus description
@@ -288,9 +288,9 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Acceptance criteria
 
-- [ ] Benchmark target met (< 10ms per 1000-line file)
+- [x] Benchmark target met (< 10ms per 1000-line file)
 - [ ] `cmakefmt` is measurably faster than `cmake-format` on every real-world fixture
-- [ ] Benchmark methodology and reproduction commands are documented
+- [x] Benchmark methodology and reproduction commands are documented
 - [ ] At least one profiling pass was performed on the hottest workloads and acted on
 - [ ] Parallel mode speedup and memory impact are measured and recorded
 - [ ] CI passes on all three platforms

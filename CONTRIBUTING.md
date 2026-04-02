@@ -121,6 +121,7 @@ registry and tests were updated together.
 Keep these aligned:
 
 - `benches/`
+- `docs/PERFORMANCE.md`
 - `.github/workflows/ci.yml` if CI should run it
 - `.pre-commit-config.yaml` if local hygiene should enforce it
 - `README.md` if users should know about it

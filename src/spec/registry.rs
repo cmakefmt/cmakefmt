@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use indexmap::{IndexMap, IndexSet};
 
@@ -24,6 +25,14 @@ pub struct CommandRegistry {
 impl CommandRegistry {
     pub fn load() -> Result<Self> {
         Self::from_builtins_and_overrides(None::<&Path>)
+    }
+
+    pub fn builtins() -> &'static Self {
+        static BUILTINS: OnceLock<CommandRegistry> = OnceLock::new();
+        BUILTINS.get_or_init(|| {
+            CommandRegistry::from_builtins_and_overrides(None::<&Path>)
+                .expect("embedded built-in command registry should deserialize")
+        })
     }
 
     pub fn from_builtins_and_overrides(path: Option<impl AsRef<Path>>) -> Result<Self> {
