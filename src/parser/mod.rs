@@ -179,12 +179,26 @@ fn collect_argument_part(
             }
             Ok(())
         }
+        Rule::arguments => {
+            for inner in pair.into_inner() {
+                collect_argument_part(inner, out)?;
+            }
+            Ok(())
+        }
         Rule::argument => {
             let mut inner = pair.into_inner();
             let argument = inner
                 .next()
                 .ok_or_else(|| Error::Formatter("argument missing child node".to_owned()))?;
             out.push(build_argument(argument)?);
+            Ok(())
+        }
+        Rule::paren_group => {
+            out.push(Argument::Unquoted("(".to_owned()));
+            for inner in pair.into_inner() {
+                collect_argument_part(inner, out)?;
+            }
+            out.push(Argument::Unquoted(")".to_owned()));
             Ok(())
         }
         Rule::bracket_comment => {
@@ -481,5 +495,39 @@ mod tests {
             panic!()
         };
         assert_eq!(cmd.name, "_my_command");
+    }
+
+    #[test]
+    fn nested_parentheses_in_arguments_are_preserved_as_unquoted_tokens() {
+        let f = parse_ok("if(FALSE AND (FALSE OR TRUE))\n");
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        let args: Vec<&str> = cmd.arguments.iter().map(Argument::as_str).collect();
+        assert_eq!(args, vec!["FALSE", "AND", "(", "FALSE", "OR", "TRUE", ")"]);
+    }
+
+    #[test]
+    fn source_file_with_utf8_bom_parses() {
+        let f = parse_ok("\u{FEFF}project(MyProject)\n");
+        assert_eq!(f.statements.len(), 1);
+    }
+
+    #[test]
+    fn legacy_unquoted_argument_with_embedded_quotes_parses() {
+        let f = parse_ok("set(x -Da=\"b c\")\n");
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(cmd.arguments[1].as_str(), "-Da=\"b c\"");
+    }
+
+    #[test]
+    fn legacy_unquoted_argument_with_make_style_reference_parses() {
+        let f = parse_ok("set(x -Da=$(v))\n");
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(cmd.arguments[1].as_str(), "-Da=$(v)");
     }
 }
