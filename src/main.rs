@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
-use std::io::{self, Read, Write};
+use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
     default_config_template, files::discover_cmake_files, format_source_with_registry,
@@ -52,6 +52,10 @@ struct Cli {
     #[arg(long, conflicts_with = "dump_config")]
     debug: bool,
 
+    /// Control ANSI color for highlighted changed output lines.
+    #[arg(long, value_enum, default_value_t = ColorChoice::Auto)]
+    color: ColorChoice,
+
     /// Format files in parallel. Pass no value to use the available CPU count.
     #[arg(
         short = 'j',
@@ -88,6 +92,13 @@ struct Cli {
     dangle_parens: Option<bool>,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum ColorChoice {
+    Auto,
+    Always,
+    Never,
+}
+
 /// Exit codes matching the spec in ARCHITECTURE.md.
 const EXIT_OK: u8 = 0;
 const EXIT_CHECK_FAILED: u8 = 1;
@@ -111,6 +122,8 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return Ok(EXIT_OK);
     }
 
+    let stdout_mode = !cli.list_files && !cli.check && !cli.in_place;
+    let colorize_stdout = stdout_mode && should_colorize_stdout(cli.color);
     let registry = CommandRegistry::load()?;
     let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
     let targets = collect_targets(cli, file_filter.as_ref())?;
@@ -126,12 +139,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     let results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
-        process_targets_parallel(&targets, cli, &registry, parallel_jobs)?
+        process_targets_parallel(&targets, cli, &registry, parallel_jobs, colorize_stdout)?
     } else {
         if cli.debug && parallel_jobs > 1 && targets.iter().any(|target| !target.is_path()) {
             log_debug("parallel mode ignored because stdin input must run serially");
         }
-        process_targets_serial(&targets, cli, &registry)?
+        process_targets_serial(&targets, cli, &registry, colorize_stdout)?
     };
 
     for result in results {
@@ -158,8 +171,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 }
             }
         } else {
+            let display_output = result
+                .highlighted_output
+                .as_deref()
+                .unwrap_or(&result.formatted);
             io::stdout()
-                .write_all(result.formatted.as_bytes())
+                .write_all(display_output.as_bytes())
                 .map_err(cmakefmt::Error::Io)?;
         }
     }
@@ -288,6 +305,7 @@ struct ProcessedTarget {
     path: Option<PathBuf>,
     display_name: String,
     formatted: String,
+    highlighted_output: Option<String>,
     would_change: bool,
     debug_lines: Vec<String>,
 }
@@ -296,10 +314,11 @@ fn process_targets_serial(
     targets: &[InputTarget],
     cli: &Cli,
     registry: &CommandRegistry,
+    colorize_stdout: bool,
 ) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
     targets
         .iter()
-        .map(|target| process_target(target, cli, registry))
+        .map(|target| process_target(target, cli, registry, colorize_stdout))
         .collect()
 }
 
@@ -308,6 +327,7 @@ fn process_targets_parallel(
     cli: &Cli,
     registry: &CommandRegistry,
     parallel_jobs: usize,
+    colorize_stdout: bool,
 ) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(parallel_jobs)
@@ -317,7 +337,7 @@ fn process_targets_parallel(
     pool.install(|| {
         targets
             .par_iter()
-            .map(|target| process_target(target, cli, registry))
+            .map(|target| process_target(target, cli, registry, colorize_stdout))
             .collect()
     })
 }
@@ -326,16 +346,18 @@ fn process_target(
     target: &InputTarget,
     cli: &Cli,
     registry: &CommandRegistry,
+    colorize_stdout: bool,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     match target {
-        InputTarget::Stdin => process_stdin(cli, registry),
-        InputTarget::Path(path) => process_path(path, cli, registry),
+        InputTarget::Stdin => process_stdin(cli, registry, colorize_stdout),
+        InputTarget::Path(path) => process_path(path, cli, registry, colorize_stdout),
     }
 }
 
 fn process_stdin(
     cli: &Cli,
     registry: &CommandRegistry,
+    colorize_stdout: bool,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     let mut source = String::new();
     io::stdin()
@@ -359,11 +381,15 @@ fn process_stdin(
 
     let would_change = formatted != source;
     debug_lines.push(format!("result <stdin>: would_change={would_change}"));
+    let highlighted_output = colorize_stdout
+        .then(|| highlight_changed_lines(&source, &formatted))
+        .filter(|_| would_change);
 
     Ok(ProcessedTarget {
         path: None,
         display_name: "<stdin>".to_owned(),
         formatted,
+        highlighted_output,
         would_change,
         debug_lines,
     })
@@ -373,6 +399,7 @@ fn process_path(
     path: &Path,
     cli: &Cli,
     registry: &CommandRegistry,
+    colorize_stdout: bool,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     let source = std::fs::read_to_string(path)
         .map_err(|err| cmakefmt::Error::Formatter(format!("{}: {err}", path.display())))?;
@@ -412,11 +439,15 @@ fn process_path(
         "result {}: would_change={would_change}",
         path.display()
     ));
+    let highlighted_output = colorize_stdout
+        .then(|| highlight_changed_lines(&source, &formatted))
+        .filter(|_| would_change);
 
     Ok(ProcessedTarget {
         path: Some(path.to_path_buf()),
         display_name: path.display().to_string(),
         formatted,
+        highlighted_output,
         would_change,
         debug_lines,
     })
@@ -429,6 +460,131 @@ fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, cmakefmt::Er
             .map(|parallelism| parallelism.get())
             .map_err(cmakefmt::Error::Io),
         Some(jobs) => Ok(jobs.max(1)),
+    }
+}
+
+fn should_colorize_stdout(choice: ColorChoice) -> bool {
+    match choice {
+        ColorChoice::Auto => {
+            io::stdout().is_terminal()
+                && std::env::var_os("NO_COLOR").is_none()
+                && std::env::var("TERM").map_or(true, |term| term != "dumb")
+        }
+        ColorChoice::Always => true,
+        ColorChoice::Never => false,
+    }
+}
+
+fn highlight_changed_lines(source: &str, formatted: &str) -> String {
+    let original_lines = split_lines_with_endings(source);
+    let formatted_lines = split_lines_with_endings(formatted);
+    let changed_mask = changed_formatted_line_mask(&original_lines, &formatted_lines);
+    let mut output = String::with_capacity(formatted.len() + changed_mask.len() * 10);
+
+    for (line, changed) in formatted_lines.iter().zip(changed_mask) {
+        if changed {
+            push_cyan_line(&mut output, line);
+        } else {
+            output.push_str(line);
+        }
+    }
+
+    output
+}
+
+fn split_lines_with_endings(source: &str) -> Vec<&str> {
+    if source.is_empty() {
+        Vec::new()
+    } else {
+        source.split_inclusive('\n').collect()
+    }
+}
+
+fn changed_formatted_line_mask<'a>(original: &[&'a str], formatted: &[&'a str]) -> Vec<bool> {
+    let mut prefix_len = 0;
+    while prefix_len < original.len()
+        && prefix_len < formatted.len()
+        && original[prefix_len] == formatted[prefix_len]
+    {
+        prefix_len += 1;
+    }
+
+    let mut suffix_len = 0;
+    while suffix_len < original.len().saturating_sub(prefix_len)
+        && suffix_len < formatted.len().saturating_sub(prefix_len)
+        && original[original.len() - 1 - suffix_len] == formatted[formatted.len() - 1 - suffix_len]
+    {
+        suffix_len += 1;
+    }
+
+    let original_mid = &original[prefix_len..original.len() - suffix_len];
+    let formatted_mid = &formatted[prefix_len..formatted.len() - suffix_len];
+
+    let mut changed = vec![false; prefix_len];
+    changed.extend(diff_middle_mask(original_mid, formatted_mid));
+    changed.extend(std::iter::repeat_n(false, suffix_len));
+    changed
+}
+
+fn diff_middle_mask<'a>(original: &[&'a str], formatted: &[&'a str]) -> Vec<bool> {
+    const MAX_DP_CELLS: usize = 2_000_000;
+
+    if formatted.is_empty() {
+        return Vec::new();
+    }
+
+    if original.is_empty() {
+        return vec![true; formatted.len()];
+    }
+
+    if original.len().saturating_mul(formatted.len()) > MAX_DP_CELLS {
+        return vec![true; formatted.len()];
+    }
+
+    let mut dp = vec![vec![0u32; formatted.len() + 1]; original.len() + 1];
+
+    for i in (0..original.len()).rev() {
+        for j in (0..formatted.len()).rev() {
+            dp[i][j] = if original[i] == formatted[j] {
+                dp[i + 1][j + 1] + 1
+            } else {
+                dp[i + 1][j].max(dp[i][j + 1])
+            };
+        }
+    }
+
+    let mut changed = vec![true; formatted.len()];
+    let mut i = 0;
+    let mut j = 0;
+
+    while i < original.len() && j < formatted.len() {
+        if original[i] == formatted[j] {
+            changed[j] = false;
+            i += 1;
+            j += 1;
+        } else if dp[i + 1][j] >= dp[i][j + 1] {
+            i += 1;
+        } else {
+            j += 1;
+        }
+    }
+
+    changed
+}
+
+fn push_cyan_line(output: &mut String, line: &str) {
+    const CYAN: &str = "\u{1b}[36m";
+    const RESET: &str = "\u{1b}[0m";
+
+    if let Some(stripped) = line.strip_suffix('\n') {
+        output.push_str(CYAN);
+        output.push_str(stripped);
+        output.push_str(RESET);
+        output.push('\n');
+    } else {
+        output.push_str(CYAN);
+        output.push_str(line);
+        output.push_str(RESET);
     }
 }
 
@@ -471,6 +627,7 @@ mod tests {
         let template = default_config_template();
         let non_config_flags = [
             "check",
+            "color",
             "config",
             "debug",
             "dump-config",

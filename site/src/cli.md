@@ -24,6 +24,7 @@ cmakefmt [OPTIONS] [FILES]...
 | `--list-files` | List files that would change without modifying them. |
 | `-f`, `--file-regex <REGEX>` | Filter recursively discovered CMake file paths. |
 | `--debug` | Emit diagnostics about discovery, config resolution, barriers, and formatting decisions. |
+| `--color <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing. If no value is given, use the available CPU count. Default behavior remains single-threaded. |
 | `--dump-config` | Print a starter config template and exit. |
 
@@ -51,6 +52,7 @@ cmakefmt CMakeLists.txt
 cmakefmt -i .
 cmakefmt --check .
 cmakefmt --list-files --file-regex 'cmake|toolchain' .
+cmakefmt --color never CMakeLists.txt
 cat CMakeLists.txt | cmakefmt -
 cmakefmt --debug --check tests/fixtures/real_world
 ```

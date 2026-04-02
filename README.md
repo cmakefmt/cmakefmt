@@ -55,6 +55,10 @@ Format one or more files to stdout:
 cmakefmt CMakeLists.txt cmake/CompilerWarnings.cmake
 ```
 
+When stdout is a terminal, lines changed by formatting are highlighted in cyan
+by default. Use `--color never` to disable that, or `--color always` to force
+ANSI color output.
+
 Recursively discover CMake files from the current directory and print the
 formatted output:
 
@@ -140,6 +144,7 @@ cmakefmt [OPTIONS] [FILES]...
   -f, --file-regex <REGEX>
       --dump-config
       --debug
+      --color <auto|always|never>
       --parallel [<JOBS>]
       --config <PATH>
       --line-width <N>

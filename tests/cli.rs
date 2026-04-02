@@ -29,6 +29,54 @@ fn formats_file_to_stdout() {
 }
 
 #[test]
+fn changed_stdout_lines_are_colored_when_forced() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    std::fs::write(&file, "set(FOO bar)\nset(  BAZ  qux )\n").unwrap();
+
+    let output = cmakefmt()
+        .args(["--color", "always", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "set(FOO bar)\n\u{1b}[36mset(BAZ qux)\u{1b}[0m\n"
+    );
+}
+
+#[test]
+fn color_auto_stays_plain_when_stdout_is_piped() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    std::fs::write(&file, "set(  FOO  bar )\n").unwrap();
+
+    let output = cmakefmt()
+        .args(["--color", "auto", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "set(FOO bar)\n");
+}
+
+#[test]
+fn color_never_disables_highlighting_even_when_forced_off() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    std::fs::write(&file, "set(  FOO  bar )\n").unwrap();
+
+    let output = cmakefmt()
+        .args(["--color", "never", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "set(FOO bar)\n");
+}
+
+#[test]
 fn reads_stdin_with_dash() {
     let mut child = cmakefmt()
         .arg("-")
