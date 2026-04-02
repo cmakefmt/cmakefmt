@@ -514,6 +514,174 @@ mod tests {
             registry.get("check_include_file").form_for(None).pargs,
             NArgs::AtLeast(2)
         );
+        assert_eq!(
+            registry.get("check_compiler_flag").form_for(None).pargs,
+            NArgs::Fixed(3)
+        );
+        assert_eq!(
+            registry
+                .get("check_objc_compiler_flag")
+                .form_for(None)
+                .pargs,
+            NArgs::Fixed(2)
+        );
+        assert_eq!(
+            registry.get("check_cxx_symbol_exists").form_for(None).pargs,
+            NArgs::Fixed(3)
+        );
+        assert!(registry
+            .get("cmake_push_check_state")
+            .form_for(None)
+            .flags
+            .contains("RESET"));
+        let print_props = registry.get("cmake_print_properties").form_for(None);
+        assert!(print_props.kwargs.contains_key("TARGETS"));
+        assert!(print_props.kwargs.contains_key("PROPERTIES"));
+        let pie = registry.get("check_pie_supported").form_for(None);
+        assert!(pie.kwargs.contains_key("OUTPUT_VARIABLE"));
+        assert!(pie.kwargs.contains_key("LANGUAGES"));
+        let source_compiles = registry.get("check_source_compiles").form_for(None);
+        assert!(source_compiles.kwargs.contains_key("SRC_EXT"));
+        assert!(source_compiles.kwargs.contains_key("FAIL_REGEX"));
+        let find_dependency = registry.get("find_dependency").form_for(None);
+        assert!(find_dependency.flags.contains("REQUIRED"));
+        assert!(find_dependency.kwargs.contains_key("COMPONENTS"));
+    }
+
+    #[test]
+    fn registry_knows_supported_deprecated_module_commands() {
+        let registry = CommandRegistry::load().unwrap();
+        let version = registry
+            .get("write_basic_config_version_file")
+            .form_for(None);
+        assert_eq!(version.pargs, NArgs::Fixed(1));
+        assert!(version.kwargs.contains_key("COMPATIBILITY"));
+        assert!(version.flags.contains("ARCH_INDEPENDENT"));
+        assert_eq!(
+            registry.get("check_cxx_accepts_flag").form_for(None).pargs,
+            NArgs::Fixed(2)
+        );
+    }
+
+    #[test]
+    fn registry_knows_fetchcontent_commands() {
+        let registry = CommandRegistry::load().unwrap();
+        let declare = registry.get("fetchcontent_declare").form_for(None);
+        assert_eq!(declare.pargs, NArgs::Fixed(1));
+        assert!(declare.flags.contains("EXCLUDE_FROM_ALL"));
+        assert!(declare.kwargs.contains_key("FIND_PACKAGE_ARGS"));
+
+        let get_properties = registry.get("fetchcontent_getproperties").form_for(None);
+        assert!(get_properties.kwargs.contains_key("SOURCE_DIR"));
+        assert!(get_properties.kwargs.contains_key("BINARY_DIR"));
+        assert!(get_properties.kwargs.contains_key("POPULATED"));
+
+        let populate = registry.get("fetchcontent_populate").form_for(None);
+        assert!(populate.flags.contains("QUIET"));
+        assert!(populate.kwargs.contains_key("SUBBUILD_DIR"));
+    }
+
+    #[test]
+    fn registry_knows_common_test_and_package_helper_modules() {
+        let registry = CommandRegistry::load().unwrap();
+
+        let google_add = registry.get("gtest_add_tests").form_for(None);
+        assert!(google_add.kwargs.contains_key("TARGET"));
+        assert!(google_add.kwargs.contains_key("SOURCES"));
+        assert!(google_add.flags.contains("SKIP_DEPENDENCY"));
+
+        let google_discover = registry.get("gtest_discover_tests").form_for(None);
+        assert!(google_discover.kwargs.contains_key("DISCOVERY_MODE"));
+        assert!(google_discover.kwargs.contains_key("XML_OUTPUT_DIR"));
+        assert!(google_discover.flags.contains("NO_PRETTY_TYPES"));
+
+        assert_eq!(
+            registry.get("processorcount").form_for(None).pargs,
+            NArgs::Fixed(1)
+        );
+
+        let fp_hsa = registry
+            .get("find_package_handle_standard_args")
+            .form_for(None);
+        assert!(fp_hsa.flags.contains("DEFAULT_MSG"));
+        assert!(fp_hsa.kwargs.contains_key("REQUIRED_VARS"));
+        assert!(fp_hsa.kwargs.contains_key("VERSION_VAR"));
+
+        let fp_check = registry.get("find_package_check_version").form_for(None);
+        assert_eq!(fp_check.pargs, NArgs::Fixed(2));
+        assert!(fp_check.flags.contains("HANDLE_VERSION_RANGE"));
+    }
+
+    #[test]
+    fn registry_knows_externalproject_helper_commands() {
+        let registry = CommandRegistry::load().unwrap();
+        let step = registry.get("externalproject_add_step").form_for(None);
+        assert_eq!(step.pargs, NArgs::Fixed(2));
+        assert!(step.kwargs.contains_key("COMMAND"));
+        assert!(step.kwargs.contains_key("DEPENDEES"));
+        assert!(step.kwargs.contains_key("ENVIRONMENT_MODIFICATION"));
+
+        let targets = registry
+            .get("externalproject_add_steptargets")
+            .form_for(None);
+        assert_eq!(targets.pargs, NArgs::AtLeast(2));
+        assert!(targets.flags.contains("NO_DEPENDS"));
+
+        let deps = registry
+            .get("externalproject_add_stepdependencies")
+            .form_for(None);
+        assert_eq!(deps.pargs, NArgs::AtLeast(3));
+
+        let props = registry.get("externalproject_get_property").form_for(None);
+        assert_eq!(props.pargs, NArgs::AtLeast(2));
+    }
+
+    #[test]
+    fn registry_knows_packaging_and_find_helper_module_commands() {
+        let registry = CommandRegistry::load().unwrap();
+
+        assert_eq!(
+            registry.get("find_package_message").form_for(None).pargs,
+            NArgs::Fixed(3)
+        );
+        assert_eq!(
+            registry
+                .get("select_library_configurations")
+                .form_for(None)
+                .pargs,
+            NArgs::Fixed(1)
+        );
+
+        let component = registry.get("cpack_add_component").form_for(None);
+        assert!(component.flags.contains("HIDDEN"));
+        assert!(component.kwargs.contains_key("DISPLAY_NAME"));
+        assert!(component.kwargs.contains_key("DEPENDS"));
+
+        let group = registry.get("cpack_add_component_group").form_for(None);
+        assert!(group.flags.contains("EXPANDED"));
+        assert!(group.kwargs.contains_key("PARENT_GROUP"));
+
+        let downloads = registry.get("cpack_configure_downloads").form_for(None);
+        assert_eq!(downloads.pargs, NArgs::Fixed(1));
+        assert!(downloads.kwargs.contains_key("UPLOAD_DIRECTORY"));
+    }
+
+    #[test]
+    fn registry_knows_export_header_module_commands() {
+        let registry = CommandRegistry::load().unwrap();
+        let export_header = registry.get("generate_export_header").form_for(None);
+        assert_eq!(export_header.pargs, NArgs::Fixed(1));
+        assert!(export_header.flags.contains("DEFINE_NO_DEPRECATED"));
+        assert!(export_header.kwargs.contains_key("EXPORT_FILE_NAME"));
+        assert!(export_header.kwargs.contains_key("PREFIX_NAME"));
+
+        assert_eq!(
+            registry
+                .get("add_compiler_export_flags")
+                .form_for(None)
+                .pargs,
+            NArgs::Optional
+        );
     }
 
     #[test]

@@ -561,8 +561,43 @@ nargs = 1
 [commands.write_basic_package_version_file.kwargs.COMPATIBILITY]
 nargs = 1
 
+[commands.write_basic_config_version_file]
+pargs = 1
+flags = ["ARCH_INDEPENDENT"]
+
+[commands.write_basic_config_version_file.kwargs.VERSION]
+nargs = 1
+
+[commands.write_basic_config_version_file.kwargs.COMPATIBILITY]
+nargs = 1
+
 [commands.cmake_dependent_option]
 pargs = 5
+
+[commands.find_dependency]
+pargs = "1+"
+flags = ["EXACT", "QUIET", "REQUIRED", "MODULE", "CONFIG", "NO_MODULE", "NO_POLICY_SCOPE", "BYPASS_PROVIDER", "GLOBAL", "UNWIND_INCLUDE"]
+
+[commands.find_dependency.kwargs.COMPONENTS]
+nargs = "+"
+
+[commands.find_dependency.kwargs.HINTS]
+nargs = "*"
+
+[commands.find_dependency.kwargs.NAMES]
+nargs = "*"
+
+[commands.find_dependency.kwargs.OPTIONAL_COMPONENTS]
+nargs = "+"
+
+[commands.find_dependency.kwargs.PATHS]
+nargs = "*"
+
+[commands.find_dependency.kwargs.REGISTRY_VIEW]
+nargs = 1
+
+[commands.find_dependency.kwargs.VERSION]
+nargs = 1
 
 [commands.feature_summary]
 pargs = "*"
@@ -586,8 +621,45 @@ nargs = "*"
 [commands.add_feature_info]
 pargs = 3
 
+[commands.cmake_print_properties]
+pargs = 0
+
+[commands.cmake_print_properties.kwargs.TARGETS]
+nargs = "*"
+
+[commands.cmake_print_properties.kwargs.SOURCES]
+nargs = "*"
+
+[commands.cmake_print_properties.kwargs.DIRECTORIES]
+nargs = "*"
+
+[commands.cmake_print_properties.kwargs.TESTS]
+nargs = "*"
+
+[commands.cmake_print_properties.kwargs.CACHE_ENTRIES]
+nargs = "*"
+
+[commands.cmake_print_properties.kwargs.PROPERTIES]
+nargs = "+"
+
+[commands.cmake_print_variables]
+pargs = "*"
+
+[commands.cmake_push_check_state]
+pargs = 0
+flags = ["RESET"]
+
+[commands.cmake_reset_check_state]
+pargs = 0
+
+[commands.cmake_pop_check_state]
+pargs = 0
+
 [commands.check_language]
 pargs = 1
+
+[commands.check_compiler_flag]
+pargs = 3
 
 [commands.check_c_compiler_flag]
 pargs = 2
@@ -596,6 +668,12 @@ pargs = 2
 pargs = 2
 
 [commands.check_fortran_compiler_flag]
+pargs = 2
+
+[commands.check_objc_compiler_flag]
+pargs = 2
+
+[commands.check_objcxx_compiler_flag]
 pargs = 2
 
 [commands.check_include_file]
@@ -625,14 +703,26 @@ pargs = 2
 [commands.check_c_source_compiles]
 pargs = 2
 
+[commands.check_c_source_compiles.kwargs.FAIL_REGEX]
+nargs = "+"
+
 [commands.check_c_source_runs]
 pargs = 2
+
+[commands.check_c_source_runs.kwargs.FAIL_REGEX]
+nargs = "+"
 
 [commands.check_cxx_source_compiles]
 pargs = 2
 
+[commands.check_cxx_source_compiles.kwargs.FAIL_REGEX]
+nargs = "+"
+
 [commands.check_cxx_source_runs]
 pargs = 2
+
+[commands.check_cxx_source_runs.kwargs.FAIL_REGEX]
+nargs = "+"
 
 [commands.check_fortran_function_exists]
 pargs = 2
@@ -640,11 +730,44 @@ pargs = 2
 [commands.check_fortran_source_compiles]
 pargs = 2
 
+[commands.check_fortran_source_compiles.kwargs.FAIL_REGEX]
+nargs = "+"
+
 [commands.check_fortran_source_runs]
 pargs = 2
 
+[commands.check_fortran_source_runs.kwargs.FAIL_REGEX]
+nargs = "+"
+
+[commands.check_objc_source_compiles]
+pargs = 2
+
+[commands.check_objc_source_compiles.kwargs.FAIL_REGEX]
+nargs = "+"
+
+[commands.check_objc_source_runs]
+pargs = 2
+
+[commands.check_objc_source_runs.kwargs.FAIL_REGEX]
+nargs = "+"
+
+[commands.check_objcxx_source_compiles]
+pargs = 2
+
+[commands.check_objcxx_source_compiles.kwargs.FAIL_REGEX]
+nargs = "+"
+
+[commands.check_objcxx_source_runs]
+pargs = 2
+
+[commands.check_objcxx_source_runs.kwargs.FAIL_REGEX]
+nargs = "+"
+
 [commands.check_source_compiles]
 pargs = 3
+
+[commands.check_source_compiles.kwargs.FAIL_REGEX]
+nargs = "+"
 
 [commands.check_source_compiles.kwargs.SRC_EXT]
 nargs = 1
@@ -652,11 +775,26 @@ nargs = 1
 [commands.check_source_runs]
 pargs = 3
 
+[commands.check_source_runs.kwargs.FAIL_REGEX]
+nargs = "+"
+
 [commands.check_source_runs.kwargs.SRC_EXT]
 nargs = 1
 
 [commands.check_linker_flag]
 pargs = 3
+
+[commands.check_cxx_symbol_exists]
+pargs = 3
+
+[commands.check_prototype_definition]
+pargs = 5
+
+[commands.check_struct_has_member]
+pargs = 4
+
+[commands.check_struct_has_member.kwargs.LANGUAGE]
+nargs = 1
 
 [commands.check_ipo_supported]
 pargs = 0
@@ -670,11 +808,23 @@ nargs = 1
 [commands.check_ipo_supported.kwargs.LANGUAGES]
 nargs = "+"
 
+[commands.check_pie_supported]
+pargs = 0
+
+[commands.check_pie_supported.kwargs.OUTPUT_VARIABLE]
+nargs = 1
+
+[commands.check_pie_supported.kwargs.LANGUAGES]
+nargs = "+"
+
 [commands.cmake_parse_arguments]
 pargs = "4+"
 
 [commands.test_big_endian]
 pargs = 1
+
+[commands.check_cxx_accepts_flag]
+pargs = 2
 
 [commands.write_compiler_detection_header]
 pargs = 0
@@ -706,6 +856,281 @@ nargs = 1
 
 [commands.write_compiler_detection_header.kwargs.EPILOG]
 nargs = 1
+
+[commands.fetchcontent_declare]
+pargs = 1
+flags = ["EXCLUDE_FROM_ALL", "SYSTEM", "OVERRIDE_FIND_PACKAGE"]
+
+[commands.fetchcontent_declare.kwargs.FIND_PACKAGE_ARGS]
+nargs = "*"
+
+[commands.fetchcontent_makeavailable]
+pargs = "+"
+
+[commands.fetchcontent_getproperties]
+pargs = 1
+
+[commands.fetchcontent_getproperties.kwargs.SOURCE_DIR]
+nargs = 1
+
+[commands.fetchcontent_getproperties.kwargs.BINARY_DIR]
+nargs = 1
+
+[commands.fetchcontent_getproperties.kwargs.POPULATED]
+nargs = 1
+
+[commands.fetchcontent_populate]
+pargs = 1
+flags = ["QUIET"]
+
+[commands.fetchcontent_populate.kwargs.SUBBUILD_DIR]
+nargs = 1
+
+[commands.fetchcontent_populate.kwargs.SOURCE_DIR]
+nargs = 1
+
+[commands.fetchcontent_populate.kwargs.BINARY_DIR]
+nargs = 1
+
+[commands.find_package_handle_standard_args]
+pargs = "1+"
+flags = [
+  "DEFAULT_MSG",
+  "HANDLE_COMPONENTS",
+  "CONFIG_MODE",
+  "NAME_MISMATCHED",
+  "HANDLE_VERSION_RANGE",
+]
+
+[commands.find_package_handle_standard_args.kwargs.FOUND_VAR]
+nargs = 1
+
+[commands.find_package_handle_standard_args.kwargs.REQUIRED_VARS]
+nargs = "+"
+
+[commands.find_package_handle_standard_args.kwargs.VERSION_VAR]
+nargs = 1
+
+[commands.find_package_handle_standard_args.kwargs.FAIL_MESSAGE]
+nargs = 1
+
+[commands.find_package_handle_standard_args.kwargs.REASON_FAILURE_MESSAGE]
+nargs = 1
+
+[commands.find_package_check_version]
+pargs = 2
+flags = ["HANDLE_VERSION_RANGE"]
+
+[commands.find_package_check_version.kwargs.RESULT_MESSAGE_VARIABLE]
+nargs = 1
+
+[commands.find_package_message]
+pargs = 3
+
+[commands.gtest_add_tests]
+pargs = 0
+flags = ["SKIP_DEPENDENCY"]
+
+[commands.gtest_add_tests.kwargs.TARGET]
+nargs = 1
+
+[commands.gtest_add_tests.kwargs.SOURCES]
+nargs = "+"
+
+[commands.gtest_add_tests.kwargs.EXTRA_ARGS]
+nargs = "*"
+
+[commands.gtest_add_tests.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.gtest_add_tests.kwargs.TEST_PREFIX]
+nargs = 1
+
+[commands.gtest_add_tests.kwargs.TEST_SUFFIX]
+nargs = 1
+
+[commands.gtest_add_tests.kwargs.TEST_LIST]
+nargs = 1
+
+[commands.gtest_discover_tests]
+pargs = 1
+flags = ["NO_PRETTY_TYPES", "NO_PRETTY_VALUES"]
+
+[commands.gtest_discover_tests.kwargs.EXTRA_ARGS]
+nargs = "*"
+
+[commands.gtest_discover_tests.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.TEST_PREFIX]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.TEST_SUFFIX]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.TEST_FILTER]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.PROPERTIES]
+nargs = "*"
+
+[commands.gtest_discover_tests.kwargs.TEST_LIST]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.DISCOVERY_TIMEOUT]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.XML_OUTPUT_DIR]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.DISCOVERY_MODE]
+nargs = 1
+
+[commands.gtest_discover_tests.kwargs.DISCOVERY_EXTRA_ARGS]
+nargs = "*"
+
+[commands.processorcount]
+pargs = 1
+
+[commands.select_library_configurations]
+pargs = 1
+
+[commands.generate_export_header]
+pargs = 1
+flags = ["DEFINE_NO_DEPRECATED"]
+
+[commands.generate_export_header.kwargs.BASE_NAME]
+nargs = 1
+
+[commands.generate_export_header.kwargs.EXPORT_FILE_NAME]
+nargs = 1
+
+[commands.generate_export_header.kwargs.EXPORT_MACRO_NAME]
+nargs = 1
+
+[commands.generate_export_header.kwargs.NO_EXPORT_MACRO_NAME]
+nargs = 1
+
+[commands.generate_export_header.kwargs.DEPRECATED_MACRO_NAME]
+nargs = 1
+
+[commands.generate_export_header.kwargs.NO_DEPRECATED_MACRO_NAME]
+nargs = 1
+
+[commands.generate_export_header.kwargs.STATIC_DEFINE]
+nargs = 1
+
+[commands.generate_export_header.kwargs.PREFIX_NAME]
+nargs = 1
+
+[commands.generate_export_header.kwargs.CUSTOM_CONTENT_FROM_VARIABLE]
+nargs = 1
+
+[commands.generate_export_header.kwargs.INCLUDE_GUARD_NAME]
+nargs = 1
+
+[commands.add_compiler_export_flags]
+pargs = "?"
+
+[commands.cpack_add_component]
+pargs = 1
+flags = ["HIDDEN", "REQUIRED", "DISABLED", "DOWNLOADED"]
+
+[commands.cpack_add_component.kwargs.DISPLAY_NAME]
+nargs = 1
+
+[commands.cpack_add_component.kwargs.DESCRIPTION]
+nargs = 1
+
+[commands.cpack_add_component.kwargs.GROUP]
+nargs = 1
+
+[commands.cpack_add_component.kwargs.DEPENDS]
+nargs = "+"
+
+[commands.cpack_add_component.kwargs.INSTALL_TYPES]
+nargs = "+"
+
+[commands.cpack_add_component.kwargs.ARCHIVE_FILE]
+nargs = 1
+
+[commands.cpack_add_component.kwargs.PLIST]
+nargs = 1
+
+[commands.cpack_add_component_group]
+pargs = 1
+flags = ["EXPANDED", "BOLD_TITLE"]
+
+[commands.cpack_add_component_group.kwargs.DISPLAY_NAME]
+nargs = 1
+
+[commands.cpack_add_component_group.kwargs.DESCRIPTION]
+nargs = 1
+
+[commands.cpack_add_component_group.kwargs.PARENT_GROUP]
+nargs = 1
+
+[commands.cpack_add_install_type]
+pargs = 1
+
+[commands.cpack_add_install_type.kwargs.DISPLAY_NAME]
+nargs = 1
+
+[commands.cpack_configure_downloads]
+pargs = 1
+flags = ["ALL", "ADD_REMOVE", "NO_ADD_REMOVE"]
+
+[commands.cpack_configure_downloads.kwargs.UPLOAD_DIRECTORY]
+nargs = 1
+
+[commands.externalproject_add_step]
+pargs = 2
+
+[commands.externalproject_add_step.kwargs.COMMAND]
+nargs = "+"
+
+[commands.externalproject_add_step.kwargs.COMMENT]
+nargs = 1
+
+[commands.externalproject_add_step.kwargs.DEPENDEES]
+nargs = "+"
+
+[commands.externalproject_add_step.kwargs.DEPENDERS]
+nargs = "+"
+
+[commands.externalproject_add_step.kwargs.DEPENDS]
+nargs = "*"
+
+[commands.externalproject_add_step.kwargs.BYPRODUCTS]
+nargs = "*"
+
+[commands.externalproject_add_step.kwargs.ALWAYS]
+nargs = 1
+
+[commands.externalproject_add_step.kwargs.EXCLUDE_FROM_MAIN]
+nargs = 1
+
+[commands.externalproject_add_step.kwargs.WORKING_DIRECTORY]
+nargs = 1
+
+[commands.externalproject_add_step.kwargs.LOG]
+nargs = 1
+
+[commands.externalproject_add_step.kwargs.USES_TERMINAL]
+nargs = 1
+
+[commands.externalproject_add_step.kwargs.ENVIRONMENT_MODIFICATION]
+nargs = "*"
+
+[commands.externalproject_add_steptargets]
+pargs = "2+"
+flags = ["NO_DEPENDS"]
+
+[commands.externalproject_add_stepdependencies]
+pargs = "3+"
+
+[commands.externalproject_get_property]
+pargs = "2+"
 
 [commands.export.forms.EXPORT]
 pargs = 1
