@@ -215,6 +215,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "pretty",
+ "regex",
  "serde",
  "tempfile",
  "thiserror",

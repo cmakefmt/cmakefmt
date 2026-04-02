@@ -60,6 +60,78 @@ struct MarkupSection {
 
 const CONFIG_FILE_NAME: &str = ".cmake-format.toml";
 
+pub fn default_config_template() -> String {
+    format!(
+        concat!(
+            "# Default cmfmt configuration.\n",
+            "# Copy this to .cmake-format.toml and uncomment the optional settings\n",
+            "# you want to customize.\n\n",
+            "[format]\n",
+            "line_width = {line_width}\n",
+            "tab_size = {tab_size}\n",
+            "# Uncomment to indent with tabs instead of spaces.\n",
+            "# use_tabchars = true\n",
+            "max_empty_lines = {max_empty_lines}\n",
+            "max_lines_hwrap = {max_lines_hwrap}\n",
+            "max_pargs_hwrap = {max_pargs_hwrap}\n",
+            "max_subgroups_hwrap = {max_subgroups_hwrap}\n",
+            "dangle_parens = {dangle_parens}\n",
+            "dangle_align = \"{dangle_align}\"\n",
+            "min_prefix_chars = {min_prefix_chars}\n",
+            "max_prefix_chars = {max_prefix_chars}\n",
+            "# Uncomment to insert a space before control-flow parentheses.\n",
+            "# separate_ctrl_name_with_space = true\n",
+            "# Uncomment to insert a space before function or macro parentheses.\n",
+            "# separate_fn_name_with_space = true\n\n",
+            "[style]\n",
+            "command_case = \"{command_case}\"\n",
+            "keyword_case = \"{keyword_case}\"\n\n",
+            "[markup]\n",
+            "enable_markup = {enable_markup}\n",
+            "first_comment_is_literal = {first_comment_is_literal}\n",
+            "# Uncomment to preserve comments matching a custom regex literally.\n",
+            "# literal_comment_pattern = \"^\\\\s*NOTE:\"\n",
+            "bullet_char = \"{bullet_char}\"\n",
+            "enum_char = \"{enum_char}\"\n",
+            "fence_pattern = '{fence_pattern}'\n",
+            "ruler_pattern = '{ruler_pattern}'\n",
+            "hashruler_min_length = {hashruler_min_length}\n",
+            "canonicalize_hashrulers = {canonicalize_hashrulers}\n\n",
+            "# Uncomment and edit a block like this to override formatting for a\n",
+            "# specific command.\n",
+            "# [per_command.message]\n",
+            "# line_width = 120\n",
+            "# command_case = \"unchanged\"\n",
+            "# keyword_case = \"upper\"\n",
+            "# tab_size = 4\n",
+            "# dangle_parens = false\n",
+            "# dangle_align = \"prefix\"\n",
+            "# max_pargs_hwrap = 8\n",
+            "# max_subgroups_hwrap = 3\n",
+        ),
+        line_width = Config::default().line_width,
+        tab_size = Config::default().tab_size,
+        max_empty_lines = Config::default().max_empty_lines,
+        max_lines_hwrap = Config::default().max_lines_hwrap,
+        max_pargs_hwrap = Config::default().max_pargs_hwrap,
+        max_subgroups_hwrap = Config::default().max_subgroups_hwrap,
+        dangle_parens = Config::default().dangle_parens,
+        dangle_align = "prefix",
+        min_prefix_chars = Config::default().min_prefix_chars,
+        max_prefix_chars = Config::default().max_prefix_chars,
+        command_case = "lower",
+        keyword_case = "upper",
+        enable_markup = Config::default().enable_markup,
+        first_comment_is_literal = Config::default().first_comment_is_literal,
+        bullet_char = Config::default().bullet_char,
+        enum_char = Config::default().enum_char,
+        fence_pattern = Config::default().fence_pattern,
+        ruler_pattern = Config::default().ruler_pattern,
+        hashruler_min_length = Config::default().hashruler_min_length,
+        canonicalize_hashrulers = Config::default().canonicalize_hashrulers,
+    )
+}
+
 impl Config {
     /// Load configuration for a file at the given path.
     ///
@@ -305,6 +377,21 @@ command_case = "upper"
         // Unspecified values keep defaults
         assert!(!config.use_tabchars);
         assert_eq!(config.max_empty_lines, 1);
+    }
+
+    #[test]
+    fn default_config_template_parses() {
+        let template = default_config_template();
+        let parsed: FileConfig = toml::from_str(&template).unwrap();
+        assert_eq!(parsed.format.line_width, Some(Config::default().line_width));
+        assert_eq!(
+            parsed.style.command_case,
+            Some(Config::default().command_case)
+        );
+        assert_eq!(
+            parsed.markup.enable_markup,
+            Some(Config::default().enable_markup)
+        );
     }
 
     #[test]

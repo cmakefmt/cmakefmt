@@ -1,4 +1,5 @@
 pub mod file;
+pub use file::default_config_template;
 
 use std::collections::HashMap;
 

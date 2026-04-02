@@ -5,6 +5,13 @@ fn cmfmt() -> Command {
     Command::new(env!("CARGO_BIN_EXE_cmfmt"))
 }
 
+fn write_file(path: &std::path::Path, contents: &str) {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+    std::fs::write(path, contents).unwrap();
+}
+
 // ── Basic formatting ────────────────────────────────────────────────────────
 
 #[test]
@@ -142,6 +149,14 @@ fn nonexistent_file_returns_exit_2() {
     assert!(stderr.contains("error:"));
 }
 
+#[test]
+fn invalid_file_regex_returns_exit_2() {
+    let output = cmfmt().args(["--file-regex", "("]).output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("invalid file regex"));
+}
+
 // ── CLI flag overrides ──────────────────────────────────────────────────────
 
 #[test]
@@ -223,6 +238,106 @@ fn multiple_files_in_one_invocation() {
     }
 }
 
+#[test]
+fn explicit_non_cmake_file_is_formatted() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("toolchain.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmfmt().arg(file.to_str().unwrap()).output().unwrap();
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "set(FOO bar)\n");
+}
+
+#[test]
+fn no_args_discovers_cmake_files_recursively() {
+    let dir = tempfile::tempdir().unwrap();
+    let top = dir.path().join("CMakeLists.txt");
+    let nested = dir.path().join("cmake/modules/CompilerWarnings.cmake");
+    let ignored = dir.path().join("docs/example.txt");
+
+    write_file(&top, "set(  TOP  value )\n");
+    write_file(&nested, "set(  NESTED  value )\n");
+    write_file(&ignored, "set(  IGNORED  value )\n");
+
+    let output = cmfmt()
+        .args(["--list-files"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("CMakeLists.txt"));
+    assert!(stdout.contains("CompilerWarnings.cmake"));
+    assert!(!stdout.contains("example.txt"));
+}
+
+#[test]
+fn directory_input_discovers_only_cmake_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let nested = dir.path().join("cmake/toolchain.cmake.in");
+    let ignored = dir.path().join("cmake/ignore.txt");
+
+    write_file(&nested, "set(  FOO  bar )\n");
+    write_file(&ignored, "set(  NOPE  value )\n");
+
+    let output = cmfmt()
+        .args(["--list-files", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("toolchain.cmake.in"));
+    assert!(!stdout.contains("ignore.txt"));
+}
+
+#[test]
+fn file_regex_filters_discovered_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let keep = dir.path().join("cmake/KeepThis.cmake");
+    let skip = dir.path().join("cmake/SkipThis.cmake");
+
+    write_file(&keep, "set(  KEEP  value )\n");
+    write_file(&skip, "set(  SKIP  value )\n");
+
+    let output = cmfmt()
+        .args([
+            "--list-files",
+            "--file-regex",
+            "Keep",
+            dir.path().to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("KeepThis.cmake"));
+    assert!(!stdout.contains("SkipThis.cmake"));
+}
+
+#[test]
+fn list_files_reports_only_changed_targets() {
+    let dir = tempfile::tempdir().unwrap();
+    let changed = dir.path().join("changed.cmake");
+    let clean = dir.path().join("clean.cmake");
+
+    write_file(&changed, "set(  FOO  bar )\n");
+    write_file(&clean, "set(FOO bar)\n");
+
+    let output = cmfmt()
+        .args(["--list-files", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("changed.cmake"));
+    assert!(!stdout.contains("clean.cmake"));
+}
+
 // ── Config file ─────────────────────────────────────────────────────────────
 
 #[test]
@@ -249,6 +364,20 @@ fn explicit_config_file() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.starts_with("CMAKE_MINIMUM_REQUIRED("));
+}
+
+#[test]
+fn dump_config_prints_template() {
+    let output = cmfmt().arg("--dump-config").output().unwrap();
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("# Default cmfmt configuration."));
+    assert!(stdout.contains("[format]"));
+    assert!(stdout.contains("line_width = 80"));
+    assert!(stdout.contains("# use_tabchars = true"));
+    assert!(stdout.contains("[markup]"));
+    assert!(stdout.contains("# [per_command.message]"));
 }
 
 // ── Version ─────────────────────────────────────────────────────────────────
