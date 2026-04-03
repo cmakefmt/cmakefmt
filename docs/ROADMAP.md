@@ -410,28 +410,28 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Redesign parser error rendering so the primary message is human-oriented
+- [x] Redesign parser error rendering so the primary message is human-oriented
       and the raw parser expectation set is secondary detail
   - short summary first, e.g. "failed to parse quoted argument"
   - raw pest expectations only after the summary / hint
   - avoid dumping low-signal parser internals before the likely cause
-- [ ] Include richer source context in all parse/format/config diagnostics
+- [x] Include richer source context in all parse/format/config diagnostics
   - absolute file path
   - 1-based line and column
   - 2-3 surrounding source lines when available
   - a caret or highlight at the failing span
   - a compact "while parsing/formatting ..." context line
-- [ ] Add targeted parser failure heuristics for common CMake mistakes
+- [x] Add targeted parser failure heuristics for common CMake mistakes
   - malformed quoted arguments / escaped quotes
   - bracket argument and bracket comment delimiter mismatches
   - unbalanced parens in command invocations and control-flow conditions
   - top-level template/configure-file placeholder issues in `.cmake.in`
   - likely earlier-line desync causing the reported failure to appear late
-- [ ] Make barrier/fence-related failures and surprises explicit
+- [x] Make barrier/fence-related failures and surprises explicit
   - report when syntax is being passed through unchanged because formatting is disabled
   - explain when invalid syntax is tolerated only because it sits inside an off/fence region
   - include barrier state in diagnostics when it materially affects behavior
-- [ ] Improve formatter/layout diagnostics for "why did this wrap?" cases
+- [x] Improve formatter/layout diagnostics for "why did this wrap?" cases
   - report the chosen layout family (inline / hanging-wrap / vertical / preserved)
   - report the key thresholds that triggered the decision
     - `line_width`
@@ -440,7 +440,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
     - `max_hanging_wrap_groups`
   - report the command-spec form selected from the registry
   - report whether source grouping preservation affected the result
-- [ ] Expand `--debug` into a structured troubleshooting mode useful on real repositories
+- [x] Expand `--debug` into a structured troubleshooting mode useful on real repositories
   - file discovery summary
   - chosen config files and precedence order
   - effective per-command config for the current command
@@ -448,41 +448,41 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - barrier/fence transitions
   - per-command layout decision summaries
   - final "why this file changed" summary where practical
-- [ ] Make config-file diagnostics more actionable
+- [x] Make config-file diagnostics more actionable
   - unknown key suggestions for close matches
   - point to the exact config file that introduced the bad value
   - explain precedence when multiple config files are in play
   - call out unsupported legacy keys and recommend `--convert-legacy-config` when relevant
-- [ ] Make CLI validation failures point to likely fixes
+- [x] Make CLI validation failures point to likely fixes
   - conflicting flag explanations
   - invalid regex diagnostics with the offending pattern
   - invalid `--colour` / enum values shown with allowed values
   - invalid `--progress-bar` usage explains the `--in-place` requirement
-- [ ] Add reproducibility and triage affordances
+- [x] Add reproducibility and triage affordances
   - a compact repro recipe in error output when a file path is known
   - document a standard bug-report checklist in the user docs
   - document how to capture `--debug` output for issue reports
   - ensure failures are copy-paste friendly from CI logs
-- [ ] Add regression coverage specifically for diagnostics quality
+- [x] Add regression coverage specifically for diagnostics quality
   - parser failure snapshots
   - config failure snapshots
   - CLI validation failure snapshots
   - custom command-spec / registry failure cases
   - debug-mode snapshots where output is stable enough to lock down
   - targeted tests for hint selection on common parser failures
-- [ ] Validate the improved diagnostics against large real repositories
+- [x] Validate the improved diagnostics against large real repositories
   - use real parsing/formatting failures encountered during late-stage validation
   - confirm the messages are understandable without reading the source code
   - trim noisy debug output until the signal is high enough for everyday use
 
 ### Acceptance criteria
 
-- [ ] Common parser/config/CLI failures produce actionable messages without requiring source-code inspection
-- [ ] A user can identify the failing file, line, and likely cause directly from CI logs
-- [ ] `--debug` output is sufficient to diagnose real formatting issues on representative repositories
-- [ ] Layout-related surprises can be traced to a concrete command-spec/config decision path
-- [ ] Diagnostics regressions are covered by snapshot or focused regression tests
-- [ ] The docs explain how to collect and share the right debugging information when reporting a bug
+- [x] Common parser/config/CLI failures produce actionable messages without requiring source-code inspection
+- [x] A user can identify the failing file, line, and likely cause directly from CI logs
+- [x] `--debug` output is sufficient to diagnose real formatting issues on representative repositories
+- [x] Layout-related surprises can be traced to a concrete command-spec/config decision path
+- [x] Diagnostics regressions are covered by snapshot or focused regression tests
+- [x] The docs explain how to collect and share the right debugging information when reporting a bug
 
 ---
 

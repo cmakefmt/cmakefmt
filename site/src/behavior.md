@@ -35,8 +35,9 @@ valid CMake on their own.
 
 ## Debug Mode
 
-`--debug` reports file discovery, config sources, barrier events, and formatter
-diagnostics for troubleshooting.
+`--debug` reports file discovery, config sources, CLI overrides, barrier/fence
+transitions, selected command forms, effective per-command thresholds, chosen
+layout families, and a final changed-line summary.
 
 ## Known Differences From `cmake-format`
 

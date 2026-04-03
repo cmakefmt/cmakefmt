@@ -152,6 +152,14 @@ Print debug diagnostics while checking a file:
 cmakefmt --debug --check CMakeLists.txt
 ```
 
+If a parse or config failure occurs, `cmakefmt` now prints:
+
+- the failing file path
+- 1-based line and column
+- a short source snippet with a caret
+- a likely-cause hint where possible
+- a copy-paste repro command using `--debug --check`
+
 Current CLI flags:
 
 ```text
@@ -187,6 +195,21 @@ Exit codes:
 - `0`: success
 - `1`: `--check` or `--list-files` found files that would change
 - `2`: parse, config, or I/O error
+
+## Debugging And Bug Reports
+
+When reporting a formatting or parsing issue, include:
+
+- the failing file path
+- the exact `cmakefmt` command you ran
+- the full error output or `--debug` output
+- the relevant `.cmakefmt.toml` files if config is involved
+
+The quickest reproducible capture is usually:
+
+```bash
+cmakefmt --debug --check path/to/CMakeLists.txt
+```
 
 ## Formatter barriers
 

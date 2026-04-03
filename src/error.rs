@@ -8,6 +8,21 @@ pub enum Error {
     #[error("parse error: {0}")]
     Parse(#[from] Box<pest::error::Error<crate::parser::Rule>>),
 
+    /// A parser error annotated with source text and line-offset context.
+    #[error("parse error in {display_name}: {source}")]
+    ParseContext {
+        /// Human-facing source name, for example a path or `<stdin>`.
+        display_name: String,
+        /// The source text that failed to parse.
+        source_text: String,
+        /// The 1-based source line number where this parser chunk started.
+        start_line: usize,
+        /// Whether earlier barrier/fence handling affected how this chunk was parsed.
+        barrier_context: bool,
+        /// The underlying pest parser error.
+        source: Box<pest::error::Error<crate::parser::Rule>>,
+    },
+
     /// A `.cmakefmt.toml` parse error.
     #[error("config error in {path}: {source}")]
     Config {
@@ -38,3 +53,25 @@ pub enum Error {
 
 /// Convenience alias for crate-level results.
 pub type Result<T> = std::result::Result<T, Error>;
+
+impl Error {
+    /// Attach a human-facing source name to a contextual parser error.
+    pub fn with_display_name(self, display_name: impl Into<String>) -> Self {
+        match self {
+            Self::ParseContext {
+                source_text,
+                start_line,
+                barrier_context,
+                source,
+                ..
+            } => Self::ParseContext {
+                display_name: display_name.into(),
+                source_text,
+                start_line,
+                barrier_context,
+                source,
+            },
+            other => other,
+        }
+    }
+}

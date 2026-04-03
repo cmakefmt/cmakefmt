@@ -203,6 +203,41 @@ fn invalid_file_regex_returns_exit_2() {
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("invalid file regex"));
+    assert!(stderr.contains("--path-regex"));
+}
+
+#[test]
+fn parse_errors_include_context_and_repro_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "message(FATAL_ERROR \"foo\n");
+
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("failed to parse"));
+    assert!(stderr.contains(file.to_str().unwrap()));
+    assert!(stderr.contains("parser detail:"));
+    assert!(stderr.contains("repro: cmakefmt --debug --check"));
+}
+
+#[test]
+fn config_errors_suggest_updated_or_close_keys() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join(".cmakefmt.toml");
+    write_file(&config, "[format]\nline_wdth = 90\n");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("invalid config file"));
+    assert!(stderr.contains("line_wdth"));
+    assert!(stderr.contains("line_width"));
+    assert!(stderr.contains("config files are applied in order"));
 }
 
 // ── CLI flag overrides ──────────────────────────────────────────────────────
@@ -694,8 +729,28 @@ fn debug_mode_reports_config_and_barriers() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("debug: processing"));
     assert!(stderr.contains("debug: config sources:"));
+    assert!(stderr.contains("debug: cli overrides:"));
     assert!(stderr.contains("formatter: disabled formatting"));
     assert!(stderr.contains("formatter: enabled formatting"));
+}
+
+#[test]
+fn debug_mode_reports_command_form_and_layout_decision() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "target_link_libraries(foo PUBLIC bar baz)\n");
+
+    let output = cmakefmt()
+        .args(["--debug", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("formatter: command target_link_libraries form="));
+    assert!(stderr.contains("effective_config("));
+    assert!(stderr.contains("layout="));
+    assert!(stderr.contains("changed_lines="));
 }
 
 #[test]

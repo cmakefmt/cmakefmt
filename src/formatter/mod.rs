@@ -7,7 +7,7 @@ pub mod comment;
 pub mod node;
 
 use crate::config::Config;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
@@ -48,6 +48,15 @@ pub fn format_source_with_registry_debug(
 /// This is useful when callers want to parse once and format repeatedly with
 /// different config or registry settings.
 pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> Result<String> {
+    format_file_with_debug(file, config, registry, &mut DebugLog::disabled())
+}
+
+fn format_file_with_debug(
+    file: &File,
+    config: &Config,
+    registry: &CommandRegistry,
+    debug: &mut DebugLog<'_>,
+) -> Result<String> {
     let mut output = String::new();
     let mut previous_was_content = false;
     let mut block_depth = 0usize;
@@ -66,6 +75,7 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                     config,
                     registry,
                     block_depth,
+                    debug,
                 )?);
 
                 if let Some(trailing) = &command.trailing_comment {
@@ -141,23 +151,40 @@ fn format_source_impl(
     let mut enabled_chunk = String::new();
     let mut total_statements = 0usize;
     let mut mode = BarrierMode::Enabled;
+    let mut enabled_chunk_start_line = 1usize;
+    let mut saw_barrier = false;
 
     for (line_index, line) in source.split_inclusive('\n').enumerate() {
         let line_no = line_index + 1;
         match detect_barrier(line) {
             Some(BarrierEvent::DisableByDirective(kind)) => {
-                let statements =
-                    flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+                let statements = flush_enabled_chunk(
+                    &mut output,
+                    &mut enabled_chunk,
+                    config,
+                    registry,
+                    debug,
+                    enabled_chunk_start_line,
+                    saw_barrier,
+                )?;
                 total_statements += statements;
                 debug.log(format!(
                     "formatter: disabled formatting at line {line_no} via {kind}: off"
                 ));
                 output.push_str(line);
                 mode = BarrierMode::DisabledByDirective;
+                saw_barrier = true;
             }
             Some(BarrierEvent::EnableByDirective(kind)) => {
-                let statements =
-                    flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+                let statements = flush_enabled_chunk(
+                    &mut output,
+                    &mut enabled_chunk,
+                    config,
+                    registry,
+                    debug,
+                    enabled_chunk_start_line,
+                    saw_barrier,
+                )?;
                 total_statements += statements;
                 debug.log(format!(
                     "formatter: enabled formatting at line {line_no} via {kind}: on"
@@ -166,10 +193,18 @@ fn format_source_impl(
                 if matches!(mode, BarrierMode::DisabledByDirective) {
                     mode = BarrierMode::Enabled;
                 }
+                saw_barrier = true;
             }
             Some(BarrierEvent::Fence) => {
-                let statements =
-                    flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+                let statements = flush_enabled_chunk(
+                    &mut output,
+                    &mut enabled_chunk,
+                    config,
+                    registry,
+                    debug,
+                    enabled_chunk_start_line,
+                    saw_barrier,
+                )?;
                 total_statements += statements;
                 let next_mode = if matches!(mode, BarrierMode::DisabledByFence) {
                     BarrierMode::Enabled
@@ -182,9 +217,13 @@ fn format_source_impl(
                 ));
                 output.push_str(line);
                 mode = next_mode;
+                saw_barrier = true;
             }
             None => {
                 if matches!(mode, BarrierMode::Enabled) {
+                    if enabled_chunk.is_empty() {
+                        enabled_chunk_start_line = line_no;
+                    }
                     enabled_chunk.push_str(line);
                 } else {
                     output.push_str(line);
@@ -193,8 +232,15 @@ fn format_source_impl(
         }
     }
 
-    total_statements +=
-        flush_enabled_chunk(&mut output, &mut enabled_chunk, config, registry, debug)?;
+    total_statements += flush_enabled_chunk(
+        &mut output,
+        &mut enabled_chunk,
+        config,
+        registry,
+        debug,
+        enabled_chunk_start_line,
+        saw_barrier,
+    )?;
     Ok((output, total_statements))
 }
 
@@ -204,17 +250,31 @@ fn flush_enabled_chunk(
     config: &Config,
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
+    chunk_start_line: usize,
+    barrier_context: bool,
 ) -> Result<usize> {
     if enabled_chunk.is_empty() {
         return Ok(0);
     }
 
-    let file = parser::parse(enabled_chunk)?;
+    let file = match parser::parse(enabled_chunk) {
+        Ok(file) => file,
+        Err(Error::Parse(source)) => {
+            return Err(Error::ParseContext {
+                display_name: "<source>".to_owned(),
+                source_text: enabled_chunk.clone(),
+                start_line: chunk_start_line,
+                barrier_context,
+                source,
+            });
+        }
+        Err(err) => return Err(err),
+    };
     let statement_count = file.statements.len();
     debug.log(format!(
-        "formatter: formatting enabled chunk with {statement_count} statement(s)"
+        "formatter: formatting enabled chunk with {statement_count} statement(s) starting at source line {chunk_start_line}"
     ));
-    let formatted = format_file(&file, config, registry)?;
+    let formatted = format_file_with_debug(&file, config, registry, debug)?;
     output.push_str(&formatted);
     enabled_chunk.clear();
     Ok(statement_count)
@@ -267,7 +327,7 @@ enum BarrierEvent<'a> {
     Fence,
 }
 
-struct DebugLog<'a> {
+pub(crate) struct DebugLog<'a> {
     lines: Option<&'a mut Vec<String>>,
 }
 

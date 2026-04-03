@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::fmt::Write as _;
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -11,6 +12,7 @@ use cmakefmt::{
     format_source_with_registry, format_source_with_registry_debug, CaseStyle, Config,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use pest::error::{ErrorVariant, LineColLocation};
 use rayon::prelude::*;
 use regex::Regex;
 
@@ -185,7 +187,7 @@ fn main() -> ExitCode {
     match run(&cli) {
         Ok(code) => ExitCode::from(code),
         Err(err) => {
-            eprintln!("error: {err}");
+            eprintln!("{}", render_cli_error(&err));
             ExitCode::from(EXIT_ERROR)
         }
     }
@@ -473,17 +475,30 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         describe_config_sources(&config_sources),
     ];
     let (formatted, mut formatter_debug) = if cli.debug {
-        format_source_with_registry_debug(&source, &config, &registry)?
+        match format_source_with_registry_debug(&source, &config, &registry) {
+            Ok(result) => result,
+            Err(err) => return Err(err.with_display_name("<stdin>")),
+        }
     } else {
-        (
-            format_source_with_registry(&source, &config, &registry)?,
-            Vec::new(),
-        )
+        match format_source_with_registry(&source, &config, &registry) {
+            Ok(formatted) => (formatted, Vec::new()),
+            Err(err) => return Err(err.with_display_name("<stdin>")),
+        }
     };
     debug_lines.append(&mut formatter_debug);
 
     let would_change = formatted != source;
+    let changed_line_count = changed_formatted_line_mask(
+        &split_lines_with_endings(&source),
+        &split_lines_with_endings(&formatted),
+    )
+    .into_iter()
+    .filter(|changed| *changed)
+    .count();
     debug_lines.push(format!("result <stdin>: would_change={would_change}"));
+    debug_lines.push(format!(
+        "result <stdin>: changed_lines={changed_line_count}"
+    ));
     let highlighted_output = colorize_stdout
         .then(|| highlight_changed_lines(&source, &formatted))
         .filter(|_| would_change);
@@ -509,36 +524,36 @@ fn process_path(
     let mut debug_lines = vec![
         format!("processing {}", path.display()),
         describe_config_sources(&config_sources),
+        describe_cli_overrides(cli),
     ];
 
     let (formatted, mut formatter_debug) = if cli.debug {
         match format_source_with_registry_debug(&source, &config, &registry) {
             Ok(result) => result,
-            Err(cmakefmt::Error::Parse(parse_err)) => {
-                return Err(cmakefmt::Error::Formatter(format!(
-                    "{}: {parse_err}",
-                    path.display()
-                )));
-            }
-            Err(err) => return Err(err),
+            Err(err) => return Err(err.with_display_name(path.display().to_string())),
         }
     } else {
         match format_source_with_registry(&source, &config, &registry) {
             Ok(formatted) => (formatted, Vec::new()),
-            Err(cmakefmt::Error::Parse(parse_err)) => {
-                return Err(cmakefmt::Error::Formatter(format!(
-                    "{}: {parse_err}",
-                    path.display()
-                )));
-            }
-            Err(err) => return Err(err),
+            Err(err) => return Err(err.with_display_name(path.display().to_string())),
         }
     };
     debug_lines.append(&mut formatter_debug);
 
     let would_change = formatted != source;
+    let changed_line_count = changed_formatted_line_mask(
+        &split_lines_with_endings(&source),
+        &split_lines_with_endings(&formatted),
+    )
+    .into_iter()
+    .filter(|changed| *changed)
+    .count();
     debug_lines.push(format!(
         "result {}: would_change={would_change}",
+        path.display()
+    ));
+    debug_lines.push(format!(
+        "result {}: changed_lines={changed_line_count}",
         path.display()
     ));
     let highlighted_output = colorize_stdout
@@ -740,6 +755,31 @@ fn describe_config_sources(config_sources: &[PathBuf]) -> String {
     }
 }
 
+fn describe_cli_overrides(cli: &Cli) -> String {
+    let mut parts = Vec::new();
+    if let Some(line_width) = cli.line_width {
+        parts.push(format!("line_width={line_width}"));
+    }
+    if let Some(tab_size) = cli.tab_size {
+        parts.push(format!("tab_size={tab_size}"));
+    }
+    if let Some(command_case) = cli.command_case {
+        parts.push(format!("command_case={command_case:?}"));
+    }
+    if let Some(keyword_case) = cli.keyword_case {
+        parts.push(format!("keyword_case={keyword_case:?}"));
+    }
+    if let Some(dangle_parens) = cli.dangle_parens {
+        parts.push(format!("dangle_parens={dangle_parens}"));
+    }
+
+    if parts.is_empty() {
+        "cli overrides: none".to_owned()
+    } else {
+        format!("cli overrides: {}", parts.join(", "))
+    }
+}
+
 fn debug_parallel_suffix(parallel_jobs: usize) -> String {
     if parallel_jobs > 1 {
         format!(" (parallel jobs: {parallel_jobs})")
@@ -750,6 +790,370 @@ fn debug_parallel_suffix(parallel_jobs: usize) -> String {
 
 fn log_debug(message: impl AsRef<str>) {
     eprintln!("debug: {}", message.as_ref());
+}
+
+fn render_cli_error(err: &cmakefmt::Error) -> String {
+    match err {
+        cmakefmt::Error::ParseContext {
+            display_name,
+            source_text,
+            start_line,
+            barrier_context,
+            source,
+        } => render_parse_error(
+            display_name,
+            source_text,
+            *start_line,
+            *barrier_context,
+            source,
+        ),
+        cmakefmt::Error::Config { path, source } => render_toml_error("config", path, source),
+        cmakefmt::Error::Spec { path, source } => render_toml_error("spec", path, source),
+        cmakefmt::Error::Formatter(message) => render_formatter_error(message),
+        cmakefmt::Error::Io(source) => format!("error: I/O failure: {source}"),
+        cmakefmt::Error::Parse(source) => {
+            format!("error: parse failure\n\nparser detail: {source}")
+        }
+    }
+}
+
+fn render_parse_error(
+    display_name: &str,
+    source_text: &str,
+    start_line: usize,
+    barrier_context: bool,
+    source: &pest::error::Error<cmakefmt::parser::Rule>,
+) -> String {
+    let (local_line, local_column) = line_col_from_pest(source);
+    let absolute_line = start_line + local_line.saturating_sub(1);
+    let source_lines: Vec<&str> = source_text.lines().collect();
+    let line_text = source_lines
+        .get(local_line.saturating_sub(1))
+        .copied()
+        .or_else(|| source_lines.last().copied())
+        .unwrap_or_default();
+    let (summary, mut hints) = classify_parse_failure(display_name, line_text, source);
+    if barrier_context {
+        hints.push(
+            "this file contains formatter barriers or fences; disabled regions are passed through verbatim"
+                .to_owned(),
+        );
+    }
+
+    let mut rendered = String::new();
+    let _ = writeln!(
+        rendered,
+        "error: {summary}\n  --> {display_name}:{absolute_line}:{local_column}"
+    );
+    if !source_text.is_empty() {
+        rendered.push('\n');
+        rendered.push_str(&render_source_snippet(
+            source_text,
+            start_line,
+            local_line,
+            local_column,
+        ));
+        rendered.push('\n');
+    }
+    for hint in hints {
+        let _ = writeln!(rendered, "hint: {hint}");
+    }
+    let _ = writeln!(
+        rendered,
+        "parser detail: {}",
+        describe_pest_expectation(source)
+    );
+    if display_name != "<stdin>" {
+        let _ = writeln!(rendered, "repro: cmakefmt --debug --check {display_name}");
+    }
+    rendered.trim_end().to_owned()
+}
+
+fn render_toml_error(kind: &str, path: &Path, source: &toml::de::Error) -> String {
+    let contents = std::fs::read_to_string(path).ok();
+    let detail = source.to_string();
+    let mut rendered = String::new();
+    let _ = writeln!(
+        rendered,
+        "error: invalid {kind} file\n  --> {}",
+        path.display()
+    );
+
+    if let (Some(contents), Some(span)) = (contents.as_deref(), source.span()) {
+        let (line, column) = byte_offset_to_line_col(contents, span.start);
+        let _ = writeln!(rendered, "      at {line}:{column}");
+        rendered.push('\n');
+        rendered.push_str(&render_source_snippet(contents, 1, line, column));
+        rendered.push('\n');
+    }
+
+    let mut hints = Vec::new();
+    if let Some((field, expected)) = extract_unknown_field_hint(&detail) {
+        if let Some(updated) = renamed_config_key(&field) {
+            hints.push(format!(
+                "`{field}` is not a valid cmakefmt key; use `{updated}` or run --convert-legacy-config"
+            ));
+        } else if let Some(suggestion) = best_match(&field, &expected) {
+            hints.push(format!(
+                "unknown key `{field}`; did you mean `{suggestion}`?"
+            ));
+        } else {
+            hints.push(format!("unknown key `{field}` in {kind} file"));
+        }
+    }
+    if kind == "config" {
+        hints.push(
+            "config files are applied in order; later files override earlier ones".to_owned(),
+        );
+    }
+    for hint in hints {
+        let _ = writeln!(rendered, "hint: {hint}");
+    }
+    let _ = writeln!(rendered, "detail: {detail}");
+    rendered.trim_end().to_owned()
+}
+
+fn render_formatter_error(message: &str) -> String {
+    let mut rendered = String::new();
+    let _ = writeln!(rendered, "error: {message}");
+    if let Some(pattern) = extract_invalid_regex_pattern(message) {
+        let _ = writeln!(
+            rendered,
+            "hint: check the --path-regex pattern {pattern:?}; Rust regex syntax does not support every PCRE feature"
+        );
+    } else if message.contains("no such file or directory") {
+        let _ = writeln!(
+            rendered,
+            "hint: pass an existing file or directory, or omit input paths to recurse from the current working directory"
+        );
+    }
+    rendered.trim_end().to_owned()
+}
+
+fn line_col_from_pest(source: &pest::error::Error<cmakefmt::parser::Rule>) -> (usize, usize) {
+    match source.line_col {
+        LineColLocation::Pos((line, column)) => (line, column),
+        LineColLocation::Span((line, column), _) => (line, column),
+    }
+}
+
+fn describe_pest_expectation(source: &pest::error::Error<cmakefmt::parser::Rule>) -> String {
+    match &source.variant {
+        ErrorVariant::ParsingError { positives, .. } if !positives.is_empty() => {
+            format!(
+                "expected {}",
+                positives
+                    .iter()
+                    .map(|rule| format!("{rule:?}").replace('_', " "))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+        ErrorVariant::CustomError { message } => message.clone(),
+        _ => source.to_string(),
+    }
+}
+
+fn classify_parse_failure(
+    display_name: &str,
+    line_text: &str,
+    source: &pest::error::Error<cmakefmt::parser::Rule>,
+) -> (String, Vec<String>) {
+    let detail = describe_pest_expectation(source);
+    let trimmed = line_text.trim();
+    let mut hints = Vec::new();
+
+    if line_text.contains("\\\"") {
+        hints.push(
+            "possible malformed quoted argument or escaped quote sequence inside this command"
+                .to_owned(),
+        );
+        hints.push(
+            "if the caret looks late, the real problem may be earlier in the same command invocation"
+                .to_owned(),
+        );
+        return ("failed to parse a quoted argument".to_owned(), hints);
+    }
+
+    if trimmed.contains("[=[") || trimmed.contains("[[") || trimmed.contains("]=]") {
+        hints.push(
+            "check that bracket argument or bracket comment delimiters use matching `=` counts"
+                .to_owned(),
+        );
+        return (
+            "failed to parse a bracket argument or comment".to_owned(),
+            hints,
+        );
+    }
+
+    if display_name.ends_with(".cmake.in") && trimmed.starts_with('@') && trimmed.ends_with('@') {
+        hints.push("top-level configure-file placeholders like @PACKAGE_INIT@ are only valid as standalone template lines".to_owned());
+        return (
+            "failed to parse a configure-file template line".to_owned(),
+            hints,
+        );
+    }
+
+    if trimmed.contains('(') || trimmed.contains(')') {
+        hints.push(
+            "check for an unbalanced command invocation or control-flow condition".to_owned(),
+        );
+        hints.push(
+            "the reported location can be after the real problem if an earlier line left the parser out of sync"
+                .to_owned(),
+        );
+        return ("failed to parse a command invocation".to_owned(), hints);
+    }
+
+    if detail.contains("quoted element") {
+        hints.push("a quoted string may be unterminated or contain malformed escapes".to_owned());
+    }
+
+    ("failed to parse CMake input".to_owned(), hints)
+}
+
+fn render_source_snippet(
+    source: &str,
+    start_line: usize,
+    focus_line: usize,
+    focus_column: usize,
+) -> String {
+    let lines: Vec<&str> = source.lines().collect();
+    if lines.is_empty() {
+        return String::new();
+    }
+
+    let focus_index = focus_line
+        .saturating_sub(1)
+        .min(lines.len().saturating_sub(1));
+    let start_index = focus_index.saturating_sub(1);
+    let end_index = (focus_index + 2).min(lines.len());
+    let max_line_no = start_line + end_index.saturating_sub(1);
+    let width = max_line_no.to_string().len();
+    let mut rendered = String::new();
+
+    for index in start_index..end_index {
+        let absolute_line = start_line + index;
+        let marker = if index == focus_index { '>' } else { ' ' };
+        let _ = writeln!(
+            rendered,
+            "{marker} {absolute_line:>width$} | {}",
+            lines[index],
+            width = width
+        );
+        if index == focus_index {
+            let visible_column = if focus_line > lines.len() {
+                lines[index].chars().count() + 1
+            } else {
+                focus_column
+            };
+            let caret_padding = visible_column.saturating_sub(1);
+            let _ = writeln!(
+                rendered,
+                "  {space:>width$} | {pad}^",
+                space = "",
+                pad = " ".repeat(caret_padding),
+                width = width
+            );
+        }
+    }
+
+    rendered.trim_end().to_owned()
+}
+
+fn byte_offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1usize;
+    let mut column = 1usize;
+    for (index, ch) in source.char_indices() {
+        if index >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+    (line, column)
+}
+
+fn extract_unknown_field_hint(detail: &str) -> Option<(String, Vec<String>)> {
+    let field = extract_between(detail, "unknown field `", "`")
+        .or_else(|| extract_between(detail, "unknown field '", "'"))?;
+    let expected = detail
+        .split("expected one of")
+        .nth(1)
+        .map(|tail| {
+            tail.split(',')
+                .map(|part| {
+                    part.trim()
+                        .trim_matches('`')
+                        .trim_matches('\'')
+                        .trim_matches('"')
+                        .to_owned()
+                })
+                .filter(|part| !part.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Some((field, expected))
+}
+
+fn extract_between(input: &str, start: &str, end: &str) -> Option<String> {
+    let tail = input.split(start).nth(1)?;
+    let field = tail.split(end).next()?;
+    Some(field.to_owned())
+}
+
+fn best_match<'a>(needle: &str, candidates: &'a [String]) -> Option<&'a str> {
+    candidates
+        .iter()
+        .filter_map(|candidate| {
+            let distance = levenshtein(needle, candidate);
+            (distance <= 6).then_some((distance, candidate.as_str()))
+        })
+        .min_by_key(|(distance, candidate)| (*distance, candidate.len()))
+        .map(|(_, candidate)| candidate)
+}
+
+fn levenshtein(left: &str, right: &str) -> usize {
+    let left: Vec<char> = left.chars().collect();
+    let right: Vec<char> = right.chars().collect();
+    let mut prev: Vec<usize> = (0..=right.len()).collect();
+    let mut curr = vec![0; right.len() + 1];
+
+    for (i, lch) in left.iter().enumerate() {
+        curr[0] = i + 1;
+        for (j, rch) in right.iter().enumerate() {
+            let cost = usize::from(lch != rch);
+            curr[j + 1] = (prev[j + 1] + 1).min(curr[j] + 1).min(prev[j] + cost);
+        }
+        std::mem::swap(&mut prev, &mut curr);
+    }
+
+    prev[right.len()]
+}
+
+fn renamed_config_key(key: &str) -> Option<&'static str> {
+    match key {
+        "use_tabchars" => Some("use_tabs"),
+        "max_lines_hwrap" => Some("max_hanging_wrap_lines"),
+        "max_pargs_hwrap" => Some("max_hanging_wrap_positional_args"),
+        "max_subgroups_hwrap" => Some("max_hanging_wrap_groups"),
+        "min_prefix_chars" => Some("min_prefix_length"),
+        "max_prefix_chars" => Some("max_prefix_length"),
+        "separate_ctrl_name_with_space" => Some("space_before_control_paren"),
+        "separate_fn_name_with_space" => Some("space_before_definition_paren"),
+        _ => None,
+    }
+}
+
+fn extract_invalid_regex_pattern(message: &str) -> Option<&str> {
+    let tail = message.strip_prefix("invalid file regex ")?;
+    let start = tail.find('"')?;
+    let end = tail[start + 1..].find('"')?;
+    Some(&tail[start..=start + end + 1])
 }
 
 #[cfg(test)]

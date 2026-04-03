@@ -61,3 +61,16 @@ cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
 cat CMakeLists.txt | cmakefmt -
 cmakefmt --debug --check tests/fixtures/real_world
 ```
+
+## Diagnostics
+
+For parse and config failures, `cmakefmt` prints a file path, line/column,
+source snippet, likely-cause hint when possible, and a repro command using
+`--debug --check`.
+
+For issue reports, capture:
+
+- the exact command you ran
+- the full stderr output
+- the relevant `.cmakefmt.toml` files
+- `--debug` output if the problem is formatting-related rather than a hard failure

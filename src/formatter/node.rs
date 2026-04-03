@@ -5,7 +5,9 @@ use crate::error::Result;
 use crate::formatter::comment;
 use crate::parser::ast::{Argument, CommandInvocation};
 use crate::spec::registry::CommandRegistry;
-use crate::spec::{CommandForm, NArgs};
+use crate::spec::{CommandForm, CommandSpec, NArgs};
+
+use super::DebugLog;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum HeaderKind {
@@ -25,17 +27,31 @@ struct Section<'a> {
 /// The formatter chooses between inline, hanging-wrap, and vertical layouts
 /// using command specs from the registry plus the effective per-command
 /// configuration.
-pub fn format_command(
+pub(crate) fn format_command(
     command: &CommandInvocation,
     config: &Config,
     registry: &CommandRegistry,
     block_depth: usize,
+    debug: &mut DebugLog<'_>,
 ) -> Result<String> {
     let cmd_config = config.for_command(&command.name);
-    let form = registry
-        .get(&command.name)
-        .form_for(first_argument(command).map(Argument::as_str));
+    let spec = registry.get(&command.name);
+    let first_arg = first_argument(command).map(Argument::as_str);
+    let form = spec.form_for(first_arg);
     let sections = split_sections(command, form)?;
+
+    debug.log(format!(
+        "formatter: command {} form={} first_arg={} effective_config(line_width={}, tab_size={}, dangle_parens={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={}, max_hanging_wrap_groups={})",
+        command.name,
+        describe_selected_form(spec, first_arg),
+        first_arg.unwrap_or("<none>"),
+        cmd_config.line_width(),
+        cmd_config.tab_size(),
+        cmd_config.dangle_parens(),
+        cmd_config.global.max_lines_hwrap,
+        cmd_config.max_pargs_hwrap(),
+        cmd_config.max_subgroups_hwrap(),
+    ));
 
     let output = if let Some(inline) = try_format_inline(
         command,
@@ -44,6 +60,15 @@ pub fn format_command(
         block_depth,
         config.line_width,
     ) {
+        debug.log(format!(
+            "formatter: command {} layout=inline sections={} positional_args={}",
+            command.name,
+            sections.len(),
+            sections
+                .iter()
+                .find(|section| section.header.is_none())
+                .map_or(0, |section| section.arguments.len())
+        ));
         inline
     } else if let Some(hanging) = try_format_hanging(
         command,
@@ -52,8 +77,23 @@ pub fn format_command(
         block_depth,
         config.line_width,
     ) {
+        debug.log(format!(
+            "formatter: command {} layout=hanging-wrap thresholds(line_width={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={})",
+            command.name,
+            cmd_config.line_width(),
+            cmd_config.global.max_lines_hwrap,
+            cmd_config.max_pargs_hwrap()
+        ));
         hanging
     } else {
+        debug.log(format!(
+            "formatter: command {} layout=vertical thresholds(line_width={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={}, max_hanging_wrap_groups={})",
+            command.name,
+            cmd_config.line_width(),
+            cmd_config.global.max_lines_hwrap,
+            cmd_config.max_pargs_hwrap(),
+            cmd_config.max_subgroups_hwrap()
+        ));
         format_command_vertical(command, &sections, &cmd_config, block_depth)?
     };
 
@@ -61,6 +101,27 @@ pub fn format_command(
         Ok(spaces_to_tabs(&output, cmd_config.tab_size()))
     } else {
         Ok(output)
+    }
+}
+
+fn describe_selected_form(spec: &CommandSpec, first_arg: Option<&str>) -> String {
+    match spec {
+        CommandSpec::Single(_) => "single".to_owned(),
+        CommandSpec::Discriminated { forms, fallback } => match first_arg {
+            Some(token) if forms.contains_key(token) => format!("discriminated:{token}"),
+            Some(token) => {
+                let normalized = token.to_ascii_uppercase();
+                if forms.contains_key(&normalized) {
+                    format!("discriminated:{normalized}")
+                } else if fallback.is_some() {
+                    format!("fallback:{token}")
+                } else {
+                    format!("first-form:{token}")
+                }
+            }
+            None if fallback.is_some() => "fallback:<none>".to_owned(),
+            None => "first-form:<none>".to_owned(),
+        },
     }
 }
 
