@@ -478,6 +478,16 @@ mod tests {
     }
 
     #[test]
+    fn escaped_quotes_in_quoted_argument_parse() {
+        let f = parse_ok("message(FATAL_ERROR \"foo \\\"Debug\\\"\")\n");
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        let args: Vec<&str> = cmd.arguments.iter().map(Argument::as_str).collect();
+        assert_eq!(args, vec!["FATAL_ERROR", "\"foo \\\"Debug\\\"\""]);
+    }
+
+    #[test]
     fn multiple_commands() {
         let src = "cmake_minimum_required(VERSION 3.20)\nproject(MyProject)\n";
         let f = parse_ok(src);

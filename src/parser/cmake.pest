@@ -29,7 +29,7 @@ arguments = { argument_part* }
 
 argument_part = { argument | bracket_comment | line_ending | space }
 
-argument = { bracket_argument | mixed_unquoted_argument | quoted_argument | unquoted_argument }
+argument = { bracket_argument | quoted_argument | mixed_unquoted_argument | unquoted_argument }
 
 // ── Line ending (may carry a comment) ────────────────────────────────────────
 
@@ -101,7 +101,7 @@ unquoted_element = {
   | unquoted_text
 }
 
-legacy_quoted = @{ "\"" ~ (!("\"" | newline) ~ ANY)* ~ "\"" }
+legacy_quoted = @{ "\"" ~ (( "\\" ~ !newline ~ ANY ) | (!("\"" | newline) ~ ANY))* ~ "\"" }
 legacy_make_var = @{ "$(" ~ (!(")" | newline) ~ ANY)* ~ ")" }
 nested_parens = @{ "(" ~ nested_parens_inner* ~ ")" }
 nested_parens_inner = { nested_parens | legacy_quoted | legacy_make_var | escape_sequence | variable_ref | genex | nested_parens_text | space }
