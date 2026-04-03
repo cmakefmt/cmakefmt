@@ -1,3 +1,5 @@
+//! Built-in and override-backed command registry.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -23,10 +25,12 @@ pub struct CommandRegistry {
 }
 
 impl CommandRegistry {
+    /// Load the embedded built-in registry from `builtins.toml`.
     pub fn load() -> Result<Self> {
         Self::from_builtins_and_overrides(None::<&Path>)
     }
 
+    /// Return the lazily initialized singleton built-in registry.
     pub fn builtins() -> &'static Self {
         static BUILTINS: OnceLock<CommandRegistry> = OnceLock::new();
         BUILTINS.get_or_init(|| {
@@ -35,6 +39,7 @@ impl CommandRegistry {
         })
     }
 
+    /// Load the embedded built-ins and optionally merge a user override file.
     pub fn from_builtins_and_overrides(path: Option<impl AsRef<Path>>) -> Result<Self> {
         let mut registry = Self::from_spec_file(parse_builtins()?);
 
@@ -45,6 +50,7 @@ impl CommandRegistry {
         Ok(registry)
     }
 
+    /// Build a registry directly from a deserialized [`SpecFile`].
     pub fn from_spec_file(mut spec_file: SpecFile) -> Self {
         normalize_spec_file(&mut spec_file);
         Self {
@@ -54,11 +60,13 @@ impl CommandRegistry {
         }
     }
 
+    /// Merge a TOML override file from disk into the registry.
     pub fn merge_override_file(&mut self, path: &Path) -> Result<()> {
         let source = fs::read_to_string(path)?;
         self.merge_override_str(&source, path)
     }
 
+    /// Merge TOML override contents into the registry.
     pub fn merge_override_str(&mut self, source: &str, path: impl Into<PathBuf>) -> Result<()> {
         let path = path.into();
         let mut overrides: SpecOverrideFile =
@@ -80,6 +88,8 @@ impl CommandRegistry {
         Ok(())
     }
 
+    /// Get the command spec for `command_name`, falling back to a permissive
+    /// default when the command is unknown.
     pub fn get(&self, command_name: &str) -> &CommandSpec {
         if let Some(spec) = self.commands.get(command_name) {
             return spec;
@@ -94,6 +104,7 @@ impl CommandRegistry {
             .unwrap_or(&self.fallback)
     }
 
+    /// Return `true` when the command is present in the built-in registry.
     pub fn contains_builtin(&self, command_name: &str) -> bool {
         self.commands.contains_key(command_name)
             || (has_ascii_uppercase(command_name)
@@ -102,6 +113,7 @@ impl CommandRegistry {
                     .contains_key(&command_name.to_ascii_lowercase()))
     }
 
+    /// Report the audited upstream CMake version for the built-in spec.
     pub fn audited_cmake_version(&self) -> &str {
         &self.metadata.cmake_version
     }

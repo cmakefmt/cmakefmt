@@ -156,6 +156,14 @@ The docs site is an `mdBook`. Before you finish a docs-heavy change, run:
 bash scripts/check-docs.sh
 ```
 
+If you changed the public Rust API or the meaning of exported types/functions,
+also update the rustdoc comments on the affected items and verify the API docs
+still build:
+
+```bash
+cargo doc --no-deps
+```
+
 ## Before You Finish A Change
 
 Run:
@@ -164,6 +172,7 @@ Run:
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
+cargo doc --no-deps
 ```
 
 If you changed CLI behavior, also check:

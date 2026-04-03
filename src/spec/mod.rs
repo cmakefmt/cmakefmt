@@ -1,3 +1,9 @@
+//! Command-spec data model used by the formatter.
+//!
+//! The built-in registry describes the argument structure of known commands so
+//! the formatter can recognize positional arguments, keywords, flags, and
+//! command-specific layout hints.
+
 pub mod registry;
 
 use indexmap::{IndexMap, IndexSet};
@@ -73,33 +79,47 @@ impl<'de> Deserialize<'de> for NArgs {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutOverrides {
+    /// Override line width for this command form.
     pub line_width: Option<usize>,
+    /// Override indentation width for this command form.
     pub tab_size: Option<usize>,
+    /// Override dangling-paren behavior for this command form.
     pub dangle_parens: Option<bool>,
+    /// Force this command form into a wrapped layout.
     pub always_wrap: Option<bool>,
+    /// Override the positional-argument hanging-wrap threshold for this form.
     pub max_pargs_hwrap: Option<usize>,
 }
 
+/// Specification for a keyword section and any nested sub-keywords it accepts.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KwargSpec {
+    /// Number of positional arguments accepted after the keyword itself.
     #[serde(default)]
     pub nargs: NArgs,
+    /// Nested keywords that may appear after this keyword.
     #[serde(default)]
     pub kwargs: IndexMap<String, KwargSpec>,
+    /// Flag tokens accepted within this keyword section.
     #[serde(default)]
     pub flags: IndexSet<String>,
 }
 
+/// One fully resolved command form.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CommandForm {
+    /// Number of positional arguments before keyword/flag processing starts.
     #[serde(default)]
     pub pargs: NArgs,
+    /// Recognized top-level keywords for this form.
     #[serde(default)]
     pub kwargs: IndexMap<String, KwargSpec>,
+    /// Recognized top-level flags for this form.
     #[serde(default)]
     pub flags: IndexSet<String>,
+    /// Optional layout hints for this form.
     #[serde(default)]
     pub layout: Option<LayoutOverrides>,
 }
@@ -118,15 +138,24 @@ impl Default for CommandForm {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum CommandSpec {
+    /// A command whose structure depends on a discriminator token, usually the
+    /// first positional argument.
     Discriminated {
+        /// Known forms keyed by normalized discriminator token.
         forms: IndexMap<String, CommandForm>,
+        /// Fallback form to use when no discriminator matches.
         #[serde(default)]
         fallback: Option<CommandForm>,
     },
+    /// A command with a single argument structure.
     Single(CommandForm),
 }
 
 impl CommandSpec {
+    /// Resolve the command form for a specific invocation.
+    ///
+    /// `first_arg` is typically the first non-comment argument in the call and
+    /// is used for discriminated commands such as `file(...)` or `install(...)`.
     pub fn form_for(&self, first_arg: Option<&str>) -> &CommandForm {
         match self {
             CommandSpec::Single(form) => form,
@@ -157,18 +186,24 @@ fn has_ascii_lowercase(s: &str) -> bool {
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 pub struct SpecMetadata {
+    /// Upstream CMake version the built-in spec was last audited against.
     #[serde(default)]
     pub cmake_version: String,
+    /// Date of the most recent audit.
     #[serde(default)]
     pub audited_at: String,
+    /// Free-form notes about the current audit state.
     #[serde(default)]
     pub notes: String,
 }
 
+/// Top-level spec file containing metadata plus command entries.
 #[derive(Debug, Default, Deserialize)]
 pub struct SpecFile {
+    /// Version and audit metadata for the built-in spec surface.
     #[serde(default)]
     pub metadata: SpecMetadata,
+    /// Built-in command specifications keyed by command name.
     #[serde(default)]
     pub commands: IndexMap<String, CommandSpec>,
 }
@@ -178,53 +213,76 @@ pub struct SpecFile {
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutOverridesOverride {
+    /// Override line width for this command form.
     pub line_width: Option<usize>,
+    /// Override indentation width for this command form.
     pub tab_size: Option<usize>,
+    /// Override dangling-paren behavior for this command form.
     pub dangle_parens: Option<bool>,
+    /// Force this command form into a wrapped layout.
     pub always_wrap: Option<bool>,
+    /// Override the positional-argument hanging-wrap threshold for this form.
     pub max_pargs_hwrap: Option<usize>,
 }
 
+/// Partial override for a keyword specification.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct KwargSpecOverride {
+    /// Override the number of positional arguments accepted after the keyword.
     pub nargs: Option<NArgs>,
+    /// Nested keyword overrides.
     #[serde(default)]
     pub kwargs: IndexMap<String, KwargSpecOverride>,
+    /// Additional supported flags.
     #[serde(default)]
     pub flags: IndexSet<String>,
 }
 
+/// Partial override for a command form.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CommandFormOverride {
+    /// Override the positional argument count for the form.
     pub pargs: Option<NArgs>,
+    /// Keyword overrides to merge into the form.
     #[serde(default)]
     pub kwargs: IndexMap<String, KwargSpecOverride>,
+    /// Additional supported flags.
     #[serde(default)]
     pub flags: IndexSet<String>,
+    /// Optional layout overrides for the form.
     pub layout: Option<LayoutOverridesOverride>,
 }
 
+/// Partial override for a full command spec.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum CommandSpecOverride {
+    /// Override a single-form command.
     Single(CommandFormOverride),
+    /// Override one or more discriminated forms.
     Discriminated {
+        /// Per-discriminator form overrides.
         #[serde(default)]
         forms: IndexMap<String, CommandFormOverride>,
+        /// Optional fallback form override.
         #[serde(default)]
         fallback: Option<CommandFormOverride>,
     },
 }
 
+/// Top-level user override file containing command overrides only.
 #[derive(Debug, Default, Deserialize)]
 pub struct SpecOverrideFile {
+    /// Override specs keyed by command name.
     #[serde(default)]
     pub commands: IndexMap<String, CommandSpecOverride>,
 }
 
 impl CommandSpecOverride {
+    /// Convert a partial override into a fully specified standalone command
+    /// spec.
     pub fn into_full_spec(self) -> CommandSpec {
         match self {
             CommandSpecOverride::Single(form) => CommandSpec::Single(form.into_full_form()),
@@ -240,6 +298,7 @@ impl CommandSpecOverride {
 }
 
 impl CommandFormOverride {
+    /// Convert a partial command form override into a fully specified form.
     pub fn into_full_form(self) -> CommandForm {
         CommandForm {
             pargs: self.pargs.unwrap_or_default(),
@@ -259,6 +318,7 @@ impl CommandFormOverride {
 }
 
 impl KwargSpecOverride {
+    /// Convert a partial keyword override into a fully specified keyword spec.
     pub fn into_full_spec(self) -> KwargSpec {
         KwargSpec {
             nargs: self.nargs.unwrap_or_default(),
@@ -277,6 +337,7 @@ impl KwargSpecOverride {
 }
 
 impl LayoutOverridesOverride {
+    /// Convert a partial layout override into a fully specified layout block.
     pub fn into_full_layout(self) -> LayoutOverrides {
         LayoutOverrides {
             line_width: self.line_width,

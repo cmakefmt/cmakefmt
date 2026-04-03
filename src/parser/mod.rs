@@ -1,8 +1,15 @@
+//! Parser entry points for CMake source text.
+//!
+//! The grammar is defined in `parser/cmake.pest`, while
+//! [`crate::parser::ast`] contains the AST types returned by
+//! [`crate::parser::parse()`].
+
 use pest::Parser;
 use pest_derive::Parser;
 
 pub mod ast;
 
+/// Internal pest parser generated from `cmake.pest`.
 #[derive(Parser)]
 #[grammar = "parser/cmake.pest"]
 pub struct CmakeParser;
@@ -10,7 +17,10 @@ pub struct CmakeParser;
 use crate::error::{Error, Result};
 use ast::{Argument, BracketArgument, CommandInvocation, Comment, File, Statement};
 
-/// Parse CMake source text into an AST.
+/// Parse CMake source text into an AST [`File`].
+///
+/// The returned AST preserves command structure, blank lines, and comments so
+/// the formatter can round-trip files with stable semantics.
 pub fn parse(source: &str) -> Result<File> {
     let mut pairs =
         CmakeParser::parse(Rule::file, source).map_err(|e| Error::Parse(Box::new(e)))?;

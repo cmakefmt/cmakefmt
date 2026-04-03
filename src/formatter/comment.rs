@@ -1,8 +1,14 @@
+//! Comment formatting helpers.
+
 use regex::Regex;
 
 use crate::config::Config;
 use crate::parser::ast::Comment;
 
+/// Format a single comment node into one or more rendered output lines.
+///
+/// Bracket comments are preserved verbatim. Line comments may be reflowed when
+/// markup handling and comment reflow are enabled in [`Config`].
 pub fn format_comment_lines(
     comment: &Comment,
     config: &Config,

@@ -4,6 +4,10 @@ use std::path::{Path, PathBuf};
 use regex::Regex;
 use walkdir::WalkDir;
 
+/// Recursively discover CMake files below `root`, optionally filtering the
+/// discovered paths with `file_filter`.
+///
+/// Returned paths are sorted to keep CLI output and batch formatting stable.
 pub fn discover_cmake_files(root: &Path, file_filter: Option<&Regex>) -> Vec<PathBuf> {
     let mut files: Vec<_> = WalkDir::new(root)
         .into_iter()
@@ -17,6 +21,14 @@ pub fn discover_cmake_files(root: &Path, file_filter: Option<&Regex>) -> Vec<Pat
     files
 }
 
+/// Returns `true` when the path matches one of the built-in CMake filename
+/// patterns understood by `cmakefmt`.
+///
+/// Supported patterns are:
+///
+/// - `CMakeLists.txt`
+/// - `*.cmake`
+/// - `*.cmake.in`
 pub fn is_cmake_file(path: &Path) -> bool {
     let Some(file_name) = path.file_name().and_then(OsStr::to_str) else {
         return false;
@@ -29,6 +41,10 @@ pub fn is_cmake_file(path: &Path) -> bool {
     file_name.ends_with(".cmake") || file_name.ends_with(".cmake.in")
 }
 
+/// Returns `true` when `path` matches the optional user-supplied discovery
+/// regex.
+///
+/// When no regex is supplied, every discovered CMake file matches.
 pub fn matches_filter(path: &Path, file_filter: Option<&Regex>) -> bool {
     let Some(file_filter) = file_filter else {
         return true;

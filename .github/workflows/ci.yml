@@ -65,3 +65,6 @@ jobs:
 
       - name: Test
         run: cargo test
+
+      - name: Build API docs
+        run: cargo doc --no-deps

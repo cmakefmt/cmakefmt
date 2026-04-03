@@ -1,3 +1,8 @@
+//! Top-level formatter entry points.
+//!
+//! These functions parse input, apply barrier handling, and render a formatted
+//! output string using the command registry and runtime configuration.
+
 pub mod comment;
 pub mod node;
 
@@ -6,14 +11,18 @@ use crate::error::Result;
 use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
+/// Format raw CMake source using the built-in command registry.
 pub fn format_source(source: &str, config: &Config) -> Result<String> {
     format_source_with_registry(source, config, CommandRegistry::builtins())
 }
 
+/// Format raw CMake source using the built-in registry and also return debug
+/// lines describing the formatter's decisions.
 pub fn format_source_with_debug(source: &str, config: &Config) -> Result<(String, Vec<String>)> {
     format_source_with_registry_debug(source, config, CommandRegistry::builtins())
 }
 
+/// Format raw CMake source using an explicit command registry.
 pub fn format_source_with_registry(
     source: &str,
     config: &Config,
@@ -22,6 +31,7 @@ pub fn format_source_with_registry(
     Ok(format_source_impl(source, config, registry, &mut DebugLog::disabled())?.0)
 }
 
+/// Format raw CMake source using an explicit registry and return debug output.
 pub fn format_source_with_registry_debug(
     source: &str,
     config: &Config,
@@ -33,6 +43,10 @@ pub fn format_source_with_registry_debug(
     Ok((formatted, lines))
 }
 
+/// Format an already parsed AST file.
+///
+/// This is useful when callers want to parse once and format repeatedly with
+/// different config or registry settings.
 pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> Result<String> {
     let mut output = String::new();
     let mut previous_was_content = false;

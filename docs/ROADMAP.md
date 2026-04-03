@@ -361,6 +361,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - error model
   - examples for `format_source` and related helpers
   - expectations around stability before and after `1.0`
+  - thorough rustdoc coverage for the public crate surface
+  - keep `cargo doc --no-deps` green
 - [x] Keep an explicit changelog and release-note process
   - choose the changelog format
   - document categories for user-visible changes
@@ -397,6 +399,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Contributor readmes exist for the main repo areas and explain where new code, fixtures, snapshots, and docs belong
 - [x] The GitHub Pages docs site builds cleanly and is linked from `README.md`
 - [x] User-visible changes have a documented changelog/release-note path
+- [x] Public library APIs and exported data structures are documented well enough to generate useful API docs with `cargo doc --no-deps`
 
 ---
 

@@ -1,6 +1,7 @@
 /// A parsed CMake source file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
+    /// Top-level statements in source order.
     pub statements: Vec<Statement>,
 }
 
@@ -52,6 +53,8 @@ impl Argument {
         }
     }
 
+    /// Returns `true` when the argument is an inline comment placeholder rather
+    /// than a normal CMake argument token.
     pub fn is_comment(&self) -> bool {
         matches!(self, Argument::InlineComment(_))
     }
@@ -76,6 +79,7 @@ pub enum Comment {
 }
 
 impl Comment {
+    /// Return the raw source text of the comment, including the leading `#`.
     pub fn as_str(&self) -> &str {
         match self {
             Comment::Line(s) | Comment::Bracket(s) => s,

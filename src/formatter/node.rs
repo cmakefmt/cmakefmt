@@ -1,3 +1,5 @@
+//! Command-invocation formatting logic.
+
 use crate::config::{CaseStyle, CommandConfig, Config, DangleAlign};
 use crate::error::Result;
 use crate::formatter::comment;
@@ -18,6 +20,11 @@ struct Section<'a> {
     arguments: Vec<&'a Argument>,
 }
 
+/// Format a single parsed command invocation.
+///
+/// The formatter chooses between inline, hanging-wrap, and vertical layouts
+/// using command specs from the registry plus the effective per-command
+/// configuration.
 pub fn format_command(
     command: &CommandInvocation,
     config: &Config,
