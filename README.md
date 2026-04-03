@@ -266,12 +266,7 @@ dangle_parens = false
 [commands.my_custom_command]
 pargs = 1
 flags = ["QUIET"]
-
-[commands.my_custom_command.kwargs.SOURCES]
-nargs = "+"
-
-[commands.my_custom_command.kwargs.LIBRARIES]
-nargs = "+"
+kwargs = { SOURCES = { nargs = "+" }, LIBRARIES = { nargs = "+" } }
 ```
 
 You can also generate a full starter config with:
@@ -331,6 +326,10 @@ Currently supported config sections:
 `[per_command.<name>]` changes formatting knobs for a known command name.
 `[commands.<name>]` teaches `cmakefmt` the syntax of a custom command or
 overrides the built-in shape of an existing one.
+
+For user config, prefer the condensed inline `kwargs = { ... }` form when the
+custom command is small and flat. Expand to explicit subtables only when the
+command grows nested keywords/flags or becomes hard to read inline.
 
 ## Library usage
 

@@ -496,14 +496,13 @@ canonicalize_hashrulers = true
 # dangle_parens = true
 
 # Command specs teach cmakefmt the syntax of custom commands or override
-# built-in command shapes.
+# built-in command shapes. In user config, prefer the condensed inline
+# kwargs = { ... } form when the command is small and flat.
 #
 # [commands.my_custom_command]
 # pargs = 1
 # flags = ["QUIET"]
-#
-# [commands.my_custom_command.kwargs.SOURCES]
-# nargs = "+"
+# kwargs = { SOURCES = { nargs = "+" } }
 ```
 
 Config is loaded by `src/config/`. Resolution order (highest wins):

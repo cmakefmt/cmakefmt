@@ -114,12 +114,7 @@ Example:
 [commands.my_custom_command]
 pargs = 1
 flags = ["QUIET"]
-
-[commands.my_custom_command.kwargs.SOURCES]
-nargs = "+"
-
-[commands.my_custom_command.kwargs.LIBRARIES]
-nargs = "+"
+kwargs = { SOURCES = { nargs = "+" }, LIBRARIES = { nargs = "+" } }
 ```
 
 This tells `cmakefmt` that:
@@ -128,6 +123,10 @@ This tells `cmakefmt` that:
 - `QUIET` is a standalone flag
 - `SOURCES` starts a keyword section with one or more values
 - `LIBRARIES` starts a keyword section with one or more values
+
+For user config, prefer the condensed inline `kwargs = { ... }` form when the
+custom command is small and flat. Expand to explicit subtables only when the
+command grows nested keywords/flags or becomes hard to read inline.
 
 The same command-spec format is used by the built-in registry in
 `src/spec/builtins.toml`.
