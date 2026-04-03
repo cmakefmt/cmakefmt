@@ -2,6 +2,8 @@ use std::collections::BTreeSet;
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 use clap::{Parser, ValueEnum};
 use cmakefmt::spec::registry::CommandRegistry;
@@ -130,6 +132,13 @@ struct Cli {
     )]
     parallel: Option<usize>,
 
+    /// Show a progress bar while formatting files in-place.
+    ///
+    /// The progress bar is intended for directory or multi-file runs and is
+    /// only available together with `--in-place`.
+    #[arg(long = "progress-bar", requires = "in_place")]
+    progress_bar: bool,
+
     /// One or more config files to merge in order. Later files override earlier ones.
     #[arg(long = "config-file", visible_alias = "config", value_name = "PATH")]
     config_paths: Vec<PathBuf>,
@@ -207,6 +216,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     let targets = collect_targets(cli, file_filter.as_ref())?;
     let parallel_jobs = resolve_parallel_jobs(cli.parallel)?;
     let mut any_would_change = false;
+    let progress = ProgressReporter::new(cli.progress_bar, cli.in_place, targets.len());
 
     if cli.debug {
         log_debug(format!(
@@ -217,12 +227,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     let results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
-        process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout)?
+        process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout, &progress)?
     } else {
         if cli.debug && parallel_jobs > 1 && targets.iter().any(|target| !target.is_path()) {
             log_debug("parallel mode ignored because stdin input must run serially");
         }
-        process_targets_serial(&targets, cli, colorize_stdout)?
+        process_targets_serial(&targets, cli, colorize_stdout, &progress)?
     };
     let multi_target_stdout = stdout_mode && results.len() > 1;
 
@@ -404,10 +414,11 @@ fn process_targets_serial(
     targets: &[InputTarget],
     cli: &Cli,
     colorize_stdout: bool,
+    progress: &ProgressReporter,
 ) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
     targets
         .iter()
-        .map(|target| process_target(target, cli, colorize_stdout))
+        .map(|target| process_target(target, cli, colorize_stdout, progress))
         .collect()
 }
 
@@ -416,6 +427,7 @@ fn process_targets_parallel(
     cli: &Cli,
     parallel_jobs: usize,
     colorize_stdout: bool,
+    progress: &ProgressReporter,
 ) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(parallel_jobs)
@@ -425,7 +437,7 @@ fn process_targets_parallel(
     pool.install(|| {
         targets
             .par_iter()
-            .map(|target| process_target(target, cli, colorize_stdout))
+            .map(|target| process_target(target, cli, colorize_stdout, progress))
             .collect()
     })
 }
@@ -434,11 +446,14 @@ fn process_target(
     target: &InputTarget,
     cli: &Cli,
     colorize_stdout: bool,
+    progress: &ProgressReporter,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
-    match target {
+    let result = match target {
         InputTarget::Stdin => process_stdin(cli, colorize_stdout),
         InputTarget::Path(path) => process_path(path, cli, colorize_stdout),
-    }
+    };
+    progress.finish_one();
+    result
 }
 
 fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cmakefmt::Error> {
@@ -542,6 +557,56 @@ fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, cmakefmt::Er
             .map(|parallelism| parallelism.get())
             .map_err(cmakefmt::Error::Io),
         Some(jobs) => Ok(jobs.max(1)),
+    }
+}
+
+#[derive(Clone)]
+struct ProgressReporter {
+    inner: Option<Arc<ProgressState>>,
+}
+
+struct ProgressState {
+    total: usize,
+    completed: AtomicUsize,
+    output_lock: Mutex<()>,
+}
+
+impl ProgressReporter {
+    fn new(requested: bool, in_place: bool, total: usize) -> Self {
+        let enabled = requested && in_place && total > 1 && io::stderr().is_terminal();
+        let inner = enabled.then(|| {
+            Arc::new(ProgressState {
+                total,
+                completed: AtomicUsize::new(0),
+                output_lock: Mutex::new(()),
+            })
+        });
+        Self { inner }
+    }
+
+    fn finish_one(&self) {
+        let Some(inner) = &self.inner else {
+            return;
+        };
+
+        let completed = inner.completed.fetch_add(1, Ordering::Relaxed) + 1;
+        let bar_width = 24usize;
+        let filled = completed * bar_width / inner.total.max(1);
+        let empty = bar_width.saturating_sub(filled);
+        let bar = format!(
+            "[{}{}] {completed}/{}",
+            "=".repeat(filled),
+            " ".repeat(empty),
+            inner.total
+        );
+
+        let _guard = inner.output_lock.lock().ok();
+        let mut stderr = io::stderr();
+        let _ = write!(stderr, "\r{bar}");
+        if completed == inner.total {
+            let _ = writeln!(stderr);
+        }
+        let _ = stderr.flush();
     }
 }
 
@@ -718,6 +783,7 @@ mod tests {
             "print-default-config",
             "list-files",
             "parallel",
+            "progress-bar",
             "version",
             "in-place",
         ];

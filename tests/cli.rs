@@ -703,6 +703,40 @@ fn parallel_without_value_uses_default_jobs() {
     assert!(stderr.contains("would be reformatted"));
 }
 
+#[test]
+fn progress_bar_requires_in_place() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  value )\n");
+
+    let output = cmakefmt()
+        .args(["--progress-bar", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("--in-place"));
+}
+
+#[test]
+fn progress_bar_with_in_place_succeeds() {
+    let dir = tempfile::tempdir().unwrap();
+    let file_a = dir.path().join("a.cmake");
+    let file_b = dir.path().join("b.cmake");
+
+    write_file(&file_a, "set(  A  value )\n");
+    write_file(&file_b, "set(  B  value )\n");
+
+    let output = cmakefmt()
+        .args(["--progress-bar", "--in-place", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(std::fs::read_to_string(&file_a).unwrap(), "set(A value)\n");
+    assert_eq!(std::fs::read_to_string(&file_b).unwrap(), "set(B value)\n");
+}
+
 // ── Version ─────────────────────────────────────────────────────────────────
 
 #[test]
@@ -727,5 +761,6 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--convert-legacy-config <PATH>"));
     assert!(stdout.contains("--list-files"));
     assert!(stdout.contains("--path-regex <REGEX>"));
+    assert!(stdout.contains("--progress-bar"));
     assert!(stdout.contains("formatting stays single-threaded"));
 }

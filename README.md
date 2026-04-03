@@ -78,6 +78,12 @@ Format files in parallel with two workers:
 cmakefmt --parallel 2 -i .
 ```
 
+Show a progress bar during an in-place run:
+
+```bash
+cmakefmt --progress-bar --in-place .
+```
+
 Use all available CPUs explicitly:
 
 ```bash
@@ -160,6 +166,7 @@ cmakefmt [OPTIONS] [FILES]...
       --debug
       --colour <auto|always|never>
       --parallel [<JOBS>]
+      --progress-bar
       --config-file <PATH>
       --line-width <N>
       --tab-size <N>
