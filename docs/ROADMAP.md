@@ -528,18 +528,111 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ## Phase 14 — Alpha Release
 
-**Goal**: Publish the first alpha and make installation easy.
+**Goal**: Publish the first public alpha, automate repeatable releases, and make
+`cmakefmt` easy to install and adopt across CLI, CI, and editor workflows.
 
 ### Tasks
 
-- [ ] Version `1.0.0-alpha.1` release on crates.io
-- [ ] Publish `cmakefmt` to package managers as the final distribution step
-  - Homebrew
-  - Other relevant package managers
+- [ ] Define the alpha release contract
+  - version `1.0.0-alpha.1`
+  - supported platforms: Linux, macOS, Windows
+  - supported CPU targets at minimum: `x86_64`; add `aarch64` where practical
+  - clear statement of what "alpha" means: feature-complete enough for early adopters,
+    but still open to formatting changes before `1.0`
+- [ ] Create a repeatable release checklist
+  - changelog/release notes process
+  - tag naming convention
+  - version bump process
+  - verification steps before publish
+  - rollback/yank procedure if a bad alpha ships
+- [ ] Make GitHub Releases the binary distribution source of truth
+  - build release binaries for:
+    - Linux `x86_64`
+    - Linux `aarch64`
+    - macOS `x86_64`
+    - macOS `aarch64`
+    - Windows `x86_64`
+  - publish `.tar.gz` archives for Unix platforms and `.zip` for Windows
+  - attach `SHA256SUMS`
+  - include install examples in release notes
+- [ ] Automate the release pipeline in GitHub Actions
+  - run full CI before publish
+  - build all release artifacts from a tag
+  - run smoke tests against built binaries
+  - publish to crates.io
+  - create/update the GitHub Release
+  - fan out follow-up publishing jobs for package managers where credentials/automation allow
+- [ ] Publish `cmakefmt` on crates.io
+  - ensure `Cargo.toml` metadata is complete
+  - include README, license, repository, keywords, categories, homepage/docs links
+  - verify `cargo install cmakefmt` works from crates.io
+- [ ] Publish first-party installation channels that we should maintain directly
+  - GitHub Releases downloadable binaries
+  - crates.io (`cargo install`)
+  - Homebrew tap formula for macOS/Linux
+  - `winget` manifest for Windows
+  - Scoop bucket/package for Windows
+  - npm wrapper package for JavaScript-heavy repos and CI environments
+  - container image published to GHCR for CI and hermetic usage
+- [ ] Prepare and publish additional package-manager channels where feasible during alpha
+  - Chocolatey package
+  - Arch Linux AUR package
+  - Nix package / flake / `nix run` support
+  - Debian/Ubuntu `.deb` package
+  - Fedora/RHEL `.rpm` package or COPR repo
+  - Alpine `apk` package if maintenance cost is acceptable
+  - MacPorts port
+  - `asdf` / `mise` plugin for version-manager installs
+- [ ] Document channel ownership and support level
+  - "officially maintained by this repo"
+  - "automated but best-effort"
+  - "community-maintained but linked from docs"
+  - define which channels are blockers for alpha vs stretch goals during the alpha window
+- [ ] Write installation and upgrade documentation
+  - installation matrix by OS/package manager
+  - copy-paste install commands
+  - upgrade/uninstall commands
+  - how to pin an alpha version in CI
+  - how to verify checksums for downloaded binaries
+- [ ] Provide copy-paste CI integration examples
+  - GitHub Actions
+  - GitLab CI
+  - Azure Pipelines
+  - generic shell/Docker examples
+- [ ] Create an official GitHub Action for `cmakefmt`
+  - support `check` mode for pull requests
+  - support optional in-place formatting for bot/workflow usage
+  - support version pinning
+  - support file/path filters
+  - document usage in the main README and in the action README
+- [ ] Create a VS Code extension as an adoption accelerator
+  - provide "format document" for `CMakeLists.txt` and `*.cmake`
+  - use a bundled or downloaded `cmakefmt` binary
+  - expose basic settings such as binary path, args, and config file
+  - work on macOS, Linux, and Windows
+  - publish to the VS Code Marketplace and Open VSX if practical
+- [ ] Ensure release-quality polish around distribution
+  - `--version` reports the expected semver and commit/tag metadata where appropriate
+  - shell completions are generated and shipped in release artifacts
+  - man page / CLI reference is generated if we decide to maintain one
+  - licenses for bundled artifacts/extensions/actions are correct
+  - release docs explain how user config discovery works in packaged installs
 
 ### Acceptance criteria
 
 - [ ] `cargo publish --dry-run` succeeds
+- [ ] Tagging `v1.0.0-alpha.1` from a clean commit can produce a complete release candidate without manual file editing
+- [ ] GitHub Releases contains working binaries for Linux, macOS, and Windows, plus checksums
+- [ ] `cargo install cmakefmt --version 1.0.0-alpha.1` works
+- [ ] Homebrew install works from a clean machine
+- [ ] Windows install works via both `winget` and Scoop
+- [ ] At least one Linux-native package-manager path is available in addition to crates.io
+  - preferred: Nix and/or AUR during alpha
+- [ ] Container image can run `cmakefmt --check` against a mounted repository
+- [ ] Official GitHub Action can format/check a repository in CI
+- [ ] VS Code extension can format a real `CMakeLists.txt` using the released binary
+- [ ] Installation docs cover every published channel and clearly label support level
+- [ ] A user with no Rust toolchain can install and run `cmakefmt` on each supported OS
 
 ---
 
@@ -550,5 +643,5 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - Revisit whether default parallelism should remain opt-in after very large
   codebase surveys
 - LSP server mode (long-term)
-- Editor plugins (VS Code, Neovim) using the formatter as a library
+- Additional editor plugins (Neovim, JetBrains, Helix) beyond the Phase 14 VS Code extension
 - Linting rules (separate `cmake-lint` subcommand or binary)
