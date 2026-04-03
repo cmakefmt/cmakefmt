@@ -31,6 +31,8 @@ argument_part = { argument | bracket_comment | line_ending | space }
 
 argument = { bracket_argument | quoted_argument | mixed_unquoted_argument | unquoted_argument }
 
+argument_boundary = _{ space | newline | ")" | "#" }
+
 // ── Line ending (may carry a comment) ────────────────────────────────────────
 
 line_ending = { line_comment? ~ newline }
@@ -74,7 +76,7 @@ mixed_unquoted_argument = { legacy_quoted ~ (unquoted_element | legacy_quoted | 
 
 // ── Quoted argument ───────────────────────────────────────────────────────────
 
-quoted_argument = { "\"" ~ quoted_element* ~ "\"" }
+quoted_argument = { "\"" ~ quoted_element* ~ "\"" ~ &argument_boundary }
 
 quoted_element = {
     quoted_continuation
