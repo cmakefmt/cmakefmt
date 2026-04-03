@@ -135,13 +135,13 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] `keyword_case` option (lower/upper/unchanged)
 - [x] `line_length` option
 - [x] `tab_size` option
-- [x] `use_tabchars` option
+- [x] `use_tabs` option
 - [x] `max_empty_lines` option
 - [x] `dangle_parens` + `dangle_align` options
-- [x] `separate_ctrl_name_with_space` option
-- [x] `separate_fn_name_with_space` option
-- [x] `max_lines_hwrap`, `max_pargs_hwrap`, `max_subgroups_hwrap` options
-- [x] `min_prefix_chars`, `max_prefix_chars` options
+- [x] `space_before_control_paren` option
+- [x] `space_before_definition_paren` option
+- [x] `max_hanging_wrap_lines`, `max_hanging_wrap_positional_args`, `max_hanging_wrap_groups` options
+- [x] `min_prefix_length`, `max_prefix_length` options
 - [x] `[markup]` section: `enable_markup`, `first_comment_is_literal`,
       `literal_comment_pattern`, `bullet_char`, `enum_char`,
       `fence_pattern`, `ruler_pattern`, `hashruler_min_length`,

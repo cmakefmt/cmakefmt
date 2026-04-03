@@ -255,12 +255,12 @@ Example config:
 [format]
 line_width = 100
 tab_size = 4
-use_tabchars = false
+use_tabs = false
 max_empty_lines = 1
 dangle_parens = true
 dangle_align = "prefix"
-separate_ctrl_name_with_space = false
-separate_fn_name_with_space = false
+space_before_control_paren = false
+space_before_definition_paren = false
 
 [style]
 command_case = "lower"
@@ -302,17 +302,17 @@ Currently supported config sections:
 - `[format]`
   - `line_width`
   - `tab_size`
-  - `use_tabchars`
+  - `use_tabs`
   - `max_empty_lines`
-  - `max_lines_hwrap`
-  - `max_pargs_hwrap`
-  - `max_subgroups_hwrap`
+  - `max_hanging_wrap_lines`
+  - `max_hanging_wrap_positional_args`
+  - `max_hanging_wrap_groups`
   - `dangle_parens`
   - `dangle_align`
-  - `min_prefix_chars`
-  - `max_prefix_chars`
-  - `separate_ctrl_name_with_space`
-  - `separate_fn_name_with_space`
+  - `min_prefix_length`
+  - `max_prefix_length`
+  - `space_before_control_paren`
+  - `space_before_definition_paren`
 - `[style]`
   - `command_case`
   - `keyword_case`
@@ -334,8 +334,8 @@ Currently supported config sections:
   - `tab_size`
   - `dangle_parens`
   - `dangle_align`
-  - `max_pargs_hwrap`
-  - `max_subgroups_hwrap`
+  - `max_hanging_wrap_positional_args`
+  - `max_hanging_wrap_groups`
 - `[commands.<name>]`
   - `pargs`
   - `flags`
@@ -348,6 +348,11 @@ overrides the built-in shape of an existing one.
 For user config, prefer the condensed inline `kwargs = { ... }` form when the
 custom command is small and flat. Expand to explicit subtables only when the
 command grows nested keywords/flags or becomes hard to read inline.
+
+The unreleased `.cmakefmt.toml` schema now only accepts the clearer names
+above. If you have an older local config draft using names like
+`use_tabchars`, `max_pargs_hwrap`, or `separate_ctrl_name_with_space`, update
+it to the new spellings before relying on it.
 
 ## Library usage
 

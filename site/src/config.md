@@ -13,17 +13,17 @@
 [format]
 line_width = 80
 tab_size = 2
-use_tabchars = false
+use_tabs = false
 max_empty_lines = 1
-max_lines_hwrap = 2
-max_pargs_hwrap = 6
-max_subgroups_hwrap = 2
+max_hanging_wrap_lines = 2
+max_hanging_wrap_positional_args = 6
+max_hanging_wrap_groups = 2
 dangle_parens = false
 dangle_align = "prefix"
-min_prefix_chars = 4
-max_prefix_chars = 10
-separate_ctrl_name_with_space = false
-separate_fn_name_with_space = false
+min_prefix_length = 4
+max_prefix_length = 10
+space_before_control_paren = false
+space_before_definition_paren = false
 
 [style]
 command_case = "lower"
@@ -48,16 +48,16 @@ canonicalize_hashrulers = true
 | --- | --- |
 | `line_width` | Target maximum output width. |
 | `tab_size` | Spaces per indent level when not using tabs. |
-| `use_tabchars` | Use tabs for leading indentation. |
+| `use_tabs` | Use tabs for leading indentation. |
 | `max_empty_lines` | Maximum blank-line runs preserved by formatting. |
-| `max_lines_hwrap` | Maximum number of hanging-wrap lines before vertical fallback. |
-| `max_pargs_hwrap` | Maximum positional args before vertical fallback. |
-| `max_subgroups_hwrap` | Maximum subgroup packing before vertical fallback. |
+| `max_hanging_wrap_lines` | Maximum number of hanging-wrap lines before vertical fallback. |
+| `max_hanging_wrap_positional_args` | Maximum positional args before vertical fallback. |
+| `max_hanging_wrap_groups` | Maximum subgroup packing before vertical fallback. |
 | `dangle_parens` | Place closing paren on a separate line when wrapping. |
 | `dangle_align` | Align dangling paren to `prefix`, `open`, or `close`. |
-| `min_prefix_chars`, `max_prefix_chars` | Prefix heuristics used by layout decisions. |
-| `separate_ctrl_name_with_space` | Insert a space before control-flow parentheses. |
-| `separate_fn_name_with_space` | Insert a space before function/macro definition parentheses. |
+| `min_prefix_length`, `max_prefix_length` | Prefix heuristics used by layout decisions. |
+| `space_before_control_paren` | Insert a space before control-flow parentheses. |
+| `space_before_definition_paren` | Insert a space before function/macro definition parentheses. |
 
 ## Style Options
 
@@ -88,8 +88,8 @@ The `[per_command.<name>]` table supports these overrides:
 - `tab_size`
 - `dangle_parens`
 - `dangle_align`
-- `max_pargs_hwrap`
-- `max_subgroups_hwrap`
+- `max_hanging_wrap_positional_args`
+- `max_hanging_wrap_groups`
 
 Example:
 
@@ -130,3 +130,8 @@ command grows nested keywords/flags or becomes hard to read inline.
 
 The same command-spec format is used by the built-in registry in
 `src/spec/builtins.toml`.
+
+The unreleased `.cmakefmt.toml` schema now only accepts the clearer names on
+this page. If you have an older local config draft using keys like
+`use_tabchars`, `max_pargs_hwrap`, or `separate_ctrl_name_with_space`, update
+it to the new spellings before using it.

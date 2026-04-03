@@ -117,6 +117,7 @@ pub struct Config {
 /// Per-command overrides. All fields are optional — only specified fields
 /// override the global config for that command.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 pub struct PerCommandConfig {
     /// Override the command casing rule for this command only.
     pub command_case: Option<CaseStyle>,
@@ -132,8 +133,10 @@ pub struct PerCommandConfig {
     pub dangle_align: Option<DangleAlign>,
     /// Override the hanging-wrap positional argument threshold for this
     /// command only.
+    #[serde(rename = "max_hanging_wrap_positional_args")]
     pub max_pargs_hwrap: Option<usize>,
     /// Override the hanging-wrap subgroup threshold for this command only.
+    #[serde(rename = "max_hanging_wrap_groups")]
     pub max_subgroups_hwrap: Option<usize>,
 }
 

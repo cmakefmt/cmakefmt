@@ -23,24 +23,26 @@ struct FileConfig {
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(default)]
+#[serde(deny_unknown_fields)]
 struct FormatSection {
     line_width: Option<usize>,
     tab_size: Option<usize>,
-    use_tabchars: Option<bool>,
+    use_tabs: Option<bool>,
     max_empty_lines: Option<usize>,
-    max_lines_hwrap: Option<usize>,
-    max_pargs_hwrap: Option<usize>,
-    max_subgroups_hwrap: Option<usize>,
+    max_hanging_wrap_lines: Option<usize>,
+    max_hanging_wrap_positional_args: Option<usize>,
+    max_hanging_wrap_groups: Option<usize>,
     dangle_parens: Option<bool>,
     dangle_align: Option<DangleAlign>,
-    min_prefix_chars: Option<usize>,
-    max_prefix_chars: Option<usize>,
-    separate_ctrl_name_with_space: Option<bool>,
-    separate_fn_name_with_space: Option<bool>,
+    min_prefix_length: Option<usize>,
+    max_prefix_length: Option<usize>,
+    space_before_control_paren: Option<bool>,
+    space_before_definition_paren: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(default)]
+#[serde(deny_unknown_fields)]
 struct StyleSection {
     command_case: Option<CaseStyle>,
     keyword_case: Option<CaseStyle>,
@@ -48,6 +50,7 @@ struct StyleSection {
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(default)]
+#[serde(deny_unknown_fields)]
 struct MarkupSection {
     enable_markup: Option<bool>,
     reflow_comments: Option<bool>,
@@ -77,30 +80,30 @@ pub fn default_config_template() -> String {
             "[format]\n",
             "# Maximum rendered line width before cmakefmt wraps a call.\n",
             "line_width = {line_width}\n\n",
-            "# Number of spaces per indentation level when use_tabchars is false.\n",
+            "# Number of spaces per indentation level when use_tabs is false.\n",
             "tab_size = {tab_size}\n\n",
             "# Indent with tab characters instead of spaces.\n",
-            "# use_tabchars = true\n\n",
+            "# use_tabs = true\n\n",
             "# Maximum number of consecutive blank lines to preserve.\n",
             "max_empty_lines = {max_empty_lines}\n\n",
             "# Maximum wrapped lines to tolerate before switching to a more vertical layout.\n",
-            "max_lines_hwrap = {max_lines_hwrap}\n\n",
+            "max_hanging_wrap_lines = {max_lines_hwrap}\n\n",
             "# Maximum positional arguments to keep in a hanging-wrap layout.\n",
-            "max_pargs_hwrap = {max_pargs_hwrap}\n\n",
+            "max_hanging_wrap_positional_args = {max_pargs_hwrap}\n\n",
             "# Maximum keyword/flag subgroups to keep in a hanging-wrap layout.\n",
-            "max_subgroups_hwrap = {max_subgroups_hwrap}\n\n",
+            "max_hanging_wrap_groups = {max_subgroups_hwrap}\n\n",
             "# Put the closing ')' on its own line when a call wraps.\n",
             "dangle_parens = {dangle_parens}\n\n",
             "# Alignment strategy for a dangling ')': prefix, open, or close.\n",
             "dangle_align = \"{dangle_align}\"\n\n",
             "# Lower heuristic bound used when deciding between compact and wrapped layouts.\n",
-            "min_prefix_chars = {min_prefix_chars}\n\n",
+            "min_prefix_length = {min_prefix_chars}\n\n",
             "# Upper heuristic bound used when deciding between compact and wrapped layouts.\n",
-            "max_prefix_chars = {max_prefix_chars}\n\n",
+            "max_prefix_length = {max_prefix_chars}\n\n",
             "# Insert a space before '(' for control-flow commands like if/foreach.\n",
-            "# separate_ctrl_name_with_space = true\n\n",
+            "# space_before_control_paren = true\n\n",
             "# Insert a space before '(' for function() and macro() definitions.\n",
-            "# separate_fn_name_with_space = true\n\n",
+            "# space_before_definition_paren = true\n\n",
             "[style]\n",
             "# Output casing for command names: lower, upper, or unchanged.\n",
             "command_case = \"{command_case}\"\n\n",
@@ -145,9 +148,9 @@ pub fn default_config_template() -> String {
             "# Override dangling-paren alignment just for this command.\n",
             "# dangle_align = \"prefix\"\n\n",
             "# Override the positional-argument hanging-wrap threshold just for this command.\n",
-            "# max_pargs_hwrap = 8\n\n",
+            "# max_hanging_wrap_positional_args = 8\n\n",
             "# Override the subgroup hanging-wrap threshold just for this command.\n",
-            "# max_subgroups_hwrap = 3\n\n",
+            "# max_hanging_wrap_groups = 3\n\n",
             "# To teach cmakefmt about a custom command's syntax, add a\n",
             "# [commands.<name>] block. For user config, prefer the condensed\n",
             "# inline kwargs = {{ ... }} form when the command is small and flat.\n",
@@ -231,19 +234,19 @@ impl Config {
         if let Some(v) = fc.format.tab_size {
             self.tab_size = v;
         }
-        if let Some(v) = fc.format.use_tabchars {
+        if let Some(v) = fc.format.use_tabs {
             self.use_tabchars = v;
         }
         if let Some(v) = fc.format.max_empty_lines {
             self.max_empty_lines = v;
         }
-        if let Some(v) = fc.format.max_lines_hwrap {
+        if let Some(v) = fc.format.max_hanging_wrap_lines {
             self.max_lines_hwrap = v;
         }
-        if let Some(v) = fc.format.max_pargs_hwrap {
+        if let Some(v) = fc.format.max_hanging_wrap_positional_args {
             self.max_pargs_hwrap = v;
         }
-        if let Some(v) = fc.format.max_subgroups_hwrap {
+        if let Some(v) = fc.format.max_hanging_wrap_groups {
             self.max_subgroups_hwrap = v;
         }
         if let Some(v) = fc.format.dangle_parens {
@@ -252,16 +255,16 @@ impl Config {
         if let Some(v) = fc.format.dangle_align {
             self.dangle_align = v;
         }
-        if let Some(v) = fc.format.min_prefix_chars {
+        if let Some(v) = fc.format.min_prefix_length {
             self.min_prefix_chars = v;
         }
-        if let Some(v) = fc.format.max_prefix_chars {
+        if let Some(v) = fc.format.max_prefix_length {
             self.max_prefix_chars = v;
         }
-        if let Some(v) = fc.format.separate_ctrl_name_with_space {
+        if let Some(v) = fc.format.space_before_control_paren {
             self.separate_ctrl_name_with_space = v;
         }
-        if let Some(v) = fc.format.separate_fn_name_with_space {
+        if let Some(v) = fc.format.space_before_definition_paren {
             self.separate_fn_name_with_space = v;
         }
 
@@ -382,14 +385,14 @@ mod tests {
 [format]
 line_width = 120
 tab_size = 4
-use_tabchars = true
+use_tabs = true
 max_empty_lines = 2
 dangle_parens = true
 dangle_align = "open"
-separate_ctrl_name_with_space = true
-separate_fn_name_with_space = true
-max_pargs_hwrap = 3
-max_subgroups_hwrap = 1
+space_before_control_paren = true
+space_before_definition_paren = true
+max_hanging_wrap_positional_args = 3
+max_hanging_wrap_groups = 1
 
 [style]
 command_case = "upper"
@@ -406,7 +409,7 @@ line_width = 100
         let config: FileConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(config.format.line_width, Some(120));
         assert_eq!(config.format.tab_size, Some(4));
-        assert_eq!(config.format.use_tabchars, Some(true));
+        assert_eq!(config.format.use_tabs, Some(true));
         assert_eq!(config.format.dangle_parens, Some(true));
         assert_eq!(config.format.dangle_align, Some(DangleAlign::Open));
         assert_eq!(config.style.command_case, Some(CaseStyle::Upper));
@@ -416,6 +419,25 @@ line_width = 100
         let msg = config.per_command.get("message").unwrap();
         assert_eq!(msg.dangle_parens, Some(true));
         assert_eq!(msg.line_width, Some(100));
+    }
+
+    #[test]
+    fn old_format_key_aliases_are_rejected() {
+        let toml_str = r#"
+[format]
+use_tabchars = true
+max_lines_hwrap = 4
+max_pargs_hwrap = 3
+max_subgroups_hwrap = 2
+min_prefix_chars = 5
+max_prefix_chars = 11
+separate_ctrl_name_with_space = true
+separate_fn_name_with_space = true
+"#;
+        let err = toml::from_str::<FileConfig>(toml_str)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("unknown field"));
     }
 
     #[test]

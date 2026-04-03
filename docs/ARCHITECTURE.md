@@ -370,7 +370,7 @@ line_width = 80
 tab_size = 2
 
 # Use tab characters instead of spaces for indentation.
-use_tabchars = false
+use_tabs = false
 
 # Maximum number of consecutive blank lines preserved between statements.
 # Extra blank lines above this are collapsed. (0 = no blank lines allowed)
@@ -378,15 +378,15 @@ max_empty_lines = 1
 
 # If the argument list of a command fits within this many lines when laid
 # out horizontally, keep it horizontal. Otherwise go vertical.
-max_lines_hwrap = 2
+max_hanging_wrap_lines = 2
 
 # If the number of positional (non-keyword) arguments exceeds this, skip
 # horizontal wrapping and go straight to vertical layout.
-max_pargs_hwrap = 6
+max_hanging_wrap_positional_args = 6
 
 # If the number of argument sub-groups (e.g. keyword blocks like
 # TARGET_SOURCES PUBLIC ...) exceeds this, skip horizontal wrapping.
-max_subgroups_hwrap = 2
+max_hanging_wrap_groups = 2
 
 # ── Parenthesis style ─────────────────────────────────────────────────────────
 
@@ -413,19 +413,19 @@ dangle_align = "prefix"
 # If the column of the opening paren is less than this many characters from
 # the start of the line, allow horizontal wrapping. If it is more, fall back
 # to vertical immediately (the line is already long enough).
-min_prefix_chars = 4
-max_prefix_chars = 10
+min_prefix_length = 4
+max_prefix_length = 10
 
 # Add a space between flow-control keywords and their opening paren.
 #   false: if(condition)
 #   true:  if (condition)
-separate_ctrl_name_with_space = false
+space_before_control_paren = false
 
 # Add a space between function/macro names and their opening paren in
 # definitions (function and macro commands only).
 #   false: function(my_func ARG)
 #   true:  function (my_func ARG)
-separate_fn_name_with_space = false
+space_before_definition_paren = false
 
 # ── Casing ────────────────────────────────────────────────────────────────────
 

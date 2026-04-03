@@ -609,7 +609,7 @@ fn dump_config_prints_template() {
     assert!(stdout.contains("# Default cmakefmt configuration."));
     assert!(stdout.contains("[format]"));
     assert!(stdout.contains("line_width = 80"));
-    assert!(stdout.contains("# use_tabchars = true"));
+    assert!(stdout.contains("# use_tabs = true"));
     assert!(stdout.contains("[markup]"));
     assert!(stdout.contains("# [per_command.message]"));
     assert!(stdout.contains("# [commands.my_custom_command]"));

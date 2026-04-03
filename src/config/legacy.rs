@@ -634,44 +634,44 @@ struct OutputFormatSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     tab_size: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    use_tabchars: Option<bool>,
+    use_tabs: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_empty_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    max_lines_hwrap: Option<usize>,
+    max_hanging_wrap_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    max_pargs_hwrap: Option<usize>,
+    max_hanging_wrap_positional_args: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    max_subgroups_hwrap: Option<usize>,
+    max_hanging_wrap_groups: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     dangle_parens: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     dangle_align: Option<DangleAlign>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    min_prefix_chars: Option<usize>,
+    min_prefix_length: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    max_prefix_chars: Option<usize>,
+    max_prefix_length: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    separate_ctrl_name_with_space: Option<bool>,
+    space_before_control_paren: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    separate_fn_name_with_space: Option<bool>,
+    space_before_definition_paren: Option<bool>,
 }
 
 impl OutputFormatSection {
     fn has_any(&self) -> bool {
         self.line_width.is_some()
             || self.tab_size.is_some()
-            || self.use_tabchars.is_some()
+            || self.use_tabs.is_some()
             || self.max_empty_lines.is_some()
-            || self.max_lines_hwrap.is_some()
-            || self.max_pargs_hwrap.is_some()
-            || self.max_subgroups_hwrap.is_some()
+            || self.max_hanging_wrap_lines.is_some()
+            || self.max_hanging_wrap_positional_args.is_some()
+            || self.max_hanging_wrap_groups.is_some()
             || self.dangle_parens.is_some()
             || self.dangle_align.is_some()
-            || self.min_prefix_chars.is_some()
-            || self.max_prefix_chars.is_some()
-            || self.separate_ctrl_name_with_space.is_some()
-            || self.separate_fn_name_with_space.is_some()
+            || self.min_prefix_length.is_some()
+            || self.max_prefix_length.is_some()
+            || self.space_before_control_paren.is_some()
+            || self.space_before_definition_paren.is_some()
     }
 }
 
@@ -743,8 +743,10 @@ struct OutputPerCommandConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     dangle_align: Option<DangleAlign>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "max_hanging_wrap_positional_args")]
     max_pargs_hwrap: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "max_hanging_wrap_groups")]
     max_subgroups_hwrap: Option<usize>,
 }
 
@@ -789,20 +791,30 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
         match key.as_str() {
             "line_width" => converted.format.line_width = as_usize(value),
             "tab_size" => converted.format.tab_size = as_usize(value),
-            "use_tabchars" => converted.format.use_tabchars = as_bool(value),
-            "max_pargs_hwrap" => converted.format.max_pargs_hwrap = as_usize(value),
-            "max_subgroups_hwrap" => converted.format.max_subgroups_hwrap = as_usize(value),
-            "max_lines_hwrap" => converted.format.max_lines_hwrap = as_usize(value),
+            "use_tabchars" | "use_tabs" => converted.format.use_tabs = as_bool(value),
+            "max_pargs_hwrap" | "max_hanging_wrap_positional_args" => {
+                converted.format.max_hanging_wrap_positional_args = as_usize(value)
+            }
+            "max_subgroups_hwrap" | "max_hanging_wrap_groups" => {
+                converted.format.max_hanging_wrap_groups = as_usize(value)
+            }
+            "max_lines_hwrap" | "max_hanging_wrap_lines" => {
+                converted.format.max_hanging_wrap_lines = as_usize(value)
+            }
             "max_empty_lines" => converted.format.max_empty_lines = as_usize(value),
             "dangle_parens" => converted.format.dangle_parens = as_bool(value),
             "dangle_align" => converted.format.dangle_align = as_dangle_align(value),
-            "min_prefix_chars" => converted.format.min_prefix_chars = as_usize(value),
-            "max_prefix_chars" => converted.format.max_prefix_chars = as_usize(value),
-            "separate_ctrl_name_with_space" => {
-                converted.format.separate_ctrl_name_with_space = as_bool(value)
+            "min_prefix_chars" | "min_prefix_length" => {
+                converted.format.min_prefix_length = as_usize(value)
             }
-            "separate_fn_name_with_space" => {
-                converted.format.separate_fn_name_with_space = as_bool(value)
+            "max_prefix_chars" | "max_prefix_length" => {
+                converted.format.max_prefix_length = as_usize(value)
+            }
+            "separate_ctrl_name_with_space" | "space_before_control_paren" => {
+                converted.format.space_before_control_paren = as_bool(value)
+            }
+            "separate_fn_name_with_space" | "space_before_definition_paren" => {
+                converted.format.space_before_definition_paren = as_bool(value)
             }
             "command_case" => {
                 converted.style.command_case = convert_case_style(path, converted, key, value)
@@ -900,8 +912,12 @@ fn merge_per_command_section(converted: &mut ConvertedConfig, path: &Path, value
                 "tab_size" => config.tab_size = as_usize(value),
                 "dangle_parens" => config.dangle_parens = as_bool(value),
                 "dangle_align" => config.dangle_align = as_dangle_align(value),
-                "max_pargs_hwrap" => config.max_pargs_hwrap = as_usize(value),
-                "max_subgroups_hwrap" => config.max_subgroups_hwrap = as_usize(value),
+                "max_pargs_hwrap" | "max_hanging_wrap_positional_args" => {
+                    config.max_pargs_hwrap = as_usize(value)
+                }
+                "max_subgroups_hwrap" | "max_hanging_wrap_groups" => {
+                    config.max_subgroups_hwrap = as_usize(value)
+                }
                 unsupported => converted.note_unsupported(
                     path,
                     &format!("[misc].per_command.{command_name}.{unsupported}"),
