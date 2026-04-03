@@ -284,7 +284,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Respect `cmake-format: off` / `cmake-format: on` barriers and `# ~~~` fence regions,
       and support `cmakefmt: off` / `cmakefmt: on` as native aliases
 - [x] Add pre-commit hook config example (`.pre-commit-config.yaml`)
-- [x] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS/Windows)
+- [x] Add GitHub Actions CI (test + clippy + fmt on Linux/macOS)
 
 ### Acceptance criteria
 
@@ -293,7 +293,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Benchmark methodology and reproduction commands are documented
 - [x] At least one profiling pass was performed on the hottest workloads and acted on
 - [x] Parallel mode speedup and memory impact are measured and recorded
-- [ ] CI passes on all three platforms
+- [ ] CI passes on Linux and macOS
 
 ---
 
@@ -412,10 +412,38 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [ ] Survey `cmakefmt --parallel` on very large codebases for RAM and system impact
       before ever considering a change from the default single-threaded execution
       model to a CPU-count default
+- [ ] Use `oomph-lib` as a late-stage large-repository validation target for this survey
+      - local checkout: `/Users/PuneetMatharu/Dropbox/programming/oomph-lib/oomph-lib-repos/forked-oomph-lib`
+      - upstream repo: `https://github.com/oomph-lib/oomph-lib`
+      - do not commit any `oomph-lib` CMake files or derived fixtures into this repository
+      - keep this repository-specific validation scoped to Phase 11 only
 
 ---
 
-## Phase 12 — Alpha Release
+## Phase 12 — Cross-Platform Support
+
+**Goal**: Restore Windows as a first-class supported platform before the first public alpha.
+
+### Tasks
+
+- [ ] Make `cmakefmt` work correctly on Windows developer machines and CI
+- [ ] Run the full test + clippy + fmt workflow on Windows in GitHub Actions
+- [ ] Audit and fix Windows-specific issues
+  - path handling
+  - newline handling
+  - terminal colour handling
+  - file discovery edge cases
+  - in-place formatting behavior
+  - docs/examples that assume POSIX shells
+
+### Acceptance criteria
+
+- [ ] CI passes on Linux, macOS, and Windows
+- [ ] Core CLI flows behave correctly on Windows
+
+---
+
+## Phase 13 — Alpha Release
 
 **Goal**: Publish the first alpha and make installation easy.
 
