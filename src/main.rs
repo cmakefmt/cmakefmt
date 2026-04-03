@@ -224,8 +224,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         process_targets_serial(&targets, cli, colorize_stdout)?
     };
+    let multi_target_stdout = stdout_mode && results.len() > 1;
 
-    for result in results {
+    for (index, result) in results.iter().enumerate() {
         if cli.debug {
             for line in &result.debug_lines {
                 log_debug(line);
@@ -249,6 +250,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 }
             }
         } else {
+            if multi_target_stdout {
+                if index > 0 {
+                    io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
+                }
+                write_stdout_header(&result.display_name)?;
+            }
             let display_output = result
                 .highlighted_output
                 .as_deref()
@@ -264,6 +271,11 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     } else {
         Ok(EXIT_OK)
     }
+}
+
+fn write_stdout_header(display_name: &str) -> Result<(), cmakefmt::Error> {
+    writeln!(io::stdout(), "### {display_name}").map_err(cmakefmt::Error::Io)?;
+    Ok(())
 }
 
 fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmakefmt::Error> {

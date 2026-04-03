@@ -298,6 +298,31 @@ fn explicit_non_cmake_file_is_formatted() {
 }
 
 #[test]
+fn multiple_stdout_files_are_labeled() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = dir.path().join("first.cmake");
+    let second = dir.path().join("second.cmake");
+
+    write_file(&first, "set(  FIRST  value )\n");
+    write_file(&second, "set(  SECOND  value )\n");
+
+    let output = cmakefmt()
+        .args([first.to_str().unwrap(), second.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!(
+            "### {}\nset(FIRST value)\n\n### {}\nset(SECOND value)\n",
+            first.display(),
+            second.display()
+        )
+    );
+}
+
+#[test]
 fn no_args_discovers_cmake_files_recursively() {
     let dir = tempfile::tempdir().unwrap();
     let top = dir.path().join("CMakeLists.txt");
