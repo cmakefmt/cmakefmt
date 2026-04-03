@@ -262,7 +262,7 @@ fn flush_enabled_chunk(
         Err(Error::Parse(source)) => {
             return Err(Error::ParseContext {
                 display_name: "<source>".to_owned(),
-                source_text: enabled_chunk.clone(),
+                source_text: enabled_chunk.clone().into_boxed_str(),
                 start_line: chunk_start_line,
                 barrier_context,
                 source,

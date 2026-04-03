@@ -72,7 +72,7 @@ impl CommandRegistry {
         let mut overrides: SpecOverrideFile =
             toml::from_str(source).map_err(|source| Error::Spec {
                 path: path.clone(),
-                source,
+                source: Box::new(source),
             })?;
         normalize_override_file(&mut overrides);
 
@@ -126,7 +126,7 @@ fn has_ascii_uppercase(s: &str) -> bool {
 fn parse_builtins() -> Result<SpecFile> {
     let mut spec: SpecFile = toml::from_str(BUILTINS_TOML).map_err(|source| Error::Spec {
         path: PathBuf::from(BUILTINS_PATH),
-        source,
+        source: Box::new(source),
     })?;
     normalize_spec_file(&mut spec);
     Ok(spec)

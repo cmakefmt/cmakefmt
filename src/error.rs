@@ -14,7 +14,7 @@ pub enum Error {
         /// Human-facing source name, for example a path or `<stdin>`.
         display_name: String,
         /// The source text that failed to parse.
-        source_text: String,
+        source_text: Box<str>,
         /// The 1-based source line number where this parser chunk started.
         start_line: usize,
         /// Whether earlier barrier/fence handling affected how this chunk was parsed.
@@ -29,7 +29,7 @@ pub enum Error {
         /// The config file that failed to deserialize.
         path: std::path::PathBuf,
         /// The underlying TOML deserialization error.
-        source: toml::de::Error,
+        source: Box<toml::de::Error>,
     },
 
     /// A built-in or user override spec parse error.
@@ -38,7 +38,7 @@ pub enum Error {
         /// The spec file that failed to deserialize.
         path: std::path::PathBuf,
         /// The underlying TOML deserialization error.
-        source: toml::de::Error,
+        source: Box<toml::de::Error>,
     },
 
     /// A filesystem or stream I/O failure.

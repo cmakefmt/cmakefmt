@@ -319,7 +319,7 @@ fn load_config_file(path: &Path) -> Result<FileConfig> {
     let contents = std::fs::read_to_string(path).map_err(Error::Io)?;
     toml::from_str(&contents).map_err(|source| Error::Config {
         path: path.to_path_buf(),
-        source,
+        source: Box::new(source),
     })
 }
 
