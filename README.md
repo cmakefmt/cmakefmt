@@ -14,11 +14,11 @@ The project currently supports:
 - respecting `cmake-format: off` / `cmake-format: on`,
   `cmakefmt: off` / `cmakefmt: on`, and `# ~~~` fence regions
 - configuration via `.cmakefmt.toml`
-- a built-in command registry audited through CMake 4.3.1
+- a built-in command registry audited through CMake 4.3.1, including the
+  supported utility/deprecated module-command surface
 
-The formatter is still under active development. Full built-in/module command
-coverage, large-codebase parallel surveying, and release/distribution work are
-not complete yet.
+The formatter is still under active development. Large-codebase parallel
+surveying, cross-platform release work, and distribution are not complete yet.
 
 The command spec version and audit date are stored in
 `src/spec/builtins.toml` under `[metadata]`.

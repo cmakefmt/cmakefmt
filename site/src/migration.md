@@ -22,7 +22,7 @@
 ## Compatibility Notes
 
 - the goal is easy adoption, not output identity
-- some config and module-command coverage is still expanding in Phase 9
+- the built-in and supported utility-module command surface is audited through CMake 4.3.1
 - `--config` is still accepted as an alias for `--config-file`, but `--dump-config` and `--file-regex` were intentionally replaced
 - unsupported compatibility should be treated as a bug or backlog item, not silently assumed
 

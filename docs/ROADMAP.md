@@ -304,7 +304,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Audit `src/spec/builtins.toml` to a full built-in and supported module-command surface,
+- [x] Audit `src/spec/builtins.toml` to a full built-in and supported module-command surface,
       including the utility/deprecated modules we intend to recognize and format well
 
 ---

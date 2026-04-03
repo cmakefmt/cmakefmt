@@ -34,7 +34,8 @@ The project currently supports:
 - barriers and fence passthrough
 - debug mode
 - opt-in parallel execution
+- a built-in command registry audited through CMake 4.3.1, including the
+  supported utility/deprecated module-command surface
 
-The formatter is still under active development. Full module-command coverage,
-very-large-codebase parallel surveying, and release/distribution work are still
-in progress.
+The formatter is still under active development. Very-large-codebase parallel
+surveying and release/distribution work are still in progress.

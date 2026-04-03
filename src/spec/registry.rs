@@ -697,6 +697,110 @@ mod tests {
     }
 
     #[test]
+    fn registry_knows_remaining_utility_module_commands() {
+        let registry = CommandRegistry::load().unwrap();
+
+        for command in [
+            "android_add_test_data",
+            "add_file_dependencies",
+            "cmake_add_fortran_subdirectory",
+            "cmake_expand_imported_targets",
+            "cmake_force_c_compiler",
+            "cmake_force_cxx_compiler",
+            "cmake_force_fortran_compiler",
+            "ctest_coverage_collect_gcov",
+            "copy_and_fixup_bundle",
+            "fixup_bundle",
+            "fixup_bundle_item",
+            "verify_app",
+            "verify_bundle_prerequisites",
+            "verify_bundle_symlinks",
+            "get_bundle_main_executable",
+            "get_dotapp_dir",
+            "get_bundle_and_executable",
+            "get_bundle_all_executables",
+            "get_bundle_keys",
+            "get_item_key",
+            "get_item_rpaths",
+            "clear_bundle_keys",
+            "set_bundle_key_values",
+            "copy_resolved_framework_into_bundle",
+            "copy_resolved_item_into_bundle",
+            "cpack_ifw_add_package_resources",
+            "cpack_ifw_add_repository",
+            "cpack_ifw_configure_component",
+            "cpack_ifw_configure_component_group",
+            "cpack_ifw_update_repository",
+            "cpack_ifw_configure_file",
+            "csharp_set_windows_forms_properties",
+            "csharp_set_designer_cs_properties",
+            "csharp_set_xaml_cs_properties",
+            "csharp_get_filename_keys",
+            "csharp_get_filename_key_base",
+            "csharp_get_dependentupon_name",
+            "externaldata_expand_arguments",
+            "externaldata_add_test",
+            "externaldata_add_target",
+            "fortrancinterface_header",
+            "fortrancinterface_verify",
+            "fetchcontent_setpopulated",
+            "gnuinstalldirs_get_absolute_install_dir",
+            "find_jar",
+            "add_jar",
+            "install_jar",
+            "install_jar_exports",
+            "export_jars",
+            "create_javadoc",
+            "create_javah",
+            "install_jni_symlink",
+            "swig_add_library",
+            "swig_link_libraries",
+            "print_enabled_features",
+            "print_disabled_features",
+            "set_feature_info",
+            "set_package_info",
+        ] {
+            assert!(
+                registry.contains_builtin(command),
+                "missing built-in {command}"
+            );
+        }
+
+        assert_eq!(
+            registry
+                .get("ctest_coverage_collect_gcov")
+                .form_for(None)
+                .pargs,
+            NArgs::ZeroOrMore
+        );
+        assert_eq!(
+            registry
+                .get("fortrancinterface_verify")
+                .form_for(None)
+                .pargs,
+            NArgs::ZeroOrMore
+        );
+        assert_eq!(
+            registry.get("add_jar").form_for(None).pargs,
+            NArgs::AtLeast(2)
+        );
+        assert_eq!(
+            registry
+                .get("cpack_ifw_configure_file")
+                .form_for(None)
+                .pargs,
+            NArgs::Fixed(2)
+        );
+        assert_eq!(
+            registry
+                .get("gnuinstalldirs_get_absolute_install_dir")
+                .form_for(None)
+                .pargs,
+            NArgs::AtLeast(3)
+        );
+    }
+
+    #[test]
     fn registry_knows_string_json_43_modes() {
         let registry = CommandRegistry::load().unwrap();
         let form = registry.get("string").form_for(Some("JSON"));

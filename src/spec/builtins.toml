@@ -621,6 +621,180 @@ nargs = "*"
 [commands.add_feature_info]
 pargs = 3
 
+[commands.print_enabled_features]
+pargs = "*"
+
+[commands.print_disabled_features]
+pargs = "*"
+
+[commands.set_feature_info]
+pargs = "+"
+
+[commands.set_package_info]
+pargs = "+"
+
+[commands.android_add_test_data]
+pargs = "2+"
+
+[commands.add_file_dependencies]
+pargs = "2+"
+
+[commands.cmake_add_fortran_subdirectory]
+pargs = "1+"
+
+[commands.cmake_expand_imported_targets]
+pargs = "+"
+
+[commands.cmake_force_c_compiler]
+pargs = 2
+
+[commands.cmake_force_cxx_compiler]
+pargs = 2
+
+[commands.cmake_force_fortran_compiler]
+pargs = 2
+
+[commands.ctest_coverage_collect_gcov]
+pargs = "*"
+
+[commands.copy_and_fixup_bundle]
+pargs = 4
+
+[commands.fixup_bundle]
+pargs = "3+"
+
+[commands.fixup_bundle_item]
+pargs = "4+"
+
+[commands.verify_app]
+pargs = "1+"
+
+[commands.verify_bundle_prerequisites]
+pargs = "1+"
+
+[commands.verify_bundle_symlinks]
+pargs = "1+"
+
+[commands.get_bundle_main_executable]
+pargs = 2
+
+[commands.get_dotapp_dir]
+pargs = 2
+
+[commands.get_bundle_and_executable]
+pargs = 4
+
+[commands.get_bundle_all_executables]
+pargs = 2
+
+[commands.get_bundle_keys]
+pargs = 2
+
+[commands.get_item_key]
+pargs = 2
+
+[commands.get_item_rpaths]
+pargs = 2
+
+[commands.clear_bundle_keys]
+pargs = 0
+
+[commands.set_bundle_key_values]
+pargs = "+"
+
+[commands.copy_resolved_framework_into_bundle]
+pargs = "+"
+
+[commands.copy_resolved_item_into_bundle]
+pargs = "+"
+
+[commands.cpack_ifw_add_package_resources]
+pargs = "+"
+
+[commands.cpack_ifw_add_repository]
+pargs = "+"
+
+[commands.cpack_ifw_configure_component]
+pargs = "+"
+
+[commands.cpack_ifw_configure_component_group]
+pargs = "+"
+
+[commands.cpack_ifw_update_repository]
+pargs = "+"
+
+[commands.cpack_ifw_configure_file]
+pargs = 2
+
+[commands.csharp_set_windows_forms_properties]
+pargs = "*"
+
+[commands.csharp_set_designer_cs_properties]
+pargs = "*"
+
+[commands.csharp_set_xaml_cs_properties]
+pargs = "*"
+
+[commands.csharp_get_filename_keys]
+pargs = "1+"
+
+[commands.csharp_get_filename_key_base]
+pargs = 2
+
+[commands.csharp_get_dependentupon_name]
+pargs = 2
+
+[commands.externaldata_expand_arguments]
+pargs = "2+"
+
+[commands.externaldata_add_test]
+pargs = "1+"
+
+[commands.externaldata_add_target]
+pargs = 1
+
+[commands.fortrancinterface_header]
+pargs = "1+"
+
+[commands.fortrancinterface_verify]
+pargs = "*"
+
+[commands.fetchcontent_setpopulated]
+pargs = 3
+
+[commands.gnuinstalldirs_get_absolute_install_dir]
+pargs = "3+"
+
+[commands.find_jar]
+pargs = "1+"
+
+[commands.add_jar]
+pargs = "2+"
+
+[commands.install_jar]
+pargs = "1+"
+
+[commands.install_jar_exports]
+pargs = "+"
+
+[commands.export_jars]
+pargs = "+"
+
+[commands.create_javadoc]
+pargs = "+"
+
+[commands.create_javah]
+pargs = "+"
+
+[commands.install_jni_symlink]
+pargs = 1
+
+[commands.swig_add_library]
+pargs = "+"
+
+[commands.swig_link_libraries]
+pargs = "+"
+
 [commands.cmake_print_properties]
 pargs = 0
 
