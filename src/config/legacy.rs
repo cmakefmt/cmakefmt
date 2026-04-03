@@ -1,0 +1,1214 @@
+//! Conversion support for legacy `cmake-format` configuration files.
+//!
+//! `cmake-format` historically supported Python, JSON, and YAML config files.
+//! `cmakefmt` intentionally uses TOML instead, but provides a converter so
+//! users can migrate existing configuration with less manual work.
+
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
+use serde::Serialize;
+
+use crate::config::{CaseStyle, DangleAlign, PerCommandConfig};
+use crate::error::{Error, Result};
+use crate::spec::{
+    CommandFormOverride, CommandSpecOverride, KwargSpecOverride, LayoutOverridesOverride, NArgs,
+};
+
+/// Convert one or more legacy `cmake-format` config files into `.cmakefmt.toml`.
+///
+/// Files are merged in the order provided, with later files overriding earlier
+/// ones. The returned string is valid TOML prefixed by explanatory comments.
+pub fn convert_legacy_config_files(paths: &[PathBuf]) -> Result<String> {
+    if paths.is_empty() {
+        return Err(Error::Formatter(
+            "--convert-legacy-config requires at least one input path".to_owned(),
+        ));
+    }
+
+    let mut converted = ConvertedConfig::default();
+    for path in paths {
+        let source = std::fs::read_to_string(path).map_err(Error::Io)?;
+        let root = parse_legacy_config(path, &source)?;
+        merge_legacy_root(&mut converted, &root, path);
+    }
+
+    let rendered = toml::to_string_pretty(&converted.as_toml()).map_err(|err| {
+        Error::Formatter(format!("failed to render converted config as TOML: {err}"))
+    })?;
+
+    let mut output = String::new();
+    output.push_str("# Converted from legacy cmake-format configuration.\n");
+    output.push_str(
+        "# Review this file before committing it; unsupported options are listed below.\n",
+    );
+
+    if !converted.notes.is_empty() {
+        output.push_str("#\n");
+        output.push_str("# Conversion notes:\n");
+        for note in &converted.notes {
+            output.push_str("# - ");
+            output.push_str(note);
+            output.push('\n');
+        }
+    }
+
+    output.push('\n');
+    output.push_str(&rendered);
+    Ok(output)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum LegacyValue {
+    Null,
+    Bool(bool),
+    Integer(i64),
+    String(String),
+    Array(Vec<LegacyValue>),
+    Table(BTreeMap<String, LegacyValue>),
+}
+
+impl LegacyValue {
+    fn as_table(&self) -> Option<&BTreeMap<String, LegacyValue>> {
+        match self {
+            LegacyValue::Table(table) => Some(table),
+            _ => None,
+        }
+    }
+
+    fn as_str(&self) -> Option<&str> {
+        match self {
+            LegacyValue::String(value) => Some(value),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LegacyFormat {
+    Json,
+    Yaml,
+    Python,
+}
+
+fn parse_legacy_config(path: &Path, source: &str) -> Result<BTreeMap<String, LegacyValue>> {
+    let root = match detect_legacy_format(path)? {
+        LegacyFormat::Json => legacy_from_json(serde_json::from_str(source).map_err(|err| {
+            Error::Formatter(format!(
+                "{}: invalid JSON legacy config: {err}",
+                path.display()
+            ))
+        })?),
+        LegacyFormat::Yaml => legacy_from_yaml(serde_yaml::from_str(source).map_err(|err| {
+            Error::Formatter(format!(
+                "{}: invalid YAML legacy config: {err}",
+                path.display()
+            ))
+        })?),
+        LegacyFormat::Python => parse_python_legacy_config(path, source)?,
+    };
+
+    match root {
+        LegacyValue::Table(table) => Ok(table),
+        _ => Err(Error::Formatter(format!(
+            "{}: legacy config root must be a mapping/object",
+            path.display()
+        ))),
+    }
+}
+
+fn detect_legacy_format(path: &Path) -> Result<LegacyFormat> {
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    if file_name.ends_with(".json") {
+        return Ok(LegacyFormat::Json);
+    }
+    if file_name.ends_with(".yaml") || file_name.ends_with(".yml") {
+        return Ok(LegacyFormat::Yaml);
+    }
+    if file_name.ends_with(".py") {
+        return Ok(LegacyFormat::Python);
+    }
+
+    Err(Error::Formatter(format!(
+        "{}: unsupported legacy config format; expected .json, .yaml, .yml, or .py",
+        path.display()
+    )))
+}
+
+fn legacy_from_json(value: serde_json::Value) -> LegacyValue {
+    match value {
+        serde_json::Value::Null => LegacyValue::Null,
+        serde_json::Value::Bool(value) => LegacyValue::Bool(value),
+        serde_json::Value::Number(value) => {
+            LegacyValue::Integer(value.as_i64().unwrap_or_default())
+        }
+        serde_json::Value::String(value) => LegacyValue::String(value),
+        serde_json::Value::Array(values) => {
+            LegacyValue::Array(values.into_iter().map(legacy_from_json).collect())
+        }
+        serde_json::Value::Object(values) => LegacyValue::Table(
+            values
+                .into_iter()
+                .map(|(key, value)| (key, legacy_from_json(value)))
+                .collect(),
+        ),
+    }
+}
+
+fn legacy_from_yaml(value: serde_yaml::Value) -> LegacyValue {
+    match value {
+        serde_yaml::Value::Null => LegacyValue::Null,
+        serde_yaml::Value::Bool(value) => LegacyValue::Bool(value),
+        serde_yaml::Value::Number(value) => {
+            LegacyValue::Integer(value.as_i64().unwrap_or_default())
+        }
+        serde_yaml::Value::String(value) => LegacyValue::String(value),
+        serde_yaml::Value::Sequence(values) => {
+            LegacyValue::Array(values.into_iter().map(legacy_from_yaml).collect())
+        }
+        serde_yaml::Value::Mapping(values) => LegacyValue::Table(
+            values
+                .into_iter()
+                .filter_map(|(key, value)| {
+                    let key = match key {
+                        serde_yaml::Value::String(value) => value,
+                        other => legacy_from_yaml(other).as_str()?.to_owned(),
+                    };
+                    Some((key, legacy_from_yaml(value)))
+                })
+                .collect(),
+        ),
+        serde_yaml::Value::Tagged(tagged) => legacy_from_yaml(tagged.value),
+    }
+}
+
+fn parse_python_legacy_config(path: &Path, source: &str) -> Result<LegacyValue> {
+    let mut parser = PythonLegacyParser::new(path, source);
+    parser.parse()
+}
+
+struct PythonLegacyParser<'a> {
+    path: &'a Path,
+    lines: Vec<&'a str>,
+    index: usize,
+}
+
+impl<'a> PythonLegacyParser<'a> {
+    fn new(path: &'a Path, source: &'a str) -> Self {
+        Self {
+            path,
+            lines: source.lines().collect(),
+            index: 0,
+        }
+    }
+
+    fn parse(&mut self) -> Result<LegacyValue> {
+        let mut root = BTreeMap::new();
+        let mut current_section: Option<String> = None;
+
+        while self.index < self.lines.len() {
+            let raw_line = self.lines[self.index];
+            let trimmed = raw_line.trim();
+            self.index += 1;
+
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+
+            if !raw_line.starts_with(' ') && !raw_line.starts_with('\t') {
+                current_section = None;
+            }
+
+            if let Some(section_name) = parse_python_section_header(trimmed) {
+                root.entry(section_name.clone())
+                    .or_insert_with(|| LegacyValue::Table(BTreeMap::new()));
+                current_section = Some(section_name);
+                continue;
+            }
+
+            let Some((key, initial_expr)) = parse_python_assignment(trimmed) else {
+                continue;
+            };
+
+            let expression = self.collect_python_expression(initial_expr);
+            let value = parse_python_literal(self.path, &expression)?;
+            if let Some(section_name) = &current_section {
+                let section = root
+                    .entry(section_name.clone())
+                    .or_insert_with(|| LegacyValue::Table(BTreeMap::new()));
+                let Some(table) = section.as_table_mut() else {
+                    return Err(Error::Formatter(format!(
+                        "{}: section {section_name:?} is not a table",
+                        self.path.display()
+                    )));
+                };
+                table.insert(key.to_owned(), value);
+            } else {
+                root.insert(key.to_owned(), value);
+            }
+        }
+
+        Ok(LegacyValue::Table(root))
+    }
+
+    fn collect_python_expression(&mut self, initial_expr: &str) -> String {
+        let mut expression = strip_python_comment(initial_expr).trim().to_owned();
+        while !python_literal_complete(&expression) && self.index < self.lines.len() {
+            let next = self.lines[self.index];
+            self.index += 1;
+            if !expression.is_empty() {
+                expression.push('\n');
+            }
+            expression.push_str(strip_python_comment(next));
+        }
+        expression
+    }
+}
+
+impl LegacyValue {
+    fn as_table_mut(&mut self) -> Option<&mut BTreeMap<String, LegacyValue>> {
+        match self {
+            LegacyValue::Table(table) => Some(table),
+            _ => None,
+        }
+    }
+}
+
+fn parse_python_section_header(line: &str) -> Option<String> {
+    let rest = line.strip_prefix("with section(")?;
+    let rest = rest.strip_suffix("):")?;
+    parse_python_quoted_name(rest.trim())
+}
+
+fn parse_python_quoted_name(input: &str) -> Option<String> {
+    let bytes = input.as_bytes();
+    if bytes.len() < 2 {
+        return None;
+    }
+    let quote = bytes[0];
+    if quote != b'\'' && quote != b'"' {
+        return None;
+    }
+    if *bytes.last()? != quote {
+        return None;
+    }
+    Some(input[1..input.len() - 1].to_owned())
+}
+
+fn parse_python_assignment(line: &str) -> Option<(&str, &str)> {
+    let (key, value) = line.split_once('=')?;
+    let key = key.trim();
+    if key.is_empty()
+        || !key
+            .chars()
+            .all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+    {
+        return None;
+    }
+    Some((key, value.trim()))
+}
+
+fn strip_python_comment(line: &str) -> &str {
+    let mut in_string = false;
+    let mut raw_string = false;
+    let mut quote = '\0';
+    let mut prev = '\0';
+
+    for (index, ch) in line.char_indices() {
+        if !in_string {
+            if ch == '#' {
+                return &line[..index];
+            }
+
+            if ch == '\'' || ch == '"' {
+                in_string = true;
+                quote = ch;
+                raw_string = prev == 'r' || prev == 'R';
+            }
+        } else if ch == quote && (raw_string || prev != '\\') {
+            in_string = false;
+            raw_string = false;
+            quote = '\0';
+        }
+
+        prev = ch;
+    }
+
+    line
+}
+
+fn python_literal_complete(input: &str) -> bool {
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut raw_string = false;
+    let mut quote = '\0';
+    let mut prev = '\0';
+
+    for ch in input.chars() {
+        if !in_string {
+            if ch == '\'' || ch == '"' {
+                in_string = true;
+                quote = ch;
+                raw_string = prev == 'r' || prev == 'R';
+            } else if matches!(ch, '[' | '{' | '(') {
+                depth += 1;
+            } else if matches!(ch, ']' | '}' | ')') {
+                depth = depth.saturating_sub(1);
+            }
+        } else if ch == quote && (raw_string || prev != '\\') {
+            in_string = false;
+            raw_string = false;
+            quote = '\0';
+        }
+
+        prev = ch;
+    }
+
+    !in_string && depth == 0
+}
+
+fn parse_python_literal(path: &Path, input: &str) -> Result<LegacyValue> {
+    let mut parser = PythonLiteralParser {
+        path,
+        chars: input.chars().collect(),
+        index: 0,
+    };
+    let value = parser.parse_value()?;
+    parser.skip_ws();
+    if parser.index != parser.chars.len() {
+        return Err(Error::Formatter(format!(
+            "{}: unsupported trailing content in python config literal: {}",
+            path.display(),
+            input.trim()
+        )));
+    }
+    Ok(value)
+}
+
+struct PythonLiteralParser<'a> {
+    path: &'a Path,
+    chars: Vec<char>,
+    index: usize,
+}
+
+impl PythonLiteralParser<'_> {
+    fn parse_value(&mut self) -> Result<LegacyValue> {
+        self.skip_ws();
+        let Some(ch) = self.peek() else {
+            return Err(self.error("unexpected end of literal"));
+        };
+
+        match ch {
+            '{' => self.parse_dict(),
+            '[' => self.parse_sequence(']'),
+            '(' => self.parse_sequence(')'),
+            '\'' | '"' => self.parse_string(false).map(LegacyValue::String),
+            'r' | 'R' => {
+                if matches!(self.peek_next(), Some('\'' | '"')) {
+                    self.index += 1;
+                    self.parse_string(true).map(LegacyValue::String)
+                } else {
+                    self.parse_identifier_or_number()
+                }
+            }
+            '-' | '0'..='9' => self.parse_number().map(LegacyValue::Integer),
+            _ => self.parse_identifier_or_number(),
+        }
+    }
+
+    fn parse_dict(&mut self) -> Result<LegacyValue> {
+        self.expect('{')?;
+        let mut table = BTreeMap::new();
+        loop {
+            self.skip_ws();
+            if self.consume_if('}') {
+                break;
+            }
+
+            let key = if matches!(self.peek(), Some('\'' | '"' | 'r' | 'R')) {
+                match self.parse_value()? {
+                    LegacyValue::String(value) => value,
+                    _ => return Err(self.error("dictionary key must be a string")),
+                }
+            } else {
+                self.parse_identifier()
+            };
+
+            self.skip_ws();
+            self.expect(':')?;
+            let value = self.parse_value()?;
+            table.insert(key, value);
+
+            self.skip_ws();
+            if self.consume_if(',') {
+                continue;
+            }
+            self.expect('}')?;
+            break;
+        }
+        Ok(LegacyValue::Table(table))
+    }
+
+    fn parse_sequence(&mut self, closing: char) -> Result<LegacyValue> {
+        let opening = if closing == ']' { '[' } else { '(' };
+        self.expect(opening)?;
+        let mut items = Vec::new();
+        loop {
+            self.skip_ws();
+            if self.consume_if(closing) {
+                break;
+            }
+            items.push(self.parse_value()?);
+            self.skip_ws();
+            if self.consume_if(',') {
+                continue;
+            }
+            self.expect(closing)?;
+            break;
+        }
+        Ok(LegacyValue::Array(items))
+    }
+
+    fn parse_string(&mut self, raw: bool) -> Result<String> {
+        let quote = self
+            .next()
+            .ok_or_else(|| self.error("expected string quote"))?;
+        let mut output = String::new();
+
+        while let Some(ch) = self.next() {
+            if ch == quote {
+                return Ok(output);
+            }
+
+            if raw || ch != '\\' {
+                output.push(ch);
+                continue;
+            }
+
+            let escaped = self
+                .next()
+                .ok_or_else(|| self.error("unterminated escape sequence"))?;
+            output.push(match escaped {
+                '\\' => '\\',
+                '\'' => '\'',
+                '"' => '"',
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                other => other,
+            });
+        }
+
+        Err(self.error("unterminated string literal"))
+    }
+
+    fn parse_number(&mut self) -> Result<i64> {
+        let start = self.index;
+        self.consume_if('-');
+        while matches!(self.peek(), Some('0'..='9')) {
+            self.index += 1;
+        }
+        self.chars[start..self.index]
+            .iter()
+            .collect::<String>()
+            .parse::<i64>()
+            .map_err(|_| self.error("invalid integer literal"))
+    }
+
+    fn parse_identifier_or_number(&mut self) -> Result<LegacyValue> {
+        let ident = self.parse_identifier();
+        match ident.as_str() {
+            "True" => Ok(LegacyValue::Bool(true)),
+            "False" => Ok(LegacyValue::Bool(false)),
+            "None" => Ok(LegacyValue::Null),
+            _ => Err(self.error(format!("unsupported python literal or identifier: {ident}"))),
+        }
+    }
+
+    fn parse_identifier(&mut self) -> String {
+        let start = self.index;
+        while matches!(self.peek(), Some(ch) if ch == '_' || ch.is_ascii_alphanumeric()) {
+            self.index += 1;
+        }
+        self.chars[start..self.index].iter().collect()
+    }
+
+    fn skip_ws(&mut self) {
+        while matches!(self.peek(), Some(ch) if ch.is_whitespace()) {
+            self.index += 1;
+        }
+    }
+
+    fn expect(&mut self, expected: char) -> Result<()> {
+        match self.next() {
+            Some(ch) if ch == expected => Ok(()),
+            _ => Err(self.error(format!("expected {expected:?}"))),
+        }
+    }
+
+    fn consume_if(&mut self, expected: char) -> bool {
+        if self.peek() == Some(expected) {
+            self.index += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn peek(&self) -> Option<char> {
+        self.chars.get(self.index).copied()
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        self.chars.get(self.index + 1).copied()
+    }
+
+    fn next(&mut self) -> Option<char> {
+        let value = self.peek()?;
+        self.index += 1;
+        Some(value)
+    }
+
+    fn error(&self, message: impl AsRef<str>) -> Error {
+        Error::Formatter(format!("{}: {}", self.path.display(), message.as_ref()))
+    }
+}
+
+#[derive(Default)]
+struct ConvertedConfig {
+    format: OutputFormatSection,
+    style: OutputStyleSection,
+    markup: OutputMarkupSection,
+    per_command: BTreeMap<String, OutputPerCommandConfig>,
+    commands: BTreeMap<String, CommandSpecOverride>,
+    notes: Vec<String>,
+}
+
+impl ConvertedConfig {
+    fn as_toml(&self) -> OutputConfigFile {
+        OutputConfigFile {
+            format: self.format.has_any().then_some(self.format.clone()),
+            style: self.style.has_any().then_some(self.style.clone()),
+            markup: self.markup.has_any().then_some(self.markup.clone()),
+            per_command: (!self.per_command.is_empty()).then_some(self.per_command.clone()),
+            commands: (!self.commands.is_empty()).then_some(self.commands.clone()),
+        }
+    }
+
+    fn note_unsupported(&mut self, path: &Path, key: &str) {
+        self.notes.push(format!(
+            "{}: unsupported legacy option {key}",
+            path.display()
+        ));
+    }
+
+    fn note_warning(&mut self, path: &Path, message: impl Into<String>) {
+        self.notes
+            .push(format!("{}: {}", path.display(), message.into()));
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+struct OutputConfigFile {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    format: Option<OutputFormatSection>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    style: Option<OutputStyleSection>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    markup: Option<OutputMarkupSection>,
+    #[serde(rename = "per_command", skip_serializing_if = "Option::is_none")]
+    per_command: Option<BTreeMap<String, OutputPerCommandConfig>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    commands: Option<BTreeMap<String, CommandSpecOverride>>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+struct OutputFormatSection {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    line_width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tab_size: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    use_tabchars: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_empty_lines: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_lines_hwrap: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_pargs_hwrap: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_subgroups_hwrap: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dangle_parens: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dangle_align: Option<DangleAlign>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    min_prefix_chars: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_prefix_chars: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    separate_ctrl_name_with_space: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    separate_fn_name_with_space: Option<bool>,
+}
+
+impl OutputFormatSection {
+    fn has_any(&self) -> bool {
+        self.line_width.is_some()
+            || self.tab_size.is_some()
+            || self.use_tabchars.is_some()
+            || self.max_empty_lines.is_some()
+            || self.max_lines_hwrap.is_some()
+            || self.max_pargs_hwrap.is_some()
+            || self.max_subgroups_hwrap.is_some()
+            || self.dangle_parens.is_some()
+            || self.dangle_align.is_some()
+            || self.min_prefix_chars.is_some()
+            || self.max_prefix_chars.is_some()
+            || self.separate_ctrl_name_with_space.is_some()
+            || self.separate_fn_name_with_space.is_some()
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+struct OutputStyleSection {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    command_case: Option<CaseStyle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    keyword_case: Option<CaseStyle>,
+}
+
+impl OutputStyleSection {
+    fn has_any(&self) -> bool {
+        self.command_case.is_some() || self.keyword_case.is_some()
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+struct OutputMarkupSection {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    enable_markup: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reflow_comments: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    first_comment_is_literal: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    literal_comment_pattern: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bullet_char: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    enum_char: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fence_pattern: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ruler_pattern: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hashruler_min_length: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    canonicalize_hashrulers: Option<bool>,
+}
+
+impl OutputMarkupSection {
+    fn has_any(&self) -> bool {
+        self.enable_markup.is_some()
+            || self.reflow_comments.is_some()
+            || self.first_comment_is_literal.is_some()
+            || self.literal_comment_pattern.is_some()
+            || self.bullet_char.is_some()
+            || self.enum_char.is_some()
+            || self.fence_pattern.is_some()
+            || self.ruler_pattern.is_some()
+            || self.hashruler_min_length.is_some()
+            || self.canonicalize_hashrulers.is_some()
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+struct OutputPerCommandConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    command_case: Option<CaseStyle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    keyword_case: Option<CaseStyle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    line_width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tab_size: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dangle_parens: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dangle_align: Option<DangleAlign>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_pargs_hwrap: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_subgroups_hwrap: Option<usize>,
+}
+
+impl From<PerCommandConfig> for OutputPerCommandConfig {
+    fn from(value: PerCommandConfig) -> Self {
+        Self {
+            command_case: value.command_case,
+            keyword_case: value.keyword_case,
+            line_width: value.line_width,
+            tab_size: value.tab_size,
+            dangle_parens: value.dangle_parens,
+            dangle_align: value.dangle_align,
+            max_pargs_hwrap: value.max_pargs_hwrap,
+            max_subgroups_hwrap: value.max_subgroups_hwrap,
+        }
+    }
+}
+
+fn merge_legacy_root(
+    converted: &mut ConvertedConfig,
+    root: &BTreeMap<String, LegacyValue>,
+    path: &Path,
+) {
+    for (key, value) in root {
+        match key.as_str() {
+            "format" => merge_format_section(converted, path, value),
+            "markup" => merge_markup_section(converted, path, value),
+            "misc" => merge_misc_section(converted, path, value),
+            "parse" => merge_parse_section(converted, path, value),
+            unsupported => converted.note_unsupported(path, &format!("[{unsupported}]")),
+        }
+    }
+}
+
+fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &LegacyValue) {
+    let Some(table) = value.as_table() else {
+        converted.note_unsupported(path, "[format] (expected a table)");
+        return;
+    };
+
+    for (key, value) in table {
+        match key.as_str() {
+            "line_width" => converted.format.line_width = as_usize(value),
+            "tab_size" => converted.format.tab_size = as_usize(value),
+            "use_tabchars" => converted.format.use_tabchars = as_bool(value),
+            "max_pargs_hwrap" => converted.format.max_pargs_hwrap = as_usize(value),
+            "max_subgroups_hwrap" => converted.format.max_subgroups_hwrap = as_usize(value),
+            "max_lines_hwrap" => converted.format.max_lines_hwrap = as_usize(value),
+            "max_empty_lines" => converted.format.max_empty_lines = as_usize(value),
+            "dangle_parens" => converted.format.dangle_parens = as_bool(value),
+            "dangle_align" => converted.format.dangle_align = as_dangle_align(value),
+            "min_prefix_chars" => converted.format.min_prefix_chars = as_usize(value),
+            "max_prefix_chars" => converted.format.max_prefix_chars = as_usize(value),
+            "separate_ctrl_name_with_space" => {
+                converted.format.separate_ctrl_name_with_space = as_bool(value)
+            }
+            "separate_fn_name_with_space" => {
+                converted.format.separate_fn_name_with_space = as_bool(value)
+            }
+            "command_case" => {
+                converted.style.command_case = convert_case_style(path, converted, key, value)
+            }
+            "keyword_case" => {
+                converted.style.keyword_case = convert_case_style(path, converted, key, value)
+            }
+            unsupported => converted.note_unsupported(path, &format!("[format].{unsupported}")),
+        }
+    }
+}
+
+fn merge_markup_section(converted: &mut ConvertedConfig, path: &Path, value: &LegacyValue) {
+    let Some(table) = value.as_table() else {
+        converted.note_unsupported(path, "[markup] (expected a table)");
+        return;
+    };
+
+    for (key, value) in table {
+        match key.as_str() {
+            "enable_markup" => converted.markup.enable_markup = as_bool(value),
+            "reflow_comments" => converted.markup.reflow_comments = as_bool(value),
+            "first_comment_is_literal" => {
+                converted.markup.first_comment_is_literal = as_bool(value)
+            }
+            "literal_comment_pattern" => {
+                converted.markup.literal_comment_pattern = as_string(value)
+            }
+            "bullet_char" => converted.markup.bullet_char = as_string(value),
+            "enum_char" => converted.markup.enum_char = as_string(value),
+            "fence_pattern" => converted.markup.fence_pattern = as_string(value),
+            "ruler_pattern" => converted.markup.ruler_pattern = as_string(value),
+            "hashruler_min_length" => converted.markup.hashruler_min_length = as_usize(value),
+            "canonicalize_hashrulers" => converted.markup.canonicalize_hashrulers = as_bool(value),
+            unsupported => converted.note_unsupported(path, &format!("[markup].{unsupported}")),
+        }
+    }
+}
+
+fn merge_misc_section(converted: &mut ConvertedConfig, path: &Path, value: &LegacyValue) {
+    let Some(table) = value.as_table() else {
+        converted.note_unsupported(path, "[misc] (expected a table)");
+        return;
+    };
+
+    for (key, value) in table {
+        match key.as_str() {
+            "per_command" => merge_per_command_section(converted, path, value),
+            unsupported => converted.note_unsupported(path, &format!("[misc].{unsupported}")),
+        }
+    }
+}
+
+fn merge_parse_section(converted: &mut ConvertedConfig, path: &Path, value: &LegacyValue) {
+    let Some(table) = value.as_table() else {
+        converted.note_unsupported(path, "[parse] (expected a table)");
+        return;
+    };
+
+    for (key, value) in table {
+        match key.as_str() {
+            "additional_commands" | "override_spec" => {
+                merge_command_specs(converted, path, value, key)
+            }
+            unsupported => converted.note_unsupported(path, &format!("[parse].{unsupported}")),
+        }
+    }
+}
+
+fn merge_per_command_section(converted: &mut ConvertedConfig, path: &Path, value: &LegacyValue) {
+    let Some(table) = value.as_table() else {
+        converted.note_unsupported(path, "[misc].per_command (expected a table)");
+        return;
+    };
+
+    for (command_name, overrides) in table {
+        let Some(overrides) = overrides.as_table() else {
+            converted.note_unsupported(
+                path,
+                &format!("[misc].per_command.{command_name} (expected a table)"),
+            );
+            continue;
+        };
+
+        let mut config = PerCommandConfig::default();
+        for (key, value) in overrides {
+            match key.as_str() {
+                "command_case" => {
+                    config.command_case = convert_case_style(path, converted, key, value)
+                }
+                "keyword_case" => {
+                    config.keyword_case = convert_case_style(path, converted, key, value)
+                }
+                "line_width" => config.line_width = as_usize(value),
+                "tab_size" => config.tab_size = as_usize(value),
+                "dangle_parens" => config.dangle_parens = as_bool(value),
+                "dangle_align" => config.dangle_align = as_dangle_align(value),
+                "max_pargs_hwrap" => config.max_pargs_hwrap = as_usize(value),
+                "max_subgroups_hwrap" => config.max_subgroups_hwrap = as_usize(value),
+                unsupported => converted.note_unsupported(
+                    path,
+                    &format!("[misc].per_command.{command_name}.{unsupported}"),
+                ),
+            }
+        }
+
+        converted
+            .per_command
+            .insert(command_name.to_ascii_lowercase(), config.into());
+    }
+}
+
+fn merge_command_specs(
+    converted: &mut ConvertedConfig,
+    path: &Path,
+    value: &LegacyValue,
+    origin_key: &str,
+) {
+    let Some(table) = value.as_table() else {
+        converted.note_unsupported(path, &format!("[parse].{origin_key} (expected a table)"));
+        return;
+    };
+
+    for (command_name, spec_value) in table {
+        match convert_command_spec(spec_value) {
+            Some(spec) => {
+                converted
+                    .commands
+                    .insert(command_name.to_ascii_lowercase(), spec);
+            }
+            None => converted.note_warning(
+                path,
+                format!(
+                    "could not fully convert [parse].{origin_key}.{command_name}; review this command manually"
+                ),
+            ),
+        }
+    }
+}
+
+fn convert_case_style(
+    path: &Path,
+    converted: &mut ConvertedConfig,
+    key: &str,
+    value: &LegacyValue,
+) -> Option<CaseStyle> {
+    let style = match as_string(value)?.to_ascii_lowercase().as_str() {
+        "lower" => Some(CaseStyle::Lower),
+        "upper" => Some(CaseStyle::Upper),
+        "unchanged" => Some(CaseStyle::Unchanged),
+        "canonical" => {
+            converted.note_warning(
+                path,
+                format!("{key} = \"canonical\" was mapped to \"lower\"; review command casing"),
+            );
+            Some(CaseStyle::Lower)
+        }
+        _ => None,
+    };
+    style
+}
+
+fn convert_command_spec(value: &LegacyValue) -> Option<CommandSpecOverride> {
+    let table = value.as_table()?;
+
+    if table.contains_key("forms") || table.contains_key("fallback") {
+        let forms = table
+            .get("forms")
+            .and_then(LegacyValue::as_table)
+            .map(|forms| {
+                forms
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        convert_command_form(value).map(|form| (name.clone(), form))
+                    })
+                    .collect::<BTreeMap<_, _>>()
+            })
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
+
+        let fallback = table.get("fallback").and_then(convert_command_form);
+        return Some(CommandSpecOverride::Discriminated { forms, fallback });
+    }
+
+    convert_command_form(value).map(CommandSpecOverride::Single)
+}
+
+fn convert_command_form(value: &LegacyValue) -> Option<CommandFormOverride> {
+    let table = value.as_table()?;
+    let mut form = CommandFormOverride::default();
+
+    for (key, value) in table {
+        match key.as_str() {
+            "pargs" => form.pargs = convert_nargs(value),
+            "flags" => form.flags = convert_flag_set(value),
+            "kwargs" => {
+                form.kwargs = value
+                    .as_table()?
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        convert_kwarg_spec(value).map(|spec| (name.to_ascii_uppercase(), spec))
+                    })
+                    .collect();
+            }
+            "layout" => form.layout = convert_layout_overrides(value),
+            _ => {}
+        }
+    }
+
+    Some(form)
+}
+
+fn convert_kwarg_spec(value: &LegacyValue) -> Option<KwargSpecOverride> {
+    match value {
+        LegacyValue::Integer(_) | LegacyValue::String(_) | LegacyValue::Array(_) => {
+            Some(KwargSpecOverride {
+                nargs: convert_nargs(value),
+                ..KwargSpecOverride::default()
+            })
+        }
+        LegacyValue::Table(table) => {
+            let mut spec = KwargSpecOverride::default();
+            for (key, value) in table {
+                match key.as_str() {
+                    "nargs" => spec.nargs = convert_nargs(value),
+                    "flags" => spec.flags = convert_flag_set(value),
+                    "kwargs" => {
+                        spec.kwargs = value
+                            .as_table()?
+                            .iter()
+                            .filter_map(|(name, value)| {
+                                convert_kwarg_spec(value)
+                                    .map(|nested| (name.to_ascii_uppercase(), nested))
+                            })
+                            .collect();
+                    }
+                    _ => {}
+                }
+            }
+            Some(spec)
+        }
+        _ => None,
+    }
+}
+
+fn convert_layout_overrides(value: &LegacyValue) -> Option<LayoutOverridesOverride> {
+    let table = value.as_table()?;
+    let mut layout = LayoutOverridesOverride::default();
+    for (key, value) in table {
+        match key.as_str() {
+            "line_width" => layout.line_width = as_usize(value),
+            "tab_size" => layout.tab_size = as_usize(value),
+            "dangle_parens" => layout.dangle_parens = as_bool(value),
+            "always_wrap" => layout.always_wrap = as_bool(value),
+            "max_pargs_hwrap" => layout.max_pargs_hwrap = as_usize(value),
+            _ => {}
+        }
+    }
+    Some(layout)
+}
+
+fn convert_flag_set(value: &LegacyValue) -> indexmap::IndexSet<String> {
+    match value {
+        LegacyValue::Array(items) => items
+            .iter()
+            .filter_map(as_string)
+            .map(|flag| flag.to_ascii_uppercase())
+            .collect(),
+        _ => indexmap::IndexSet::new(),
+    }
+}
+
+fn convert_nargs(value: &LegacyValue) -> Option<NArgs> {
+    match value {
+        LegacyValue::Integer(value) if *value >= 0 => Some(NArgs::Fixed(*value as usize)),
+        LegacyValue::String(value) => parse_nargs_string(value),
+        LegacyValue::Array(items) if items.len() == 1 => convert_nargs(&items[0]),
+        _ => None,
+    }
+}
+
+fn parse_nargs_string(value: &str) -> Option<NArgs> {
+    match value {
+        "*" => Some(NArgs::ZeroOrMore),
+        "+" => Some(NArgs::OneOrMore),
+        "?" => Some(NArgs::Optional),
+        _ if value.ends_with('+') => value[..value.len() - 1]
+            .parse::<usize>()
+            .ok()
+            .map(NArgs::AtLeast),
+        _ => value.parse::<usize>().ok().map(NArgs::Fixed),
+    }
+}
+
+fn as_usize(value: &LegacyValue) -> Option<usize> {
+    match value {
+        LegacyValue::Integer(value) if *value >= 0 => Some(*value as usize),
+        _ => None,
+    }
+}
+
+fn as_bool(value: &LegacyValue) -> Option<bool> {
+    match value {
+        LegacyValue::Bool(value) => Some(*value),
+        _ => None,
+    }
+}
+
+fn as_string(value: &LegacyValue) -> Option<String> {
+    match value {
+        LegacyValue::String(value) => Some(value.clone()),
+        _ => None,
+    }
+}
+
+fn as_dangle_align(value: &LegacyValue) -> Option<DangleAlign> {
+    match value.as_str()?.to_ascii_lowercase().as_str() {
+        "prefix" => Some(DangleAlign::Prefix),
+        "open" => Some(DangleAlign::Open),
+        "close" => Some(DangleAlign::Close),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn converts_legacy_json_config() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(
+            &path,
+            r#"{
+  "format": {
+    "line_width": 100,
+    "tab_size": 4,
+    "command_case": "lower",
+    "keyword_case": "upper"
+  },
+  "misc": {
+    "per_command": {
+      "message": {
+        "line_width": 120
+      }
+    }
+  }
+}"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path]).unwrap();
+        assert!(converted.contains("[format]"));
+        assert!(converted.contains("line_width = 100"));
+        assert!(converted.contains("[style]"));
+        assert!(converted.contains("command_case = \"lower\""));
+        assert!(converted.contains("[per_command.message]"));
+    }
+
+    #[test]
+    fn converts_legacy_python_custom_command_spec() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.py");
+        std::fs::write(
+            &path,
+            r#"
+with section("parse"):
+  additional_commands = {
+    "my_command": {
+      "pargs": 1,
+      "flags": ["QUIET"],
+      "kwargs": {
+        "SOURCES": "*",
+        "LIBRARIES": "+"
+      }
+    }
+  }
+"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path]).unwrap();
+        assert!(converted.contains("[commands.my_command]"));
+        assert!(converted.contains("pargs = 1"));
+        assert!(converted.contains("flags = [\"QUIET\"]"));
+    }
+
+    #[test]
+    fn converts_legacy_yaml_config() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            r#"
+markup:
+  enable_markup: true
+  reflow_comments: true
+"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path]).unwrap();
+        assert!(converted.contains("[markup]"));
+        assert!(converted.contains("reflow_comments = true"));
+    }
+}

@@ -199,7 +199,7 @@ fn nonexistent_file_returns_exit_2() {
 
 #[test]
 fn invalid_file_regex_returns_exit_2() {
-    let output = cmakefmt().args(["--file-regex", "("]).output().unwrap();
+    let output = cmakefmt().args(["--path-regex", "("]).output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("invalid file regex"));
@@ -353,7 +353,7 @@ fn file_regex_filters_discovered_files() {
     let output = cmakefmt()
         .args([
             "--list-files",
-            "--file-regex",
+            "--path-regex",
             "Keep",
             dir.path().to_str().unwrap(),
         ])
@@ -395,7 +395,7 @@ fn explicit_config_file() {
     std::fs::write(&config_path, "[style]\ncommand_case = \"upper\"\n").unwrap();
 
     let mut child = cmakefmt()
-        .args(["--config", config_path.to_str().unwrap(), "-"])
+        .args(["--config-file", config_path.to_str().unwrap(), "-"])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .spawn()
@@ -424,9 +424,9 @@ fn multiple_explicit_config_files_merge_in_order() {
 
     let mut child = cmakefmt()
         .args([
-            "--config",
+            "--config-file",
             first.to_str().unwrap(),
-            "--config",
+            "--config-file",
             second.to_str().unwrap(),
             "-",
         ])
@@ -447,6 +447,83 @@ fn multiple_explicit_config_files_merge_in_order() {
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
         "CMAKE_MINIMUM_REQUIRED(version 3.20)\n"
+    );
+}
+
+#[test]
+fn config_alias_still_works() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("custom.toml");
+    std::fs::write(&config_path, "[style]\ncommand_case = \"upper\"\n").unwrap();
+
+    let mut child = cmakefmt()
+        .args(["--config", config_path.to_str().unwrap(), "-"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"cmake_minimum_required(VERSION 3.20)\n")
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).starts_with("CMAKE_MINIMUM_REQUIRED("));
+}
+
+#[test]
+fn convert_legacy_json_config_to_stdout() {
+    let dir = tempfile::tempdir().unwrap();
+    let legacy = dir.path().join("cmake-format.json");
+    std::fs::write(
+        &legacy,
+        r#"{
+  "format": {
+    "line_width": 100,
+    "command_case": "lower"
+  }
+}"#,
+    )
+    .unwrap();
+
+    let output = cmakefmt()
+        .args(["--convert-legacy-config", legacy.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("# Converted from legacy cmake-format configuration."));
+    assert!(stdout.contains("[format]"));
+    assert!(stdout.contains("line_width = 100"));
+    assert!(stdout.contains("[style]"));
+    assert!(stdout.contains("command_case = \"lower\""));
+}
+
+#[test]
+fn convert_config_conflicts_with_input_paths() {
+    let dir = tempfile::tempdir().unwrap();
+    let legacy = dir.path().join("cmake-format.json");
+    std::fs::write(&legacy, "{}").unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--convert-legacy-config",
+            legacy.to_str().unwrap(),
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("does not accept formatting input paths")
     );
 }
 
@@ -509,7 +586,7 @@ nargs = "+"
 
     let output = cmakefmt()
         .args([
-            "--config",
+            "--config-file",
             config_path.to_str().unwrap(),
             input.to_str().unwrap(),
         ])
@@ -525,7 +602,7 @@ nargs = "+"
 
 #[test]
 fn dump_config_prints_template() {
-    let output = cmakefmt().arg("--dump-config").output().unwrap();
+    let output = cmakefmt().arg("--print-default-config").output().unwrap();
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -612,12 +689,18 @@ fn version_flag() {
 }
 
 #[test]
-fn help_mentions_config_discovery_and_colour() {
+fn help_mentions_config_discovery_and_primary_flags() {
     let output = cmakefmt().arg("--help").output().unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Parse CMake listfiles and format them nicely."));
     assert!(stdout.contains(".cmakefmt.toml"));
     assert!(stdout.contains("--colour <COLOUR>"));
+    assert!(stdout.contains("--print-default-config"));
+    assert!(stdout.contains("--in-place"));
+    assert!(stdout.contains("--config-file <PATH>"));
+    assert!(stdout.contains("--convert-legacy-config <PATH>"));
+    assert!(stdout.contains("--list-files"));
+    assert!(stdout.contains("--path-regex <REGEX>"));
     assert!(stdout.contains("formatting stays single-threaded"));
 }

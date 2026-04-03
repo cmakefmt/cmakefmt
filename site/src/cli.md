@@ -22,17 +22,18 @@ cmakefmt [OPTIONS] [FILES]...
 | `-i`, `--in-place` | Rewrite files on disk. |
 | `--check` | Exit with code 1 when any file would change. |
 | `--list-files` | List files that would change without modifying them. |
-| `-f`, `--file-regex <REGEX>` | Filter recursively discovered CMake file paths. |
+| `--path-regex <REGEX>` | Filter recursively discovered CMake file paths. |
 | `--debug` | Emit diagnostics about discovery, config resolution, barriers, and formatting decisions. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. If omitted, formatting stays single-threaded. |
-| `--dump-config` | Print a starter config template and exit. |
+| `--print-default-config` | Print a starter config template and exit. |
+| `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
 ## Config-backed Override Flags
 
 | Flag | Meaning |
 | --- | --- |
-| `--config <PATH>` | Use one or more specific config files instead of config discovery. Later files override earlier ones. |
+| `--config-file <PATH>` | Use one or more specific config files instead of config discovery. Later files override earlier ones. `--config` remains as a compatibility alias. |
 | `--line-width <N>` | Override `[format].line_width`. |
 | `--tab-size <N>` | Override `[format].tab_size`. |
 | `--command-case <lower\|upper\|unchanged>` | Override `[style].command_case`. |
@@ -51,9 +52,10 @@ cmakefmt [OPTIONS] [FILES]...
 cmakefmt CMakeLists.txt
 cmakefmt -i .
 cmakefmt --check .
-cmakefmt --list-files --file-regex 'cmake|toolchain' .
+cmakefmt --list-files --path-regex 'cmake|toolchain' .
 cmakefmt --colour never CMakeLists.txt
-cmakefmt --config base.toml --config team.toml CMakeLists.txt
+cmakefmt --config-file base.toml --config-file team.toml CMakeLists.txt
+cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
 cat CMakeLists.txt | cmakefmt -
 cmakefmt --debug --check tests/fixtures/real_world
 ```

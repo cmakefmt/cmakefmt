@@ -5,8 +5,10 @@
 //! overrides.
 
 pub mod file;
+mod legacy;
 /// Render a commented starter `.cmakefmt.toml` template.
 pub use file::default_config_template;
+pub use legacy::convert_legacy_config_files;
 
 use std::collections::HashMap;
 

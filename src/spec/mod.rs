@@ -7,7 +7,7 @@
 pub mod registry;
 
 use indexmap::{IndexMap, IndexSet};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
 // ── NArgs ────────────────────────────────────────────────────────────────────
@@ -28,6 +28,18 @@ pub enum NArgs {
     OneOrMore,
     Optional,
     AtLeast(usize),
+}
+
+impl Serialize for NArgs {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            NArgs::Fixed(value) => serializer.serialize_u64(*value as u64),
+            NArgs::ZeroOrMore => serializer.serialize_str("*"),
+            NArgs::OneOrMore => serializer.serialize_str("+"),
+            NArgs::Optional => serializer.serialize_str("?"),
+            NArgs::AtLeast(value) => serializer.serialize_str(&format!("{value}+")),
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for NArgs {
@@ -210,7 +222,7 @@ pub struct SpecFile {
 
 // ── Mergeable override model ─────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutOverridesOverride {
     /// Override line width for this command form.
@@ -226,7 +238,7 @@ pub struct LayoutOverridesOverride {
 }
 
 /// Partial override for a keyword specification.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct KwargSpecOverride {
     /// Override the number of positional arguments accepted after the keyword.
@@ -240,7 +252,7 @@ pub struct KwargSpecOverride {
 }
 
 /// Partial override for a command form.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CommandFormOverride {
     /// Override the positional argument count for the form.
@@ -256,7 +268,7 @@ pub struct CommandFormOverride {
 }
 
 /// Partial override for a full command spec.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum CommandSpecOverride {
     /// Override a single-form command.
@@ -273,7 +285,7 @@ pub enum CommandSpecOverride {
 }
 
 /// Top-level user override file containing command overrides only.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct SpecOverrideFile {
     /// Override specs keyed by command name.
     #[serde(default)]

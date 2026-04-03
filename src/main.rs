@@ -6,8 +6,8 @@ use std::process::ExitCode;
 use clap::{Parser, ValueEnum};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
-    default_config_template, files::discover_cmake_files, format_source_with_registry,
-    format_source_with_registry_debug, CaseStyle, Config,
+    convert_legacy_config_files, default_config_template, files::discover_cmake_files,
+    format_source_with_registry, format_source_with_registry_debug, CaseStyle, Config,
 };
 use rayon::prelude::*;
 use regex::Regex;
@@ -23,7 +23,10 @@ to the repository root or filesystem root. If no project-local config exists,
 cmakefmt falls back to ~/.cmakefmt.toml when present.
 
 cmakefmt can print a commented starter configuration for you as a customization
-starting point with --dump-config.";
+starting point with --print-default-config.
+
+Legacy cmake-format JSON, YAML, and Python config files can be converted to
+.cmakefmt.toml with --convert-legacy-config.";
 
 /// A fast, correct CMake formatter.
 #[derive(Parser, Debug)]
@@ -45,29 +48,67 @@ struct Cli {
         short = 'i',
         long = "in-place",
         conflicts_with = "list_files",
-        conflicts_with = "dump_config"
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
     )]
     in_place: bool,
 
     /// Check if files are already formatted (exit 1 if not).
-    #[arg(long, conflicts_with = "dump_config")]
+    #[arg(
+        long,
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
     check: bool,
 
     /// List the files that would be reformatted without changing them.
-    #[arg(long = "list-files", conflicts_with = "dump_config")]
+    #[arg(
+        long = "list-files",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
     list_files: bool,
 
     /// Regex filter applied to discovered CMake file paths.
-    #[arg(short = 'f', long = "file-regex", conflicts_with = "dump_config")]
+    #[arg(
+        long = "path-regex",
+        value_name = "REGEX",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
     file_regex: Option<String>,
 
     /// Print the default config template and exit.
-    #[arg(long = "dump-config")]
+    #[arg(long = "print-default-config")]
     dump_config: bool,
+
+    /// Convert legacy cmake-format config files to `.cmakefmt.toml` and print
+    /// the result to stdout.
+    #[arg(
+        long = "convert-legacy-config",
+        value_name = "PATH",
+        conflicts_with = "dump_config",
+        conflicts_with = "check",
+        conflicts_with = "list_files",
+        conflicts_with = "in_place",
+        conflicts_with = "debug",
+        conflicts_with = "parallel",
+        conflicts_with = "config_paths",
+        conflicts_with = "line_width",
+        conflicts_with = "tab_size",
+        conflicts_with = "command_case",
+        conflicts_with = "keyword_case",
+        conflicts_with = "dangle_parens"
+    )]
+    convert_config_paths: Vec<PathBuf>,
 
     /// Print debug diagnostics about discovery, config resolution, barriers,
     /// and formatter decisions.
-    #[arg(long, conflicts_with = "dump_config")]
+    #[arg(
+        long,
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
     debug: bool,
 
     /// Control ANSI colour for highlighted changed output lines.
@@ -84,12 +125,13 @@ struct Cli {
         value_name = "JOBS",
         num_args = 0..=1,
         default_missing_value = "0",
-        conflicts_with = "dump_config"
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
     )]
     parallel: Option<usize>,
 
     /// One or more config files to merge in order. Later files override earlier ones.
-    #[arg(long = "config")]
+    #[arg(long = "config-file", visible_alias = "config", value_name = "PATH")]
     config_paths: Vec<PathBuf>,
 
     /// Override the maximum line width.
@@ -143,6 +185,19 @@ fn main() -> ExitCode {
 fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     if cli.dump_config {
         print!("{}", default_config_template());
+        return Ok(EXIT_OK);
+    }
+
+    if !cli.convert_config_paths.is_empty() {
+        if !cli.files.is_empty() {
+            return Err(cmakefmt::Error::Formatter(
+                "--convert-legacy-config does not accept formatting input paths".to_owned(),
+            ));
+        }
+        print!(
+            "{}",
+            convert_legacy_config_files(&cli.convert_config_paths)?
+        );
         return Ok(EXIT_OK);
     }
 
@@ -642,16 +697,17 @@ mod tests {
         let template = default_config_template();
         let non_config_flags = [
             "check",
+            "config-file",
+            "convert-legacy-config",
             "colour",
-            "config",
             "debug",
-            "dump-config",
-            "file-regex",
+            "path-regex",
             "help",
-            "in-place",
+            "print-default-config",
             "list-files",
             "parallel",
             "version",
+            "in-place",
         ];
 
         for arg in Cli::command().get_arguments() {

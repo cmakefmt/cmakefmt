@@ -25,7 +25,8 @@ pub mod spec;
 
 /// Re-exported configuration entry points.
 pub use config::{
-    default_config_template, CaseStyle, CommandConfig, Config, DangleAlign, PerCommandConfig,
+    convert_legacy_config_files, default_config_template, CaseStyle, CommandConfig, Config,
+    DangleAlign, PerCommandConfig,
 };
 /// Re-exported error types.
 pub use error::{Error, Result};

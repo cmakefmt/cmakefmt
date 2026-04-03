@@ -2,7 +2,7 @@
 
 ## Config Discovery Order
 
-1. repeated `--config <PATH>` files, if provided
+1. repeated `--config-file <PATH>` files, if provided
 2. the nearest `.cmakefmt.toml` found by walking upward from the file
 3. `~/.cmakefmt.toml`
 4. built-in defaults

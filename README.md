@@ -100,7 +100,7 @@ cmakefmt --list-files path/to/project
 Restrict recursive discovery with a regex:
 
 ```bash
-cmakefmt --list-files --file-regex 'modules|toolchain' .
+cmakefmt --list-files --path-regex 'modules|toolchain' .
 ```
 
 Read from stdin:
@@ -112,14 +112,14 @@ cat CMakeLists.txt | cmakefmt -
 Use an explicit config file:
 
 ```bash
-cmakefmt --config path/to/.cmakefmt.toml CMakeLists.txt
+cmakefmt --config-file path/to/.cmakefmt.toml CMakeLists.txt
 ```
 
 Merge multiple config files explicitly, with later files overriding earlier
 ones:
 
 ```bash
-cmakefmt --config base.toml --config team.toml CMakeLists.txt
+cmakefmt --config-file base.toml --config-file team.toml CMakeLists.txt
 ```
 
 Override config values on the command line:
@@ -131,7 +131,13 @@ cmakefmt --line-width 100 --tab-size 4 --command-case lower --keyword-case upper
 Print the default config template:
 
 ```bash
-cmakefmt --dump-config
+cmakefmt --print-default-config
+```
+
+Convert a legacy `cmake-format` config file:
+
+```bash
+cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
 ```
 
 Print debug diagnostics while checking a file:
@@ -148,12 +154,13 @@ cmakefmt [OPTIONS] [FILES]...
   -i, --in-place
       --check
       --list-files
-  -f, --file-regex <REGEX>
-      --dump-config
+      --path-regex <REGEX>
+      --print-default-config
+      --convert-legacy-config <PATH>
       --debug
       --colour <auto|always|never>
       --parallel [<JOBS>]
-      --config <PATH>
+      --config-file <PATH>
       --line-width <N>
       --tab-size <N>
       --command-case <lower|upper|unchanged>
@@ -162,6 +169,11 @@ cmakefmt [OPTIONS] [FILES]...
   -h, --help
   -V, --version
 ```
+
+The clearer `cmakefmt` long-form flags are primary where applicable. In
+particular, `--print-default-config` replaces the older `--dump-config`, and
+`--path-regex` replaces the older `--file-regex`. `--config` is still accepted
+as an alias for `--config-file` to ease migration.
 
 Exit codes:
 
@@ -232,7 +244,7 @@ measurements live in
 
 The formatter looks for `.cmakefmt.toml` in this order:
 
-1. repeated `--config <PATH>` files, if provided
+1. repeated `--config-file <PATH>` files, if provided
 2. the nearest `.cmakefmt.toml` found by walking upward from the file
 3. `~/.cmakefmt.toml`
 4. built-in defaults
@@ -272,7 +284,13 @@ kwargs = { SOURCES = { nargs = "+" }, LIBRARIES = { nargs = "+" } }
 You can also generate a full starter config with:
 
 ```bash
-cmakefmt --dump-config
+cmakefmt --print-default-config
+```
+
+Legacy `cmake-format` config files can be converted with:
+
+```bash
+cmakefmt --convert-legacy-config path/to/.cmake-format.py > .cmakefmt.toml
 ```
 
 Optional features that are off by default, such as tab indentation or extra

@@ -171,10 +171,11 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - `cmakefmt -i [FILE]...` — format in-place
   - `cmakefmt --check [FILE]...` — exit 1 if any file would change
   - `cmakefmt --list-files [FILE|DIR]...` — list files that would be reformatted
-  - `cmakefmt -f, --file-regex <REGEX>` — filter recursively discovered CMake files
+  - `cmakefmt --path-regex <REGEX>` — filter recursively discovered CMake files
   - `cmakefmt -` — read from stdin, write to stdout
-  - `cmakefmt --dump-config` — print a default config template
-  - `cmakefmt --config <PATH>` — one or more explicit config files
+  - `cmakefmt --print-default-config` — print a default config template
+  - `cmakefmt --convert-legacy-config <PATH>` — convert old `cmake-format` config files to `.cmakefmt.toml`
+  - `cmakefmt --config-file <PATH>` — one or more explicit config files
   - `cmakefmt --line-width <N>` — override config
   - `cmakefmt --version` — print version
 - [x] Correct exit codes (0 = ok, 1 = check failed, 2 = error)
@@ -327,14 +328,14 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Expand the user-facing docs into a full guide set
   - installation from Cargo and supported package managers
   - quick-start workflow for local formatting, `--check`, and `-i`
-  - file discovery, `--file-regex`, `--list-files`, and `--parallel`
+  - file discovery, `--path-regex`, `--list-files`, and `--parallel`
   - barriers and fence regions
   - debug mode and troubleshooting
   - benchmark / performance guide
 - [x] Write a complete CLI reference
   - every flag with behavior, defaults, and exit-code semantics
   - examples for single-file, recursive, stdin, in-place, and CI usage
-  - examples for config overrides and `--dump-config`
+  - examples for config overrides, `--print-default-config`, and `--convert-legacy-config`
   - note which flags are operational-only versus config-backed
 - [x] Write a complete configuration reference
   - document every config section and option

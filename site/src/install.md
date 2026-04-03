@@ -18,7 +18,7 @@ cargo install --path .
 ```bash
 cmakefmt --check .
 cmakefmt -i .
-cmakefmt --dump-config > .cmakefmt.toml
+cmakefmt --print-default-config > .cmakefmt.toml
 ```
 
 ## Pre-commit

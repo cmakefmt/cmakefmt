@@ -508,7 +508,7 @@ canonicalize_hashrulers = true
 Config is loaded by `src/config/`. Resolution order (highest wins):
 
 1. CLI flags (e.g. `--line-width 120`)
-2. repeated `--config <PATH>` files, if provided (later files override earlier ones)
+2. repeated `--config-file <PATH>` files, if provided (later files override earlier ones)
 3. the nearest `.cmakefmt.toml` found by walking up from the file
 4. `~/.cmakefmt.toml` (user global default)
 5. Compiled-in defaults (the values shown above)
