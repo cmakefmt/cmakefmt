@@ -13,7 +13,7 @@ The project currently supports:
 - preserving comments and blank lines
 - respecting `cmake-format: off` / `cmake-format: on`,
   `cmakefmt: off` / `cmakefmt: on`, and `# ~~~` fence regions
-- configuration via `.cmake-format.toml`
+- configuration via `.cmakefmt.toml`
 - a built-in command registry audited through CMake 4.3.1
 
 The formatter is still under active development. Full built-in/module command
@@ -56,8 +56,8 @@ cmakefmt CMakeLists.txt cmake/CompilerWarnings.cmake
 ```
 
 When stdout is a terminal, lines changed by formatting are highlighted in cyan
-by default. Use `--color never` to disable that, or `--color always` to force
-ANSI color output.
+by default. Use `--colour never` to disable that, or `--colour always` to force
+ANSI colour output.
 
 Recursively discover CMake files from the current directory and print the
 formatted output:
@@ -112,7 +112,14 @@ cat CMakeLists.txt | cmakefmt -
 Use an explicit config file:
 
 ```bash
-cmakefmt --config path/to/.cmake-format.toml CMakeLists.txt
+cmakefmt --config path/to/.cmakefmt.toml CMakeLists.txt
+```
+
+Merge multiple config files explicitly, with later files overriding earlier
+ones:
+
+```bash
+cmakefmt --config base.toml --config team.toml CMakeLists.txt
 ```
 
 Override config values on the command line:
@@ -144,7 +151,7 @@ cmakefmt [OPTIONS] [FILES]...
   -f, --file-regex <REGEX>
       --dump-config
       --debug
-      --color <auto|always|never>
+      --colour <auto|always|never>
       --parallel [<JOBS>]
       --config <PATH>
       --line-width <N>
@@ -223,13 +230,12 @@ measurements live in
 
 ## Configuration
 
-The formatter looks for `.cmake-format.toml` in this order:
+The formatter looks for `.cmakefmt.toml` in this order:
 
-1. `--config <PATH>` if provided
-2. the directory of the file being formatted
-3. parent directories up to the git root or filesystem root
-4. `~/.cmake-format.toml`
-5. built-in defaults
+1. repeated `--config <PATH>` files, if provided
+2. the nearest `.cmakefmt.toml` found by walking upward from the file
+3. `~/.cmakefmt.toml`
+4. built-in defaults
 
 Example config:
 
@@ -256,6 +262,16 @@ first_comment_is_literal = true
 [per_command.message]
 line_width = 120
 dangle_parens = false
+
+[commands.my_custom_command]
+pargs = 1
+flags = ["QUIET"]
+
+[commands.my_custom_command.kwargs.SOURCES]
+nargs = "+"
+
+[commands.my_custom_command.kwargs.LIBRARIES]
+nargs = "+"
 ```
 
 You can also generate a full starter config with:
@@ -307,6 +323,14 @@ Currently supported config sections:
   - `dangle_align`
   - `max_pargs_hwrap`
   - `max_subgroups_hwrap`
+- `[commands.<name>]`
+  - `pargs`
+  - `flags`
+  - `kwargs`
+
+`[per_command.<name>]` changes formatting knobs for a known command name.
+`[commands.<name>]` teaches `cmakefmt` the syntax of a custom command or
+overrides the built-in shape of an existing one.
 
 ## Library usage
 

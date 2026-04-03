@@ -2,11 +2,10 @@
 
 ## Config Discovery Order
 
-1. `--config <PATH>` if provided
-2. the directory of the file being formatted
-3. parent directories up to the git root or filesystem root
-4. `~/.cmake-format.toml`
-5. built-in defaults
+1. repeated `--config <PATH>` files, if provided
+2. the nearest `.cmakefmt.toml` found by walking upward from the file
+3. `~/.cmakefmt.toml`
+4. built-in defaults
 
 ## Defaults
 
@@ -100,3 +99,35 @@ line_width = 120
 command_case = "unchanged"
 keyword_case = "upper"
 ```
+
+These tables only change formatting knobs for a command name. They do not
+define command syntax.
+
+## Custom Command Specs
+
+Use `[commands.<name>]` to teach `cmakefmt` about custom functions/macros or
+to override the built-in shape of an existing command.
+
+Example:
+
+```toml
+[commands.my_custom_command]
+pargs = 1
+flags = ["QUIET"]
+
+[commands.my_custom_command.kwargs.SOURCES]
+nargs = "+"
+
+[commands.my_custom_command.kwargs.LIBRARIES]
+nargs = "+"
+```
+
+This tells `cmakefmt` that:
+
+- the command starts with one positional argument
+- `QUIET` is a standalone flag
+- `SOURCES` starts a keyword section with one or more values
+- `LIBRARIES` starts a keyword section with one or more values
+
+The same command-spec format is used by the built-in registry in
+`src/spec/builtins.toml`.

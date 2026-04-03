@@ -12,9 +12,27 @@ use cmakefmt::{
 use rayon::prelude::*;
 use regex::Regex;
 
+const LONG_ABOUT: &str = "
+
+Parse CMake listfiles and format them nicely.
+
+Formatting is configurable with one or more TOML configuration files. If no
+config file is specified on the command line, cmakefmt will try to find the
+nearest .cmakefmt.toml for each input by walking up through parent directories
+to the repository root or filesystem root. If no project-local config exists,
+cmakefmt falls back to ~/.cmakefmt.toml when present.
+
+cmakefmt can print a commented starter configuration for you as a customization
+starting point with --dump-config.";
+
 /// A fast, correct CMake formatter.
 #[derive(Parser, Debug)]
-#[command(name = "cmakefmt", version, about)]
+#[command(
+    name = "cmakefmt",
+    version,
+    about = "Parse CMake listfiles and format them nicely.",
+    long_about = LONG_ABOUT
+)]
 struct Cli {
     /// Files or directories to format. Use `-` for stdin.
     ///
@@ -52,11 +70,14 @@ struct Cli {
     #[arg(long, conflicts_with = "dump_config")]
     debug: bool,
 
-    /// Control ANSI color for highlighted changed output lines.
-    #[arg(long, value_enum, default_value_t = ColorChoice::Auto)]
-    color: ColorChoice,
+    /// Control ANSI colour for highlighted changed output lines.
+    #[arg(long = "colour", alias = "color", value_enum, default_value_t = ColorChoice::Auto)]
+    colour: ColorChoice,
 
-    /// Format files in parallel. Pass no value to use the available CPU count.
+    /// Format files in parallel when explicitly requested.
+    ///
+    /// If omitted entirely, formatting stays single-threaded. If provided
+    /// without a value, cmakefmt uses the available CPU count.
     #[arg(
         short = 'j',
         long,
@@ -67,9 +88,9 @@ struct Cli {
     )]
     parallel: Option<usize>,
 
-    /// Path to a specific config file to use.
+    /// One or more config files to merge in order. Later files override earlier ones.
     #[arg(long = "config")]
-    config_path: Option<PathBuf>,
+    config_paths: Vec<PathBuf>,
 
     /// Override the maximum line width.
     #[arg(long)]
@@ -94,8 +115,11 @@ struct Cli {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 enum ColorChoice {
+    /// Use colour only when stdout is a terminal that looks colour-capable.
     Auto,
+    /// Always emit ANSI colour codes.
     Always,
+    /// Never emit ANSI colour codes.
     Never,
 }
 
@@ -123,8 +147,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     let stdout_mode = !cli.list_files && !cli.check && !cli.in_place;
-    let colorize_stdout = stdout_mode && should_colorize_stdout(cli.color);
-    let registry = CommandRegistry::load()?;
+    let colorize_stdout = stdout_mode && should_colorize_stdout(cli.colour);
     let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
     let targets = collect_targets(cli, file_filter.as_ref())?;
     let parallel_jobs = resolve_parallel_jobs(cli.parallel)?;
@@ -139,12 +162,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     let results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
-        process_targets_parallel(&targets, cli, &registry, parallel_jobs, colorize_stdout)?
+        process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout)?
     } else {
         if cli.debug && parallel_jobs > 1 && targets.iter().any(|target| !target.is_path()) {
             log_debug("parallel mode ignored because stdin input must run serially");
         }
-        process_targets_serial(&targets, cli, &registry, colorize_stdout)?
+        process_targets_serial(&targets, cli, colorize_stdout)?
     };
 
     for result in results {
@@ -249,26 +272,26 @@ fn push_unique_path(
     }
 }
 
-/// Build a Config by layering: defaults → config file → CLI overrides.
-fn build_config(
+/// Build a formatting context by layering: defaults → config files → CLI
+/// overrides, and by merging any `[commands]` spec overrides from the same
+/// config files into the command registry.
+fn build_context(
     cli: &Cli,
     file_path: Option<&Path>,
-) -> Result<(Config, Vec<PathBuf>), cmakefmt::Error> {
-    let config_sources = if let Some(config_path) = &cli.config_path {
-        vec![config_path.clone()]
+) -> Result<(Config, CommandRegistry, Vec<PathBuf>), cmakefmt::Error> {
+    let config_sources = if !cli.config_paths.is_empty() {
+        cli.config_paths.clone()
     } else if let Some(path) = file_path {
         Config::config_sources_for(path)
     } else {
         Vec::new()
     };
 
-    let mut config = if let Some(config_path) = &cli.config_path {
-        Config::from_file(config_path)?
-    } else if let Some(path) = file_path {
-        Config::for_file(path)?
-    } else {
-        Config::default()
-    };
+    let mut config = Config::from_files(&config_sources)?;
+    let mut registry = CommandRegistry::builtins().clone();
+    for path in &config_sources {
+        registry.merge_override_file(path)?;
+    }
 
     if let Some(v) = cli.line_width {
         config.line_width = v;
@@ -286,7 +309,7 @@ fn build_config(
         config.dangle_parens = v;
     }
 
-    Ok((config, config_sources))
+    Ok((config, registry, config_sources))
 }
 
 #[derive(Clone)]
@@ -313,19 +336,17 @@ struct ProcessedTarget {
 fn process_targets_serial(
     targets: &[InputTarget],
     cli: &Cli,
-    registry: &CommandRegistry,
     colorize_stdout: bool,
 ) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
     targets
         .iter()
-        .map(|target| process_target(target, cli, registry, colorize_stdout))
+        .map(|target| process_target(target, cli, colorize_stdout))
         .collect()
 }
 
 fn process_targets_parallel(
     targets: &[InputTarget],
     cli: &Cli,
-    registry: &CommandRegistry,
     parallel_jobs: usize,
     colorize_stdout: bool,
 ) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
@@ -337,7 +358,7 @@ fn process_targets_parallel(
     pool.install(|| {
         targets
             .par_iter()
-            .map(|target| process_target(target, cli, registry, colorize_stdout))
+            .map(|target| process_target(target, cli, colorize_stdout))
             .collect()
     })
 }
@@ -345,35 +366,30 @@ fn process_targets_parallel(
 fn process_target(
     target: &InputTarget,
     cli: &Cli,
-    registry: &CommandRegistry,
     colorize_stdout: bool,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     match target {
-        InputTarget::Stdin => process_stdin(cli, registry, colorize_stdout),
-        InputTarget::Path(path) => process_path(path, cli, registry, colorize_stdout),
+        InputTarget::Stdin => process_stdin(cli, colorize_stdout),
+        InputTarget::Path(path) => process_path(path, cli, colorize_stdout),
     }
 }
 
-fn process_stdin(
-    cli: &Cli,
-    registry: &CommandRegistry,
-    colorize_stdout: bool,
-) -> Result<ProcessedTarget, cmakefmt::Error> {
+fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cmakefmt::Error> {
     let mut source = String::new();
     io::stdin()
         .read_to_string(&mut source)
         .map_err(cmakefmt::Error::Io)?;
 
-    let (config, config_sources) = build_config(cli, None)?;
+    let (config, registry, config_sources) = build_context(cli, None)?;
     let mut debug_lines = vec![
         "processing <stdin>".to_owned(),
         describe_config_sources(&config_sources),
     ];
     let (formatted, mut formatter_debug) = if cli.debug {
-        format_source_with_registry_debug(&source, &config, registry)?
+        format_source_with_registry_debug(&source, &config, &registry)?
     } else {
         (
-            format_source_with_registry(&source, &config, registry)?,
+            format_source_with_registry(&source, &config, &registry)?,
             Vec::new(),
         )
     };
@@ -398,19 +414,18 @@ fn process_stdin(
 fn process_path(
     path: &Path,
     cli: &Cli,
-    registry: &CommandRegistry,
     colorize_stdout: bool,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     let source = std::fs::read_to_string(path)
         .map_err(|err| cmakefmt::Error::Formatter(format!("{}: {err}", path.display())))?;
-    let (config, config_sources) = build_config(cli, Some(path))?;
+    let (config, registry, config_sources) = build_context(cli, Some(path))?;
     let mut debug_lines = vec![
         format!("processing {}", path.display()),
         describe_config_sources(&config_sources),
     ];
 
     let (formatted, mut formatter_debug) = if cli.debug {
-        match format_source_with_registry_debug(&source, &config, registry) {
+        match format_source_with_registry_debug(&source, &config, &registry) {
             Ok(result) => result,
             Err(cmakefmt::Error::Parse(parse_err)) => {
                 return Err(cmakefmt::Error::Formatter(format!(
@@ -421,7 +436,7 @@ fn process_path(
             Err(err) => return Err(err),
         }
     } else {
-        match format_source_with_registry(&source, &config, registry) {
+        match format_source_with_registry(&source, &config, &registry) {
             Ok(formatted) => (formatted, Vec::new()),
             Err(cmakefmt::Error::Parse(parse_err)) => {
                 return Err(cmakefmt::Error::Formatter(format!(
@@ -627,7 +642,7 @@ mod tests {
         let template = default_config_template();
         let non_config_flags = [
             "check",
-            "color",
+            "colour",
             "config",
             "debug",
             "dump-config",

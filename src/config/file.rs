@@ -8,7 +8,7 @@ use serde::Deserialize;
 use crate::config::{CaseStyle, Config, DangleAlign, PerCommandConfig};
 use crate::error::{Error, Result};
 
-/// The TOML file structure for `.cmake-format.toml`.
+/// The TOML file structure for `.cmakefmt.toml`.
 ///
 /// All fields are optional — only specified values override the defaults.
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -61,9 +61,9 @@ struct MarkupSection {
     canonicalize_hashrulers: Option<bool>,
 }
 
-const CONFIG_FILE_NAME: &str = ".cmake-format.toml";
+const CONFIG_FILE_NAME: &str = ".cmakefmt.toml";
 
-/// Render a commented starter `.cmake-format.toml`.
+/// Render a commented starter `.cmakefmt.toml`.
 ///
 /// The template is intentionally verbose: every option is introduced by a
 /// short explanatory comment so users can understand the surface without
@@ -72,7 +72,7 @@ pub fn default_config_template() -> String {
     format!(
         concat!(
             "# Default cmakefmt configuration.\n",
-            "# Copy this to .cmake-format.toml and uncomment the optional settings\n",
+            "# Copy this to .cmakefmt.toml and uncomment the optional settings\n",
             "# you want to customize.\n\n",
             "[format]\n",
             "# Maximum rendered line width before cmakefmt wraps a call.\n",
@@ -127,8 +127,9 @@ pub fn default_config_template() -> String {
             "hashruler_min_length = {hashruler_min_length}\n\n",
             "# Normalize ruler comments when markup handling is enabled.\n",
             "canonicalize_hashrulers = {canonicalize_hashrulers}\n\n",
-            "# Uncomment and edit a block like this to override formatting for a\n",
-            "# specific command.\n",
+            "# Uncomment and edit a block like this to override formatting knobs\n",
+            "# for a specific command. This changes layout behavior for that\n",
+            "# command name only; it does not define new command syntax.\n",
             "#\n",
             "# [per_command.message]\n",
             "# Override the line width just for this command.\n",
@@ -146,7 +147,24 @@ pub fn default_config_template() -> String {
             "# Override the positional-argument hanging-wrap threshold just for this command.\n",
             "# max_pargs_hwrap = 8\n\n",
             "# Override the subgroup hanging-wrap threshold just for this command.\n",
-            "# max_subgroups_hwrap = 3\n",
+            "# max_subgroups_hwrap = 3\n\n",
+            "# To teach cmakefmt about a custom command's syntax, add a\n",
+            "# [commands.<name>] block. Command specs tell the formatter which\n",
+            "# tokens are positional arguments, standalone flags, and keyword\n",
+            "# sections.\n",
+            "#\n",
+            "# Example: one positional argument, one flag, and two keyword\n",
+            "# sections that each take one or more values.\n",
+            "#\n",
+            "# [commands.my_custom_command]\n",
+            "# pargs = 1\n",
+            "# flags = [\"QUIET\"]\n",
+            "#\n",
+            "# [commands.my_custom_command.kwargs.SOURCES]\n",
+            "# nargs = \"+\"\n",
+            "#\n",
+            "# [commands.my_custom_command.kwargs.LIBRARIES]\n",
+            "# nargs = \"+\"\n",
         ),
         line_width = Config::default().line_width,
         tab_size = Config::default().tab_size,
@@ -174,32 +192,37 @@ pub fn default_config_template() -> String {
 impl Config {
     /// Load configuration for a file at the given path.
     ///
-    /// Searches for `.cmake-format.toml` starting from the file's directory,
-    /// walking up to the repository/filesystem root, then checks `~/.cmake-format.toml`.
-    /// Merges all found configs (closest wins).
+    /// Searches for the nearest `.cmakefmt.toml` starting from the file's
+    /// directory and walking up to the repository/filesystem root. If none is
+    /// found, falls back to `~/.cmakefmt.toml` when present.
     pub fn for_file(file_path: &Path) -> Result<Self> {
-        let mut config = Config::default();
-
         let config_paths = find_config_files(file_path);
-        // Apply in reverse order (most distant first) so closest wins.
-        for path in config_paths.iter().rev() {
-            let file_config = load_config_file(path)?;
-            config.apply(file_config);
-        }
-
-        Ok(config)
+        Self::from_files(&config_paths)
     }
 
     /// Load configuration from a specific TOML file.
     pub fn from_file(path: &Path) -> Result<Self> {
+        let paths = [path.to_path_buf()];
+        Self::from_files(&paths)
+    }
+
+    /// Load configuration by merging several TOML files in order.
+    ///
+    /// Later files override earlier files.
+    pub fn from_files(paths: &[PathBuf]) -> Result<Self> {
         let mut config = Config::default();
-        let file_config = load_config_file(path)?;
-        config.apply(file_config);
+        for path in paths {
+            let file_config = load_config_file(path)?;
+            config.apply(file_config);
+        }
         Ok(config)
     }
 
-    /// Return the config files that would be merged for the given file, ordered
-    /// closest-first to match the runtime search order.
+    /// Return the config files that would be applied for the given file.
+    ///
+    /// When config discovery is used, this is either the nearest
+    /// `.cmakefmt.toml` found by walking upward from the file, or
+    /// `~/.cmakefmt.toml` if no nearer config exists.
     pub fn config_sources_for(file_path: &Path) -> Vec<PathBuf> {
         find_config_files(file_path)
     }
@@ -301,12 +324,12 @@ fn load_config_file(path: &Path) -> Result<FileConfig> {
     })
 }
 
-/// Find all `.cmake-format.toml` files from the file's directory up to root,
-/// plus the user home config. Returns them ordered closest-first.
+/// Find the config files that apply to `file_path`.
+///
+/// The nearest `.cmakefmt.toml` discovered while walking upward wins. If no
+/// project-local config is found, the user home config is returned when
+/// present.
 fn find_config_files(file_path: &Path) -> Vec<PathBuf> {
-    let mut configs = Vec::new();
-
-    // Walk from the file's parent directory up to root.
     let start_dir = if file_path.is_dir() {
         file_path.to_path_buf()
     } else {
@@ -320,10 +343,9 @@ fn find_config_files(file_path: &Path) -> Vec<PathBuf> {
     while let Some(d) = dir {
         let candidate = d.join(CONFIG_FILE_NAME);
         if candidate.is_file() {
-            configs.push(candidate);
+            return vec![candidate];
         }
 
-        // Stop at git root to avoid searching unrelated parent directories.
         if d.join(".git").exists() {
             break;
         }
@@ -331,15 +353,14 @@ fn find_config_files(file_path: &Path) -> Vec<PathBuf> {
         dir = d.parent();
     }
 
-    // Check user home directory.
     if let Some(home) = home_dir() {
         let home_config = home.join(CONFIG_FILE_NAME);
-        if home_config.is_file() && !configs.contains(&home_config) {
-            configs.push(home_config);
+        if home_config.is_file() {
+            return vec![home_config];
         }
     }
 
-    configs
+    Vec::new()
 }
 
 fn home_dir() -> Option<PathBuf> {
@@ -494,9 +515,21 @@ command_case = "upper"
         fs::write(&file, "").unwrap();
 
         let config = Config::for_file(&file).unwrap();
-        // Closer config wins for line_width
+        // Only the nearest config is used automatically.
         assert_eq!(config.line_width, 100);
-        // Parent config still applies for tab_size
+        assert_eq!(config.tab_size, Config::default().tab_size);
+    }
+
+    #[test]
+    fn from_files_merges_in_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let first = dir.path().join("first.toml");
+        let second = dir.path().join("second.toml");
+        fs::write(&first, "[format]\nline_width = 120\ntab_size = 4\n").unwrap();
+        fs::write(&second, "[format]\nline_width = 100\n").unwrap();
+
+        let config = Config::from_files(&[first, second]).unwrap();
+        assert_eq!(config.line_width, 100);
         assert_eq!(config.tab_size, 4);
     }
 

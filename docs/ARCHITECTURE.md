@@ -254,7 +254,7 @@ nargs = "*"    # treated as sequential name-value pairs by the formatter
 ### User extension via config
 
 Users can add specs for their own macros/functions, or override built-ins, in
-`.cmake-format.toml`:
+`.cmakefmt.toml`:
 
 ```toml
 # Define your own cmake function's argument shape so the formatter groups it
@@ -352,12 +352,12 @@ examining the `Whitespace` nodes in the AST.
 
 ## Config
 
-The config file is `.cmake-format.toml`. Every option mirrors or improves on
+The config file is `.cmakefmt.toml`. Every option mirrors or improves on
 the original `cmake-format` Python tool. All options have sane defaults so
 the tool works out of the box with no config file.
 
 ```toml
-# .cmake-format.toml  —  full reference with defaults shown
+# .cmakefmt.toml  —  full reference with defaults shown
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 
@@ -494,14 +494,24 @@ canonicalize_hashrulers = true
 #
 # [per_command.message]
 # dangle_parens = true
+
+# Command specs teach cmakefmt the syntax of custom commands or override
+# built-in command shapes.
+#
+# [commands.my_custom_command]
+# pargs = 1
+# flags = ["QUIET"]
+#
+# [commands.my_custom_command.kwargs.SOURCES]
+# nargs = "+"
 ```
 
 Config is loaded by `src/config/`. Resolution order (highest wins):
 
 1. CLI flags (e.g. `--line-width 120`)
-2. `.cmake-format.toml` in the same directory as the file being formatted
-3. `.cmake-format.toml` found by walking up to the git root (or fs root)
-4. `~/.cmake-format.toml` (user global default)
+2. repeated `--config <PATH>` files, if provided (later files override earlier ones)
+3. the nearest `.cmakefmt.toml` found by walking up from the file
+4. `~/.cmakefmt.toml` (user global default)
 5. Compiled-in defaults (the values shown above)
 
 ---

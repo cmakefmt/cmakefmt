@@ -1,11 +1,11 @@
 //! Runtime formatter configuration.
 //!
 //! [`Config`] is the fully resolved in-memory configuration used by the
-//! formatter. It is built from defaults, `.cmake-format.toml` files, and CLI
+//! formatter. It is built from defaults, `.cmakefmt.toml` files, and CLI
 //! overrides.
 
 pub mod file;
-/// Render a commented starter `.cmake-format.toml` template.
+/// Render a commented starter `.cmakefmt.toml` template.
 pub use file::default_config_template;
 
 use std::collections::HashMap;

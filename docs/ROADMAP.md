@@ -174,7 +174,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - `cmakefmt -f, --file-regex <REGEX>` — filter recursively discovered CMake files
   - `cmakefmt -` — read from stdin, write to stdout
   - `cmakefmt --dump-config` — print a default config template
-  - `cmakefmt --config <PATH>` — explicit config file
+  - `cmakefmt --config <PATH>` — one or more explicit config files
   - `cmakefmt --line-width <N>` — override config
   - `cmakefmt --version` — print version
 - [x] Correct exit codes (0 = ok, 1 = check failed, 2 = error)

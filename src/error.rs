@@ -8,7 +8,7 @@ pub enum Error {
     #[error("parse error: {0}")]
     Parse(#[from] Box<pest::error::Error<crate::parser::Rule>>),
 
-    /// A `.cmake-format.toml` parse error.
+    /// A `.cmakefmt.toml` parse error.
     #[error("config error in {path}: {source}")]
     Config {
         /// The config file that failed to deserialize.

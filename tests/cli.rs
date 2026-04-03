@@ -35,7 +35,7 @@ fn changed_stdout_lines_are_colored_when_forced() {
     std::fs::write(&file, "set(FOO bar)\nset(  BAZ  qux )\n").unwrap();
 
     let output = cmakefmt()
-        .args(["--color", "always", file.to_str().unwrap()])
+        .args(["--colour", "always", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -53,7 +53,7 @@ fn color_auto_stays_plain_when_stdout_is_piped() {
     std::fs::write(&file, "set(  FOO  bar )\n").unwrap();
 
     let output = cmakefmt()
-        .args(["--color", "auto", file.to_str().unwrap()])
+        .args(["--colour", "auto", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -68,7 +68,7 @@ fn color_never_disables_highlighting_even_when_forced_off() {
     std::fs::write(&file, "set(  FOO  bar )\n").unwrap();
 
     let output = cmakefmt()
-        .args(["--color", "never", file.to_str().unwrap()])
+        .args(["--colour", "never", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -415,6 +415,115 @@ fn explicit_config_file() {
 }
 
 #[test]
+fn multiple_explicit_config_files_merge_in_order() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = dir.path().join("first.toml");
+    let second = dir.path().join("second.toml");
+    std::fs::write(&first, "[style]\ncommand_case = \"upper\"\n").unwrap();
+    std::fs::write(&second, "[style]\nkeyword_case = \"lower\"\n").unwrap();
+
+    let mut child = cmakefmt()
+        .args([
+            "--config",
+            first.to_str().unwrap(),
+            "--config",
+            second.to_str().unwrap(),
+            "-",
+        ])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"cmake_minimum_required(VERSION 3.20)\n")
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "CMAKE_MINIMUM_REQUIRED(version 3.20)\n"
+    );
+}
+
+#[test]
+fn discovered_config_uses_nearest_file_only() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join(".git")).unwrap();
+    std::fs::write(
+        dir.path().join(".cmakefmt.toml"),
+        "[style]\ncommand_case = \"upper\"\n",
+    )
+    .unwrap();
+
+    let subdir = dir.path().join("nested");
+    std::fs::create_dir(&subdir).unwrap();
+    std::fs::write(
+        subdir.join(".cmakefmt.toml"),
+        "[style]\nkeyword_case = \"lower\"\n",
+    )
+    .unwrap();
+
+    let file = subdir.join("CMakeLists.txt");
+    write_file(&file, "cmake_minimum_required(VERSION 3.20)\n");
+
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "cmake_minimum_required(version 3.20)\n"
+    );
+}
+
+#[test]
+fn config_file_can_define_custom_command_specs() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("custom.toml");
+    std::fs::write(
+        &config_path,
+        r#"
+[format]
+line_width = 30
+
+[commands.my_custom_command]
+pargs = 1
+
+[commands.my_custom_command.kwargs.SOURCES]
+nargs = "+"
+
+[commands.my_custom_command.kwargs.LIBRARIES]
+nargs = "+"
+"#,
+    )
+    .unwrap();
+
+    let input = dir.path().join("input.cmake");
+    write_file(
+        &input,
+        "my_custom_command(target SOURCES a.cpp b.cpp c.cpp LIBRARIES foo bar)\n",
+    );
+
+    let output = cmakefmt()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            input.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("my_custom_command("));
+    assert!(stdout.contains("\n  SOURCES a.cpp b.cpp c.cpp\n"));
+    assert!(stdout.contains("\n  LIBRARIES foo bar)"));
+}
+
+#[test]
 fn dump_config_prints_template() {
     let output = cmakefmt().arg("--dump-config").output().unwrap();
     assert!(output.status.success());
@@ -426,6 +535,7 @@ fn dump_config_prints_template() {
     assert!(stdout.contains("# use_tabchars = true"));
     assert!(stdout.contains("[markup]"));
     assert!(stdout.contains("# [per_command.message]"));
+    assert!(stdout.contains("# [commands.my_custom_command]"));
 }
 
 #[test]
@@ -433,7 +543,7 @@ fn debug_mode_reports_config_and_barriers() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join(".git")).unwrap();
     std::fs::write(
-        dir.path().join(".cmake-format.toml"),
+        dir.path().join(".cmakefmt.toml"),
         "[format]\nline_width = 40\n",
     )
     .unwrap();
@@ -499,4 +609,15 @@ fn version_flag() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("cmakefmt"));
+}
+
+#[test]
+fn help_mentions_config_discovery_and_colour() {
+    let output = cmakefmt().arg("--help").output().unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Parse CMake listfiles and format them nicely."));
+    assert!(stdout.contains(".cmakefmt.toml"));
+    assert!(stdout.contains("--colour <COLOUR>"));
+    assert!(stdout.contains("formatting stays single-threaded"));
 }
