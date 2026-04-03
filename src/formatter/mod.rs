@@ -80,6 +80,14 @@ pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> 
                 previous_was_content = true;
                 block_depth += block_indent_after(&command.name);
             }
+            Statement::TemplatePlaceholder(placeholder) => {
+                if previous_was_content {
+                    output.push('\n');
+                }
+
+                output.push_str(placeholder);
+                previous_was_content = true;
+            }
             Statement::BlankLines(count) => {
                 let newline_count = if previous_was_content {
                     count + 1

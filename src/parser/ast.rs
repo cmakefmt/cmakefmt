@@ -10,6 +10,10 @@ pub struct File {
 pub enum Statement {
     /// A command invocation, e.g. `target_link_libraries(foo PUBLIC bar)`.
     Command(CommandInvocation),
+    /// A top-level configure-file placeholder line such as `@PACKAGE_INIT@`.
+    ///
+    /// These occur in `.cmake.in` templates and must be preserved verbatim.
+    TemplatePlaceholder(String),
     /// A standalone comment (on its own line).
     Comment(Comment),
     /// One or more consecutive blank lines between statements.

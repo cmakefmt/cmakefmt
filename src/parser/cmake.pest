@@ -15,7 +15,7 @@ bom = _{ "\u{FEFF}" }
 
 file = { SOI ~ bom? ~ file_item* ~ EOI }
 
-file_item = { command_invocation | bracket_comment | line_comment | newline | space }
+file_item = { command_invocation | template_placeholder | bracket_comment | line_comment | newline | space }
 
 // ── Command invocation ────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ command_invocation = {
 }
 
 identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+template_placeholder = @{ "@" ~ (ASCII_ALPHANUMERIC | "_")+ ~ "@" }
 
 arguments = { argument_part* }
 

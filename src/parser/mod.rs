@@ -70,6 +70,12 @@ fn collect_file_item(
             *line_has_content = true;
             Ok(())
         }
+        Rule::template_placeholder => {
+            flush_blank_lines(statements, pending_blank_lines);
+            statements.push(Statement::TemplatePlaceholder(item.as_str().to_owned()));
+            *line_has_content = true;
+            Ok(())
+        }
         Rule::bracket_comment => {
             let comment = Comment::Bracket(item.as_str().to_owned());
             if let Some(comment) = attach_trailing_comment(statements, comment, *line_has_content) {
@@ -526,6 +532,15 @@ mod tests {
     fn source_file_with_utf8_bom_parses() {
         let f = parse_ok("\u{FEFF}project(MyProject)\n");
         assert_eq!(f.statements.len(), 1);
+    }
+
+    #[test]
+    fn top_level_template_placeholder_parses() {
+        let f = parse_ok("@PACKAGE_INIT@\n");
+        assert_eq!(
+            f.statements,
+            vec![Statement::TemplatePlaceholder("@PACKAGE_INIT@".to_owned())]
+        );
     }
 
     #[test]
