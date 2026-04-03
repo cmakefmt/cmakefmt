@@ -2,8 +2,7 @@ use std::collections::BTreeSet;
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
 use cmakefmt::spec::registry::CommandRegistry;
@@ -11,6 +10,7 @@ use cmakefmt::{
     convert_legacy_config_files, default_config_template, files::discover_cmake_files,
     format_source_with_registry, format_source_with_registry_debug, CaseStyle, Config,
 };
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use rayon::prelude::*;
 use regex::Regex;
 
@@ -264,7 +264,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 if index > 0 {
                     io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
                 }
-                write_stdout_header(&result.display_name)?;
+                write_stdout_header(&result.display_name, colorize_stdout)?;
             }
             let display_output = result
                 .highlighted_output
@@ -283,8 +283,13 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 }
 
-fn write_stdout_header(display_name: &str) -> Result<(), cmakefmt::Error> {
-    writeln!(io::stdout(), "### {display_name}").map_err(cmakefmt::Error::Io)?;
+fn write_stdout_header(display_name: &str, colorize: bool) -> Result<(), cmakefmt::Error> {
+    if colorize {
+        writeln!(io::stdout(), "\u{1b}[1;36m### {display_name}\u{1b}[0m")
+            .map_err(cmakefmt::Error::Io)?;
+    } else {
+        writeln!(io::stdout(), "### {display_name}").map_err(cmakefmt::Error::Io)?;
+    }
     Ok(())
 }
 
@@ -562,24 +567,23 @@ fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, cmakefmt::Er
 
 #[derive(Clone)]
 struct ProgressReporter {
-    inner: Option<Arc<ProgressState>>,
-}
-
-struct ProgressState {
-    total: usize,
-    completed: AtomicUsize,
-    output_lock: Mutex<()>,
+    inner: Option<Arc<ProgressBar>>,
 }
 
 impl ProgressReporter {
     fn new(requested: bool, in_place: bool, total: usize) -> Self {
         let enabled = requested && in_place && total > 1 && io::stderr().is_terminal();
         let inner = enabled.then(|| {
-            Arc::new(ProgressState {
-                total,
-                completed: AtomicUsize::new(0),
-                output_lock: Mutex::new(()),
-            })
+            let progress = ProgressBar::new(total as u64);
+            progress.set_draw_target(ProgressDrawTarget::stderr());
+            progress.set_style(
+                ProgressStyle::with_template(
+                    "{spinner:.cyan} [{elapsed_precise}] [{bar:50.cyan/blue}] {pos}/{len} files",
+                )
+                .expect("progress template should be valid")
+                .progress_chars("=> "),
+            );
+            Arc::new(progress)
         });
         Self { inner }
     }
@@ -589,24 +593,10 @@ impl ProgressReporter {
             return;
         };
 
-        let completed = inner.completed.fetch_add(1, Ordering::Relaxed) + 1;
-        let bar_width = 24usize;
-        let filled = completed * bar_width / inner.total.max(1);
-        let empty = bar_width.saturating_sub(filled);
-        let bar = format!(
-            "[{}{}] {completed}/{}",
-            "=".repeat(filled),
-            " ".repeat(empty),
-            inner.total
-        );
-
-        let _guard = inner.output_lock.lock().ok();
-        let mut stderr = io::stderr();
-        let _ = write!(stderr, "\r{bar}");
-        if completed == inner.total {
-            let _ = writeln!(stderr);
+        inner.inc(1);
+        if inner.position() == inner.length().unwrap_or(0) {
+            inner.finish();
         }
-        let _ = stderr.flush();
     }
 }
 

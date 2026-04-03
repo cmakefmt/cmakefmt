@@ -323,6 +323,36 @@ fn multiple_stdout_files_are_labeled() {
 }
 
 #[test]
+fn multiple_stdout_headers_are_colored_when_forced() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = dir.path().join("first.cmake");
+    let second = dir.path().join("second.cmake");
+
+    write_file(&first, "set(  FIRST  value )\n");
+    write_file(&second, "set(  SECOND  value )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--colour",
+            "always",
+            first.to_str().unwrap(),
+            second.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!(
+            "\u{1b}[1;36m### {}\u{1b}[0m\n\u{1b}[36mset(FIRST value)\u{1b}[0m\n\n\u{1b}[1;36m### {}\u{1b}[0m\n\u{1b}[36mset(SECOND value)\u{1b}[0m\n",
+            first.display(),
+            second.display()
+        )
+    );
+}
+
+#[test]
 fn no_args_discovers_cmake_files_recursively() {
     let dir = tempfile::tempdir().unwrap();
     let top = dir.path().join("CMakeLists.txt");
