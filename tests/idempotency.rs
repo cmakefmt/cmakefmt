@@ -71,14 +71,47 @@ fn formatter_is_idempotent_and_preserves_parse_tree() {
 
 fn normalize_semantics(mut file: File, registry: &CommandRegistry) -> File {
     for statement in &mut file.statements {
-        if let Statement::Command(command) = statement {
-            command.span = (0, 0);
-            command.name.make_ascii_lowercase();
-            normalize_keyword_args(command, registry);
+        match statement {
+            Statement::Command(command) => {
+                command.span = (0, 0);
+                command.name.make_ascii_lowercase();
+                normalize_command_literals(command);
+                normalize_keyword_args(command, registry);
+            }
+            Statement::TemplatePlaceholder(value) => normalize_line_endings(value),
+            Statement::Comment(comment) => normalize_comment(comment),
+            Statement::BlankLines(_) => {}
         }
     }
 
     file
+}
+
+fn normalize_command_literals(command: &mut cmakefmt::parser::ast::CommandInvocation) {
+    if let Some(comment) = &mut command.trailing_comment {
+        normalize_comment(comment);
+    }
+
+    for argument in &mut command.arguments {
+        match argument {
+            Argument::Bracket(bracket) => normalize_line_endings(&mut bracket.raw),
+            Argument::Quoted(value) | Argument::Unquoted(value) => normalize_line_endings(value),
+            Argument::InlineComment(comment) => normalize_comment(comment),
+        }
+    }
+}
+
+fn normalize_comment(comment: &mut cmakefmt::parser::ast::Comment) {
+    match comment {
+        cmakefmt::parser::ast::Comment::Line(value)
+        | cmakefmt::parser::ast::Comment::Bracket(value) => normalize_line_endings(value),
+    }
+}
+
+fn normalize_line_endings(value: &mut String) {
+    if value.contains('\r') {
+        *value = value.replace("\r\n", "\n");
+    }
 }
 
 fn line_contains_comment(line: &str) -> bool {
