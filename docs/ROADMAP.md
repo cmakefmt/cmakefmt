@@ -404,7 +404,49 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ---
 
-## Phase 11 — Final Tweaks
+## Phase 11 — Debugging Clarity
+
+**Goal**: Make failures and surprising behavior easy to understand, reproduce, and fix.
+
+### Tasks
+
+- [ ] Improve parser and formatter error messages so they are human-oriented first,
+      with raw parser detail secondary
+- [ ] Include better failure context in diagnostics
+  - file path
+  - line and column
+  - surrounding source lines
+  - caret or highlight at the failing location
+- [ ] Add targeted heuristics for common CMake parse/format failure modes
+  - malformed quoted arguments / escaped quotes
+  - bracket argument or bracket comment delimiter mismatches
+  - invalid syntax inside disabled or fenced regions
+  - likely earlier-line desync causing a later parser failure
+- [ ] Expand `--debug` output so it is useful for real incident triage
+  - command currently being parsed/formatted
+  - selected command-spec form
+  - active config source(s)
+  - barrier/fence state
+  - layout decision summaries
+- [ ] Make config and CLI validation failures point to likely fixes
+  - unknown config key suggestions
+  - deprecated/removed key guidance where relevant
+  - conflicting CLI flag explanations
+- [ ] Add regression tests for diagnostics quality
+  - parser failures
+  - config failures
+  - custom command-spec failures
+  - debug-mode output snapshots where stable
+
+### Acceptance criteria
+
+- [ ] Common parser/config failures produce actionable messages without requiring source-code inspection
+- [ ] `--debug` output is sufficient to diagnose real formatting issues on representative repos
+- [ ] Diagnostics regressions are covered by tests
+
+---
+
+## Phase 12 — Final Tweaks
 
 **Goal**: Validate late-stage operational behavior before release.
 
@@ -417,11 +459,11 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
       - local checkout: `/Users/PuneetMatharu/Dropbox/programming/oomph-lib/oomph-lib-repos/forked-oomph-lib`
       - upstream repo: `https://github.com/oomph-lib/oomph-lib`
       - do not commit any `oomph-lib` CMake files or derived fixtures into this repository
-      - keep this repository-specific validation scoped to Phase 11 only
+      - keep this repository-specific validation scoped to Phase 12 only
 
 ---
 
-## Phase 12 — Cross-Platform Support
+## Phase 13 — Cross-Platform Support
 
 **Goal**: Restore Windows as a first-class supported platform before the first public alpha.
 
@@ -444,7 +486,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ---
 
-## Phase 13 — Alpha Release
+## Phase 14 — Alpha Release
 
 **Goal**: Publish the first alpha and make installation easy.
 
