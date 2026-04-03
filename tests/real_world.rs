@@ -46,9 +46,10 @@ fn real_world_fixture_manifest_mentions_every_fixture() {
         let relative = path
             .strip_prefix("tests/fixtures/real_world")
             .unwrap()
-            .to_string_lossy();
+            .to_string_lossy()
+            .replace(std::path::MAIN_SEPARATOR, "/");
         assert!(
-            manifest.contains(relative.as_ref()),
+            manifest.contains(&relative),
             "fixture {} missing from SOURCES.md",
             relative
         );
