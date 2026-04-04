@@ -135,7 +135,10 @@ fn first_argument(command: &CommandInvocation) -> Option<&Argument> {
 fn format_name(command: &CommandInvocation, cmd_config: &CommandConfig<'_>) -> String {
     let name = apply_case(cmd_config.command_case(), &command.name);
     if cmd_config.space_before_paren {
-        format!("{name} ")
+        let mut spaced = String::with_capacity(name.len() + 1);
+        spaced.push_str(&name);
+        spaced.push(' ');
+        spaced
     } else {
         name
     }
@@ -453,8 +456,10 @@ fn format_section_inline(
         return None;
     }
 
+    let indent_width = indent.chars().count();
     let mut line = String::from(header);
-    let comment_indent = indent.chars().count() + line.chars().count();
+    let mut line_width_count = line.chars().count();
+    let comment_indent = indent_width + line_width_count;
 
     for (index, argument) in arguments.iter().enumerate() {
         match argument {
@@ -472,28 +477,34 @@ fn format_section_inline(
                 candidate.push_str(&line);
                 candidate.push(' ');
                 candidate.push_str(&comment_lines[0]);
-                if indent.chars().count() + candidate.chars().count() > line_width {
+                let candidate_width = line_width_count + 1 + comment_lines[0].chars().count();
+                if indent_width + candidate_width > line_width {
                     return None;
                 }
                 line = candidate;
+                line_width_count = candidate_width;
             }
             _ => {
                 let token = argument.as_str();
-                let mut candidate = String::with_capacity(line.len() + token.len() + 1);
-                if line.is_empty() {
-                    candidate.push_str(token);
+                let token_width = token.chars().count();
+                let candidate_width = if line.is_empty() {
+                    token_width
                 } else {
-                    candidate.push_str(&line);
-                    candidate.push(' ');
-                    candidate.push_str(token);
-                }
-                if indent.chars().count() + candidate.chars().count() > line_width {
+                    line_width_count + 1 + token_width
+                };
+                if indent_width + candidate_width > line_width {
                     if matches!(header_kind, Some(HeaderKind::Flag)) && arguments.len() == 1 {
                         return None;
                     }
                     return None;
                 }
-                line = candidate;
+                if line.is_empty() {
+                    line.push_str(token);
+                } else {
+                    line.push(' ');
+                    line.push_str(token);
+                }
+                line_width_count = candidate_width;
             }
         }
     }
@@ -509,6 +520,8 @@ fn write_packed_arguments(
     line_width: usize,
 ) {
     let mut current = String::new();
+    let indent_width = indent.chars().count();
+    let mut current_width = 0usize;
 
     for (index, argument) in arguments.iter().enumerate() {
         match argument {
@@ -526,13 +539,16 @@ fn write_packed_arguments(
                     candidate.push_str(&current);
                     candidate.push(' ');
                     candidate.push_str(&comment_lines[0]);
-                    if indent.chars().count() + candidate.chars().count() <= line_width {
+                    let candidate_width = current_width + 1 + comment_lines[0].chars().count();
+                    if indent_width + candidate_width <= line_width {
                         current = candidate;
+                        current_width = candidate_width;
                         continue;
                     }
                 }
 
                 flush_current_line(output, &mut current, indent);
+                current_width = 0;
                 for line in comment_lines {
                     output.push_str(indent);
                     output.push_str(&line);
@@ -541,25 +557,29 @@ fn write_packed_arguments(
             }
             _ if argument_has_newline(argument) => {
                 flush_current_line(output, &mut current, indent);
+                current_width = 0;
                 write_multiline_argument(output, indent, argument.as_str());
             }
             _ => {
                 let token = argument.as_str();
-                let mut candidate = String::with_capacity(current.len() + token.len() + 1);
-                if current.is_empty() {
-                    candidate.push_str(token);
+                let token_width = token.chars().count();
+                let candidate_width = if current.is_empty() {
+                    token_width
                 } else {
-                    candidate.push_str(&current);
-                    candidate.push(' ');
-                    candidate.push_str(token);
-                }
+                    current_width + 1 + token_width
+                };
 
-                if current.is_empty()
-                    || indent.chars().count() + candidate.chars().count() <= line_width
-                {
-                    current = candidate;
+                if current.is_empty() || indent_width + candidate_width <= line_width {
+                    if current.is_empty() {
+                        current.push_str(token);
+                    } else {
+                        current.push(' ');
+                        current.push_str(token);
+                    }
+                    current_width = candidate_width;
                 } else {
                     flush_current_line(output, &mut current, indent);
+                    current_width = token_width;
                     current = token.to_owned();
                 }
             }
@@ -638,7 +658,10 @@ fn pack_tokens(
         return Some(vec![prefix.to_owned()]);
     }
 
+    let prefix_width = prefix.chars().count();
+    let continuation_width = continuation.chars().count();
     let mut lines = vec![prefix.to_owned()];
+    let mut current_width = prefix_width;
 
     for &token in tokens {
         if break_before
@@ -651,19 +674,20 @@ fn pack_tokens(
             next.push_str(continuation);
             next.push_str(token);
             lines.push(next);
+            current_width = continuation_width + token.chars().count();
             continue;
         }
 
         let current = lines.last_mut().expect("at least one line");
-        let mut candidate = String::with_capacity(current.len() + token.len() + 1);
-        candidate.push_str(current);
-        if current != prefix && current != continuation {
-            candidate.push(' ');
-        }
-        candidate.push_str(token);
+        let needs_space = current_width != prefix_width && current_width != continuation_width;
+        let candidate_width = current_width + usize::from(needs_space) + token.chars().count();
 
-        if candidate.chars().count() <= line_width {
-            *current = candidate;
+        if candidate_width <= line_width {
+            if needs_space {
+                current.push(' ');
+            }
+            current.push_str(token);
+            current_width = candidate_width;
             continue;
         }
 
@@ -675,6 +699,7 @@ fn pack_tokens(
         next.push_str(continuation);
         next.push_str(token);
         lines.push(next);
+        current_width = continuation_width + token.chars().count();
     }
 
     Some(lines)

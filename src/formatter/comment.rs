@@ -56,22 +56,29 @@ fn format_line_comment(
 
     let mut lines = Vec::new();
     let mut current = String::from(prefix);
+    let mut current_width = prefix_width;
 
     for word in body.split_whitespace() {
-        let projected = if current == prefix {
-            prefix_width + word.chars().count()
+        let word_width = word.chars().count();
+        let projected = if current_width == prefix_width {
+            prefix_width + word_width
         } else {
-            current.chars().count() + 1 + word.chars().count()
+            current_width + 1 + word_width
         };
 
-        if projected > available && current != prefix {
+        if projected > available && current_width != prefix_width {
             lines.push(current);
-            current = format!("{prefix}{word}");
+            current = String::with_capacity(prefix.len() + word.len());
+            current.push_str(prefix);
+            current.push_str(word);
+            current_width = prefix_width + word_width;
         } else {
-            if current != prefix {
+            if current_width != prefix_width {
                 current.push(' ');
+                current_width += 1;
             }
             current.push_str(word);
+            current_width += word_width;
         }
     }
 

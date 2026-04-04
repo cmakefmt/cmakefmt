@@ -291,13 +291,17 @@ fn detect_barrier(line: &str) -> Option<BarrierEvent<'_>> {
         return Some(BarrierEvent::Fence);
     }
 
-    for kind in ["cmake-format", "cmakefmt"] {
-        if body == format!("{kind}: off") {
-            return Some(BarrierEvent::DisableByDirective(kind));
-        }
-        if body == format!("{kind}: on") {
-            return Some(BarrierEvent::EnableByDirective(kind));
-        }
+    if body == "cmake-format: off" {
+        return Some(BarrierEvent::DisableByDirective("cmake-format"));
+    }
+    if body == "cmake-format: on" {
+        return Some(BarrierEvent::EnableByDirective("cmake-format"));
+    }
+    if body == "cmakefmt: off" {
+        return Some(BarrierEvent::DisableByDirective("cmakefmt"));
+    }
+    if body == "cmakefmt: on" {
+        return Some(BarrierEvent::EnableByDirective("cmakefmt"));
     }
 
     None

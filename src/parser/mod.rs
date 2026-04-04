@@ -34,11 +34,12 @@ pub fn parse(source: &str) -> Result<File> {
 fn build_file(pair: pest::iterators::Pair<'_, Rule>) -> Result<File> {
     debug_assert_eq!(pair.as_rule(), Rule::file);
 
-    let mut statements = Vec::new();
+    let items = pair.into_inner();
+    let mut statements = Vec::with_capacity(items.size_hint().0);
     let mut pending_blank_lines = 0usize;
     let mut line_has_content = false;
 
-    for item in pair.into_inner() {
+    for item in items {
         collect_file_item(
             item,
             &mut statements,
