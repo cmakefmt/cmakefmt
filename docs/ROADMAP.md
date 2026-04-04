@@ -254,7 +254,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - capture formatter-only flamegraphs
   - capture end-to-end flamegraphs on a large real-world file
   - summarize the top hotspots and the changes made to address them
-- [ ] Optimize the hottest paths aggressively but safely:
+- [x] Optimize the hottest paths aggressively but safely:
   - reduce avoidable allocations/cloning
   - reduce repeated case conversions / string normalization where measurable
   - reuse parsed/loaded data where appropriate
@@ -294,7 +294,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Benchmark methodology and reproduction commands are documented
 - [x] At least one profiling pass was performed on the hottest workloads and acted on
 - [x] Parallel mode speedup and memory impact are measured and recorded
-- [ ] CI passes on Linux and macOS
+- [x] CI passes on Linux and macOS
 
 ---
 
