@@ -692,6 +692,12 @@ not just faster.
   - decide which file types should carry SPDX/copyright headers directly
   - add `reuse` metadata/exceptions for generated files, snapshots, fixtures, and other non-header cases
   - run `reuse lint` and keep it in the release checklist
+- [ ] Reduce the checked-in third-party fixture/license surface before alpha
+  - stop shipping copied upstream real-world fixtures directly in the main repository if we can avoid it
+  - replace them with fetch-at-test-time tooling and/or a separately versioned fixture archive
+  - pin upstream sources/commits so real-world validation remains deterministic and reviewable
+  - keep CI/local test runs practical, including a clear cache/offline story for contributors
+  - ensure the repo root only needs license texts for project-owned files and intentionally bundled assets
 - [ ] Publish first-party installation channels that we should maintain directly
   - GitHub Releases downloadable binaries
   - crates.io (`cargo install`)
@@ -803,6 +809,7 @@ not just faster.
 
 - [ ] `cargo publish --dry-run` succeeds
 - [ ] `reuse lint` succeeds and the repo has a consistent final license story
+- [ ] Real-world validation no longer requires checked-in copied upstream fixture trees in the main repo
 - [ ] Tagging `v1.0.0-alpha.1` from a clean commit can produce a complete release candidate without manual file editing
 - [ ] GitHub Releases contains working binaries for Linux, macOS, and Windows, plus checksums
 - [ ] `cargo install cmakefmt --version 1.0.0-alpha.1` works
