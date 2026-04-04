@@ -585,7 +585,7 @@ struct ConvertedConfig {
     format: OutputFormatSection,
     style: OutputStyleSection,
     markup: OutputMarkupSection,
-    per_command: BTreeMap<String, OutputPerCommandConfig>,
+    per_command_overrides: BTreeMap<String, OutputPerCommandConfig>,
     commands: BTreeMap<String, CommandSpecOverride>,
     notes: Vec<String>,
 }
@@ -596,7 +596,8 @@ impl ConvertedConfig {
             format: self.format.has_any().then_some(self.format.clone()),
             style: self.style.has_any().then_some(self.style.clone()),
             markup: self.markup.has_any().then_some(self.markup.clone()),
-            per_command: (!self.per_command.is_empty()).then_some(self.per_command.clone()),
+            per_command_overrides: (!self.per_command_overrides.is_empty())
+                .then_some(self.per_command_overrides.clone()),
             commands: (!self.commands.is_empty()).then_some(self.commands.clone()),
         }
     }
@@ -622,8 +623,11 @@ struct OutputConfigFile {
     style: Option<OutputStyleSection>,
     #[serde(skip_serializing_if = "Option::is_none")]
     markup: Option<OutputMarkupSection>,
-    #[serde(rename = "per_command", skip_serializing_if = "Option::is_none")]
-    per_command: Option<BTreeMap<String, OutputPerCommandConfig>>,
+    #[serde(
+        rename = "per_command_overrides",
+        skip_serializing_if = "Option::is_none"
+    )]
+    per_command_overrides: Option<BTreeMap<String, OutputPerCommandConfig>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     commands: Option<BTreeMap<String, CommandSpecOverride>>,
 }
@@ -927,7 +931,7 @@ fn merge_per_command_section(converted: &mut ConvertedConfig, path: &Path, value
         }
 
         converted
-            .per_command
+            .per_command_overrides
             .insert(command_name.to_ascii_lowercase(), config.into());
     }
 }
@@ -1179,7 +1183,7 @@ mod tests {
         assert!(converted.contains("line_width = 100"));
         assert!(converted.contains("[style]"));
         assert!(converted.contains("command_case = \"lower\""));
-        assert!(converted.contains("[per_command.message]"));
+        assert!(converted.contains("[per_command_overrides.message]"));
     }
 
     #[test]

@@ -84,7 +84,7 @@ canonicalize_hashrulers = true
 
 ## Per-command Overrides
 
-The `[per_command.<name>]` table supports these overrides:
+The `[per_command_overrides.<name>]` table supports these overrides:
 
 - `command_case`
 - `keyword_case`
@@ -98,8 +98,8 @@ The `[per_command.<name>]` table supports these overrides:
 Example:
 
 ```yaml
-per_command:
-  message:
+per_command_overrides:
+  my_custom_command:
     line_width: 120
     command_case: unchanged
     keyword_case: upper

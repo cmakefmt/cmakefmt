@@ -689,7 +689,7 @@ fn dump_config_prints_template() {
     assert!(stdout.contains("line_width: 80"));
     assert!(stdout.contains("# use_tabs: true"));
     assert!(stdout.contains("markup:"));
-    assert!(stdout.contains("# per_command:"));
+    assert!(stdout.contains("# per_command_overrides:"));
     assert!(stdout.contains("# commands:"));
     assert!(stdout.contains("#   my_custom_command:"));
 }
@@ -705,7 +705,7 @@ fn dump_config_toml_prints_template() {
     assert!(stdout.contains("line_width = 80"));
     assert!(stdout.contains("# use_tabs = true"));
     assert!(stdout.contains("[markup]"));
-    assert!(stdout.contains("# [per_command.message]"));
+    assert!(stdout.contains("# [per_command_overrides.my_custom_command]"));
     assert!(stdout.contains("# [commands.my_custom_command]"));
 }
 

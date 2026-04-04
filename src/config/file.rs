@@ -18,8 +18,10 @@ struct FileConfig {
     format: FormatSection,
     style: StyleSection,
     markup: MarkupSection,
+    #[serde(rename = "per_command_overrides")]
+    per_command_overrides: HashMap<String, PerCommandConfig>,
     #[serde(rename = "per_command")]
-    per_command: HashMap<String, PerCommandConfig>,
+    legacy_per_command: HashMap<String, PerCommandConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -178,7 +180,7 @@ fn default_config_template_toml() -> String {
             "# for a specific command. This changes layout behavior for that\n",
             "# command name only; it does not define new command syntax.\n",
             "#\n",
-            "# [per_command.message]\n",
+            "# [per_command_overrides.my_custom_command]\n",
             "# Override the line width just for this command.\n",
             "# line_width = 120\n\n",
             "# Override command casing just for this command.\n",
@@ -295,8 +297,8 @@ fn default_config_template_yaml() -> String {
             "# for a specific command. This changes layout behavior for that\n",
             "# command name only; it does not define new command syntax.\n",
             "#\n",
-            "# per_command:\n",
-            "#   message:\n",
+            "# per_command_overrides:\n",
+            "#   my_custom_command:\n",
             "#     # Override the line width just for this command.\n",
             "#     line_width: 120\n",
             "#\n",
@@ -483,15 +485,15 @@ impl Config {
         }
 
         // Per-command overrides (merge, don't replace)
-        for (name, overrides) in fc.per_command {
-            self.per_command.insert(name, overrides);
+        for (name, overrides) in fc.per_command_overrides {
+            self.per_command_overrides.insert(name, overrides);
         }
     }
 }
 
 fn load_config_file(path: &Path) -> Result<FileConfig> {
     let contents = std::fs::read_to_string(path).map_err(Error::Io)?;
-    match detect_config_format(path)? {
+    let config: FileConfig = match detect_config_format(path)? {
         ConfigFileFormat::Toml => toml::from_str(&contents).map_err(|source| {
             let (line, column) = toml_line_col(&contents, source.span().map(|span| span.start));
             Error::Config {
@@ -520,7 +522,16 @@ fn load_config_file(path: &Path) -> Result<FileConfig> {
                 source_message: source.to_string().into_boxed_str(),
             }
         }),
+    }?;
+
+    if !config.legacy_per_command.is_empty() {
+        return Err(Error::Formatter(format!(
+            "{}: `per_command` has been renamed to `per_command_overrides`",
+            path.display()
+        )));
     }
+
+    Ok(config)
 }
 
 /// Find the config files that apply to `file_path`.
@@ -656,7 +667,7 @@ keyword_case = "lower"
 enable_markup = false
 hashruler_min_length = 20
 
-[per_command.message]
+[per_command_overrides.message]
 dangle_parens = true
 line_width = 100
 "#;
@@ -670,7 +681,7 @@ line_width = 100
         assert_eq!(config.style.keyword_case, Some(CaseStyle::Lower));
         assert_eq!(config.markup.enable_markup, Some(false));
 
-        let msg = config.per_command.get("message").unwrap();
+        let msg = config.per_command_overrides.get("message").unwrap();
         assert_eq!(msg.dangle_parens, Some(true));
         assert_eq!(msg.line_width, Some(100));
     }

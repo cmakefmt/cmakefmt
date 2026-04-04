@@ -146,7 +146,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
       `literal_comment_pattern`, `bullet_char`, `enum_char`,
       `fence_pattern`, `ruler_pattern`, `hashruler_min_length`,
       `canonicalize_hashrulers`
-- [x] `[per_command.<name>]` overrides — let users tune any option per-command
+- [x] `[per_command_overrides.<name>]` overrides — let users tune any option per-command
       (e.g. always uppercase `SET`, wider lines for `message`)
 - [x] Tests for config resolution precedence
 

@@ -491,11 +491,11 @@ canonicalize_hashrulers = true
 # Useful for commands like set() or message() that have very different
 # argument shapes.
 #
-# [per_command.set]
+# [per_command_overrides.set]
 # command_case = "upper"     # override: always uppercase SET(...)
 # line_width = 120           # allow wider lines for set() calls
 #
-# [per_command.message]
+# [per_command_overrides.my_custom_command]
 # dangle_parens = true
 
 # Command specs teach cmakefmt the syntax of custom commands or override

@@ -112,7 +112,7 @@ pub struct Config {
 
     // ── Per-command overrides ────────────────────────────────────────────
     /// Per-command configuration overrides keyed by lowercase command name.
-    pub per_command: HashMap<String, PerCommandConfig>,
+    pub per_command_overrides: HashMap<String, PerCommandConfig>,
 }
 
 /// Per-command overrides. All fields are optional — only specified fields
@@ -169,7 +169,7 @@ impl Default for Config {
             ruler_pattern: r"^[^\w\s]{3}.*[^\w\s]{3}$".to_string(),
             hashruler_min_length: 10,
             canonicalize_hashrulers: true,
-            per_command: HashMap::new(),
+            per_command_overrides: HashMap::new(),
         }
     }
 }
@@ -200,7 +200,7 @@ impl Config {
     /// given command name, plus the appropriate space-before-paren setting.
     pub fn for_command(&self, command_name: &str) -> CommandConfig<'_> {
         let lower = command_name.to_ascii_lowercase();
-        let per_cmd = self.per_command.get(&lower);
+        let per_cmd = self.per_command_overrides.get(&lower);
 
         let space_before_paren = if CONTROL_FLOW_COMMANDS.contains(&lower.as_str()) {
             self.separate_ctrl_name_with_space

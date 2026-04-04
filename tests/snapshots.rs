@@ -561,8 +561,8 @@ fn max_empty_lines_two() {
 #[test]
 fn per_command_override() {
     let src = "SET(VAR value)\nmessage(STATUS \"hello\")\n";
-    let mut per_command = HashMap::new();
-    per_command.insert(
+    let mut per_command_overrides = HashMap::new();
+    per_command_overrides.insert(
         "set".to_string(),
         PerCommandConfig {
             command_case: Some(CaseStyle::Upper),
@@ -571,7 +571,7 @@ fn per_command_override() {
     );
     let config = Config {
         command_case: CaseStyle::Lower,
-        per_command,
+        per_command_overrides,
         ..Config::default()
     };
     let formatted = format_source(src, &config).unwrap();

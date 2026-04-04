@@ -312,8 +312,8 @@ markup:
   reflow_comments: true
   first_comment_is_literal: true
 
-per_command:
-  message:
+per_command_overrides:
+  my_custom_command:
     line_width: 120
     dangle_parens: false
 
@@ -382,7 +382,7 @@ Currently supported config sections:
   - `ruler_pattern`
   - `hashruler_min_length`
   - `canonicalize_hashrulers`
-- `[per_command.<name>]`
+- `[per_command_overrides.<name>]`
   - `command_case`
   - `keyword_case`
   - `line_width`
@@ -396,7 +396,8 @@ Currently supported config sections:
   - `flags`
   - `kwargs`
 
-`per_command.<name>` changes formatting knobs for a known command name.
+`per_command_overrides.<name>` changes formatting knobs for a known command
+name.
 `commands.<name>` teaches `cmakefmt` the syntax of a custom command or
 overrides the built-in shape of an existing one.
 
