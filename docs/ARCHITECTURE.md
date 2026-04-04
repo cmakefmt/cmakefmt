@@ -352,9 +352,12 @@ examining the `Whitespace` nodes in the AST.
 
 ## Config
 
-The config file is `.cmakefmt.toml`. Every option mirrors or improves on
-the original `cmake-format` Python tool. All options have sane defaults so
-the tool works out of the box with no config file.
+User config may live in `.cmakefmt.yaml`, `.cmakefmt.yml`, or
+`.cmakefmt.toml`. YAML is preferred for hand-edited configs with larger custom
+command specs; `--dump-config` emits YAML by default and `--dump-config toml`
+prints the TOML variant. Every option mirrors or improves on the original
+`cmake-format` Python tool. All options have sane defaults so the tool works
+out of the box with no config file.
 
 ```toml
 # .cmakefmt.toml  —  full reference with defaults shown
@@ -496,8 +499,9 @@ canonicalize_hashrulers = true
 # dangle_parens = true
 
 # Command specs teach cmakefmt the syntax of custom commands or override
-# built-in command shapes. In user config, prefer the condensed inline
-# kwargs = { ... } form when the command is small and flat.
+# built-in command shapes. In user-facing config, prefer YAML once custom
+# commands grow beyond the smallest flat cases. TOML remains supported and
+# can be emitted explicitly with --dump-config toml.
 #
 # [commands.my_custom_command]
 # pargs = 1
@@ -509,8 +513,8 @@ Config is loaded by `src/config/`. Resolution order (highest wins):
 
 1. CLI flags (e.g. `--line-width 120`)
 2. repeated `--config-file <PATH>` files, if provided (later files override earlier ones)
-3. the nearest `.cmakefmt.toml` found by walking up from the file
-4. `~/.cmakefmt.toml` (user global default)
+3. the nearest `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` found by walking up from the file
+4. `~/.cmakefmt.yaml`, `~/.cmakefmt.yml`, or `~/.cmakefmt.toml` (user global default)
 5. Compiled-in defaults (the values shown above)
 
 ---

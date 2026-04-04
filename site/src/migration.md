@@ -3,7 +3,8 @@
 ## Recommended Rollout
 
 1. start with `--check` in CI on a small target directory
-2. generate a starter config with `--dump-config`
+2. generate a starter config with `--dump-config` (YAML by default, `toml`
+   available explicitly if needed)
 3. if you already have a `cmake-format` config file, convert it with `--convert-legacy-config`
 4. compare output on a representative corpus
 5. switch pre-commit and CI once the output is acceptable

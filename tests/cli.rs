@@ -630,8 +630,8 @@ fn discovered_config_uses_nearest_file_only() {
     let subdir = dir.path().join("nested");
     std::fs::create_dir(&subdir).unwrap();
     std::fs::write(
-        subdir.join(".cmakefmt.toml"),
-        "[style]\nkeyword_case = \"lower\"\n",
+        subdir.join(".cmakefmt.yaml"),
+        "style:\n  keyword_case: lower\n",
     )
     .unwrap();
 
@@ -649,22 +649,10 @@ fn discovered_config_uses_nearest_file_only() {
 #[test]
 fn config_file_can_define_custom_command_specs() {
     let dir = tempfile::tempdir().unwrap();
-    let config_path = dir.path().join("custom.toml");
+    let config_path = dir.path().join("custom.yaml");
     std::fs::write(
         &config_path,
-        r#"
-[format]
-line_width = 30
-
-[commands.my_custom_command]
-pargs = 1
-
-[commands.my_custom_command.kwargs.SOURCES]
-nargs = "+"
-
-[commands.my_custom_command.kwargs.LIBRARIES]
-nargs = "+"
-"#,
+        "format:\n  line_width: 30\ncommands:\n  my_custom_command:\n    pargs: 1\n    kwargs:\n      SOURCES:\n        nargs: \"+\"\n      LIBRARIES:\n        nargs: \"+\"\n",
     )
     .unwrap();
 
@@ -697,6 +685,22 @@ fn dump_config_prints_template() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("# Default cmakefmt configuration."));
+    assert!(stdout.contains("format:"));
+    assert!(stdout.contains("line_width: 80"));
+    assert!(stdout.contains("# use_tabs: true"));
+    assert!(stdout.contains("markup:"));
+    assert!(stdout.contains("# per_command:"));
+    assert!(stdout.contains("# commands:"));
+    assert!(stdout.contains("#   my_custom_command:"));
+}
+
+#[test]
+fn dump_config_toml_prints_template() {
+    let output = cmakefmt().args(["--dump-config", "toml"]).output().unwrap();
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("# Default cmakefmt configuration."));
     assert!(stdout.contains("[format]"));
     assert!(stdout.contains("line_width = 80"));
     assert!(stdout.contains("# use_tabs = true"));
@@ -710,8 +714,8 @@ fn debug_mode_reports_config_and_barriers() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join(".git")).unwrap();
     std::fs::write(
-        dir.path().join(".cmakefmt.toml"),
-        "[format]\nline_width = 40\n",
+        dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 40\n",
     )
     .unwrap();
     let file = dir.path().join("CMakeLists.txt");
@@ -838,9 +842,11 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Parse CMake listfiles and format them nicely."));
+    assert!(stdout.contains(".cmakefmt.yaml"));
+    assert!(stdout.contains(".cmakefmt.yml"));
     assert!(stdout.contains(".cmakefmt.toml"));
     assert!(stdout.contains("--colour <COLOUR>"));
-    assert!(stdout.contains("--dump-config"));
+    assert!(stdout.contains("--dump-config [<FORMAT>]"));
     assert!(stdout.contains("--in-place"));
     assert!(stdout.contains("--config-file <PATH>"));
     assert!(stdout.contains("--convert-legacy-config <PATH>"));

@@ -3,9 +3,13 @@
 ## Config Discovery Order
 
 1. repeated `--config-file <PATH>` files, if provided
-2. the nearest `.cmakefmt.toml` found by walking upward from the file
-3. `~/.cmakefmt.toml`
+2. the nearest `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` found by walking upward from the file
+3. `~/.cmakefmt.yaml`, `~/.cmakefmt.yml`, or `~/.cmakefmt.toml`
 4. built-in defaults
+
+If multiple supported config filenames exist in the same directory, YAML is preferred over TOML.
+
+YAML is the recommended user-facing format once your config includes larger custom-command specs. `--dump-config` emits YAML by default, and `--dump-config toml` prints the TOML variant.
 
 ## Defaults
 
@@ -93,11 +97,12 @@ The `[per_command.<name>]` table supports these overrides:
 
 Example:
 
-```toml
-[per_command.message]
-line_width = 120
-command_case = "unchanged"
-keyword_case = "upper"
+```yaml
+per_command:
+  message:
+    line_width: 120
+    command_case: unchanged
+    keyword_case: upper
 ```
 
 These tables only change formatting knobs for a command name. They do not
@@ -105,16 +110,22 @@ define command syntax.
 
 ## Custom Command Specs
 
-Use `[commands.<name>]` to teach `cmakefmt` about custom functions/macros or
+Use `commands.<name>` to teach `cmakefmt` about custom functions/macros or
 to override the built-in shape of an existing command.
 
 Example:
 
-```toml
-[commands.my_custom_command]
-pargs = 1
-flags = ["QUIET"]
-kwargs = { SOURCES = { nargs = "+" }, LIBRARIES = { nargs = "+" } }
+```yaml
+commands:
+  my_custom_command:
+    pargs: 1
+    flags:
+      - QUIET
+    kwargs:
+      SOURCES:
+        nargs: "+"
+      LIBRARIES:
+        nargs: "+"
 ```
 
 This tells `cmakefmt` that:
@@ -124,14 +135,14 @@ This tells `cmakefmt` that:
 - `SOURCES` starts a keyword section with one or more values
 - `LIBRARIES` starts a keyword section with one or more values
 
-For user config, prefer the condensed inline `kwargs = { ... }` form when the
-custom command is small and flat. Expand to explicit subtables only when the
-command grows nested keywords/flags or becomes hard to read inline.
+For user config, prefer YAML for custom commands beyond the smallest flat
+cases. TOML remains supported, but YAML is easier to scan and maintain for
+larger nested specs.
 
 The same command-spec format is used by the built-in registry in
 `src/spec/builtins.toml`.
 
-The unreleased `.cmakefmt.toml` schema now only accepts the clearer names on
-this page. If you have an older local config draft using keys like
+The current `cmakefmt` config schema only accepts the clearer names on this
+page. If you have an older local config draft using keys like
 `use_tabchars`, `max_pargs_hwrap`, or `separate_ctrl_name_with_space`, update
 it to the new spellings before using it.

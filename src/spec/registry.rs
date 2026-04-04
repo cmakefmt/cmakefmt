@@ -6,6 +6,7 @@ use std::sync::OnceLock;
 
 use indexmap::{IndexMap, IndexSet};
 
+use crate::config::file::{detect_config_format, ConfigFileFormat};
 use crate::error::{Error, Result};
 
 use super::{
@@ -60,20 +61,54 @@ impl CommandRegistry {
         }
     }
 
-    /// Merge a TOML override file from disk into the registry.
+    /// Merge a supported user override file from disk into the registry.
     pub fn merge_override_file(&mut self, path: &Path) -> Result<()> {
         let source = fs::read_to_string(path)?;
-        self.merge_override_str(&source, path)
+        self.merge_override_source(&source, path.to_path_buf(), detect_config_format(path)?)
     }
 
     /// Merge TOML override contents into the registry.
     pub fn merge_override_str(&mut self, source: &str, path: impl Into<PathBuf>) -> Result<()> {
-        let path = path.into();
-        let mut overrides: SpecOverrideFile =
-            toml::from_str(source).map_err(|source| Error::Spec {
-                path: path.clone(),
-                source: Box::new(source),
-            })?;
+        self.merge_override_source(source, path.into(), ConfigFileFormat::Toml)
+    }
+
+    fn merge_override_source(
+        &mut self,
+        source: &str,
+        path: PathBuf,
+        format: ConfigFileFormat,
+    ) -> Result<()> {
+        let mut overrides: SpecOverrideFile = match format {
+            ConfigFileFormat::Toml => toml::from_str(source).map_err(|toml_err| {
+                let (line, column) = crate::config::file::toml_line_col(
+                    source,
+                    toml_err.span().map(|span| span.start),
+                );
+                Error::Spec {
+                    path: path.clone(),
+                    details: crate::error::FileParseError {
+                        format: format.as_str(),
+                        message: toml_err.to_string().into_boxed_str(),
+                        line,
+                        column,
+                    },
+                    source_message: toml_err.to_string().into_boxed_str(),
+                }
+            })?,
+            ConfigFileFormat::Yaml => serde_yaml::from_str(source).map_err(|yaml_err| {
+                let location = yaml_err.location();
+                Error::Spec {
+                    path: path.clone(),
+                    details: crate::error::FileParseError {
+                        format: format.as_str(),
+                        message: yaml_err.to_string().into_boxed_str(),
+                        line: location.as_ref().map(|loc| loc.line()),
+                        column: location.as_ref().map(|loc| loc.column()),
+                    },
+                    source_message: yaml_err.to_string().into_boxed_str(),
+                }
+            })?,
+        };
         normalize_override_file(&mut overrides);
 
         for (name, override_spec) in overrides.commands {
@@ -126,7 +161,13 @@ fn has_ascii_uppercase(s: &str) -> bool {
 fn parse_builtins() -> Result<SpecFile> {
     let mut spec: SpecFile = toml::from_str(BUILTINS_TOML).map_err(|source| Error::Spec {
         path: PathBuf::from(BUILTINS_PATH),
-        source: Box::new(source),
+        details: crate::error::FileParseError {
+            format: "TOML",
+            message: source.to_string().into_boxed_str(),
+            line: None,
+            column: None,
+        },
+        source_message: source.to_string().into_boxed_str(),
     })?;
     normalize_spec_file(&mut spec);
     Ok(spec)

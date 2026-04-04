@@ -8,8 +8,9 @@ use std::sync::Arc;
 use clap::{Parser, ValueEnum};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
-    convert_legacy_config_files, default_config_template, files::discover_cmake_files,
+    convert_legacy_config_files, default_config_template_for, files::discover_cmake_files,
     format_source_with_registry, format_source_with_registry_debug, CaseStyle, Config,
+    DumpConfigFormat,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use pest::error::{ErrorVariant, LineColLocation};
@@ -20,17 +21,20 @@ const LONG_ABOUT: &str = "
 
 Parse CMake listfiles and format them nicely.
 
-Formatting is configurable with one or more TOML configuration files. If no
-config file is specified on the command line, cmakefmt will try to find the
-nearest .cmakefmt.toml for each input by walking up through parent directories
-to the repository root or filesystem root. If no project-local config exists,
-cmakefmt falls back to ~/.cmakefmt.toml when present.
+Formatting is configurable with one or more YAML or TOML configuration files.
+If no config file is specified on the command line, cmakefmt will try to find
+the nearest .cmakefmt.yaml, .cmakefmt.yml, or .cmakefmt.toml for each input by
+walking up through parent directories to the repository root or filesystem
+root. If no project-local config exists, cmakefmt falls back to the same files
+in the home directory when present.
 
 cmakefmt can print a commented starter configuration for you as a customization
-starting point with --dump-config.
+starting point with --dump-config. By default this emits YAML; pass
+--dump-config toml for TOML output.
 
 Legacy cmake-format JSON, YAML, and Python config files can be converted to
-.cmakefmt.toml with --convert-legacy-config.";
+.cmakefmt.toml with --convert-legacy-config. YAML is the recommended user
+config format for larger custom-command specs.";
 
 /// A fast, correct CMake formatter.
 #[derive(Parser, Debug)]
@@ -83,8 +87,15 @@ struct Cli {
     file_regex: Option<String>,
 
     /// Print the default config template and exit.
-    #[arg(long = "dump-config")]
-    dump_config: bool,
+    ///
+    /// By default this emits YAML. Pass `toml` to print TOML instead.
+    #[arg(
+        long = "dump-config",
+        value_name = "FORMAT",
+        num_args = 0..=1,
+        default_missing_value = "yaml"
+    )]
+    dump_config: Option<DumpConfigFormat>,
 
     /// Convert legacy cmake-format config files to `.cmakefmt.toml` and print
     /// the result to stdout.
@@ -141,7 +152,7 @@ struct Cli {
     #[arg(long = "progress-bar", requires = "in_place")]
     progress_bar: bool,
 
-    /// One or more config files to merge in order. Later files override earlier ones.
+    /// One or more YAML or TOML config files to merge in order. Later files override earlier ones.
     #[arg(long = "config-file", visible_alias = "config", value_name = "PATH")]
     config_paths: Vec<PathBuf>,
 
@@ -194,8 +205,8 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
-    if cli.dump_config {
-        print!("{}", default_config_template());
+    if let Some(format) = cli.dump_config {
+        print!("{}", default_config_template_for(format));
         return Ok(EXIT_OK);
     }
 
@@ -807,8 +818,12 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
             *barrier_context,
             source,
         ),
-        cmakefmt::Error::Config { path, source } => render_toml_error("config", path, source),
-        cmakefmt::Error::Spec { path, source } => render_toml_error("spec", path, source),
+        cmakefmt::Error::Config { path, details, .. } => {
+            render_file_parse_error("config", path, details)
+        }
+        cmakefmt::Error::Spec { path, details, .. } => {
+            render_file_parse_error("spec", path, details)
+        }
         cmakefmt::Error::Formatter(message) => render_formatter_error(message),
         cmakefmt::Error::Io(source) => format!("error: I/O failure: {source}"),
         cmakefmt::Error::Parse(source) => {
@@ -869,18 +884,24 @@ fn render_parse_error(
     rendered.trim_end().to_owned()
 }
 
-fn render_toml_error(kind: &str, path: &Path, source: &toml::de::Error) -> String {
+fn render_file_parse_error(
+    kind: &str,
+    path: &Path,
+    source: &cmakefmt::error::FileParseError,
+) -> String {
     let contents = std::fs::read_to_string(path).ok();
-    let detail = source.to_string();
+    let detail = source.message.as_ref();
     let mut rendered = String::new();
     let _ = writeln!(
         rendered,
-        "error: invalid {kind} file\n  --> {}",
+        "error: invalid {kind} file ({})\n  --> {}",
+        source.format,
         path.display()
     );
 
-    if let (Some(contents), Some(span)) = (contents.as_deref(), source.span()) {
-        let (line, column) = byte_offset_to_line_col(contents, span.start);
+    if let (Some(contents), Some(line), Some(column)) =
+        (contents.as_deref(), source.line, source.column)
+    {
         let _ = writeln!(rendered, "      at {line}:{column}");
         rendered.push('\n');
         rendered.push_str(&render_source_snippet(contents, 1, line, column));
@@ -888,7 +909,7 @@ fn render_toml_error(kind: &str, path: &Path, source: &toml::de::Error) -> Strin
     }
 
     let mut hints = Vec::new();
-    if let Some((field, expected)) = extract_unknown_field_hint(&detail) {
+    if let Some((field, expected)) = extract_unknown_field_hint(detail) {
         if let Some(updated) = renamed_config_key(&field) {
             hints.push(format!(
                 "`{field}` is not a valid cmakefmt key; use `{updated}` or run --convert-legacy-config"
@@ -1061,23 +1082,6 @@ fn render_source_snippet(
     rendered.trim_end().to_owned()
 }
 
-fn byte_offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
-    let mut line = 1usize;
-    let mut column = 1usize;
-    for (index, ch) in source.char_indices() {
-        if index >= offset {
-            break;
-        }
-        if ch == '\n' {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
-    }
-    (line, column)
-}
-
 fn extract_unknown_field_hint(detail: &str) -> Option<(String, Vec<String>)> {
     let field = extract_between(detail, "unknown field `", "`")
         .or_else(|| extract_between(detail, "unknown field '", "'"))?;
@@ -1161,7 +1165,7 @@ mod tests {
     use clap::CommandFactory;
 
     use super::Cli;
-    use cmakefmt::default_config_template;
+    use cmakefmt::{default_config_template, default_config_template_for, DumpConfigFormat};
 
     #[test]
     fn dump_config_covers_config_backed_long_flags() {
@@ -1196,6 +1200,33 @@ mod tests {
                 template.contains(&template_key),
                 "CLI flag --{long} is not represented in default_config_template(); \
                  update src/config/file.rs or add --{long} to the non-config flag allowlist in src/main.rs tests"
+            );
+        }
+    }
+
+    #[test]
+    fn toml_dump_config_covers_config_backed_long_flags() {
+        let template = default_config_template_for(DumpConfigFormat::Toml);
+        for key in [
+            "line_width",
+            "tab_size",
+            "use_tabs",
+            "max_empty_lines",
+            "max_hanging_wrap_lines",
+            "max_hanging_wrap_positional_args",
+            "max_hanging_wrap_groups",
+            "dangle_parens",
+            "dangle_align",
+            "min_prefix_length",
+            "max_prefix_length",
+            "space_before_control_paren",
+            "space_before_definition_paren",
+            "command_case",
+            "keyword_case",
+        ] {
+            assert!(
+                template.contains(key),
+                "TOML dump template is missing {key}"
             );
         }
     }

@@ -13,7 +13,8 @@ The project currently supports:
 - preserving comments and blank lines
 - respecting `cmake-format: off` / `cmake-format: on`,
   `cmakefmt: off` / `cmakefmt: on`, and `# ~~~` fence regions
-- configuration via `.cmakefmt.toml`
+- configuration via `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`
+  with YAML preferred for user-edited configs
 - a built-in command registry audited through CMake 4.3.1, including the
   supported utility/deprecated module-command surface
 
@@ -118,14 +119,14 @@ cat CMakeLists.txt | cmakefmt -
 Use an explicit config file:
 
 ```bash
-cmakefmt --config-file path/to/.cmakefmt.toml CMakeLists.txt
+cmakefmt --config-file path/to/.cmakefmt.yaml CMakeLists.txt
 ```
 
 Merge multiple config files explicitly, with later files overriding earlier
 ones:
 
 ```bash
-cmakefmt --config-file base.toml --config-file team.toml CMakeLists.txt
+cmakefmt --config-file base.yaml --config-file team.yaml CMakeLists.txt
 ```
 
 Override config values on the command line:
@@ -134,10 +135,16 @@ Override config values on the command line:
 cmakefmt --line-width 100 --tab-size 4 --command-case lower --keyword-case upper CMakeLists.txt
 ```
 
-Print the default config template:
+Print the default YAML config template:
 
 ```bash
 cmakefmt --dump-config
+```
+
+Print the TOML config template explicitly:
+
+```bash
+cmakefmt --dump-config toml
 ```
 
 Convert a legacy `cmake-format` config file:
@@ -202,7 +209,8 @@ When reporting a formatting or parsing issue, include:
 - the failing file path
 - the exact `cmakefmt` command you ran
 - the full error output or `--debug` output
-- the relevant `.cmakefmt.toml` files if config is involved
+- the relevant `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` files if
+  config is involved
 
 The quickest reproducible capture is usually:
 
@@ -271,49 +279,66 @@ measurements live in
 
 ## Configuration
 
-The formatter looks for `.cmakefmt.toml` in this order:
+The formatter looks for config files in this order:
 
 1. repeated `--config-file <PATH>` files, if provided
-2. the nearest `.cmakefmt.toml` found by walking upward from the file
-3. `~/.cmakefmt.toml`
+2. the nearest `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` found by
+   walking upward from the file
+3. `~/.cmakefmt.yaml`, `~/.cmakefmt.yml`, or `~/.cmakefmt.toml`
 4. built-in defaults
+
+When more than one supported config filename exists in the same directory,
+`cmakefmt` prefers YAML over TOML.
 
 Example config:
 
-```toml
-[format]
-line_width = 100
-tab_size = 4
-use_tabs = false
-max_empty_lines = 1
-dangle_parens = true
-dangle_align = "prefix"
-space_before_control_paren = false
-space_before_definition_paren = false
+```yaml
+format:
+  line_width: 100
+  tab_size: 4
+  use_tabs: false
+  max_empty_lines: 1
+  dangle_parens: true
+  dangle_align: prefix
+  space_before_control_paren: false
+  space_before_definition_paren: false
 
-[style]
-command_case = "lower"
-keyword_case = "upper"
+style:
+  command_case: lower
+  keyword_case: upper
 
-[markup]
-enable_markup = true
-reflow_comments = true
-first_comment_is_literal = true
+markup:
+  enable_markup: true
+  reflow_comments: true
+  first_comment_is_literal: true
 
-[per_command.message]
-line_width = 120
-dangle_parens = false
+per_command:
+  message:
+    line_width: 120
+    dangle_parens: false
 
-[commands.my_custom_command]
-pargs = 1
-flags = ["QUIET"]
-kwargs = { SOURCES = { nargs = "+" }, LIBRARIES = { nargs = "+" } }
+commands:
+  my_custom_command:
+    pargs: 1
+    flags:
+      - QUIET
+    kwargs:
+      SOURCES:
+        nargs: "+"
+      LIBRARIES:
+        nargs: "+"
 ```
 
 You can also generate a full starter config with:
 
 ```bash
 cmakefmt --dump-config
+```
+
+By default this emits YAML. Pass `toml` to print the TOML variant:
+
+```bash
+cmakefmt --dump-config toml
 ```
 
 Legacy `cmake-format` config files can be converted with:
@@ -324,7 +349,8 @@ cmakefmt --convert-legacy-config path/to/.cmake-format.py > .cmakefmt.toml
 
 Optional features that are off by default, such as tab indentation or extra
 spacing before control-flow parentheses, are emitted as commented-out settings
-in that template. Uncomment them when you want to opt in.
+in that template. Uncomment them when you want to opt in. `--dump-config`
+emits YAML by default, while `--dump-config toml` prints the TOML variant.
 
 Currently supported config sections:
 
@@ -370,16 +396,17 @@ Currently supported config sections:
   - `flags`
   - `kwargs`
 
-`[per_command.<name>]` changes formatting knobs for a known command name.
-`[commands.<name>]` teaches `cmakefmt` the syntax of a custom command or
+`per_command.<name>` changes formatting knobs for a known command name.
+`commands.<name>` teaches `cmakefmt` the syntax of a custom command or
 overrides the built-in shape of an existing one.
 
-For user config, prefer the condensed inline `kwargs = { ... }` form when the
-custom command is small and flat. Expand to explicit subtables only when the
-command grows nested keywords/flags or becomes hard to read inline.
+For user config, prefer YAML once custom command specs grow beyond a couple of
+flags/kwargs. TOML remains supported and is what `--dump-config` currently
+prints, but YAML is much easier to read and edit for larger nested command
+specs.
 
-The unreleased `.cmakefmt.toml` schema now only accepts the clearer names
-above. If you have an older local config draft using names like
+The current `cmakefmt` config schema only accepts the clearer names above. If
+you have an older local config draft using names like
 `use_tabchars`, `max_pargs_hwrap`, or `separate_ctrl_name_with_space`, update
 it to the new spellings before relying on it.
 

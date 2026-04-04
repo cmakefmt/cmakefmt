@@ -27,7 +27,7 @@ cmakefmt [OPTIONS] [FILES]...
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. If omitted, formatting stays single-threaded. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
-| `--dump-config` | Print a starter config template and exit. |
+| `--dump-config [FORMAT]` | Print a starter config template and exit. Defaults to YAML; pass `toml` for TOML. |
 | `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
 ## Config-backed Override Flags
@@ -56,7 +56,7 @@ cmakefmt --check .
 cmakefmt --list-files --path-regex 'cmake|toolchain' .
 cmakefmt --colour never CMakeLists.txt
 cmakefmt --progress-bar --in-place .
-cmakefmt --config-file base.toml --config-file team.toml CMakeLists.txt
+cmakefmt --config-file base.yaml --config-file team.yaml CMakeLists.txt
 cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
 cat CMakeLists.txt | cmakefmt -
 cmakefmt --debug --check tests/fixtures/real_world
@@ -72,5 +72,5 @@ For issue reports, capture:
 
 - the exact command you ran
 - the full stderr output
-- the relevant `.cmakefmt.toml` files
+- the relevant `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` files
 - `--debug` output if the problem is formatting-related rather than a hard failure

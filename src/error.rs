@@ -1,5 +1,19 @@
 use thiserror::Error;
 
+/// Structured config/spec deserialization failure metadata used for
+/// user-facing diagnostics.
+#[derive(Debug, Clone)]
+pub struct FileParseError {
+    /// Parser format name, such as `TOML` or `YAML`.
+    pub format: &'static str,
+    /// Human-readable parser message.
+    pub message: Box<str>,
+    /// Optional 1-based line number.
+    pub line: Option<usize>,
+    /// Optional 1-based column number.
+    pub column: Option<usize>,
+}
+
 /// Errors that can be returned by parsing, config loading, spec loading, or
 /// formatting operations.
 #[derive(Debug, Error)]
@@ -23,22 +37,26 @@ pub enum Error {
         source: Box<pest::error::Error<crate::parser::Rule>>,
     },
 
-    /// A `.cmakefmt.toml` parse error.
-    #[error("config error in {path}: {source}")]
+    /// A user config parse error.
+    #[error("config error in {path}: {source_message}")]
     Config {
         /// The config file that failed to deserialize.
         path: std::path::PathBuf,
-        /// The underlying TOML deserialization error.
-        source: Box<toml::de::Error>,
+        /// Structured parser details for the failure.
+        details: FileParseError,
+        /// Cached display string used by `thiserror`.
+        source_message: Box<str>,
     },
 
     /// A built-in or user override spec parse error.
-    #[error("spec error in {path}: {source}")]
+    #[error("spec error in {path}: {source_message}")]
     Spec {
         /// The spec file that failed to deserialize.
         path: std::path::PathBuf,
-        /// The underlying TOML deserialization error.
-        source: Box<toml::de::Error>,
+        /// Structured parser details for the failure.
+        details: FileParseError,
+        /// Cached display string used by `thiserror`.
+        source_message: Box<str>,
     },
 
     /// A filesystem or stream I/O failure.

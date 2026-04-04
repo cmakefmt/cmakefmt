@@ -1,13 +1,14 @@
 //! Runtime formatter configuration.
 //!
 //! [`Config`] is the fully resolved in-memory configuration used by the
-//! formatter. It is built from defaults, `.cmakefmt.toml` files, and CLI
+//! formatter. It is built from defaults, user config files
+//! (`.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`), and CLI
 //! overrides.
 
 pub mod file;
 mod legacy;
-/// Render a commented starter `.cmakefmt.toml` template.
-pub use file::default_config_template;
+/// Render a commented starter config template.
+pub use file::{default_config_template, default_config_template_for, DumpConfigFormat};
 pub use legacy::convert_legacy_config_files;
 
 use std::collections::HashMap;
@@ -42,8 +43,8 @@ pub enum DangleAlign {
 
 /// Full formatter configuration.
 ///
-/// This struct is used at runtime. It is populated from defaults, TOML files,
-/// and CLI flag overrides (highest wins).
+/// This struct is used at runtime. It is populated from defaults, supported
+/// user config files (YAML or TOML), and CLI flag overrides (highest wins).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
     // ── Layout ──────────────────────────────────────────────────────────

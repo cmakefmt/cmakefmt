@@ -21,6 +21,10 @@ cmakefmt -i .
 cmakefmt --dump-config > .cmakefmt.toml
 ```
 
+For larger custom-command specs, prefer keeping your edited user config in
+`.cmakefmt.yaml` or `.cmakefmt.yml`. `--dump-config` emits YAML by default;
+pass `toml` if you want a TOML starter instead.
+
 ## Pre-commit
 
 The repository already ships a pre-commit configuration:

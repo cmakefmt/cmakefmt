@@ -1,8 +1,9 @@
 //! Conversion support for legacy `cmake-format` configuration files.
 //!
 //! `cmake-format` historically supported Python, JSON, and YAML config files.
-//! `cmakefmt` intentionally uses TOML instead, but provides a converter so
-//! users can migrate existing configuration with less manual work.
+//! `cmakefmt` now accepts YAML or TOML user config, but still provides a
+//! converter that renders TOML so users can start from a strict, commented
+//! baseline and then adapt it as needed.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
