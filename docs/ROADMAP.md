@@ -624,6 +624,15 @@ not just faster.
   - ensure `Cargo.toml` metadata is complete
   - include README, license, repository, keywords, categories, homepage/docs links
   - verify `cargo install cmakefmt` works from crates.io
+- [ ] Finalize the project license before the first public alpha
+  - choose the final SPDX expression
+  - add or update the canonical `LICENSE*` files in the repo root
+  - make Cargo metadata, README/docs, and release packaging agree on the license
+  - document any third-party notice requirements that need to ship with release artifacts
+- [ ] Use `reuse` to make copyright and license metadata explicit across the repo
+  - decide which file types should carry SPDX/copyright headers directly
+  - add `reuse` metadata/exceptions for generated files, snapshots, fixtures, and other non-header cases
+  - run `reuse lint` and keep it in the release checklist
 - [ ] Publish first-party installation channels that we should maintain directly
   - GitHub Releases downloadable binaries
   - crates.io (`cargo install`)
@@ -734,6 +743,7 @@ not just faster.
 ### Acceptance criteria
 
 - [ ] `cargo publish --dry-run` succeeds
+- [ ] `reuse lint` succeeds and the repo has a consistent final license story
 - [ ] Tagging `v1.0.0-alpha.1` from a clean commit can produce a complete release candidate without manual file editing
 - [ ] GitHub Releases contains working binaries for Linux, macOS, and Windows, plus checksums
 - [ ] `cargo install cmakefmt --version 1.0.0-alpha.1` works
