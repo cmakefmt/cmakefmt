@@ -23,7 +23,17 @@ cmakefmt [OPTIONS] [FILES]...
 | `--check` | Exit with code 1 when any file would change. |
 | `--list-files` | List files that would change without modifying them. |
 | `--path-regex <REGEX>` | Filter recursively discovered CMake file paths. |
+| `--ignore-path <PATH>` | Add one or more extra ignore files during recursive discovery. |
+| `--no-gitignore` | Ignore `.gitignore` files and only use built-in / explicit ignore rules. |
+| `--files-from <PATH>` | Read newline-delimited or NUL-delimited input paths from a file, or `-` for stdin. |
 | `--debug` | Emit diagnostics about discovery, config resolution, barriers, and formatting decisions. |
+| `--diff` | Print a unified diff instead of the full formatted output. |
+| `--staged` | Select only staged Git-tracked files. |
+| `--changed` | Select only changed Git-tracked files. |
+| `--since <REF>` | Base Git ref used together with `--changed`. |
+| `--stdin-path <PATH>` | Virtual on-disk path used for stdin config discovery and diagnostics. |
+| `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges. |
+| `--report-format <human\|json>` | Switch between human terminal output and machine-readable JSON. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. If omitted, formatting stays single-threaded. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
@@ -54,13 +64,26 @@ cmakefmt CMakeLists.txt
 cmakefmt -i .
 cmakefmt --check .
 cmakefmt --list-files --path-regex 'cmake|toolchain' .
+cmakefmt --ignore-path ci/cmakefmt.ignore --list-files .
+cmakefmt --diff CMakeLists.txt
+cmakefmt --report-format json --check .
+cmakefmt --staged --check
+cmakefmt --changed --since origin/main --check
+git diff --name-only --diff-filter=ACMR origin/main...HEAD | cmakefmt --files-from - --check
+cat CMakeLists.txt | cmakefmt - --stdin-path subdir/CMakeLists.txt
+cmakefmt --stdin-path src/CMakeLists.txt --lines 10:25 -
 cmakefmt --colour never CMakeLists.txt
 cmakefmt --progress-bar --in-place .
 cmakefmt --config-file base.yaml --config-file team.yaml CMakeLists.txt
 cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
-cat CMakeLists.txt | cmakefmt -
 cmakefmt --debug --check tests/fixtures/real_world
 ```
+
+## Discovery Precedence
+
+- Direct file arguments are always processed, even if an ignore rule would skip them.
+- Recursive discovery honors `.cmakefmtignore` and, by default, `.gitignore`.
+- `--ignore-path` adds more ignore files for discovered directories only.
 
 ## Diagnostics
 

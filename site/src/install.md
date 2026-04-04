@@ -18,7 +18,8 @@ cargo install --path .
 ```bash
 cmakefmt --check .
 cmakefmt -i .
-cmakefmt --dump-config > .cmakefmt.toml
+cmakefmt --dump-config > .cmakefmt.yaml
+cmakefmt --staged --check
 ```
 
 For larger custom-command specs, prefer keeping your edited user config in
@@ -32,6 +33,13 @@ The repository already ships a pre-commit configuration:
 ```bash
 pre-commit install
 pre-commit install --hook-type pre-push
+```
+
+For lightweight manual hooks, these workflow-oriented commands are the useful baseline:
+
+```bash
+cmakefmt --staged --check
+cmakefmt --changed --since origin/main --check
 ```
 
 ## Package Managers

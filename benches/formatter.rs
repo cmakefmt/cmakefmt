@@ -1,11 +1,13 @@
 use std::hint::black_box;
 use std::time::Duration;
 
+use cmakefmt::files::{discover_cmake_files_with_options, DiscoveryOptions};
 use cmakefmt::formatter;
 use cmakefmt::spec::registry::CommandRegistry;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode};
 use rayon::prelude::*;
 use regex::Regex;
+use similar::TextDiff;
 use tempfile::tempdir;
 
 fn small_source() -> &'static str {
@@ -188,11 +190,60 @@ fn discovery_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
+fn workflow_discovery_benchmark(c: &mut Criterion) {
+    let dir = tempdir().expect("tempdir");
+    std::fs::create_dir(dir.path().join(".git")).expect("git dir");
+    std::fs::write(dir.path().join(".gitignore"), "ignored_git.cmake\n").expect("gitignore");
+    std::fs::write(
+        dir.path().join(".cmakefmtignore"),
+        "ignored_custom.cmake\nnested/skip/**\n",
+    )
+    .expect("cmakefmtignore");
+    std::fs::write(dir.path().join("extra.ignore"), "extra_ignored.cmake\n").expect("extra");
+
+    for index in 0..120 {
+        let keep = dir.path().join(format!("nested/keep_{index}.cmake"));
+        let ignored_git = dir.path().join(format!("nested/ignored_git_{index}.cmake"));
+        let ignored_custom = dir
+            .path()
+            .join(format!("nested/ignored_custom_{index}.cmake"));
+        let ignored_extra = dir
+            .path()
+            .join(format!("nested/extra_ignored_{index}.cmake"));
+        std::fs::create_dir_all(keep.parent().expect("parent")).expect("mkdir");
+        std::fs::write(&keep, "set(FOO bar)\n").expect("write keep");
+        std::fs::write(&ignored_git, "set(FOO bar)\n").expect("write ignored");
+        std::fs::write(&ignored_custom, "set(FOO bar)\n").expect("write ignored");
+        std::fs::write(&ignored_extra, "set(FOO bar)\n").expect("write ignored");
+    }
+
+    let filter = Regex::new("keep_").expect("regex");
+    let explicit_ignore = vec![dir.path().join("extra.ignore")];
+    let mut group = c.benchmark_group("workflow_discovery");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(6));
+    group.sample_size(50);
+
+    group.bench_function(BenchmarkId::from_parameter("ignore_and_gitaware"), |b| {
+        b.iter(|| {
+            discover_cmake_files_with_options(
+                black_box(dir.path()),
+                DiscoveryOptions {
+                    file_filter: Some(&filter),
+                    honor_gitignore: true,
+                    explicit_ignore_paths: &explicit_ignore,
+                },
+            )
+        })
+    });
+    group.finish();
+}
+
 fn config_benchmark(c: &mut Criterion) {
     let dir = tempdir().expect("tempdir");
     std::fs::create_dir(dir.path().join(".git")).expect("git dir");
     std::fs::write(
-        dir.path().join(".cmake-format.toml"),
+        dir.path().join(".cmakefmt.toml"),
         "[format]\nline_width = 100\n",
     )
     .expect("root config");
@@ -207,6 +258,28 @@ fn config_benchmark(c: &mut Criterion) {
 
     group.bench_function(BenchmarkId::from_parameter("config_for_file"), |b| {
         b.iter(|| cmakefmt::Config::for_file(black_box(&nested)).expect("config should load"))
+    });
+    group.finish();
+}
+
+fn workflow_diff_benchmark(c: &mut Criterion) {
+    let original = large_synthetic_source();
+    let formatted =
+        cmakefmt::format_source(&original, &cmakefmt::Config::default()).expect("format");
+
+    let mut group = c.benchmark_group("workflow_diff");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(6));
+    group.sample_size(50);
+
+    group.bench_function(BenchmarkId::from_parameter("unified_diff_large"), |b| {
+        b.iter(|| {
+            TextDiff::from_lines(black_box(&original), black_box(&formatted))
+                .unified_diff()
+                .context_radius(3)
+                .header("a/CMakeLists.txt", "b/CMakeLists.txt")
+                .to_string()
+        })
     });
     group.finish();
 }
@@ -292,7 +365,9 @@ criterion_group!(
     end_to_end_benchmarks,
     debug_and_barrier_benchmarks,
     discovery_benchmark,
+    workflow_discovery_benchmark,
     config_benchmark,
+    workflow_diff_benchmark,
     check_and_write_benchmarks,
     batch_scaling_benchmarks
 );

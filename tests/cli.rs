@@ -1,6 +1,8 @@
 use std::io::Write;
 use std::process::Command;
 
+use serde_json::Value;
+
 fn cmakefmt() -> Command {
     Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
 }
@@ -10,6 +12,41 @@ fn write_file(path: &std::path::Path, contents: &str) {
         std::fs::create_dir_all(parent).unwrap();
     }
     std::fs::write(path, contents).unwrap();
+}
+
+fn git(dir: &std::path::Path, args: &[&str]) {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git {:?} failed: {}",
+        args,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+fn git_stdout(dir: &std::path::Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "git {:?} failed: {}",
+        args,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).trim().to_owned()
+}
+
+fn init_git_repo(dir: &std::path::Path) {
+    git(dir, &["init"]);
+    git(dir, &["config", "user.email", "cmakefmt@example.invalid"]);
+    git(dir, &["config", "user.name", "cmakefmt tests"]);
 }
 
 // ── Basic formatting ────────────────────────────────────────────────────────
@@ -95,6 +132,94 @@ fn reads_stdin_with_dash() {
     let output = child.wait_with_output().unwrap();
     assert!(output.status.success());
     assert_eq!(String::from_utf8_lossy(&output.stdout), "set(FOO bar)\n");
+}
+
+#[test]
+fn stdin_path_uses_config_discovery() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join(".git")).unwrap();
+    let nested = dir.path().join("nested");
+    std::fs::create_dir_all(&nested).unwrap();
+    write_file(
+        &nested.join(".cmakefmt.yaml"),
+        "style:\n  command_case: upper\n",
+    );
+
+    let mut child = cmakefmt()
+        .args(["-", "--stdin-path", "nested/CMakeLists.txt"])
+        .current_dir(dir.path())
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"cmake_minimum_required(VERSION 3.20)\n")
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).starts_with("CMAKE_MINIMUM_REQUIRED("));
+}
+
+#[test]
+fn diff_outputs_unified_diff() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--diff", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("--- a/"));
+    assert!(stdout.contains("+++ b/"));
+    assert!(stdout.contains("-set(  FOO  bar )"));
+    assert!(stdout.contains("+set(FOO bar)"));
+}
+
+#[test]
+fn json_report_in_check_mode() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--report-format", "json", "--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["mode"], "check");
+    assert_eq!(report["files"][0]["would_change"], true);
+    assert!(report["files"][0]["changed_lines"][0].as_u64().is_some());
+}
+
+#[test]
+fn json_report_in_diff_mode_includes_diff() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--report-format", "json", "--diff", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["mode"], "diff");
+    assert!(report["files"][0]["diff"]
+        .as_str()
+        .unwrap()
+        .contains("--- a/"));
 }
 
 // ── In-place formatting ─────────────────────────────────────────────────────
@@ -322,6 +447,70 @@ fn multiple_files_in_one_invocation() {
 }
 
 #[test]
+fn files_from_reads_newline_delimited_targets() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = dir.path().join("first.cmake");
+    let second = dir.path().join("second.cmake");
+    let list = dir.path().join("targets.txt");
+
+    write_file(&first, "set(  FIRST  value )\n");
+    write_file(&second, "set(  SECOND  value )\n");
+    write_file(
+        &list,
+        &format!("{}\n{}\n", first.display(), second.display()),
+    );
+
+    let output = cmakefmt()
+        .args(["-i", "--files-from", list.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        std::fs::read_to_string(&first).unwrap(),
+        "set(FIRST value)\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&second).unwrap(),
+        "set(SECOND value)\n"
+    );
+}
+
+#[test]
+fn files_from_reads_stdin_target_list() {
+    let dir = tempfile::tempdir().unwrap();
+    let first = dir.path().join("first.cmake");
+    let second = dir.path().join("second.cmake");
+    write_file(&first, "set(  FIRST  value )\n");
+    write_file(&second, "set(  SECOND  value )\n");
+
+    let mut child = cmakefmt()
+        .args(["-i", "--files-from", "-"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(format!("{}\n{}\n", first.display(), second.display()).as_bytes())
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    assert_eq!(
+        std::fs::read_to_string(&first).unwrap(),
+        "set(FIRST value)\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&second).unwrap(),
+        "set(SECOND value)\n"
+    );
+}
+
+#[test]
 fn explicit_non_cmake_file_is_formatted() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("toolchain.txt");
@@ -412,6 +601,97 @@ fn no_args_discovers_cmake_files_recursively() {
 }
 
 #[test]
+fn cmakefmtignore_filters_recursive_discovery() {
+    let dir = tempfile::tempdir().unwrap();
+    let keep = dir.path().join("keep.cmake");
+    let ignored = dir.path().join("ignored.cmake");
+
+    write_file(&keep, "set(  KEEP  value )\n");
+    write_file(&ignored, "set(  IGNORE  value )\n");
+    write_file(&dir.path().join(".cmakefmtignore"), "ignored.cmake\n");
+
+    let output = cmakefmt()
+        .args(["--list-files", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("keep.cmake"));
+    assert!(!stdout.contains("ignored.cmake"));
+}
+
+#[test]
+fn explicit_ignore_path_filters_recursive_discovery() {
+    let dir = tempfile::tempdir().unwrap();
+    let keep = dir.path().join("keep.cmake");
+    let ignored = dir.path().join("ignored.cmake");
+    let ignore_file = dir.path().join("extra.ignore");
+
+    write_file(&keep, "set(  KEEP  value )\n");
+    write_file(&ignored, "set(  IGNORE  value )\n");
+    write_file(&ignore_file, "ignored.cmake\n");
+
+    let output = cmakefmt()
+        .args([
+            "--list-files",
+            "--ignore-path",
+            ignore_file.to_str().unwrap(),
+            dir.path().to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("keep.cmake"));
+    assert!(!stdout.contains("ignored.cmake"));
+}
+
+#[test]
+fn explicit_file_argument_bypasses_ignore_rules() {
+    let dir = tempfile::tempdir().unwrap();
+    let ignored = dir.path().join("ignored.cmake");
+
+    write_file(&ignored, "set(  IGNORE  value )\n");
+    write_file(&dir.path().join(".cmakefmtignore"), "ignored.cmake\n");
+
+    let output = cmakefmt()
+        .args(["--list-files", ignored.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("ignored.cmake"));
+}
+
+#[test]
+fn no_gitignore_allows_gitignored_files() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join(".git")).unwrap();
+    write_file(&dir.path().join(".gitignore"), "ignored.cmake\n");
+    let ignored = dir.path().join("ignored.cmake");
+    write_file(&ignored, "set(  IGNORE  value )\n");
+
+    let default_output = cmakefmt()
+        .args(["--list-files", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(default_output.status.code(), Some(0));
+
+    let no_gitignore_output = cmakefmt()
+        .args([
+            "--list-files",
+            "--no-gitignore",
+            dir.path().to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(no_gitignore_output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&no_gitignore_output.stdout).contains("ignored.cmake"));
+}
+
+#[test]
 fn directory_input_discovers_only_cmake_files() {
     let dir = tempfile::tempdir().unwrap();
     let nested = dir.path().join("cmake/toolchain.cmake.in");
@@ -467,6 +747,64 @@ fn list_files_reports_only_changed_targets() {
 
     let output = cmakefmt()
         .args(["--list-files", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("changed.cmake"));
+    assert!(!stdout.contains("clean.cmake"));
+}
+
+#[test]
+fn staged_selects_only_staged_cmake_files() {
+    let dir = tempfile::tempdir().unwrap();
+    init_git_repo(dir.path());
+
+    let staged = dir.path().join("staged.cmake");
+    let unstaged = dir.path().join("unstaged.cmake");
+    let ignored = dir.path().join("notes.txt");
+    write_file(&staged, "set(STAGED value)\n");
+    write_file(&unstaged, "set(UNSTAGED value)\n");
+    write_file(&ignored, "not cmake\n");
+    git(dir.path(), &["add", "."]);
+    git(dir.path(), &["commit", "-m", "baseline"]);
+
+    write_file(&staged, "set(  STAGED  value )\n");
+    write_file(&unstaged, "set(  UNSTAGED  value )\n");
+    git(dir.path(), &["add", "staged.cmake"]);
+
+    let output = cmakefmt()
+        .args(["--list-files", "--staged"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("staged.cmake"));
+    assert!(!stdout.contains("unstaged.cmake"));
+    assert!(!stdout.contains("notes.txt"));
+}
+
+#[test]
+fn changed_since_selects_only_changed_files() {
+    let dir = tempfile::tempdir().unwrap();
+    init_git_repo(dir.path());
+
+    let changed = dir.path().join("changed.cmake");
+    let clean = dir.path().join("clean.cmake");
+    write_file(&changed, "set(CHANGED value)\n");
+    write_file(&clean, "set(CLEAN value)\n");
+    git(dir.path(), &["add", "."]);
+    git(dir.path(), &["commit", "-m", "baseline"]);
+    let baseline = git_stdout(dir.path(), &["rev-parse", "HEAD"]);
+
+    write_file(&changed, "set(  CHANGED  value )\n");
+
+    let output = cmakefmt()
+        .args(["--list-files", "--changed", "--since", &baseline])
+        .current_dir(dir.path())
         .output()
         .unwrap();
 
@@ -758,6 +1096,46 @@ fn debug_mode_reports_command_form_and_layout_decision() {
 }
 
 #[test]
+fn line_ranges_format_only_selected_lines() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\nset(  BAZ  qux )\n");
+
+    let output = cmakefmt()
+        .args(["--lines", "2:2", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "set(FOO bar)\nset(BAZ qux)\n"
+    );
+}
+
+#[test]
+fn line_ranges_fail_when_changes_escape_requested_range() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  a b c d e f g h i )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--lines",
+            "1:1",
+            "--line-width",
+            "20",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("selected line ranges would affect lines outside the requested ranges"));
+}
+
+#[test]
 fn parallel_in_place_formats_multiple_files() {
     let dir = tempfile::tempdir().unwrap();
     let file_a = dir.path().join("a.cmake");
@@ -852,6 +1230,16 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--convert-legacy-config <PATH>"));
     assert!(stdout.contains("--list-files"));
     assert!(stdout.contains("--path-regex <REGEX>"));
+    assert!(stdout.contains("--ignore-path <PATH>"));
+    assert!(stdout.contains("--no-gitignore"));
+    assert!(stdout.contains("--files-from <PATH>"));
+    assert!(stdout.contains("--diff"));
+    assert!(stdout.contains("--staged"));
+    assert!(stdout.contains("--changed"));
+    assert!(stdout.contains("--since <REF>"));
+    assert!(stdout.contains("--stdin-path <PATH>"));
+    assert!(stdout.contains("--lines <START:END>"));
+    assert!(stdout.contains("--report-format <REPORT_FORMAT>"));
     assert!(stdout.contains("--progress-bar"));
     assert!(stdout.contains("formatting stays single-threaded"));
 }

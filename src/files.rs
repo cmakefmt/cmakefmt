@@ -1,21 +1,63 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+use ignore::WalkBuilder;
 use regex::Regex;
-use walkdir::WalkDir;
+
+/// User-facing custom ignore filename honored during recursive discovery.
+pub const CUSTOM_IGNORE_FILE_NAME: &str = ".cmakefmtignore";
+
+/// Options controlling recursive CMake file discovery.
+#[derive(Debug, Clone, Default)]
+pub struct DiscoveryOptions<'a> {
+    /// Optional regex filter applied after filename/ignore filtering.
+    pub file_filter: Option<&'a Regex>,
+    /// Honor Git ignore files while walking directories.
+    pub honor_gitignore: bool,
+    /// Additional ignore files loaded explicitly by the user.
+    pub explicit_ignore_paths: &'a [PathBuf],
+}
 
 /// Recursively discover CMake files below `root`, optionally filtering the
 /// discovered paths with `file_filter`.
 ///
 /// Returned paths are sorted to keep CLI output and batch formatting stable.
 pub fn discover_cmake_files(root: &Path, file_filter: Option<&Regex>) -> Vec<PathBuf> {
-    let mut files: Vec<_> = WalkDir::new(root)
-        .into_iter()
+    discover_cmake_files_with_options(
+        root,
+        DiscoveryOptions {
+            file_filter,
+            honor_gitignore: false,
+            explicit_ignore_paths: &[],
+        },
+    )
+}
+
+/// Recursively discover CMake files below `root` using the provided workflow
+/// options, including ignore-file handling.
+pub fn discover_cmake_files_with_options(
+    root: &Path,
+    options: DiscoveryOptions<'_>,
+) -> Vec<PathBuf> {
+    let mut builder = WalkBuilder::new(root);
+    builder.hidden(false);
+    builder.git_ignore(options.honor_gitignore);
+    builder.git_global(options.honor_gitignore);
+    builder.git_exclude(options.honor_gitignore);
+    builder.require_git(false);
+    builder.add_custom_ignore_filename(CUSTOM_IGNORE_FILE_NAME);
+
+    for ignore_path in options.explicit_ignore_paths {
+        builder.add_ignore(ignore_path);
+    }
+
+    let mut files: Vec<_> = builder
+        .build()
         .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| entry.file_type().is_some_and(|kind| kind.is_file()))
         .map(|entry| entry.into_path())
         .filter(|path| is_cmake_file(path))
-        .filter(|path| matches_filter(path, file_filter))
+        .filter(|path| matches_filter(path, options.file_filter))
         .collect();
     files.sort();
     files

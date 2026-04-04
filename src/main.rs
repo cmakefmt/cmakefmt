@@ -3,12 +3,14 @@ use std::fmt::Write as _;
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use clap::{Parser, ValueEnum};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
-    convert_legacy_config_files, default_config_template_for, files::discover_cmake_files,
+    convert_legacy_config_files, default_config_template_for,
+    files::{discover_cmake_files_with_options, is_cmake_file, matches_filter, DiscoveryOptions},
     format_source_with_registry, format_source_with_registry_debug, CaseStyle, Config,
     DumpConfigFormat,
 };
@@ -16,6 +18,8 @@ use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use pest::error::{ErrorVariant, LineColLocation};
 use rayon::prelude::*;
 use regex::Regex;
+use serde::Serialize;
+use similar::TextDiff;
 
 const LONG_ABOUT: &str = "
 
@@ -51,6 +55,17 @@ struct Cli {
     /// working directory.
     files: Vec<String>,
 
+    /// Read additional formatting targets from a file, or `-` for stdin.
+    ///
+    /// Accepts newline-delimited or NUL-delimited path lists.
+    #[arg(
+        long = "files-from",
+        value_name = "PATH",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    files_from: Vec<String>,
+
     /// Format files in-place (modifies the files on disk).
     #[arg(
         short = 'i',
@@ -85,6 +100,23 @@ struct Cli {
         conflicts_with = "convert_config_paths"
     )]
     file_regex: Option<String>,
+
+    /// Additional ignore file(s) to apply during recursive discovery.
+    #[arg(
+        long = "ignore-path",
+        value_name = "PATH",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    ignore_paths: Vec<PathBuf>,
+
+    /// Do not honor `.gitignore` during recursive discovery.
+    #[arg(
+        long = "no-gitignore",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    no_gitignore: bool,
 
     /// Print the default config template and exit.
     ///
@@ -125,6 +157,49 @@ struct Cli {
         conflicts_with = "convert_config_paths"
     )]
     debug: bool,
+
+    /// Emit a unified diff instead of full formatted output.
+    #[arg(
+        long,
+        conflicts_with = "in_place",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    diff: bool,
+
+    /// Select changed files from the current Git repository.
+    #[arg(
+        long,
+        conflicts_with = "staged",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    changed: bool,
+
+    /// Select staged files from the current Git repository.
+    #[arg(
+        long,
+        conflicts_with = "changed",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    staged: bool,
+
+    /// Git reference used with `--changed`.
+    #[arg(long, requires = "changed", value_name = "REF")]
+    since: Option<String>,
+
+    /// Virtual path used when formatting stdin.
+    #[arg(long = "stdin-path", value_name = "PATH")]
+    stdin_path: Option<PathBuf>,
+
+    /// Restrict formatting to one or more 1-based inclusive line ranges.
+    #[arg(long = "lines", value_name = "START:END")]
+    line_ranges: Vec<LineRange>,
+
+    /// Output mode for results and change reporting.
+    #[arg(long = "report-format", value_enum, default_value_t = ReportFormat::Human)]
+    report_format: ReportFormat,
 
     /// Control ANSI colour for highlighted changed output lines.
     #[arg(long = "colour", alias = "color", value_enum, default_value_t = ColorChoice::Auto)]
@@ -187,6 +262,49 @@ enum ColorChoice {
     Never,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum ReportFormat {
+    /// Human-friendly terminal output.
+    Human,
+    /// Machine-readable JSON output.
+    Json,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct LineRange {
+    start: usize,
+    end: usize,
+}
+
+impl LineRange {
+    fn contains(&self, line: usize) -> bool {
+        self.start <= line && line <= self.end
+    }
+}
+
+impl FromStr for LineRange {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let Some((start, end)) = value.split_once(':') else {
+            return Err("expected START:END".to_owned());
+        };
+        let start = start
+            .parse::<usize>()
+            .map_err(|_| "line range start must be a positive integer".to_owned())?;
+        let end = end
+            .parse::<usize>()
+            .map_err(|_| "line range end must be a positive integer".to_owned())?;
+        if start == 0 || end == 0 {
+            return Err("line ranges are 1-based".to_owned());
+        }
+        if end < start {
+            return Err("line range end must be >= start".to_owned());
+        }
+        Ok(Self { start, end })
+    }
+}
+
 /// Exit codes matching the spec in ARCHITECTURE.md.
 const EXIT_OK: u8 = 0;
 const EXIT_CHECK_FAILED: u8 = 1;
@@ -223,10 +341,17 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return Ok(EXIT_OK);
     }
 
+    validate_cli(cli)?;
+
     let stdout_mode = !cli.list_files && !cli.check && !cli.in_place;
     let colorize_stdout = stdout_mode && should_colorize_stdout(cli.colour);
     let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
     let targets = collect_targets(cli, file_filter.as_ref())?;
+    if !cli.line_ranges.is_empty() && targets.len() != 1 {
+        return Err(cmakefmt::Error::Formatter(
+            "--lines requires exactly one formatting target".to_owned(),
+        ));
+    }
     let parallel_jobs = resolve_parallel_jobs(cli.parallel)?;
     let mut any_would_change = false;
     let progress = ProgressReporter::new(cli.progress_bar, cli.in_place, targets.len());
@@ -248,6 +373,29 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         process_targets_serial(&targets, cli, colorize_stdout, &progress)?
     };
     let multi_target_stdout = stdout_mode && results.len() > 1;
+
+    if cli.report_format == ReportFormat::Json {
+        if cli.in_place {
+            for result in &results {
+                if let Some(path) = &result.path {
+                    if result.would_change {
+                        std::fs::write(path, &result.formatted).map_err(cmakefmt::Error::Io)?;
+                    }
+                }
+            }
+        }
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&build_json_report(&results, cli)).map_err(|err| {
+                cmakefmt::Error::Formatter(format!("failed to build JSON report: {err}"))
+            })?
+        );
+        return if (cli.check || cli.list_files) && results.iter().any(|r| r.would_change) {
+            Ok(EXIT_CHECK_FAILED)
+        } else {
+            Ok(EXIT_OK)
+        };
+    }
 
     for (index, result) in results.iter().enumerate() {
         if cli.debug {
@@ -273,19 +421,33 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 }
             }
         } else {
-            if multi_target_stdout {
-                if index > 0 {
-                    io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
+            if cli.diff {
+                if result.would_change {
+                    io::stdout()
+                        .write_all(
+                            result
+                                .unified_diff
+                                .as_deref()
+                                .unwrap_or_default()
+                                .as_bytes(),
+                        )
+                        .map_err(cmakefmt::Error::Io)?;
                 }
-                write_stdout_header(&result.display_name, colorize_stdout)?;
+            } else {
+                if multi_target_stdout {
+                    if index > 0 {
+                        io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
+                    }
+                    write_stdout_header(&result.display_name, colorize_stdout)?;
+                }
+                let display_output = result
+                    .highlighted_output
+                    .as_deref()
+                    .unwrap_or(&result.formatted);
+                io::stdout()
+                    .write_all(display_output.as_bytes())
+                    .map_err(cmakefmt::Error::Io)?;
             }
-            let display_output = result
-                .highlighted_output
-                .as_deref()
-                .unwrap_or(&result.formatted);
-            io::stdout()
-                .write_all(display_output.as_bytes())
-                .map_err(cmakefmt::Error::Io)?;
         }
     }
 
@@ -306,6 +468,29 @@ fn write_stdout_header(display_name: &str, colorize: bool) -> Result<(), cmakefm
     Ok(())
 }
 
+fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
+    if (cli.staged || cli.changed) && (!cli.files.is_empty() || !cli.files_from.is_empty()) {
+        return Err(cmakefmt::Error::Formatter(
+            "--staged/--changed cannot be combined with explicit input paths or --files-from"
+                .to_owned(),
+        ));
+    }
+
+    if cli.stdin_path.is_some() && !cli.files.iter().any(|file| file == "-") {
+        return Err(cmakefmt::Error::Formatter(
+            "--stdin-path requires stdin input via `cmakefmt -`".to_owned(),
+        ));
+    }
+
+    if cli.diff && cli.list_files {
+        return Err(cmakefmt::Error::Formatter(
+            "--diff cannot be combined with --list-files".to_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
 fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmakefmt::Error> {
     pattern
         .map(|pattern| {
@@ -320,11 +505,7 @@ fn collect_targets(
     cli: &Cli,
     file_filter: Option<&Regex>,
 ) -> Result<Vec<InputTarget>, cmakefmt::Error> {
-    let inputs = if cli.files.is_empty() {
-        vec![".".to_owned()]
-    } else {
-        cli.files.clone()
-    };
+    let inputs = collect_input_arguments(cli, file_filter)?;
 
     let mut targets = Vec::new();
     let mut seen_paths = BTreeSet::new();
@@ -342,7 +523,14 @@ fn collect_targets(
         }
 
         if path.is_dir() {
-            for discovered in discover_cmake_files(&path, file_filter) {
+            for discovered in discover_cmake_files_with_options(
+                &path,
+                DiscoveryOptions {
+                    file_filter,
+                    honor_gitignore: !cli.no_gitignore,
+                    explicit_ignore_paths: &cli.ignore_paths,
+                },
+            ) {
                 push_unique_path(&mut targets, &mut seen_paths, discovered);
             }
             continue;
@@ -355,6 +543,122 @@ fn collect_targets(
     }
 
     Ok(targets)
+}
+
+fn collect_input_arguments(
+    cli: &Cli,
+    file_filter: Option<&Regex>,
+) -> Result<Vec<String>, cmakefmt::Error> {
+    let mut inputs = Vec::new();
+
+    if cli.staged {
+        inputs.extend(collect_git_paths(GitSelectionMode::Staged, file_filter)?);
+    } else if cli.changed {
+        inputs.extend(collect_git_paths(
+            GitSelectionMode::Changed(cli.since.as_deref()),
+            file_filter,
+        )?);
+    }
+
+    for files_from in &cli.files_from {
+        inputs.extend(read_files_from(files_from)?);
+    }
+
+    inputs.extend(cli.files.clone());
+
+    if inputs.is_empty() {
+        inputs.push(".".to_owned());
+    }
+
+    Ok(inputs)
+}
+
+#[derive(Copy, Clone)]
+enum GitSelectionMode<'a> {
+    Staged,
+    Changed(Option<&'a str>),
+}
+
+fn collect_git_paths(
+    mode: GitSelectionMode<'_>,
+    file_filter: Option<&Regex>,
+) -> Result<Vec<String>, cmakefmt::Error> {
+    let repo_root = git_command(["rev-parse", "--show-toplevel"])?;
+    let repo_root = PathBuf::from(repo_root.trim());
+
+    let diff_output = match mode {
+        GitSelectionMode::Staged => {
+            git_command(["diff", "--name-only", "--cached", "--diff-filter=ACMR"])?
+        }
+        GitSelectionMode::Changed(Some(reference)) => git_command([
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            &format!("{reference}...HEAD"),
+        ])?,
+        GitSelectionMode::Changed(None) => {
+            git_command(["diff", "--name-only", "--diff-filter=ACMR", "HEAD"])?
+        }
+    };
+
+    let mut paths = Vec::new();
+    for line in diff_output
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+    {
+        let candidate = repo_root.join(line);
+        if is_cmake_file(&candidate) && matches_filter(&candidate, file_filter) {
+            paths.push(candidate.display().to_string());
+        }
+    }
+    Ok(paths)
+}
+
+fn git_command<const N: usize>(args: [&str; N]) -> Result<String, cmakefmt::Error> {
+    let output = std::process::Command::new("git")
+        .args(args)
+        .output()
+        .map_err(cmakefmt::Error::Io)?;
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        Err(cmakefmt::Error::Formatter(format!(
+            "git {} failed: {}",
+            args.join(" "),
+            String::from_utf8_lossy(&output.stderr).trim()
+        )))
+    }
+}
+
+fn read_files_from(source: &str) -> Result<Vec<String>, cmakefmt::Error> {
+    let contents = if source == "-" {
+        let mut stdin = String::new();
+        io::stdin()
+            .read_to_string(&mut stdin)
+            .map_err(cmakefmt::Error::Io)?;
+        stdin
+    } else {
+        std::fs::read_to_string(source)
+            .map_err(|err| cmakefmt::Error::Formatter(format!("{source}: {err}")))?
+    };
+
+    let entries = if contents.contains('\0') {
+        contents
+            .split('\0')
+            .map(str::trim)
+            .filter(|entry| !entry.is_empty())
+            .map(ToOwned::to_owned)
+            .collect()
+    } else {
+        contents
+            .lines()
+            .map(str::trim)
+            .filter(|entry| !entry.is_empty())
+            .map(ToOwned::to_owned)
+            .collect()
+    };
+    Ok(entries)
 }
 
 fn push_unique_path(
@@ -424,7 +728,26 @@ struct ProcessedTarget {
     display_name: String,
     formatted: String,
     highlighted_output: Option<String>,
+    unified_diff: Option<String>,
+    changed_lines: Vec<usize>,
     would_change: bool,
+    debug_lines: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonReport {
+    mode: &'static str,
+    files: Vec<JsonFileReport>,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonFileReport {
+    display_name: String,
+    path: Option<String>,
+    would_change: bool,
+    changed_lines: Vec<usize>,
+    formatted: Option<String>,
+    diff: Option<String>,
     debug_lines: Vec<String>,
 }
 
@@ -480,45 +803,54 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         .read_to_string(&mut source)
         .map_err(cmakefmt::Error::Io)?;
 
-    let (config, registry, config_sources) = build_context(cli, None)?;
+    let stdin_path = cli.stdin_path.as_deref();
+    let (config, registry, config_sources) = build_context(cli, stdin_path)?;
+    let display_name = stdin_path
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| "<stdin>".to_owned());
     let mut debug_lines = vec![
-        "processing <stdin>".to_owned(),
+        format!("processing {display_name}"),
         describe_config_sources(&config_sources),
     ];
     let (formatted, mut formatter_debug) = if cli.debug {
         match format_source_with_registry_debug(&source, &config, &registry) {
             Ok(result) => result,
-            Err(err) => return Err(err.with_display_name("<stdin>")),
+            Err(err) => return Err(err.with_display_name(&display_name)),
         }
     } else {
         match format_source_with_registry(&source, &config, &registry) {
             Ok(formatted) => (formatted, Vec::new()),
-            Err(err) => return Err(err.with_display_name("<stdin>")),
+            Err(err) => return Err(err.with_display_name(&display_name)),
         }
     };
     debug_lines.append(&mut formatter_debug);
 
+    let formatted = apply_line_ranges(&source, &formatted, &cli.line_ranges, &display_name)?;
+
     let would_change = formatted != source;
-    let changed_line_count = changed_formatted_line_mask(
+    let changed_lines = changed_formatted_line_numbers(
         &split_lines_with_endings(&source),
         &split_lines_with_endings(&formatted),
-    )
-    .into_iter()
-    .filter(|changed| *changed)
-    .count();
-    debug_lines.push(format!("result <stdin>: would_change={would_change}"));
+    );
     debug_lines.push(format!(
-        "result <stdin>: changed_lines={changed_line_count}"
+        "result {display_name}: would_change={would_change}"
+    ));
+    debug_lines.push(format!(
+        "result {display_name}: changed_lines={}",
+        changed_lines.len()
     ));
     let highlighted_output = colorize_stdout
         .then(|| highlight_changed_lines(&source, &formatted))
         .filter(|_| would_change);
+    let unified_diff = would_change.then(|| build_unified_diff(&display_name, &source, &formatted));
 
     Ok(ProcessedTarget {
-        path: None,
-        display_name: "<stdin>".to_owned(),
+        path: stdin_path.map(Path::to_path_buf),
+        display_name,
         formatted,
         highlighted_output,
+        unified_diff,
+        changed_lines,
         would_change,
         debug_lines,
     })
@@ -551,31 +883,39 @@ fn process_path(
     };
     debug_lines.append(&mut formatter_debug);
 
+    let formatted = apply_line_ranges(
+        &source,
+        &formatted,
+        &cli.line_ranges,
+        &path.display().to_string(),
+    )?;
     let would_change = formatted != source;
-    let changed_line_count = changed_formatted_line_mask(
+    let changed_lines = changed_formatted_line_numbers(
         &split_lines_with_endings(&source),
         &split_lines_with_endings(&formatted),
-    )
-    .into_iter()
-    .filter(|changed| *changed)
-    .count();
+    );
     debug_lines.push(format!(
         "result {}: would_change={would_change}",
         path.display()
     ));
     debug_lines.push(format!(
-        "result {}: changed_lines={changed_line_count}",
-        path.display()
+        "result {}: changed_lines={}",
+        path.display(),
+        changed_lines.len()
     ));
     let highlighted_output = colorize_stdout
         .then(|| highlight_changed_lines(&source, &formatted))
         .filter(|_| would_change);
+    let unified_diff =
+        would_change.then(|| build_unified_diff(&path.display().to_string(), &source, &formatted));
 
     Ok(ProcessedTarget {
         path: Some(path.to_path_buf()),
         display_name: path.display().to_string(),
         formatted,
         highlighted_output,
+        unified_diff,
+        changed_lines,
         would_change,
         debug_lines,
     })
@@ -689,6 +1029,14 @@ fn changed_formatted_line_mask<'a>(original: &[&'a str], formatted: &[&'a str]) 
     changed
 }
 
+fn changed_formatted_line_numbers(original: &[&str], formatted: &[&str]) -> Vec<usize> {
+    changed_formatted_line_mask(original, formatted)
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, changed)| changed.then_some(index + 1))
+        .collect()
+}
+
 fn diff_middle_mask<'a>(original: &[&'a str], formatted: &[&'a str]) -> Vec<bool> {
     const MAX_DP_CELLS: usize = 2_000_000;
 
@@ -748,6 +1096,86 @@ fn push_cyan_line(output: &mut String, line: &str) {
         output.push_str(CYAN);
         output.push_str(line);
         output.push_str(RESET);
+    }
+}
+
+fn build_unified_diff(display_name: &str, source: &str, formatted: &str) -> String {
+    TextDiff::from_lines(source, formatted)
+        .unified_diff()
+        .context_radius(3)
+        .header(&format!("a/{display_name}"), &format!("b/{display_name}"))
+        .to_string()
+}
+
+fn apply_line_ranges(
+    source: &str,
+    formatted: &str,
+    line_ranges: &[LineRange],
+    display_name: &str,
+) -> Result<String, cmakefmt::Error> {
+    if line_ranges.is_empty() {
+        return Ok(formatted.to_owned());
+    }
+
+    let changed_lines = changed_formatted_line_numbers(
+        &split_lines_with_endings(source),
+        &split_lines_with_endings(formatted),
+    );
+    let mut outside = Vec::new();
+    for line in changed_lines {
+        if !line_ranges.iter().any(|range| range.contains(line)) {
+            outside.push(line);
+        }
+    }
+
+    if outside.is_empty() {
+        Ok(formatted.to_owned())
+    } else {
+        Err(cmakefmt::Error::Formatter(format!(
+            "{display_name}: selected line ranges would affect lines outside the requested ranges ({})",
+            outside
+                .into_iter()
+                .map(|line| line.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )))
+    }
+}
+
+fn build_json_report(results: &[ProcessedTarget], cli: &Cli) -> JsonReport {
+    let mode = if cli.in_place {
+        "in-place"
+    } else if cli.check {
+        "check"
+    } else if cli.list_files {
+        "list-files"
+    } else if cli.diff {
+        "diff"
+    } else {
+        "stdout"
+    };
+
+    JsonReport {
+        mode,
+        files: results
+            .iter()
+            .map(|result| JsonFileReport {
+                display_name: result.display_name.clone(),
+                path: result.path.as_ref().map(|path| path.display().to_string()),
+                would_change: result.would_change,
+                changed_lines: result.changed_lines.clone(),
+                formatted: (!cli.in_place && !cli.check && !cli.list_files && !cli.diff)
+                    .then(|| result.formatted.clone()),
+                diff: cli
+                    .diff
+                    .then(|| result.unified_diff.clone().unwrap_or_default()),
+                debug_lines: if cli.debug {
+                    result.debug_lines.clone()
+                } else {
+                    Vec::new()
+                },
+            })
+            .collect(),
     }
 }
 
@@ -1175,13 +1603,23 @@ mod tests {
             "config-file",
             "convert-legacy-config",
             "colour",
+            "changed",
             "debug",
+            "diff",
             "path-regex",
+            "files-from",
             "help",
             "dump-config",
+            "ignore-path",
+            "lines",
             "list-files",
+            "no-gitignore",
             "parallel",
             "progress-bar",
+            "report-format",
+            "since",
+            "staged",
+            "stdin-path",
             "version",
             "in-place",
         ];

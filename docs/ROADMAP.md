@@ -533,42 +533,42 @@ not just faster.
 
 ### Tasks
 
-- [ ] Add ignore-file support for recursive discovery
+- [x] Add ignore-file support for recursive discovery
   - support `.cmakefmtignore`
   - optionally honor `.gitignore` by default for discovered files
   - allow one or more explicit `--ignore-path <PATH>` files
   - document precedence between explicit paths, ignore files, and direct file arguments
-- [ ] Add partial / range formatting for editor integrations
+- [x] Add partial / range formatting for editor integrations
   - support line-range formatting on a single file (for example `--lines 10:25`)
   - support multiple ranges in one invocation
   - document that multi-line statements may force formatting slightly outside the selected range
   - keep range formatting unavailable in config files and scoped to explicit editor/CLI use
-- [ ] Add stdin virtual-path support
+- [x] Add stdin virtual-path support
   - support `--stdin-path <PATH>` (or equivalent naming) so stdin formatting can use:
     - the right file type / extension semantics
     - the nearest project config for the virtual path
     - ignore-file decisions and debug output tied to a meaningful path
   - make editor integrations first-class rather than a special-case stdin hack
-- [ ] Add diff and machine-readable change output
+- [x] Add diff and machine-readable change output
   - add `--diff` to emit a unified diff instead of full formatted output
   - add a machine-readable replacement/report mode suitable for editor plugins and CI tooling
   - keep human-friendly stdout as the default, but make integration-friendly output stable
   - document output-format guarantees clearly enough for downstream tooling
-- [ ] Add VCS-aware file selection modes
+- [x] Add VCS-aware file selection modes
   - support `--staged` for pre-commit / pre-push workflows
   - support `--changed` and `--since <REF>` for CI and incremental formatting
   - keep these modes opt-in and independent of recursive discovery defaults
   - document exact Git assumptions and failure modes clearly
-- [ ] Add file-list input modes for large scripted workflows
+- [x] Add file-list input modes for large scripted workflows
   - support `--files-from <PATH>` and `--files-from -`
   - accept newline-delimited and/or NUL-delimited path lists
   - make this compose cleanly with `--check`, `--diff`, and `--in-place`
-- [ ] Tighten editor and automation integration
+- [x] Tighten editor and automation integration
   - document editor integration patterns for stdin + virtual path + range formatting
   - add CI examples using `--changed` / `--since`
   - add pre-commit examples using `--staged`
   - ensure every workflow feature has CLI regression coverage
-- [ ] Benchmark and validate the new workflow features
+- [x] Benchmark and validate the new workflow features
   - benchmark ignore-heavy directory walks
   - benchmark VCS-aware changed/staged modes on realistic repos
   - benchmark diff/range/stdin-path overhead
@@ -576,11 +576,11 @@ not just faster.
 
 ### Acceptance criteria
 
-- [ ] `cmakefmt` can skip ignored files during recursive discovery without custom wrapper scripts
-- [ ] An editor can format stdin reliably using a virtual file path and, where supported, explicit line ranges
-- [ ] CI and pre-commit workflows can format only changed/staged files with first-party CLI support
-- [ ] `--diff` and the machine-readable output mode are stable enough for downstream tooling
-- [ ] Workflow-feature regressions are covered by CLI/integration tests and benchmarked for overhead
+- [x] `cmakefmt` can skip ignored files during recursive discovery without custom wrapper scripts
+- [x] An editor can format stdin reliably using a virtual file path and, where supported, explicit line ranges
+- [x] CI and pre-commit workflows can format only changed/staged files with first-party CLI support
+- [x] `--diff` and the machine-readable output mode are stable enough for downstream tooling
+- [x] Workflow-feature regressions are covered by CLI/integration tests and benchmarked for overhead
 
 ---
 

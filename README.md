@@ -73,6 +73,54 @@ Format in place:
 cmakefmt -i CMakeLists.txt
 ```
 
+Format only the currently staged CMake files before a commit:
+
+```bash
+cmakefmt --staged --check
+```
+
+Format only files changed since a base ref in CI:
+
+```bash
+cmakefmt --changed --since origin/main --check
+```
+
+Format an explicit file list from another tool:
+
+```bash
+git diff --name-only --diff-filter=ACMR origin/main...HEAD | cmakefmt --files-from - --check
+```
+
+Show a unified diff instead of full formatted output:
+
+```bash
+cmakefmt --diff CMakeLists.txt
+```
+
+Emit a machine-readable report for tooling:
+
+```bash
+cmakefmt --report-format json --check .
+```
+
+Honor `.cmakefmtignore` and extra ignore files during discovery:
+
+```bash
+cmakefmt --ignore-path ci/cmakefmt.ignore --list-files .
+```
+
+Format stdin using a virtual on-disk path for config discovery:
+
+```bash
+cat CMakeLists.txt | cmakefmt - --stdin-path subdir/CMakeLists.txt
+```
+
+Ask for line-range formatting from an editor integration:
+
+```bash
+cmakefmt --stdin-path src/CMakeLists.txt --lines 10:25 -
+```
+
 Format files in parallel with two workers:
 
 ```bash
@@ -176,9 +224,19 @@ cmakefmt [OPTIONS] [FILES]...
       --check
       --list-files
       --path-regex <REGEX>
+      --ignore-path <PATH>
+      --no-gitignore
+      --files-from <PATH>
       --dump-config
       --convert-legacy-config <PATH>
       --debug
+      --diff
+      --staged
+      --changed
+      --since <REF>
+      --stdin-path <PATH>
+      --lines <START:END>
+      --report-format <human|json>
       --colour <auto|always|never>
       --parallel [<JOBS>]
       --progress-bar
@@ -201,6 +259,12 @@ Exit codes:
 - `0`: success
 - `1`: `--check` or `--list-files` found files that would change
 - `2`: parse, config, or I/O error
+
+Discovery rules:
+
+- direct file arguments always win and are formatted even if an ignore file would skip them
+- recursive discovery honors `.cmakefmtignore` and, by default, `.gitignore`
+- `--ignore-path` adds extra ignore files for discovered directories only
 
 ## Debugging And Bug Reports
 
