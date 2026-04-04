@@ -878,10 +878,14 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
     let display_name = stdin_path
         .map(|path| path.display().to_string())
         .unwrap_or_else(|| "<stdin>".to_owned());
-    let mut debug_lines = vec![
-        format!("processing {display_name}"),
-        describe_config_sources(&config_sources),
-    ];
+    let mut debug_lines = if cli.debug {
+        vec![
+            format!("processing {display_name}"),
+            describe_config_sources(&config_sources),
+        ]
+    } else {
+        Vec::new()
+    };
     let (formatted, mut formatter_debug) = if cli.debug {
         match format_source_with_registry_debug(&source, &config, &registry) {
             Ok(result) => result,
@@ -893,22 +897,30 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
             Err(err) => return Err(err.with_display_name(&display_name)),
         }
     };
-    debug_lines.append(&mut formatter_debug);
+    if cli.debug {
+        debug_lines.append(&mut formatter_debug);
+    }
 
     let formatted = apply_line_ranges(&source, &formatted, &cli.line_ranges, &display_name)?;
 
     let would_change = formatted != source;
-    let changed_lines = changed_formatted_line_numbers(
-        &split_lines_with_endings(&source),
-        &split_lines_with_endings(&formatted),
-    );
-    debug_lines.push(format!(
-        "result {display_name}: would_change={would_change}"
-    ));
-    debug_lines.push(format!(
-        "result {display_name}: changed_lines={}",
-        changed_lines.len()
-    ));
+    let changed_lines = if needs_changed_lines(cli, colorize_stdout) {
+        changed_formatted_line_numbers(
+            &split_lines_with_endings(&source),
+            &split_lines_with_endings(&formatted),
+        )
+    } else {
+        Vec::new()
+    };
+    if cli.debug {
+        debug_lines.push(format!(
+            "result {display_name}: would_change={would_change}"
+        ));
+        debug_lines.push(format!(
+            "result {display_name}: changed_lines={}",
+            changed_lines.len()
+        ));
+    }
     let highlighted_output = colorize_stdout
         .then(|| highlight_changed_lines(&source, &formatted))
         .filter(|_| would_change);
@@ -934,11 +946,15 @@ fn process_path(
     let source = std::fs::read_to_string(path)
         .map_err(|err| cmakefmt::Error::Formatter(format!("{}: {err}", path.display())))?;
     let (config, registry, config_sources) = build_context(cli, Some(path))?;
-    let mut debug_lines = vec![
-        format!("processing {}", path.display()),
-        describe_config_sources(&config_sources),
-        describe_cli_overrides(cli),
-    ];
+    let mut debug_lines = if cli.debug {
+        vec![
+            format!("processing {}", path.display()),
+            describe_config_sources(&config_sources),
+            describe_cli_overrides(cli),
+        ]
+    } else {
+        Vec::new()
+    };
 
     let (formatted, mut formatter_debug) = if cli.debug {
         match format_source_with_registry_debug(&source, &config, &registry) {
@@ -951,7 +967,9 @@ fn process_path(
             Err(err) => return Err(err.with_display_name(path.display().to_string())),
         }
     };
-    debug_lines.append(&mut formatter_debug);
+    if cli.debug {
+        debug_lines.append(&mut formatter_debug);
+    }
 
     let formatted = apply_line_ranges(
         &source,
@@ -960,19 +978,25 @@ fn process_path(
         &path.display().to_string(),
     )?;
     let would_change = formatted != source;
-    let changed_lines = changed_formatted_line_numbers(
-        &split_lines_with_endings(&source),
-        &split_lines_with_endings(&formatted),
-    );
-    debug_lines.push(format!(
-        "result {}: would_change={would_change}",
-        path.display()
-    ));
-    debug_lines.push(format!(
-        "result {}: changed_lines={}",
-        path.display(),
-        changed_lines.len()
-    ));
+    let changed_lines = if needs_changed_lines(cli, colorize_stdout) {
+        changed_formatted_line_numbers(
+            &split_lines_with_endings(&source),
+            &split_lines_with_endings(&formatted),
+        )
+    } else {
+        Vec::new()
+    };
+    if cli.debug {
+        debug_lines.push(format!(
+            "result {}: would_change={would_change}",
+            path.display()
+        ));
+        debug_lines.push(format!(
+            "result {}: changed_lines={}",
+            path.display(),
+            changed_lines.len()
+        ));
+    }
     let highlighted_output = colorize_stdout
         .then(|| highlight_changed_lines(&source, &formatted))
         .filter(|_| would_change);
@@ -989,6 +1013,13 @@ fn process_path(
         would_change,
         debug_lines,
     })
+}
+
+fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
+    colorize_stdout
+        || !cli.line_ranges.is_empty()
+        || cli.debug
+        || cli.report_format == ReportFormat::Json
 }
 
 fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, cmakefmt::Error> {
