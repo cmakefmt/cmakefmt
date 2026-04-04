@@ -15,32 +15,47 @@ cmakefmt [OPTIONS] [FILES]...
 | `cmakefmt` | Recursively discover CMake files under the current working directory. |
 | `cmakefmt -` | Read from stdin and write formatted output to stdout. |
 
-## Operational Flags
+## Input Selection
 
 | Flag | Meaning |
 | --- | --- |
-| `-i`, `--in-place` | Rewrite files on disk. |
-| `--check` | Exit with code 1 when any file would change. |
-| `--list-files` | List files that would change without modifying them. |
-| `--path-regex <REGEX>` | Filter recursively discovered CMake file paths. |
-| `--ignore-path <PATH>` | Add one or more extra ignore files during recursive discovery. |
-| `--no-gitignore` | Ignore `.gitignore` files and only use built-in / explicit ignore rules. |
-| `--files-from <PATH>` | Read newline-delimited or NUL-delimited input paths from a file, or `-` for stdin. |
-| `--debug` | Emit diagnostics about discovery, config resolution, barriers, and formatting decisions. |
+| `--files-from <PATH>` | Read more input paths from a file, or `-` for stdin. Accepts newline-delimited or NUL-delimited path lists. |
+| `--path-regex <REGEX>` | Filter discovered CMake paths. Direct file arguments are not filtered out. |
+| `--ignore-path <PATH>` | Add extra ignore files during recursive discovery. Direct file arguments still win. |
+| `--no-gitignore` | Stop honoring `.gitignore` during recursive discovery. |
+| `--staged` | Use staged Git-tracked files instead of explicit input paths. |
+| `--changed` | Use modified Git-tracked files instead of explicit input paths. |
+| `--since <REF>` | Choose the Git base ref used by `--changed`. Without it, `HEAD` is the base. |
+| `--stdin-path <PATH>` | Give stdin formatting a virtual on-disk path for config discovery and diagnostics. |
+| `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges on a single target. |
+
+## Output Modes
+
+| Flag | Meaning |
+| --- | --- |
+| `-i`, `--in-place` | Rewrite files on disk instead of printing formatted output. |
+| `--check` | Exit with code 1 when any selected file would change. |
+| `--list-files` | Print only the files that would change. |
 | `--diff` | Print a unified diff instead of the full formatted output. |
-| `--staged` | Select only staged Git-tracked files. |
-| `--changed` | Select only changed Git-tracked files. |
-| `--since <REF>` | Base Git ref used together with `--changed`. |
-| `--stdin-path <PATH>` | Virtual on-disk path used for stdin config discovery and diagnostics. |
-| `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges. |
 | `--report-format <human\|json>` | Switch between human terminal output and machine-readable JSON. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
+
+## Execution
+
+| Flag | Meaning |
+| --- | --- |
+| `--debug` | Emit discovery, config, barrier, and formatter diagnostics to stderr. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. If omitted, formatting stays single-threaded. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
+
+## Config And Conversion
+
+| Flag | Meaning |
+| --- | --- |
 | `--dump-config [FORMAT]` | Print a starter config template and exit. Defaults to YAML; pass `toml` for TOML. |
 | `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
-## Config-backed Override Flags
+## Config Overrides
 
 | Flag | Meaning |
 | --- | --- |
@@ -84,6 +99,7 @@ cmakefmt --debug --check tests/fixtures/real_world
 - Direct file arguments are always processed, even if an ignore rule would skip them.
 - Recursive discovery honors `.cmakefmtignore` and, by default, `.gitignore`.
 - `--ignore-path` adds more ignore files for discovered directories only.
+- `--files-from`, `--staged`, and `--changed` still pass through the normal discovery filters when they produce directories or paths that need filtering.
 
 ## Diagnostics
 

@@ -32,6 +32,10 @@ walking up through parent directories to the repository root or filesystem
 root. If no project-local config exists, cmakefmt falls back to the same files
 in the home directory when present.
 
+Direct file arguments are always processed, even if ignore files would skip
+them during recursive discovery. Ignore rules only affect files discovered
+from directories, --files-from, or Git-aware selection modes.
+
 cmakefmt can print a commented starter configuration for you as a customization
 starting point with --dump-config. By default this emits YAML; pass
 --dump-config toml for TOML output.
@@ -55,64 +59,78 @@ struct Cli {
     /// working directory.
     files: Vec<String>,
 
-    /// Read additional formatting targets from a file, or `-` for stdin.
+    /// Read more formatting targets from a file, or `-` for stdin.
     ///
-    /// Accepts newline-delimited or NUL-delimited path lists.
+    /// Accepts newline-delimited or NUL-delimited path lists. This is useful
+    /// for scripted workflows that already know which files to pass to
+    /// `cmakefmt`.
     #[arg(
         long = "files-from",
         value_name = "PATH",
+        help_heading = "Input Selection",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     files_from: Vec<String>,
 
-    /// Format files in-place (modifies the files on disk).
+    /// Rewrite files on disk instead of printing formatted output.
     #[arg(
         short = 'i',
         long = "in-place",
+        help_heading = "Output Modes",
         conflicts_with = "list_files",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     in_place: bool,
 
-    /// Check if files are already formatted (exit 1 if not).
+    /// Exit with code 1 if any selected file would change.
     #[arg(
         long,
+        help_heading = "Output Modes",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     check: bool,
 
-    /// List the files that would be reformatted without changing them.
+    /// Print only the files that would change, without modifying them.
     #[arg(
         long = "list-files",
+        help_heading = "Output Modes",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     list_files: bool,
 
-    /// Regex filter applied to discovered CMake file paths.
+    /// Filter recursively discovered CMake paths with a regex.
+    ///
+    /// This only affects discovery from directories or Git/file-list driven
+    /// inputs. Direct file arguments are always kept.
     #[arg(
         long = "path-regex",
         value_name = "REGEX",
+        help_heading = "Input Selection",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     file_regex: Option<String>,
 
-    /// Additional ignore file(s) to apply during recursive discovery.
+    /// Add one or more extra ignore files during recursive discovery.
+    ///
+    /// This only affects discovered files, not direct file arguments.
     #[arg(
         long = "ignore-path",
         value_name = "PATH",
+        help_heading = "Input Selection",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     ignore_paths: Vec<PathBuf>,
 
-    /// Do not honor `.gitignore` during recursive discovery.
+    /// Ignore `.gitignore` files during recursive discovery.
     #[arg(
         long = "no-gitignore",
+        help_heading = "Input Selection",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
@@ -124,16 +142,19 @@ struct Cli {
     #[arg(
         long = "dump-config",
         value_name = "FORMAT",
+        help_heading = "Config And Conversion",
         num_args = 0..=1,
         default_missing_value = "yaml"
     )]
     dump_config: Option<DumpConfigFormat>,
 
-    /// Convert legacy cmake-format config files to `.cmakefmt.toml` and print
-    /// the result to stdout.
+    /// Convert legacy cmake-format JSON, YAML, or Python config files.
+    ///
+    /// The converted config is printed to stdout as `.cmakefmt.toml`.
     #[arg(
         long = "convert-legacy-config",
         value_name = "PATH",
+        help_heading = "Config And Conversion",
         conflicts_with = "dump_config",
         conflicts_with = "check",
         conflicts_with = "list_files",
@@ -149,60 +170,96 @@ struct Cli {
     )]
     convert_config_paths: Vec<PathBuf>,
 
-    /// Print debug diagnostics about discovery, config resolution, barriers,
-    /// and formatter decisions.
+    /// Print detailed discovery, config, and formatter diagnostics to stderr.
     #[arg(
         long,
+        help_heading = "Execution",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     debug: bool,
 
-    /// Emit a unified diff instead of full formatted output.
+    /// Print a unified diff instead of full formatted output.
     #[arg(
         long,
+        help_heading = "Output Modes",
         conflicts_with = "in_place",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     diff: bool,
 
-    /// Select changed files from the current Git repository.
+    /// Select modified Git-tracked files instead of explicit input paths.
+    ///
+    /// Use `--since` to compare against a specific base ref; otherwise
+    /// `cmakefmt` compares the working tree against `HEAD`.
     #[arg(
         long,
+        help_heading = "Input Selection",
         conflicts_with = "staged",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     changed: bool,
 
-    /// Select staged files from the current Git repository.
+    /// Select staged Git-tracked files instead of explicit input paths.
     #[arg(
         long,
+        help_heading = "Input Selection",
         conflicts_with = "changed",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
     staged: bool,
 
-    /// Git reference used with `--changed`.
-    #[arg(long, requires = "changed", value_name = "REF")]
+    /// Git base ref used together with `--changed`.
+    #[arg(
+        long,
+        requires = "changed",
+        value_name = "REF",
+        help_heading = "Input Selection"
+    )]
     since: Option<String>,
 
-    /// Virtual path used when formatting stdin.
-    #[arg(long = "stdin-path", value_name = "PATH")]
+    /// Virtual path used for config discovery and diagnostics when reading stdin.
+    ///
+    /// This does not read from disk; it only gives stdin formatting a real
+    /// project-relative path to work from.
+    #[arg(
+        long = "stdin-path",
+        value_name = "PATH",
+        help_heading = "Input Selection"
+    )]
     stdin_path: Option<PathBuf>,
 
     /// Restrict formatting to one or more 1-based inclusive line ranges.
-    #[arg(long = "lines", value_name = "START:END")]
+    ///
+    /// This is intended for editor integrations and only works on a single
+    /// formatting target.
+    #[arg(
+        long = "lines",
+        value_name = "START:END",
+        help_heading = "Input Selection"
+    )]
     line_ranges: Vec<LineRange>,
 
-    /// Output mode for results and change reporting.
-    #[arg(long = "report-format", value_enum, default_value_t = ReportFormat::Human)]
+    /// Choose human terminal output or machine-readable JSON reporting.
+    #[arg(
+        long = "report-format",
+        value_enum,
+        default_value_t = ReportFormat::Human,
+        help_heading = "Output Modes"
+    )]
     report_format: ReportFormat,
 
-    /// Control ANSI colour for highlighted changed output lines.
-    #[arg(long = "colour", alias = "color", value_enum, default_value_t = ColorChoice::Auto)]
+    /// Control ANSI colour when printing formatted output to stdout.
+    #[arg(
+        long = "colour",
+        alias = "color",
+        value_enum,
+        default_value_t = ColorChoice::Auto,
+        help_heading = "Output Modes"
+    )]
     colour: ColorChoice,
 
     /// Format files in parallel when explicitly requested.
@@ -213,6 +270,7 @@ struct Cli {
         short = 'j',
         long,
         value_name = "JOBS",
+        help_heading = "Execution",
         num_args = 0..=1,
         default_missing_value = "0",
         conflicts_with = "dump_config",
@@ -224,37 +282,48 @@ struct Cli {
     ///
     /// The progress bar is intended for directory or multi-file runs and is
     /// only available together with `--in-place`.
-    #[arg(long = "progress-bar", requires = "in_place")]
+    #[arg(
+        long = "progress-bar",
+        requires = "in_place",
+        help_heading = "Execution"
+    )]
     progress_bar: bool,
 
-    /// One or more YAML or TOML config files to merge in order. Later files override earlier ones.
-    #[arg(long = "config-file", visible_alias = "config", value_name = "PATH")]
+    /// Use one or more explicit config files instead of config discovery.
+    ///
+    /// Later files override earlier ones.
+    #[arg(
+        long = "config-file",
+        visible_alias = "config",
+        value_name = "PATH",
+        help_heading = "Config Overrides"
+    )]
     config_paths: Vec<PathBuf>,
 
     /// Override the maximum line width.
-    #[arg(long)]
+    #[arg(long, help_heading = "Config Overrides")]
     line_width: Option<usize>,
 
     /// Override the number of spaces per indent level.
-    #[arg(long)]
+    #[arg(long, help_heading = "Config Overrides")]
     tab_size: Option<usize>,
 
     /// Normalise command name case (lower, upper, unchanged).
-    #[arg(long)]
+    #[arg(long, help_heading = "Config Overrides")]
     command_case: Option<CaseStyle>,
 
     /// Normalise keyword case (lower, upper, unchanged).
-    #[arg(long)]
+    #[arg(long, help_heading = "Config Overrides")]
     keyword_case: Option<CaseStyle>,
 
     /// Place closing paren on its own line when wrapping.
-    #[arg(long)]
+    #[arg(long, help_heading = "Config Overrides")]
     dangle_parens: Option<bool>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 enum ColorChoice {
-    /// Use colour only when stdout is a terminal that looks colour-capable.
+    /// Use colour only when stdout looks like an interactive terminal.
     Auto,
     /// Always emit ANSI colour codes.
     Always,
