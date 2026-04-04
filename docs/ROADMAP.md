@@ -509,9 +509,9 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Make `cmakefmt` work correctly on Windows developer machines and CI
-- [ ] Run the full test + clippy + fmt workflow on Windows in GitHub Actions
-- [ ] Audit and fix Windows-specific issues
+- [x] Make `cmakefmt` work correctly on Windows developer machines and CI
+- [x] Run the full test + clippy + fmt workflow on Windows in GitHub Actions
+- [x] Audit and fix Windows-specific issues
   - path handling
   - newline handling
   - terminal colour handling
@@ -521,8 +521,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Acceptance criteria
 
-- [ ] CI passes on Linux, macOS, and Windows
-- [ ] Core CLI flows behave correctly on Windows
+- [x] CI passes on Linux, macOS, and Windows
+- [x] Core CLI flows behave correctly on Windows
 
 ---
 
