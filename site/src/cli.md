@@ -27,7 +27,7 @@ cmakefmt [OPTIONS] [FILES]...
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. If omitted, formatting stays single-threaded. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
-| `--print-default-config` | Print a starter config template and exit. |
+| `--dump-config` | Print a starter config template and exit. |
 | `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
 ## Config-backed Override Flags

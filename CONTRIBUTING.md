@@ -179,7 +179,7 @@ If you changed CLI behavior, also check:
 
 ```bash
 cargo run -- --help
-cargo run -- --print-default-config
+cargo run -- --dump-config
 ```
 
 If you changed docs, also check:

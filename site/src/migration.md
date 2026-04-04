@@ -3,7 +3,7 @@
 ## Recommended Rollout
 
 1. start with `--check` in CI on a small target directory
-2. generate a starter config with `--print-default-config`
+2. generate a starter config with `--dump-config`
 3. if you already have a `cmake-format` config file, convert it with `--convert-legacy-config`
 4. compare output on a representative corpus
 5. switch pre-commit and CI once the output is acceptable
@@ -23,7 +23,7 @@
 
 - the goal is easy adoption, not output identity
 - the built-in and supported utility-module command surface is audited through CMake 4.3.1
-- `--config` is still accepted as an alias for `--config-file`, but `--dump-config` and `--file-regex` were intentionally replaced
+- `--config` is still accepted as an alias for `--config-file`, and `--path-regex` replaces the older `--file-regex`
 - unsupported compatibility should be treated as a bug or backlog item, not silently assumed
 
 ## Operational Advice

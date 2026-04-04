@@ -27,7 +27,7 @@ to the repository root or filesystem root. If no project-local config exists,
 cmakefmt falls back to ~/.cmakefmt.toml when present.
 
 cmakefmt can print a commented starter configuration for you as a customization
-starting point with --print-default-config.
+starting point with --dump-config.
 
 Legacy cmake-format JSON, YAML, and Python config files can be converted to
 .cmakefmt.toml with --convert-legacy-config.";
@@ -83,7 +83,7 @@ struct Cli {
     file_regex: Option<String>,
 
     /// Print the default config template and exit.
-    #[arg(long = "print-default-config")]
+    #[arg(long = "dump-config")]
     dump_config: bool,
 
     /// Convert legacy cmake-format config files to `.cmakefmt.toml` and print
@@ -1174,7 +1174,7 @@ mod tests {
             "debug",
             "path-regex",
             "help",
-            "print-default-config",
+            "dump-config",
             "list-files",
             "parallel",
             "progress-bar",

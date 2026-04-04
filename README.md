@@ -137,7 +137,7 @@ cmakefmt --line-width 100 --tab-size 4 --command-case lower --keyword-case upper
 Print the default config template:
 
 ```bash
-cmakefmt --print-default-config
+cmakefmt --dump-config
 ```
 
 Convert a legacy `cmake-format` config file:
@@ -169,7 +169,7 @@ cmakefmt [OPTIONS] [FILES]...
       --check
       --list-files
       --path-regex <REGEX>
-      --print-default-config
+      --dump-config
       --convert-legacy-config <PATH>
       --debug
       --colour <auto|always|never>
@@ -185,8 +185,7 @@ cmakefmt [OPTIONS] [FILES]...
   -V, --version
 ```
 
-The clearer `cmakefmt` long-form flags are primary where applicable. In
-particular, `--print-default-config` replaces the older `--dump-config`, and
+The clearer `cmakefmt` long-form flags are primary where applicable.
 `--path-regex` replaces the older `--file-regex`. `--config` is still accepted
 as an alias for `--config-file` to ease migration.
 
@@ -314,7 +313,7 @@ kwargs = { SOURCES = { nargs = "+" }, LIBRARIES = { nargs = "+" } }
 You can also generate a full starter config with:
 
 ```bash
-cmakefmt --print-default-config
+cmakefmt --dump-config
 ```
 
 Legacy `cmake-format` config files can be converted with:

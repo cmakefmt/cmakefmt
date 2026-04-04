@@ -173,7 +173,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - `cmakefmt --list-files [FILE|DIR]...` — list files that would be reformatted
   - `cmakefmt --path-regex <REGEX>` — filter recursively discovered CMake files
   - `cmakefmt -` — read from stdin, write to stdout
-  - `cmakefmt --print-default-config` — print a default config template
+  - `cmakefmt --dump-config` — print a default config template
   - `cmakefmt --convert-legacy-config <PATH>` — convert old `cmake-format` config files to `.cmakefmt.toml`
   - `cmakefmt --config-file <PATH>` — one or more explicit config files
   - `cmakefmt --line-width <N>` — override config
@@ -335,7 +335,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] Write a complete CLI reference
   - every flag with behavior, defaults, and exit-code semantics
   - examples for single-file, recursive, stdin, in-place, and CI usage
-  - examples for config overrides, `--print-default-config`, and `--convert-legacy-config`
+  - examples for config overrides, `--dump-config`, and `--convert-legacy-config`
   - note which flags are operational-only versus config-backed
 - [x] Write a complete configuration reference
   - document every config section and option

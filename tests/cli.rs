@@ -692,7 +692,7 @@ nargs = "+"
 
 #[test]
 fn dump_config_prints_template() {
-    let output = cmakefmt().arg("--print-default-config").output().unwrap();
+    let output = cmakefmt().arg("--dump-config").output().unwrap();
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -840,7 +840,7 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("Parse CMake listfiles and format them nicely."));
     assert!(stdout.contains(".cmakefmt.toml"));
     assert!(stdout.contains("--colour <COLOUR>"));
-    assert!(stdout.contains("--print-default-config"));
+    assert!(stdout.contains("--dump-config"));
     assert!(stdout.contains("--in-place"));
     assert!(stdout.contains("--config-file <PATH>"));
     assert!(stdout.contains("--convert-legacy-config <PATH>"));
