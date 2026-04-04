@@ -399,6 +399,33 @@ fn line_width_override() {
 }
 
 #[test]
+fn line_width_short_alias_works() {
+    let mut child = cmakefmt()
+        .args(["-l", "30", "-"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"set(FOO a b c d e f g h i j k l)\n")
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        assert!(
+            line.len() <= 30,
+            "line exceeds 30 chars: {line:?} ({})",
+            line.len()
+        );
+    }
+}
+
+#[test]
 fn command_case_override() {
     let mut child = cmakefmt()
         .args(["--command-case", "upper", "-"])
@@ -843,6 +870,31 @@ fn explicit_config_file() {
 }
 
 #[test]
+fn config_short_alias_works() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("custom.toml");
+    std::fs::write(&config_path, "[style]\ncommand_case = \"upper\"\n").unwrap();
+
+    let mut child = cmakefmt()
+        .args(["-c", config_path.to_str().unwrap(), "-"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"cmake_minimum_required(VERSION 3.20)\n")
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).starts_with("CMAKE_MINIMUM_REQUIRED("));
+}
+
+#[test]
 fn multiple_explicit_config_files_merge_in_order() {
     let dir = tempfile::tempdir().unwrap();
     let first = dir.path().join("first.toml");
@@ -1226,8 +1278,10 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--colour <COLOUR>"));
     assert!(stdout.contains("--dump-config [<FORMAT>]"));
     assert!(stdout.contains("--in-place"));
+    assert!(stdout.contains("-c, --config-file <PATH>"));
     assert!(stdout.contains("--config-file <PATH>"));
     assert!(stdout.contains("--convert-legacy-config <PATH>"));
+    assert!(stdout.contains("-l, --line-width <LINE_WIDTH>"));
     assert!(stdout.contains("--list-files"));
     assert!(stdout.contains("--path-regex <REGEX>"));
     assert!(stdout.contains("--ignore-path <PATH>"));

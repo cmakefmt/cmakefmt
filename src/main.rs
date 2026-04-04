@@ -293,6 +293,7 @@ struct Cli {
     ///
     /// Later files override earlier ones.
     #[arg(
+        short = 'c',
         long = "config-file",
         visible_alias = "config",
         value_name = "PATH",
@@ -301,7 +302,7 @@ struct Cli {
     config_paths: Vec<PathBuf>,
 
     /// Override the maximum line width.
-    #[arg(long, help_heading = "Config Overrides")]
+    #[arg(short = 'l', long, help_heading = "Config Overrides")]
     line_width: Option<usize>,
 
     /// Override the number of spaces per indent level.
