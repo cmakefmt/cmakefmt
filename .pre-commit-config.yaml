@@ -19,6 +19,12 @@ repos:
     hooks:
       - id: actionlint
 
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.2.0
+    hooks:
+      - id: reuse
+        exclude: ^\.pre-commit-cache/
+
   - repo: local
     hooks:
       - id: cargo-fmt
