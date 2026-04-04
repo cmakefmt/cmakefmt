@@ -526,7 +526,52 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ---
 
-## Phase 14 — Alpha Release
+## Phase 14 — Workspace Split
+
+**Goal**: Split the project into reusable crates and separate tool entry points
+before the first public alpha.
+
+### Tasks
+
+- [ ] Convert the repository into a Cargo workspace
+  - keep one top-level repository and shared docs/release process
+  - define clear crate boundaries and ownership
+- [ ] Extract a dedicated CMake parser crate
+  - move `src/parser` AST + grammar + parse entry points into a reusable crate
+  - expose a clean parser-focused public API
+  - keep parser tests and fixtures passing after the split
+- [ ] Extract a dedicated CMake formatter crate
+  - move formatter/config/spec integration into a formatter-focused crate
+  - make the `cmakefmt` CLI depend on that crate instead of the monolith
+  - preserve current formatting behavior, snapshots, and idempotency guarantees
+- [ ] Prepare for a future linter crate/tool
+  - define where lint configuration and diagnostics would live
+  - avoid coupling formatter-only config to future lint-only features
+  - document the intended crate/tool boundaries even if the linter is not yet implemented
+- [ ] Clean up shared error and config boundaries
+  - keep parser errors/parser data independent from formatter config concerns
+  - avoid one oversized catch-all error type spanning every future tool
+  - ensure public APIs remain coherent after the split
+- [ ] Make multi-crate publishing and release order explicit
+  - define crate names and publish order
+  - decide whether versions stay lockstep initially
+  - document how internal crates relate to the end-user CLI crate
+- [ ] Preserve docs, benches, and tests across the split
+  - update docs to explain the workspace layout
+  - keep benchmark coverage attached to the right crate/tool layer
+  - ensure CI still validates the full workspace cleanly
+
+### Acceptance criteria
+
+- [ ] The repository builds as a workspace with separate reusable parser/formatter crates
+- [ ] The `cmakefmt` CLI uses the formatter crate rather than monolithic in-repo modules
+- [ ] Existing parser, snapshot, idempotency, CLI, and benchmark coverage still pass after the split
+- [ ] The release process documents the publish order and relationship between crates
+- [ ] The codebase is structurally ready for a future linter tool without another large refactor
+
+---
+
+## Phase 15 — Alpha Release
 
 **Goal**: Publish the first public alpha, automate repeatable releases, and make
 `cmakefmt` easy to install and adopt across CLI, CI, and editor workflows.
