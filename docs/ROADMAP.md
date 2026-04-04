@@ -391,6 +391,61 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - add the build/deploy workflow
   - ensure local preview instructions exist
   - ensure versioned or release-tagged docs policy is clear
+- [ ] Do a full documentation overhaul before alpha
+  - rewrite `docs/ARCHITECTURE.md` so it clearly explains how parsing, command-spec resolution,
+    layout selection, comment preservation, barriers, and CLI execution fit together
+  - expand the published architecture page to explain the pipeline in user-facing terms,
+    not just as a short layer list
+  - massively expand the API guide with realistic examples for:
+    - `format_source`
+    - custom `Config` construction
+    - loading config from disk
+    - using `CommandRegistry` overrides
+    - collecting debug output
+    - embedding `cmakefmt` in editors, scripts, or CI tools
+    - handling errors cleanly
+  - expand the behavior guide with concrete before/after examples for:
+    - line wrapping
+    - keyword grouping
+    - comment preservation
+    - comment reflow
+    - blank-line preservation
+    - disabled regions / fences
+    - control-flow indentation
+    - per-command overrides
+    - known non-goals / intentional differences from `cmake-format`
+  - expand `site/src/cli.md` so the "Common Examples" section shows example output
+    for flags whose effect is easy to visualize
+  - thoroughly rewrite `site/src/config.md`
+    - provide a table of contents for all config options
+    - give each option a dedicated subsection
+    - explain what it does, when to use it, its default, and a small example where useful
+    - clearly separate global formatting options, style options, markup options,
+      per-command overrides, and custom command specs
+  - rewrite `site/src/install.md` into a fuller install and adoption guide
+    - local build vs `cargo install`
+    - first-run checks
+    - config bootstrap
+    - upgrade/uninstall notes
+    - pre-commit / CI usage
+    - local docs preview
+  - rewrite the docs landing page to sell the project more clearly
+    - clear positioning statement
+    - "why use cmakefmt?" summary
+    - quick-start section that stays easy to find
+    - benchmark / performance highlights that are honest and reproducible
+    - migration callout for `cmake-format` users without disparaging the original tool
+  - add stronger cross-linking and navigation between architecture, API, behavior,
+    CLI, config, install, migration, and performance pages
+  - add more troubleshooting / FAQ-style guidance where users are likely to get stuck
+    (config discovery, ignored files, parsing failures, editor usage, migration surprises)
+  - make benchmark claims in the docs traceable to `docs/PERFORMANCE.md`
+    and keep them phrased as measured results rather than hype
+  - ensure every major docs page answers:
+    - what is this for?
+    - what should I do first?
+    - what are the common pitfalls?
+    - where do I go next?
 
 ### Acceptance criteria
 
@@ -401,6 +456,10 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] The GitHub Pages docs site builds cleanly and is linked from `README.md`
 - [x] User-visible changes have a documented changelog/release-note path
 - [x] Public library APIs and exported data structures are documented well enough to generate useful API docs with `cargo doc --no-deps`
+- [ ] The landing page makes a compelling, evidence-backed case for trying `cmakefmt`
+- [ ] The architecture, API, behavior, CLI, config, and install pages all contain enough concrete examples
+      that a user can solve common tasks without reading the source
+- [ ] Config docs are navigable enough that a user can jump directly to any single option and understand its effect quickly
 
 ---
 
