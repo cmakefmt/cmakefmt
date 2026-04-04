@@ -526,48 +526,61 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ---
 
-## Phase 14 — Workspace Split
+## Phase 14 — Workflow Advantage
 
-**Goal**: Split the project into reusable crates and separate tool entry points
-before the first public alpha.
+**Goal**: Make `cmakefmt` materially more useful in real developer workflows than `cmake-format`,
+not just faster.
 
 ### Tasks
 
-- [ ] Convert the repository into a Cargo workspace
-  - keep one top-level repository and shared docs/release process
-  - define clear crate boundaries and ownership
-- [ ] Extract a dedicated CMake parser crate
-  - move `src/parser` AST + grammar + parse entry points into a reusable crate
-  - expose a clean parser-focused public API
-  - keep parser tests and fixtures passing after the split
-- [ ] Extract a dedicated CMake formatter crate
-  - move formatter/config/spec integration into a formatter-focused crate
-  - make the `cmakefmt` CLI depend on that crate instead of the monolith
-  - preserve current formatting behavior, snapshots, and idempotency guarantees
-- [ ] Prepare for a future linter crate/tool
-  - define where lint configuration and diagnostics would live
-  - avoid coupling formatter-only config to future lint-only features
-  - document the intended crate/tool boundaries even if the linter is not yet implemented
-- [ ] Clean up shared error and config boundaries
-  - keep parser errors/parser data independent from formatter config concerns
-  - avoid one oversized catch-all error type spanning every future tool
-  - ensure public APIs remain coherent after the split
-- [ ] Make multi-crate publishing and release order explicit
-  - define crate names and publish order
-  - decide whether versions stay lockstep initially
-  - document how internal crates relate to the end-user CLI crate
-- [ ] Preserve docs, benches, and tests across the split
-  - update docs to explain the workspace layout
-  - keep benchmark coverage attached to the right crate/tool layer
-  - ensure CI still validates the full workspace cleanly
+- [ ] Add ignore-file support for recursive discovery
+  - support `.cmakefmtignore`
+  - optionally honor `.gitignore` by default for discovered files
+  - allow one or more explicit `--ignore-path <PATH>` files
+  - document precedence between explicit paths, ignore files, and direct file arguments
+- [ ] Add partial / range formatting for editor integrations
+  - support line-range formatting on a single file (for example `--lines 10:25`)
+  - support multiple ranges in one invocation
+  - document that multi-line statements may force formatting slightly outside the selected range
+  - keep range formatting unavailable in config files and scoped to explicit editor/CLI use
+- [ ] Add stdin virtual-path support
+  - support `--stdin-path <PATH>` (or equivalent naming) so stdin formatting can use:
+    - the right file type / extension semantics
+    - the nearest project config for the virtual path
+    - ignore-file decisions and debug output tied to a meaningful path
+  - make editor integrations first-class rather than a special-case stdin hack
+- [ ] Add diff and machine-readable change output
+  - add `--diff` to emit a unified diff instead of full formatted output
+  - add a machine-readable replacement/report mode suitable for editor plugins and CI tooling
+  - keep human-friendly stdout as the default, but make integration-friendly output stable
+  - document output-format guarantees clearly enough for downstream tooling
+- [ ] Add VCS-aware file selection modes
+  - support `--staged` for pre-commit / pre-push workflows
+  - support `--changed` and `--since <REF>` for CI and incremental formatting
+  - keep these modes opt-in and independent of recursive discovery defaults
+  - document exact Git assumptions and failure modes clearly
+- [ ] Add file-list input modes for large scripted workflows
+  - support `--files-from <PATH>` and `--files-from -`
+  - accept newline-delimited and/or NUL-delimited path lists
+  - make this compose cleanly with `--check`, `--diff`, and `--in-place`
+- [ ] Tighten editor and automation integration
+  - document editor integration patterns for stdin + virtual path + range formatting
+  - add CI examples using `--changed` / `--since`
+  - add pre-commit examples using `--staged`
+  - ensure every workflow feature has CLI regression coverage
+- [ ] Benchmark and validate the new workflow features
+  - benchmark ignore-heavy directory walks
+  - benchmark VCS-aware changed/staged modes on realistic repos
+  - benchmark diff/range/stdin-path overhead
+  - add real regression tests for ignore handling, diff output, range formatting, and VCS selection
 
 ### Acceptance criteria
 
-- [ ] The repository builds as a workspace with separate reusable parser/formatter crates
-- [ ] The `cmakefmt` CLI uses the formatter crate rather than monolithic in-repo modules
-- [ ] Existing parser, snapshot, idempotency, CLI, and benchmark coverage still pass after the split
-- [ ] The release process documents the publish order and relationship between crates
-- [ ] The codebase is structurally ready for a future linter tool without another large refactor
+- [ ] `cmakefmt` can skip ignored files during recursive discovery without custom wrapper scripts
+- [ ] An editor can format stdin reliably using a virtual file path and, where supported, explicit line ranges
+- [ ] CI and pre-commit workflows can format only changed/staged files with first-party CLI support
+- [ ] `--diff` and the machine-readable output mode are stable enough for downstream tooling
+- [ ] Workflow-feature regressions are covered by CLI/integration tests and benchmarked for overhead
 
 ---
 
@@ -683,8 +696,6 @@ before the first public alpha.
 
 ## Future (post-1.0)
 
-- `--diff` mode: show unified diff of changes
-- `--files-from <FILE>` mode: read list of files from stdin/file
 - Revisit whether default parallelism should remain opt-in after very large
   codebase surveys
 - LSP server mode (long-term)
