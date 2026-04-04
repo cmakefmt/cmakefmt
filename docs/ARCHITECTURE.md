@@ -1,363 +1,350 @@
 # Architecture
 
-## Pipeline
+This document is the implementation-facing companion to the user docs in
+`site/src/`. It explains how `cmakefmt` is structured internally, which data
+flows through the pipeline, and where to make changes safely.
 
-```
-Source (String)
-    │
-    ▼  [pest grammar — src/parser/cmake.pest]
-Concrete Syntax Tree (pest::iterators::Pairs)
-    │
-    ▼  [AST builder — src/parser/ast.rs]
-Abstract Syntax Tree (Vec<Node>)
-    │
-    ▼  [Formatter — src/formatter/]
-Doc IR  (pretty::Doc)
-    │
-    ▼  [Wadler-Lindig layout engine — `pretty` crate]
-Formatted String
-```
+## Design Goals
 
-Comments are parsed as first-class tokens in the pest grammar and preserved
-as `Node::LineComment` / `Node::BracketComment` throughout the pipeline.
+The architecture is optimized around a few explicit priorities:
 
----
+1. **Semantic safety.** Formatting must preserve the meaning of a file.
+2. **Idempotency.** `format(format(x)) == format(x)` must keep holding.
+3. **Structured formatting.** CMake is parsed and classified before layout;
+   this is not a regex-based rewriter.
+4. **Configurable command awareness.** Built-in and user-defined command specs
+   drive grouping and layout decisions.
+5. **Actionable diagnostics.** Parse/config/formatter failures should explain
+   what happened and where.
+6. **Workflow-friendly speed.** The CLI should be fast enough for local loops,
+   hooks, and CI.
 
-## AST
+## Top-Level Pipeline
 
-The AST is a flat-ish tree. CMake has no nested expression grammar so there
-is no deep recursion. The top-level structure is a `File` containing a sequence
-of `Statement`s.
+At the highest level, a formatting run looks like this:
 
-```rust
-pub struct File {
-    pub statements: Vec<Statement>,
-}
-
-pub enum Statement {
-    Command(CommandInvocation),
-    LineComment(LineComment),
-    BracketComment(BracketComment),
-    Whitespace(Whitespace),   // blank lines — preserved for spacing
-}
-
-pub struct CommandInvocation {
-    pub name: Identifier,
-    pub arguments: Vec<Argument>,
-    pub leading_comments: Vec<Comment>,   // comments before the command
-    pub trailing_comment: Option<Comment>, // comment on same line as closing paren
-    pub span: Span,
-}
-
-pub enum Argument {
-    Bracket(BracketArgument),
-    Quoted(QuotedArgument),
-    Unquoted(UnquotedArgument),
-    // Separator (whitespace between args) is NOT an argument;
-    // it's handled by the formatter.
-}
+```text
+input selection
+  -> config resolution
+  -> parse source into AST
+  -> resolve command form from command registry
+  -> convert AST into pretty::Doc fragments
+  -> render final text
+  -> emit stdout / diff / check result / in-place rewrite
 ```
 
-Spans (byte offsets into the source) are preserved on all nodes so that
-error messages can point at the right location.
+The CLI does the discovery/reporting part. The library entry points begin at
+`format_source` and work from in-memory source text downward.
 
----
+## Module Layout
+
+The current code is still a single crate. The important modules are:
+
+- `src/main.rs`
+  - CLI parsing, workflow modes, discovery, summaries, reporting
+- `src/lib.rs`
+  - public library surface and re-exports
+- `src/config/`
+  - runtime config types
+  - YAML/TOML config loading and merging
+  - config template rendering
+  - legacy `cmake-format` config conversion
+- `src/parser/`
+  - `pest` grammar
+  - AST definitions
+  - source parsing and parse errors
+- `src/spec/`
+  - command-shape model
+  - embedded built-in registry
+  - override merging
+- `src/formatter/`
+  - AST to pretty-doc layout conversion
+  - comment handling
+  - barrier/disabled-region handling
+- `src/files.rs`
+  - recursive CMake file discovery and ignore integration
+- `src/error.rs`
+  - shared cross-layer error types
+
+## Parsing Pipeline
+
+### Grammar
+
+The source of truth for syntax is `src/parser/cmake.pest`.
+
+The grammar covers:
+
+- command invocations
+- quoted arguments
+- unquoted arguments
+- bracket arguments
+- line comments
+- bracket comments
+- variable references
+- generator expressions
+- continuation lines
+- top-level template placeholders used by `.cmake.in` files
+
+### AST Construction
+
+`src/parser/ast.rs` converts the raw `pest` pairs into a more convenient AST.
+
+The AST is intentionally simple. CMake does not have a rich nested expression
+language, so the tree is mostly:
+
+- file
+- statement list
+- command invocation
+- argument list
+- comments / whitespace / placeholders
+
+Spans and line/column context are preserved so later errors can point back to
+the correct source region.
+
+### Comments As First-Class Syntax
+
+Comments are not stripped and reattached later.
+
+That is a deliberate design choice because it avoids a large class of bugs
+where comment placement is guessed heuristically after formatting. Instead,
+comments remain explicit syntax elements throughout parsing and formatting.
+
+## Config Model
+
+### Runtime Config
+
+`src/config/mod.rs` defines the resolved `Config` struct that the formatter
+actually consumes at runtime.
+
+This struct is:
+
+- fully typed
+- populated from defaults
+- merged with any discovered or explicit config files
+- finally overridden by CLI flags
+
+### File Formats
+
+User config may be:
+
+- `.cmakefmt.yaml`
+- `.cmakefmt.yml`
+- `.cmakefmt.toml`
+
+YAML is the recommended user-facing format because it is much easier to read
+and maintain once custom command specs become non-trivial.
+
+### Config Resolution
+
+`src/config/file.rs` is responsible for:
+
+- loading explicit config files
+- discovering nearest project config
+- falling back to home-directory config
+- rendering starter templates
+- rendering effective config for `--show-config`
+- converting legacy `cmake-format` config files
+
+The key design constraint here is that config resolution must be inspectable.
+That is why the CLI exposes:
+
+- `--show-config-path`
+- `--show-config`
+- `--explain-config`
 
 ## Command Spec Registry
 
-The formatter needs to understand a command's argument *structure* to produce
-intelligent output — specifically: which tokens are keywords that start a new
-visual group, and how many arguments each keyword consumes.
-
-Without this, `target_link_libraries` would be formatted as a flat token list
-rather than visually grouped by `PUBLIC`/`PRIVATE`/`INTERFACE`.
-
-### Core types (`src/spec/mod.rs`)
-
-```rust
-/// How many arguments a position accepts.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum NArgs {
-    Fixed(usize),           // exactly N:        "pargs = 1"
-    ZeroOrMore,             // zero or more:     "pargs = \"*\""
-    OneOrMore,              // one or more:      "pargs = \"+\""
-    Optional,               // zero or one:      "pargs = \"?\""
-    AtLeast(usize, char),   // N or more:        "pargs = \"2+\""  (parsed from "N+")
-    Range(usize, usize),    // between N and M:  "pargs = [2, 4]"
-}
-
-/// Positional argument group spec (args before the first keyword).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PosSpec {
-    pub nargs: NArgs,
-    /// If true the formatter may sort args alphabetically (e.g. source lists).
-    #[serde(default)]
-    pub sortable: bool,
-}
-
-/// Specification for a keyword's following arguments, and any nested
-/// sub-keywords that keyword itself introduces.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KwargSpec {
-    pub nargs: NArgs,
-    /// Sub-keywords introduced by this keyword (e.g. TARGETS in install()
-    /// introduces DESTINATION, PERMISSIONS, etc.)
-    #[serde(default)]
-    pub kwargs: IndexMap<String, KwargSpec>,
-    /// Boolean flags valid inside this keyword's argument group.
-    #[serde(default)]
-    pub flags: IndexSet<String>,
-}
-
-/// The complete shape of one command invocation form.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommandForm {
-    /// Positional args before the first keyword.  Default: ZeroOrMore.
-    #[serde(default)]
-    pub pargs: PosSpec,
-    /// Keyword → spec for its argument group.
-    #[serde(default)]
-    pub kwargs: IndexMap<String, KwargSpec>,
-    /// Boolean keywords (flags) that take no arguments.
-    #[serde(default)]
-    pub flags: IndexSet<String>,
-    /// Per-command layout overrides (overrides global config for this command).
-    #[serde(default)]
-    pub layout: Option<LayoutOverrides>,
-}
-
-/// A command may have a single fixed shape, or multiple forms selected by the
-/// value of the first positional argument (the "discriminator").
-///
-/// Example: install(TARGETS ...) vs install(FILES ...) vs install(DIRECTORY ...)
-/// Each form has completely different keywords.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum CommandSpec {
-    /// All invocations have the same argument shape.
-    Single(CommandForm),
-    /// First positional argument selects the form.
-    Discriminated {
-        forms: IndexMap<String, CommandForm>,
-        /// Form to use when the first arg doesn't match any key (or is absent).
-        #[serde(default)]
-        fallback: Option<CommandForm>,
-    },
-}
-```
-
-### Fallback for unknown commands
-
-Any command **not** in the registry is formatted as if it has this spec:
-
-```rust
-CommandSpec::Single(CommandForm {
-    pargs: PosSpec { nargs: NArgs::ZeroOrMore, sortable: false },
-    kwargs: IndexMap::new(),
-    flags: IndexSet::new(),
-    layout: None,
-})
-```
-
-i.e. all arguments are treated as positional tokens with no keyword grouping.
-The Wadler-Lindig layout still applies — it just won't create per-keyword groups.
-
-### Built-in registry
-
-Shipped as an embedded TOML file (`src/spec/builtins.toml`, loaded via
-`include_str!` at compile time). Covers all ~150 CMake built-in commands.
+The formatter only produces good output if it understands command structure.
 
-Example entries:
+Without a registry, CMake would look like a flat token stream and commands such
+as `target_link_libraries`, `install`, or project-specific DSL commands would
+wrap poorly.
 
-```toml
-# ── Simple command ────────────────────────────────────────────────────────────
-[commands.cmake_minimum_required]
-pargs = "1"
-flags = ["FATAL_ERROR"]
+### Core Idea
 
-[commands.cmake_minimum_required.kwargs.VERSION]
-nargs = "1"
+Each command has a `CommandSpec`, which describes:
 
-# ── Keyword-heavy command ─────────────────────────────────────────────────────
-[commands.target_link_libraries]
-pargs = "1"   # the target name
+- leading positional arguments
+- standalone flags
+- keyword sections and their arity
+- discriminated forms when the first positional argument changes the meaning
 
-[commands.target_link_libraries.kwargs.PUBLIC]
-nargs = "*"
+### Registry Sources
 
-[commands.target_link_libraries.kwargs.PRIVATE]
-nargs = "*"
+The registry is built from:
 
-[commands.target_link_libraries.kwargs.INTERFACE]
-nargs = "*"
+- embedded built-ins in `src/spec/builtins.toml`
+- optional user overrides from config under `commands:`
 
-# ── Flag-heavy command ────────────────────────────────────────────────────────
-[commands.find_package]
-pargs = "1+"
-flags = ["EXACT", "QUIET", "REQUIRED", "NO_POLICY_SCOPE", "MODULE", "CONFIG",
-         "NO_MODULE", "GLOBAL", "OPTIONAL_COMPONENTS"]
+Built-ins are compiled in with `include_str!` and normalized once. User
+overrides are merged on top, which allows projects to:
 
-[commands.find_package.kwargs.VERSION]
-nargs = "1"
+- teach `cmakefmt` about custom macros/functions
+- override built-in command shapes when necessary
 
-[commands.find_package.kwargs.COMPONENTS]
-nargs = "+"
+### Why This Matters
 
-[commands.find_package.kwargs.OPTIONAL_COMPONENTS]
-nargs = "+"
+For example, `target_link_libraries(foo PUBLIC bar PRIVATE baz)` should not be
+formatted like four unrelated positional tokens. The registry is what tells the
+formatter that `PUBLIC` and `PRIVATE` open new sections.
 
-[commands.find_package.kwargs.HINTS]
-nargs = "*"
+## Formatter Pipeline
 
-[commands.find_package.kwargs.PATHS]
-nargs = "*"
+### Public Entry Points
 
-# ── Discriminated command (multiple forms) ────────────────────────────────────
-[commands.install]
-# install() dispatches on its first positional argument
+The main library entry points are:
 
-[commands.install.forms.TARGETS]
-pargs = "+"    # one or more targets
-flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+- `format_source`
+- `format_source_with_debug`
+- `format_source_with_registry`
+- `format_source_with_registry_debug`
 
-[commands.install.forms.TARGETS.kwargs.DESTINATION]
-nargs = "1"
+These functions parse the source, select or receive a registry, and format the
+AST into a final string.
 
-[commands.install.forms.TARGETS.kwargs.PERMISSIONS]
-nargs = "+"
+### Pretty-Printing Model
 
-[commands.install.forms.TARGETS.kwargs.COMPONENT]
-nargs = "1"
+The formatter uses the `pretty` crate, which implements a Wadler-Lindig style
+document model.
 
-[commands.install.forms.FILES]
-pargs = "+"
-flags = ["OPTIONAL"]
+The important consequence is that layout decisions are expressed as:
 
-[commands.install.forms.FILES.kwargs.DESTINATION]
-nargs = "1"
+- text fragments
+- soft line breaks
+- hard line breaks
+- indentation
+- grouping
 
-[commands.install.forms.DIRECTORY]
-pargs = "+"
+So the formatter can ask "does this group still fit flat?" instead of manually
+splitting strings line by line.
 
-[commands.install.forms.DIRECTORY.kwargs.DESTINATION]
-nargs = "1"
+### Layout Decisions
 
-# ── Tuple-valued kwargs (name-value pairs) ────────────────────────────────────
-[commands.set_target_properties]
-pargs = "+"    # one or more targets
+Most formatting behavior in `src/formatter/node.rs` is driven by:
 
-[commands.set_target_properties.kwargs.PROPERTIES]
-nargs = "*"    # treated as sequential name-value pairs by the formatter
-```
+- the effective `Config`
+- the effective per-command override for the current command
+- the selected `CommandSpec` form
+- actual rendered width
 
-### User extension via config
+Typical decisions include:
 
-Users can add specs for their own macros/functions, or override built-ins, in
-`.cmakefmt.toml`:
+- keep on one line
+- hanging wrap
+- fully vertical fallback
+- preserve disabled regions verbatim
 
-```toml
-# Define your own cmake function's argument shape so the formatter groups it
-[commands.my_add_executable]
-pargs = "1"
+### Comment Handling
 
-[commands.my_add_executable.kwargs.SRCS]
-nargs = "+"
+`src/formatter/comment.rs` turns parsed comments into layout nodes while
+preserving relative attachment:
 
-[commands.my_add_executable.kwargs.DEPS]
-nargs = "*"
+- standalone comments
+- inline/trailing comments
+- bracket comments
+- markup-aware comment handling when enabled
 
-[commands.my_add_executable.kwargs.INCLUDE_DIRS]
-nargs = "*"
+## CLI Workflow Layer
 
-# Override a built-in's layout
-[commands.message]
-layout.always_wrap = true
-```
+The CLI in `src/main.rs` is intentionally richer than "read file, write file".
 
-User-defined entries are **merged** with the built-in registry; user entries win
-on conflict.
+It handles:
 
-### How the formatter uses a spec
+- recursive discovery
+- `.cmakefmtignore` and `.gitignore`
+- Git-aware modes such as `--staged` and `--changed`
+- stdin formatting with `--stdin-path`
+- range formatting with `--lines`
+- `--check`, `--list-files`, `--diff`, and JSON reports
+- progress bars and opt-in parallelism
+- human summaries and batch error handling
 
-Given `CommandSpec` for the current command, the formatter:
+This workflow layer is part of the product, not just a thin wrapper.
 
-1. Classifies each argument token as: positional, keyword, flag, or unknown.
-2. Groups arguments into *sections*: the leading positional group + one section
-   per keyword occurrence.
-3. Applies the Wadler-Lindig layout to each section independently:
-   - Short sections stay on one line.
-   - Long sections break vertically with the keyword on its own line.
-4. Unknown tokens (not matching any keyword or flag) are folded into the nearest
-   preceding section as additional positional args.
+## Diagnostics Architecture
 
----
+The project explicitly invests in better diagnostics.
 
-## Formatter / Doc IR
+That is why parse/config/spec errors preserve:
 
-We use the `pretty` crate which implements the Wadler-Lindig algorithm.
+- file paths
+- line and column information
+- source snippets
+- likely-cause hints where possible
 
-Key Doc primitives we use:
+And why the formatter exposes debug data about:
 
-| Primitive | Meaning |
-|---|---|
-| `text(s)` | Literal string, never broken |
-| `line()` | A newline (or space when in flat/single-line mode) |
-| `hardline()` | Unconditional newline |
-| `group(doc)` | Try to lay out `doc` flat; break all `line()`s if it doesn't fit |
-| `indent(doc)` | Increase indentation level inside `doc` |
-| `concat([a, b])` | Concatenate two docs |
-| `nil()` | Empty doc |
+- file discovery
+- config provenance
+- barrier transitions
+- chosen command forms
+- chosen layout families
 
-### Argument list layout
+## Performance Model
 
-The core formatting decision for CMake is how to lay out argument lists.
-The rule is simple and mirrors `cmake-format`'s behaviour:
+The broad performance shape today is:
 
-```
-if all arguments fit on the current line:
-    command(ARG1 ARG2 ARG3)
+- parsing dominates end-to-end cost
+- formatter layout is materially smaller than parser cost
+- registry lookup is no longer a primary hotspot
+- CLI overhead matters enough to optimize, especially on multi-file runs
 
-else:
-    command(
-        ARG1
-        ARG2
-        ARG3
-    )
-```
+The benchmark and profiling policy lives in `docs/PERFORMANCE.md`.
 
-This maps cleanly to a `group(...)` containing `line()` separators:
+Practical consequence: if performance regresses, the most likely hotspots are:
 
-```rust
-// Pseudo-code
-let args_doc = group(
-    indent(
-        concat(args.iter().map(|a| concat([line(), format_arg(a)])))
-    )
-    + line()
-);
-let doc = text(name) + text("(") + args_doc + text(")");
-```
+- parser work
+- unnecessary allocation/cloning
+- repeated string normalization
+- repeated CLI bookkeeping
 
-When `group` fits on one line, `line()` renders as a space.
-When it doesn't, every `line()` renders as a newline + indentation.
+## Invariants To Protect
 
-### Blank lines between statements
+When changing the parser, registry, formatter, or CLI, keep these invariants in
+mind:
 
-Blank lines between top-level commands are preserved up to a configurable
-maximum (`max_empty_lines_between_commands`, default 1). This is handled by
-examining the `Whitespace` nodes in the AST.
+- formatted output should parse again
+- parse-tree equivalence should hold modulo intentional whitespace normalization
+- `format(format(x)) == format(x)` should hold
+- comments and disabled regions must not be lost
+- config discovery and diagnostics should remain explainable
 
----
+If a change threatens one of those invariants, it is usually architectural, not
+just cosmetic.
 
-## Config
+## Where To Extend The System
 
-User config may live in `.cmakefmt.yaml`, `.cmakefmt.yml`, or
-`.cmakefmt.toml`. YAML is preferred for hand-edited configs with larger custom
-command specs; `--dump-config` emits YAML by default and `--dump-config toml`
-prints the TOML variant. Every option mirrors or improves on the original
-`cmake-format` Python tool. All options have sane defaults so the tool works
-out of the box with no config file.
+### Add New CMake Syntax
+
+- grammar: `src/parser/cmake.pest`
+- AST conversion: `src/parser/ast.rs`
+- parser tests and fixtures
+
+### Add New Command Knowledge
+
+- built-ins: `src/spec/builtins.toml`
+- merge/lookup logic: `src/spec/registry.rs`
+- snapshot coverage for affected commands
+
+### Add New Formatting Behavior
+
+- layout logic: `src/formatter/node.rs`
+- comment-specific behavior: `src/formatter/comment.rs`
+- snapshot tests plus idempotency coverage
+
+### Add New Config Knobs
+
+- runtime config: `src/config/mod.rs`
+- file schema/template rendering: `src/config/file.rs`
+- CLI overrides if appropriate: `src/main.rs`
+- docs and tests
+
+## Related Docs
+
+- `docs/cmake-grammar.md`
+- `docs/PERFORMANCE.md`
+- `docs/ROADMAP.md`
+- `site/src/architecture.md`
 
 ```toml
 # .cmakefmt.toml  —  full reference with defaults shown

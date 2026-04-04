@@ -1,21 +1,41 @@
 # CLI Reference
 
+This page is the complete reference for the `cmakefmt` command-line interface.
+If you only want to get productive quickly, read the [Install](install.md) page
+first and come back here when you want to understand the full surface.
+
 ## Synopsis
 
 ```text
 cmakefmt [OPTIONS] [FILES]...
 ```
 
-## Inputs
+## The Four Main Ways To Run `cmakefmt`
 
-| Input | Behavior |
+| Pattern | What it does |
 | --- | --- |
-| `cmakefmt file.cmake` | Format one file to stdout. |
+| `cmakefmt CMakeLists.txt` | Format one file to stdout. |
 | `cmakefmt dir/` | Recursively discover CMake files under that directory. |
 | `cmakefmt` | Recursively discover CMake files under the current working directory. |
-| `cmakefmt -` | Read from stdin and write formatted output to stdout. |
+| `cmakefmt -` | Read one file from stdin and write formatted output to stdout. |
 
-## Input Selection
+## How Input Selection Works
+
+The most important rule to remember is:
+
+- **direct file arguments always win**
+
+If you pass a file path explicitly, `cmakefmt` will process it even if an
+ignore file or regex would have excluded it during discovery.
+
+Ignore rules only affect:
+
+- directory discovery
+- `--files-from`
+- `--staged`
+- `--changed`
+
+## Input Selection Flags
 
 | Flag | Meaning |
 | --- | --- |
@@ -29,48 +49,48 @@ cmakefmt [OPTIONS] [FILES]...
 | `--stdin-path <PATH>` | Give stdin formatting a virtual on-disk path for config discovery and diagnostics. |
 | `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges on a single target. |
 
-## Output Modes
+## Output Mode Flags
 
 | Flag | Meaning |
 | --- | --- |
 | `-i`, `--in-place` | Rewrite files on disk instead of printing formatted output. |
-| `--check` | Exit with code 1 when any selected file would change. |
+| `--check` | Exit with code `1` when any selected file would change. |
 | `--list-files` | Print only the files that would change. |
 | `--diff` | Print a unified diff instead of the full formatted output. |
 | `--report-format <human\|json>` | Switch between human terminal output and machine-readable JSON. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 
-## Execution
+## Execution Flags
 
 | Flag | Meaning |
 | --- | --- |
 | `--debug` | Emit discovery, config, barrier, and formatter diagnostics to stderr. |
 | `--quiet` | Suppress per-file human output and keep only summaries plus actual errors. |
 | `--keep-going` | Continue processing later files after a file-level parse/format error. |
-| `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. If omitted, formatting stays single-threaded. |
+| `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
-## Config And Conversion
+## Config And Conversion Flags
 
 | Flag | Meaning |
 | --- | --- |
 | `--dump-config [FORMAT]` | Print a starter config template and exit. Defaults to YAML; pass `toml` for TOML. |
 | `--show-config [FORMAT]` | Print the effective config for a single target and exit. Defaults to YAML; pass `toml` for TOML. |
-| `--show-config-path` | Print the selected config file path for a single target and exit. `--find-config-path` is a visible alias. |
+| `--show-config-path` | Print the selected config file path for a single target and exit. `--find-config-path` is an alias. |
 | `--explain-config <PATH>` | Explain config resolution for a target path, including selected files and CLI overrides. |
 | `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
-## Config Overrides
+## Config Override Flags
 
 | Flag | Meaning |
 | --- | --- |
-| `--config-file <PATH>` | Use one or more specific config files instead of config discovery. Later files override earlier ones. `--config` remains as a compatibility alias. |
+| `-c`, `--config-file <PATH>` | Use one or more specific config files instead of config discovery. Later files override earlier ones. `--config` remains a compatibility alias. |
 | `--no-config` | Ignore discovered config files and explicit `--config-file` entries. Only built-in defaults plus CLI overrides remain. |
-| `--line-width <N>` | Override `[format].line_width`. |
-| `--tab-size <N>` | Override `[format].tab_size`. |
-| `--command-case <lower\|upper\|unchanged>` | Override `[style].command_case`. |
-| `--keyword-case <lower\|upper\|unchanged>` | Override `[style].keyword_case`. |
-| `--dangle-parens <true\|false>` | Override `[format].dangle_parens`. |
+| `-l`, `--line-width <N>` | Override `format.line_width`. |
+| `--tab-size <N>` | Override `format.tab_size`. |
+| `--command-case <lower\|upper\|unchanged>` | Override `style.command_case`. |
+| `--keyword-case <lower\|upper\|unchanged>` | Override `style.keyword_case`. |
+| `--dangle-parens <true\|false>` | Override `format.dangle_parens`. |
 
 ## Exit Codes
 
@@ -80,55 +100,226 @@ cmakefmt [OPTIONS] [FILES]...
 
 ## Common Examples
 
+### Format One File To Stdout
+
 ```bash
 cmakefmt CMakeLists.txt
-cmakefmt -i .
-cmakefmt --check .
-cmakefmt --list-files --path-regex 'cmake|toolchain' .
-cmakefmt --ignore-path ci/cmakefmt.ignore --list-files .
-cmakefmt --diff CMakeLists.txt
-cmakefmt --report-format json --check .
-cmakefmt --staged --check
-cmakefmt --changed --since origin/main --check
-cmakefmt --check --quiet .
-cmakefmt --keep-going --in-place .
-git diff --name-only --diff-filter=ACMR origin/main...HEAD | cmakefmt --files-from - --check
-cat CMakeLists.txt | cmakefmt - --stdin-path subdir/CMakeLists.txt
-cmakefmt --stdin-path src/CMakeLists.txt --lines 10:25 -
-cmakefmt --colour never CMakeLists.txt
-cmakefmt --progress-bar --in-place .
-cmakefmt --config-file base.yaml --config-file team.yaml CMakeLists.txt
-cmakefmt --show-config-path src/CMakeLists.txt
-cmakefmt --show-config --line-width 100 src/CMakeLists.txt
-cmakefmt --show-config=toml src/CMakeLists.txt
-cmakefmt --explain-config src/CMakeLists.txt
-cmakefmt --no-config --show-config src/CMakeLists.txt
-cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
-cmakefmt --debug --check tests/fixtures/real_world
 ```
 
-## Discovery Precedence
+This prints the formatted file to stdout and leaves the file on disk unchanged.
+
+### Rewrite Files In Place
+
+```bash
+cmakefmt --in-place .
+```
+
+This is the "apply formatting now" mode.
+
+### Use `--check` In CI
+
+```bash
+cmakefmt --check .
+```
+
+Typical human-mode effect:
+
+```text
+would reformat src/foo/CMakeLists.txt
+would reformat cmake/Toolchain.cmake
+
+summary: selected=12 changed=2 unchanged=10 failed=0
+```
+
+If nothing would change, the exit code is `0`. If one or more files would
+change, the exit code is `1`.
+
+### List Only The Files That Would Change
+
+```bash
+cmakefmt --list-files --path-regex 'cmake|toolchain' .
+```
+
+Typical output:
+
+```text
+cmake/Toolchain.cmake
+cmake/Warnings.cmake
+```
+
+This is useful for editor integration, scripts, and review tooling.
+
+### Show The Actual Patch
+
+```bash
+cmakefmt --diff CMakeLists.txt
+```
+
+Typical output:
+
+```diff
+--- CMakeLists.txt
++++ CMakeLists.txt.formatted
+@@
+-target_link_libraries(foo PUBLIC bar baz)
++target_link_libraries(
++  foo
++  PUBLIC
++    bar
++    baz)
+```
+
+### Quiet CI Output
+
+```bash
+cmakefmt --check --quiet .
+```
+
+Typical effect:
+
+```text
+summary: selected=48 changed=3 unchanged=45 failed=0
+```
+
+This is useful when you want a clean CI log but still want a reliable exit code.
+
+### Continue Past Bad Files
+
+```bash
+cmakefmt --check --keep-going .
+```
+
+Typical effect:
+
+```text
+error: failed to parse cmake/generated.cmake:...
+error: failed to read vendor/missing.cmake:...
+
+summary: selected=48 changed=3 unchanged=43 failed=2
+```
+
+Without `--keep-going`, a human run still stops at the first file-level error.
+
+### Format Only Staged Files
+
+```bash
+cmakefmt --staged --check
+```
+
+This is the easiest pre-commit or pre-push workflow when you only want to
+touch files that are already part of the current Git change.
+
+### Format Only Changed Files Since A Ref
+
+```bash
+cmakefmt --changed --since origin/main --check
+```
+
+This is useful in review workflows where you want to check "what this branch changed".
+
+### Feed Paths From Another Tool
+
+```bash
+git diff --name-only --diff-filter=ACMR origin/main...HEAD | \
+  cmakefmt --files-from - --check
+```
+
+`--files-from` accepts newline-delimited or NUL-delimited lists.
+
+### Stdin With Correct Config Discovery
+
+```bash
+cat src/CMakeLists.txt | cmakefmt - --stdin-path src/CMakeLists.txt
+```
+
+Without `--stdin-path`, stdin formatting has no real on-disk context for config
+discovery or path-sensitive diagnostics.
+
+### Partial Formatting For Editor Workflows
+
+```bash
+cmakefmt --stdin-path src/CMakeLists.txt --lines 10:25 -
+```
+
+Use this when an editor wants to format only a selected line range instead of
+rewriting the whole buffer.
+
+### See Which Config Was Selected
+
+```bash
+cmakefmt --show-config-path src/CMakeLists.txt
+```
+
+Typical output:
+
+```text
+/path/to/project/.cmakefmt.yaml
+```
+
+### Inspect The Effective Config
+
+```bash
+cmakefmt --show-config src/CMakeLists.txt
+cmakefmt --show-config=toml src/CMakeLists.txt
+```
+
+This prints the fully resolved config after discovery plus any CLI overrides.
+
+### Explain Config Resolution
+
+```bash
+cmakefmt --explain-config src/CMakeLists.txt
+```
+
+Typical output includes:
+
+- the target path being resolved
+- config files considered
+- config file selected
+- CLI overrides applied
+
+### Generate A Starter Config
+
+```bash
+cmakefmt --dump-config > .cmakefmt.yaml
+cmakefmt --dump-config toml > .cmakefmt.toml
+```
+
+YAML is the default because it is easier to maintain once you start defining
+larger custom command specs.
+
+### Convert An Old `cmake-format` Config
+
+```bash
+cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
+```
+
+This is the fastest way to migrate an existing legacy config into the current
+`cmakefmt` schema.
+
+## Discovery Precedence And Filtering Rules
 
 - Direct file arguments are always processed, even if an ignore rule would skip them.
 - Recursive discovery honors `.cmakefmtignore` and, by default, `.gitignore`.
 - `--ignore-path` adds more ignore files for discovered directories only.
-- `--files-from`, `--staged`, and `--changed` still pass through the normal discovery filters when they produce directories or paths that need filtering.
+- `--files-from`, `--staged`, and `--changed` still pass through normal discovery filters when they produce directories or paths that need filtering.
 - `--show-config-path`, `--show-config`, and `--explain-config` resolve a single target context and make the selected config path(s) visible.
 - `--no-config` disables config discovery entirely.
 
-## Diagnostics
+## Diagnostic Quality
 
-For parse and config failures, `cmakefmt` prints a file path, line/column,
-source snippet, likely-cause hint when possible, and a repro command using
-`--debug --check`.
+For parse and config failures, `cmakefmt` prints:
 
-On multi-file human runs, `cmakefmt` also prints an end-of-run summary with
-selected / changed / unchanged / failed counts. `--keep-going` lets the run
-finish and aggregate file-level failures instead of failing immediately.
+- the file path
+- line and column information
+- source context
+- likely-cause hints when possible
+- a repro hint using `--debug --check`
 
-For issue reports, capture:
+For formatting surprises rather than hard failures, add `--debug`.
 
-- the exact command you ran
-- the full stderr output
-- the relevant `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` files
-- `--debug` output if the problem is formatting-related rather than a hard failure
+## Related Reading
+
+- [Config Reference](config.md)
+- [Formatter Behavior](behavior.md)
+- [Troubleshooting](troubleshooting.md)

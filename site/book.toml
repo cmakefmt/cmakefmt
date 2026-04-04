@@ -2,8 +2,8 @@
 authors = ["OpenAI Codex", "Project Contributors"]
 language = "en"
 src = "src"
-title = "cmakefmt Documentation"
-description = "User guide, CLI reference, config reference, migration guide, and API notes for cmakefmt."
+title = "cmakefmt: Fast CMake Formatting"
+description = "Installation guide, workflow-focused CLI reference, config guide, migration notes, API examples, and architecture notes for cmakefmt."
 
 [build]
 build-dir = "book"
