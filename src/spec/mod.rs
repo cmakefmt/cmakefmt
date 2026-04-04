@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Command-spec data model used by the formatter.
 //!
 //! The built-in registry describes the argument structure of known commands so

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! `cmakefmt` is a fast, configurable CMake formatter and parser.
 //!
 //! The crate exposes:

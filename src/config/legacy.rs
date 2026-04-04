@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Conversion support for legacy `cmake-format` configuration files.
 //!
 //! `cmake-format` historically supported Python, JSON, and YAML config files.

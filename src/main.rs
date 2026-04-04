@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::io::{self, IsTerminal, Read, Write};
@@ -2067,13 +2071,19 @@ mod tests {
             "files-from",
             "help",
             "dump-config",
+            "explain-config",
             "ignore-path",
+            "keep-going",
             "lines",
             "list-files",
+            "no-config",
             "no-gitignore",
             "parallel",
             "progress-bar",
+            "quiet",
             "report-format",
+            "show-config",
+            "show-config-path",
             "since",
             "staged",
             "stdin-path",

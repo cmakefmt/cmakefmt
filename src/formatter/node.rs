@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Command-invocation formatting logic.
 
 use crate::config::{CaseStyle, CommandConfig, Config, DangleAlign};

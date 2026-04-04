@@ -3,7 +3,7 @@ name = "cmakefmt"
 version = "0.1.0"
 edition = "2021"
 description = "A fast, correct CMake formatter"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 
 [[bin]]
 name = "cmakefmt"

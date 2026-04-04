@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Parser entry points for CMake source text.
 //!
 //! The grammar is defined in `parser/cmake.pest`, while

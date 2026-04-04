@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Runtime formatter configuration.
 //!
 //! [`Config`] is the fully resolved in-memory configuration used by the

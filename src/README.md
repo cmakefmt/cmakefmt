@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # `src/`
 
 This directory contains the implementation of `cmakefmt`.

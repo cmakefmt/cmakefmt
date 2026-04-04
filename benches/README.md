@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # `benches/`
 
 This directory contains Criterion benchmarks for `cmakefmt`.

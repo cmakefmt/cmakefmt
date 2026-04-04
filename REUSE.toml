@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2026 Puneet Matharu
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+version = 1
+
+[[annotations]]
+path = [
+  ".github/workflows/*.yml",
+  ".gitignore",
+  ".pre-commit-config.yaml",
+  "AGENTS.md",
+  "CHANGELOG.md",
+  "CLAUDE.md",
+  "CONTRIBUTING.md",
+  "Cargo.lock",
+  "Cargo.toml",
+  "LICENSE",
+  "README.md",
+  "docs/*.md",
+  "site/README.md",
+  "site/book.toml",
+  "site/src/*.md",
+  "src/parser/cmake.pest",
+  "tests/README.md",
+  "tests/fixtures/README.md",
+  "tests/fixtures/basic/*.cmake",
+  "tests/fixtures/comments/*.cmake",
+  "tests/fixtures/edge_cases/*.cmake",
+  "tests/fixtures/real_world/SOURCES.md",
+  "tests/fixtures/real_world/monorepo_root.cmake",
+  "tests/snapshots/README.md",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Puneet Matharu"
+SPDX-License-Identifier = "MIT OR Apache-2.0"
+
+[[annotations]]
+path = [
+  "tests/fixtures/real_world/abseil/CMakeLists.txt",
+  "tests/snapshots/real_world__abseil__CMakeLists_txt.snap",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2017 The Abseil Authors"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+  "tests/fixtures/real_world/catch2/CMakeLists.txt",
+  "tests/snapshots/real_world__catch2__CMakeLists_txt.snap",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "BSL-1.0"
+
+[[annotations]]
+path = [
+  "tests/fixtures/real_world/cmake_cmbzip2/CMakeLists.txt",
+  "tests/snapshots/real_world__cmake_cmbzip2__CMakeLists_txt.snap",
+  "tests/fixtures/real_world/googletest/CMakeLists.txt",
+  "tests/snapshots/real_world__googletest__CMakeLists_txt.snap",
+  "tests/fixtures/real_world/protobuf/CMakeLists.txt",
+  "tests/snapshots/real_world__protobuf__CMakeLists_txt.snap",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+[[annotations]]
+path = [
+  "tests/fixtures/real_world/llvm_tablegen/CMakeLists.txt",
+  "tests/snapshots/real_world__llvm_tablegen__CMakeLists_txt.snap",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "Apache-2.0 WITH LLVM-exception"
+
+[[annotations]]
+path = [
+  "tests/fixtures/real_world/nlohmann_json/CMakeLists.txt",
+  "tests/snapshots/real_world__nlohmann_json__CMakeLists_txt.snap",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+  "tests/fixtures/real_world/opencv_flann/CMakeLists.txt",
+  "tests/snapshots/real_world__opencv_flann__CMakeLists_txt.snap",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "Apache-2.0"

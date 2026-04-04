@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Top-level formatter entry points.
 //!
 //! These functions parse input, apply barrier handling, and render a formatted

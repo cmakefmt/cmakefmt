@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 /// A parsed CMake source file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {

@@ -36,6 +36,15 @@ Primary docs entry points:
 The user docs are authored as an `mdBook` under `site/` and published to
 GitHub Pages from the built book output.
 
+## License
+
+`cmakefmt` is dual-licensed under either:
+
+- MIT
+- Apache-2.0
+
+at your option. See [LICENSE](LICENSE) and the texts in [`LICENSES/`](LICENSES).
+
 ## Build
 
 ```bash
