@@ -11,8 +11,8 @@ use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
     convert_legacy_config_files, default_config_template_for,
     files::{discover_cmake_files_with_options, is_cmake_file, matches_filter, DiscoveryOptions},
-    format_source_with_registry, format_source_with_registry_debug, CaseStyle, Config,
-    DumpConfigFormat,
+    format_source_with_registry, format_source_with_registry_debug, render_effective_config,
+    CaseStyle, Config, DumpConfigFormat,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use pest::error::{ErrorVariant, LineColLocation};
@@ -42,7 +42,11 @@ starting point with --dump-config. By default this emits YAML; pass
 
 Legacy cmake-format JSON, YAML, and Python config files can be converted to
 .cmakefmt.toml with --convert-legacy-config. YAML is the recommended user
-config format for larger custom-command specs.";
+config format for larger custom-command specs.
+
+Use --show-config-path to inspect which config file was selected, --show-config
+to inspect the effective config after CLI overrides, and --explain-config for
+a fuller human-readable explanation of config resolution.";
 
 /// A fast, correct CMake formatter.
 #[derive(Parser, Debug)]
@@ -148,6 +152,47 @@ struct Cli {
         default_missing_value = "yaml"
     )]
     dump_config: Option<DumpConfigFormat>,
+
+    /// Print the effective config for a single target and exit.
+    ///
+    /// By default this emits YAML. Pass `toml` to print TOML instead.
+    #[arg(
+        long = "show-config",
+        value_name = "FORMAT",
+        help_heading = "Config And Conversion",
+        num_args = 0..=1,
+        default_missing_value = "yaml",
+        require_equals = true,
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths",
+        conflicts_with = "show_config_path",
+        conflicts_with = "explain_config"
+    )]
+    show_config: Option<DumpConfigFormat>,
+
+    /// Print the config file path selected for a single target and exit.
+    #[arg(
+        long = "show-config-path",
+        visible_alias = "find-config-path",
+        help_heading = "Config And Conversion",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths",
+        conflicts_with = "show_config",
+        conflicts_with = "explain_config"
+    )]
+    show_config_path: bool,
+
+    /// Explain config resolution for a target path and exit.
+    #[arg(
+        long = "explain-config",
+        value_name = "PATH",
+        help_heading = "Config And Conversion",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths",
+        conflicts_with = "show_config",
+        conflicts_with = "show_config_path"
+    )]
+    explain_config: Option<PathBuf>,
 
     /// Convert legacy cmake-format JSON, YAML, or Python config files.
     ///
@@ -325,6 +370,10 @@ struct Cli {
     )]
     config_paths: Vec<PathBuf>,
 
+    /// Disable config discovery and ignore explicit config files.
+    #[arg(long, help_heading = "Config Overrides")]
+    no_config: bool,
+
     /// Override the maximum line width.
     #[arg(short = 'l', long, help_heading = "Config Overrides")]
     line_width: Option<usize>,
@@ -436,6 +485,10 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     validate_cli(cli)?;
+
+    if cli.show_config.is_some() || cli.show_config_path || cli.explain_config.is_some() {
+        return run_config_introspection(cli);
+    }
 
     let stdout_mode = !cli.list_files && !cli.check && !cli.in_place;
     let colorize_stdout = stdout_mode && should_colorize_stdout(cli.colour);
@@ -617,6 +670,12 @@ fn write_stdout_header(display_name: &str, colorize: bool) -> Result<(), cmakefm
 }
 
 fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
+    if cli.no_config && !cli.config_paths.is_empty() {
+        return Err(cmakefmt::Error::Formatter(
+            "--no-config cannot be combined with --config-file".to_owned(),
+        ));
+    }
+
     if (cli.staged || cli.changed) && (!cli.files.is_empty() || !cli.files_from.is_empty()) {
         return Err(cmakefmt::Error::Formatter(
             "--staged/--changed cannot be combined with explicit input paths or --files-from"
@@ -636,7 +695,148 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
         ));
     }
 
+    if is_config_introspection_mode(cli) {
+        if cli.check || cli.list_files || cli.in_place || cli.diff {
+            return Err(cmakefmt::Error::Formatter(
+                "config introspection flags cannot be combined with formatting output modes"
+                    .to_owned(),
+            ));
+        }
+        if cli.report_format != ReportFormat::Human {
+            return Err(cmakefmt::Error::Formatter(
+                "config introspection flags only support human output".to_owned(),
+            ));
+        }
+        if cli.staged || cli.changed || !cli.files_from.is_empty() {
+            return Err(cmakefmt::Error::Formatter(
+                "config introspection expects a single explicit path or stdin context".to_owned(),
+            ));
+        }
+    }
+
     Ok(())
+}
+
+fn is_config_introspection_mode(cli: &Cli) -> bool {
+    cli.show_config.is_some() || cli.show_config_path || cli.explain_config.is_some()
+}
+
+fn run_config_introspection(cli: &Cli) -> Result<u8, cmakefmt::Error> {
+    if let Some(path) = &cli.explain_config {
+        return explain_config(cli, path);
+    }
+
+    let target = resolve_config_probe_target(cli)?;
+    let target_path = target.as_deref();
+    let config_context = resolve_config_context(cli, target_path);
+
+    if cli.show_config_path {
+        for path in &config_context.sources {
+            println!("{}", path.display());
+        }
+        return Ok(EXIT_OK);
+    }
+
+    if let Some(format) = cli.show_config {
+        let (config, _, _) = build_context(cli, target_path)?;
+        let rendered = render_effective_config(&config, format)?;
+        print!("{rendered}");
+        if !rendered.ends_with('\n') {
+            println!();
+        }
+        return Ok(EXIT_OK);
+    }
+
+    Ok(EXIT_OK)
+}
+
+fn explain_config(cli: &Cli, path: &Path) -> Result<u8, cmakefmt::Error> {
+    let (config, _, config_context) = build_context(cli, Some(path))?;
+    println!("target: {}", path.display());
+    println!("config mode: {}", describe_config_mode(config_context.mode));
+    if config_context.sources.is_empty() {
+        println!("config files: none");
+    } else {
+        println!("config files:");
+        for source in &config_context.sources {
+            println!("  - {}", source.display());
+        }
+    }
+
+    let cli_overrides = describe_cli_overrides(cli);
+    println!("{cli_overrides}");
+    println!();
+    println!("effective config:");
+    let rendered = render_effective_config(&config, DumpConfigFormat::Yaml)?;
+    print!("{rendered}");
+    if !rendered.ends_with('\n') {
+        println!();
+    }
+    Ok(EXIT_OK)
+}
+
+fn resolve_config_probe_target(cli: &Cli) -> Result<Option<PathBuf>, cmakefmt::Error> {
+    if cli.files.is_empty() {
+        return Ok(Some(PathBuf::from(".")));
+    }
+
+    if cli.files.len() != 1 {
+        return Err(cmakefmt::Error::Formatter(
+            "config introspection expects exactly one explicit path".to_owned(),
+        ));
+    }
+
+    if cli.files[0] == "-" {
+        return cli.stdin_path.clone().map(Some).ok_or_else(|| {
+            cmakefmt::Error::Formatter(
+                "stdin config introspection requires --stdin-path".to_owned(),
+            )
+        });
+    }
+
+    Ok(Some(PathBuf::from(&cli.files[0])))
+}
+
+fn resolve_config_context(cli: &Cli, file_path: Option<&Path>) -> ConfigContext {
+    if cli.no_config {
+        return ConfigContext {
+            mode: ConfigSourceMode::Disabled,
+            sources: Vec::new(),
+        };
+    }
+
+    if !cli.config_paths.is_empty() {
+        return ConfigContext {
+            mode: ConfigSourceMode::Explicit,
+            sources: cli.config_paths.clone(),
+        };
+    }
+
+    if let Some(path) = file_path {
+        let sources = Config::config_sources_for(path);
+        return ConfigContext {
+            mode: if sources.is_empty() {
+                ConfigSourceMode::DefaultsOnly
+            } else {
+                ConfigSourceMode::Discovered
+            },
+            sources,
+        };
+    }
+
+    ConfigContext {
+        mode: ConfigSourceMode::DefaultsOnly,
+        sources: Vec::new(),
+    }
+}
+
+fn describe_config_mode(mode: ConfigSourceMode) -> &'static str {
+    match mode {
+        ConfigSourceMode::Disabled => "disabled by --no-config",
+        ConfigSourceMode::Explicit => "explicit --config-file override(s)",
+        ConfigSourceMode::Discovered => "discovered from the target path",
+        ConfigSourceMode::DefaultsOnly => "defaults only",
+    }
 }
 
 fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmakefmt::Error> {
@@ -819,24 +1019,32 @@ fn push_unique_path(
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ConfigSourceMode {
+    Disabled,
+    Explicit,
+    Discovered,
+    DefaultsOnly,
+}
+
+#[derive(Clone, Debug)]
+struct ConfigContext {
+    mode: ConfigSourceMode,
+    sources: Vec<PathBuf>,
+}
+
 /// Build a formatting context by layering: defaults → config files → CLI
 /// overrides, and by merging any `[commands]` spec overrides from the same
 /// config files into the command registry.
 fn build_context(
     cli: &Cli,
     file_path: Option<&Path>,
-) -> Result<(Config, CommandRegistry, Vec<PathBuf>), cmakefmt::Error> {
-    let config_sources = if !cli.config_paths.is_empty() {
-        cli.config_paths.clone()
-    } else if let Some(path) = file_path {
-        Config::config_sources_for(path)
-    } else {
-        Vec::new()
-    };
+) -> Result<(Config, CommandRegistry, ConfigContext), cmakefmt::Error> {
+    let config_context = resolve_config_context(cli, file_path);
 
-    let mut config = Config::from_files(&config_sources)?;
+    let mut config = Config::from_files(&config_context.sources)?;
     let mut registry = CommandRegistry::builtins().clone();
-    for path in &config_sources {
+    for path in &config_context.sources {
         registry.merge_override_file(path)?;
     }
 
@@ -856,7 +1064,7 @@ fn build_context(
         config.dangle_parens = v;
     }
 
-    Ok((config, registry, config_sources))
+    Ok((config, registry, config_context))
 }
 
 #[derive(Clone)]
@@ -973,14 +1181,14 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         .map_err(cmakefmt::Error::Io)?;
 
     let stdin_path = cli.stdin_path.as_deref();
-    let (config, registry, config_sources) = build_context(cli, stdin_path)?;
+    let (config, registry, config_context) = build_context(cli, stdin_path)?;
     let display_name = stdin_path
         .map(|path| path.display().to_string())
         .unwrap_or_else(|| "<stdin>".to_owned());
     let mut debug_lines = if cli.debug {
         vec![
             format!("processing {display_name}"),
-            describe_config_sources(&config_sources),
+            describe_config_context(&config_context),
         ]
     } else {
         Vec::new()
@@ -1044,11 +1252,11 @@ fn process_path(
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     let source = std::fs::read_to_string(path)
         .map_err(|err| cmakefmt::Error::Formatter(format!("{}: {err}", path.display())))?;
-    let (config, registry, config_sources) = build_context(cli, Some(path))?;
+    let (config, registry, config_context) = build_context(cli, Some(path))?;
     let mut debug_lines = if cli.debug {
         vec![
             format!("processing {}", path.display()),
-            describe_config_sources(&config_sources),
+            describe_config_context(&config_context),
             describe_cli_overrides(cli),
         ]
     } else {
@@ -1427,18 +1635,19 @@ fn render_human_summary(summary: &RunSummary) -> String {
     )
 }
 
-fn describe_config_sources(config_sources: &[PathBuf]) -> String {
-    if config_sources.is_empty() {
-        "config sources: defaults only".to_owned()
-    } else {
-        format!(
+fn describe_config_context(config_context: &ConfigContext) -> String {
+    match config_context.mode {
+        ConfigSourceMode::Disabled => "config sources: disabled by --no-config".to_owned(),
+        ConfigSourceMode::DefaultsOnly => "config sources: defaults only".to_owned(),
+        ConfigSourceMode::Explicit | ConfigSourceMode::Discovered => format!(
             "config sources: {}",
-            config_sources
+            config_context
+                .sources
                 .iter()
                 .map(|path| path.display().to_string())
                 .collect::<Vec<_>>()
                 .join(", ")
-        )
+        ),
     }
 }
 

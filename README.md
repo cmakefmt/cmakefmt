@@ -196,6 +196,37 @@ Print the default YAML config template:
 cmakefmt --dump-config
 ```
 
+Inspect the config file path selected for a target:
+
+```bash
+cmakefmt --show-config-path src/CMakeLists.txt
+```
+
+Inspect the effective config, including CLI overrides:
+
+```bash
+cmakefmt --show-config --line-width 100 src/CMakeLists.txt
+```
+
+Print that effective config as TOML instead:
+
+```bash
+cmakefmt --show-config=toml src/CMakeLists.txt
+```
+
+Explain config resolution in more detail:
+
+```bash
+cmakefmt --explain-config src/CMakeLists.txt
+```
+
+Ignore discovered config files entirely and use only defaults plus CLI
+overrides:
+
+```bash
+cmakefmt --no-config --show-config src/CMakeLists.txt
+```
+
 Print the TOML config template explicitly:
 
 ```bash
@@ -235,6 +266,9 @@ cmakefmt [OPTIONS] [FILES]...
       --no-gitignore
       --files-from <PATH>
       --dump-config
+      --show-config [<FORMAT>]
+      --show-config-path
+      --explain-config <PATH>
       --convert-legacy-config <PATH>
       --debug
       --quiet
@@ -250,6 +284,7 @@ cmakefmt [OPTIONS] [FILES]...
       --parallel [<JOBS>]
       --progress-bar
       --config-file <PATH>
+      --no-config
       --line-width <N>
       --tab-size <N>
       --command-case <lower|upper|unchanged>

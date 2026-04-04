@@ -1164,6 +1164,167 @@ fn dump_config_toml_prints_template() {
 }
 
 #[test]
+fn show_config_prints_effective_yaml_config() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 99\nstyle:\n  command_case: upper\n",
+    );
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--show-config", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("format:"));
+    assert!(stdout.contains("line_width: 99"));
+    assert!(stdout.contains("style:"));
+    assert!(stdout.contains("command_case: upper"));
+}
+
+#[test]
+fn show_config_applies_cli_overrides() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 99\n",
+    );
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--show-config",
+            "--line-width",
+            "120",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("line_width: 120"));
+}
+
+#[test]
+fn show_config_path_prints_nearest_config() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join(".git")).unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.toml"),
+        "[style]\ncommand_case = \"upper\"\n",
+    );
+    let nested = dir.path().join("nested");
+    std::fs::create_dir_all(&nested).unwrap();
+    write_file(
+        &nested.join(".cmakefmt.yaml"),
+        "style:\n  command_case: lower\n",
+    );
+    let file = nested.join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--show-config-path", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!("{}\n", nested.join(".cmakefmt.yaml").display())
+    );
+}
+
+#[test]
+fn find_config_path_alias_works() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join(".cmakefmt.yaml");
+    write_file(&config, "style:\n  command_case: upper\n");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--find-config-path", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!("{}\n", config.display())
+    );
+}
+
+#[test]
+fn no_config_ignores_discovered_config_for_show_config() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 99\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--no-config", "--show-config", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("line_width: 80"));
+}
+
+#[test]
+fn explain_config_reports_sources_and_overrides() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join(".cmakefmt.yaml");
+    write_file(&config, "format:\n  line_width: 99\n");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--explain-config",
+            file.to_str().unwrap(),
+            "--line-width",
+            "120",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains(&format!("target: {}", file.display())));
+    assert!(stdout.contains("config mode: discovered from the target path"));
+    assert!(stdout.contains(&config.display().to_string()));
+    assert!(stdout.contains("cli overrides: line_width=120"));
+    assert!(stdout.contains("effective config:"));
+    assert!(stdout.contains("line_width: 120"));
+}
+
+#[test]
+fn show_config_rejects_multiple_paths() {
+    let dir = tempfile::tempdir().unwrap();
+    let a = dir.path().join("a.cmake");
+    let b = dir.path().join("b.cmake");
+    write_file(&a, "set(A value)\n");
+    write_file(&b, "set(B value)\n");
+
+    let output = cmakefmt()
+        .args(["--show-config", a.to_str().unwrap(), b.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("config introspection expects exactly one explicit path"));
+}
+
+#[test]
 fn debug_mode_reports_config_and_barriers() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join(".git")).unwrap();
@@ -1341,9 +1502,14 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains(".cmakefmt.toml"));
     assert!(stdout.contains("--colour <COLOUR>"));
     assert!(stdout.contains("--dump-config [<FORMAT>]"));
+    assert!(stdout.contains("--show-config[=<FORMAT>]"));
+    assert!(stdout.contains("--show-config-path"));
+    assert!(stdout.contains("--find-config-path"));
+    assert!(stdout.contains("--explain-config <PATH>"));
     assert!(stdout.contains("--in-place"));
     assert!(stdout.contains("-c, --config-file <PATH>"));
     assert!(stdout.contains("--config-file <PATH>"));
+    assert!(stdout.contains("--no-config"));
     assert!(stdout.contains("--convert-legacy-config <PATH>"));
     assert!(stdout.contains("-l, --line-width <LINE_WIDTH>"));
     assert!(stdout.contains("--list-files"));

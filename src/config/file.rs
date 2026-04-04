@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::{CaseStyle, Config, DangleAlign, PerCommandConfig};
 use crate::error::{Error, FileParseError, Result};
@@ -109,6 +109,22 @@ pub fn default_config_template_for(format: DumpConfigFormat) -> String {
     match format {
         DumpConfigFormat::Yaml => default_config_template_yaml(),
         DumpConfigFormat::Toml => default_config_template_toml(),
+    }
+}
+
+/// Render a resolved runtime config back into the user-facing config schema.
+///
+/// This is primarily used by CLI introspection commands such as
+/// `cmakefmt --show-config`.
+pub fn render_effective_config(config: &Config, format: DumpConfigFormat) -> Result<String> {
+    let view = EffectiveConfigFile::from(config);
+    match format {
+        DumpConfigFormat::Yaml => serde_yaml::to_string(&view).map_err(|err| {
+            Error::Formatter(format!("failed to render effective config as YAML: {err}"))
+        }),
+        DumpConfigFormat::Toml => toml::to_string_pretty(&view).map_err(|err| {
+            Error::Formatter(format!("failed to render effective config as TOML: {err}"))
+        }),
     }
 }
 
@@ -232,6 +248,90 @@ fn default_config_template_toml() -> String {
         hashruler_min_length = Config::default().hashruler_min_length,
         canonicalize_hashrulers = Config::default().canonicalize_hashrulers,
     )
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct EffectiveConfigFile {
+    format: EffectiveFormatSection,
+    style: EffectiveStyleSection,
+    markup: EffectiveMarkupSection,
+    per_command_overrides: HashMap<String, PerCommandConfig>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct EffectiveFormatSection {
+    line_width: usize,
+    tab_size: usize,
+    use_tabs: bool,
+    max_empty_lines: usize,
+    max_hanging_wrap_lines: usize,
+    max_hanging_wrap_positional_args: usize,
+    max_hanging_wrap_groups: usize,
+    dangle_parens: bool,
+    dangle_align: DangleAlign,
+    min_prefix_length: usize,
+    max_prefix_length: usize,
+    space_before_control_paren: bool,
+    space_before_definition_paren: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct EffectiveStyleSection {
+    command_case: CaseStyle,
+    keyword_case: CaseStyle,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct EffectiveMarkupSection {
+    enable_markup: bool,
+    reflow_comments: bool,
+    first_comment_is_literal: bool,
+    literal_comment_pattern: String,
+    bullet_char: String,
+    enum_char: String,
+    fence_pattern: String,
+    ruler_pattern: String,
+    hashruler_min_length: usize,
+    canonicalize_hashrulers: bool,
+}
+
+impl From<&Config> for EffectiveConfigFile {
+    fn from(config: &Config) -> Self {
+        Self {
+            format: EffectiveFormatSection {
+                line_width: config.line_width,
+                tab_size: config.tab_size,
+                use_tabs: config.use_tabchars,
+                max_empty_lines: config.max_empty_lines,
+                max_hanging_wrap_lines: config.max_lines_hwrap,
+                max_hanging_wrap_positional_args: config.max_pargs_hwrap,
+                max_hanging_wrap_groups: config.max_subgroups_hwrap,
+                dangle_parens: config.dangle_parens,
+                dangle_align: config.dangle_align,
+                min_prefix_length: config.min_prefix_chars,
+                max_prefix_length: config.max_prefix_chars,
+                space_before_control_paren: config.separate_ctrl_name_with_space,
+                space_before_definition_paren: config.separate_fn_name_with_space,
+            },
+            style: EffectiveStyleSection {
+                command_case: config.command_case,
+                keyword_case: config.keyword_case,
+            },
+            markup: EffectiveMarkupSection {
+                enable_markup: config.enable_markup,
+                reflow_comments: config.reflow_comments,
+                first_comment_is_literal: config.first_comment_is_literal,
+                literal_comment_pattern: config.literal_comment_pattern.clone(),
+                bullet_char: config.bullet_char.clone(),
+                enum_char: config.enum_char.clone(),
+                fence_pattern: config.fence_pattern.clone(),
+                ruler_pattern: config.ruler_pattern.clone(),
+                hashruler_min_length: config.hashruler_min_length,
+                canonicalize_hashrulers: config.canonicalize_hashrulers,
+            },
+            per_command_overrides: config.per_command_overrides.clone(),
+        }
+    }
 }
 
 fn default_config_template_yaml() -> String {

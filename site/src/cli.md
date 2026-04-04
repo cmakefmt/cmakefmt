@@ -55,6 +55,9 @@ cmakefmt [OPTIONS] [FILES]...
 | Flag | Meaning |
 | --- | --- |
 | `--dump-config [FORMAT]` | Print a starter config template and exit. Defaults to YAML; pass `toml` for TOML. |
+| `--show-config [FORMAT]` | Print the effective config for a single target and exit. Defaults to YAML; pass `toml` for TOML. |
+| `--show-config-path` | Print the selected config file path for a single target and exit. `--find-config-path` is a visible alias. |
+| `--explain-config <PATH>` | Explain config resolution for a target path, including selected files and CLI overrides. |
 | `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
 ## Config Overrides
@@ -62,6 +65,7 @@ cmakefmt [OPTIONS] [FILES]...
 | Flag | Meaning |
 | --- | --- |
 | `--config-file <PATH>` | Use one or more specific config files instead of config discovery. Later files override earlier ones. `--config` remains as a compatibility alias. |
+| `--no-config` | Ignore discovered config files and explicit `--config-file` entries. Only built-in defaults plus CLI overrides remain. |
 | `--line-width <N>` | Override `[format].line_width`. |
 | `--tab-size <N>` | Override `[format].tab_size`. |
 | `--command-case <lower\|upper\|unchanged>` | Override `[style].command_case`. |
@@ -94,6 +98,11 @@ cmakefmt --stdin-path src/CMakeLists.txt --lines 10:25 -
 cmakefmt --colour never CMakeLists.txt
 cmakefmt --progress-bar --in-place .
 cmakefmt --config-file base.yaml --config-file team.yaml CMakeLists.txt
+cmakefmt --show-config-path src/CMakeLists.txt
+cmakefmt --show-config --line-width 100 src/CMakeLists.txt
+cmakefmt --show-config=toml src/CMakeLists.txt
+cmakefmt --explain-config src/CMakeLists.txt
+cmakefmt --no-config --show-config src/CMakeLists.txt
 cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
 cmakefmt --debug --check tests/fixtures/real_world
 ```
@@ -104,6 +113,8 @@ cmakefmt --debug --check tests/fixtures/real_world
 - Recursive discovery honors `.cmakefmtignore` and, by default, `.gitignore`.
 - `--ignore-path` adds more ignore files for discovered directories only.
 - `--files-from`, `--staged`, and `--changed` still pass through the normal discovery filters when they produce directories or paths that need filtering.
+- `--show-config-path`, `--show-config`, and `--explain-config` resolve a single target context and make the selected config path(s) visible.
+- `--no-config` disables config discovery entirely.
 
 ## Diagnostics
 

@@ -8,7 +8,9 @@
 pub mod file;
 mod legacy;
 /// Render a commented starter config template.
-pub use file::{default_config_template, default_config_template_for, DumpConfigFormat};
+pub use file::{
+    default_config_template, default_config_template_for, render_effective_config, DumpConfigFormat,
+};
 pub use legacy::convert_legacy_config_files;
 
 use std::collections::HashMap;
