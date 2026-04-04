@@ -1,18 +1,18 @@
 # Install
 
-This page covers the practical ways to get `cmakefmt` running today, how to
-bootstrap a project config, and how to wire the formatter into local workflows.
+Get `cmakefmt` running, wire it into your project, and never think about CMake
+formatting again.
 
 ## Current Installation Options
 
-`cmakefmt` has not reached its public alpha release yet, so the supported
-installation paths today are repository-based:
+`cmakefmt` has not yet reached its public alpha release, so the supported paths
+today are repository-based:
 
 - build from source with `cargo build --release`
 - install from this checkout with `cargo install --path .`
 
-First-party package-manager distribution is planned for the alpha-release
-phase. Until then, expect Cargo or a source checkout to be the main path.
+First-party package-manager distribution is coming in the alpha-release phase.
+Until then, Cargo is the fastest path to a working binary.
 
 ## Build From This Repository
 
@@ -23,7 +23,7 @@ cargo build --release
 ./target/release/cmakefmt --help
 ```
 
-This is the best path if you are actively developing `cmakefmt`, reviewing
+This is the right path if you are actively developing `cmakefmt`, reviewing
 changes, or benchmarking local modifications.
 
 ## Install With Cargo
@@ -32,7 +32,7 @@ changes, or benchmarking local modifications.
 cargo install --path .
 ```
 
-After that, verify the binary:
+Verify the binary is on your path:
 
 ```bash
 cmakefmt --version
@@ -41,7 +41,7 @@ cmakefmt --help
 
 ## First Project Setup
 
-Generate a starter config:
+Dump a starter config into your repo root:
 
 ```bash
 cmakefmt --dump-config > .cmakefmt.yaml
@@ -53,13 +53,13 @@ Why YAML by default?
 - it is the recommended user-facing format for `cmakefmt`
 - `--dump-config toml` still exists if you prefer TOML
 
-Then check your project without rewriting anything:
+Do a dry run — check your whole project without rewriting a single file:
 
 ```bash
 cmakefmt --check .
 ```
 
-If the output looks good, rewrite files in place:
+When you are happy with what you see, apply the formatting:
 
 ```bash
 cmakefmt --in-place .
@@ -67,7 +67,7 @@ cmakefmt --in-place .
 
 ## Typical Local Workflow
 
-The most common day-to-day commands are:
+The four commands you will reach for every day:
 
 ```bash
 cmakefmt --check .
@@ -76,48 +76,48 @@ cmakefmt --staged --check
 cmakefmt --changed --since origin/main --check
 ```
 
-What each one is for:
+What each one does:
 
 - `--check .`: CI-safe validation for a repository or directory
 - `--in-place .`: rewrite all discovered CMake files
-- `--staged --check`: quick pre-commit guard for staged files only
-- `--changed --since origin/main --check`: review branch-only changes in a PR workflow
+- `--staged --check`: pre-commit guard — only touches staged files
+- `--changed --since origin/main --check`: PR-scoped check for branch-only changes
 
 ## Pre-commit
 
-The repository already ships a `pre-commit` configuration. Install both the
-normal commit hooks and the pre-push hooks:
+The repository ships a `pre-commit` configuration out of the box. Install both
+commit and pre-push hooks:
 
 ```bash
 pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-Useful manual spot checks:
+Useful spot checks:
 
 ```bash
 pre-commit run --all-files
 cmakefmt --staged --check
 ```
 
-That shipped hook set covers both code-quality checks and REUSE/license
-metadata checks, so it is worth installing early in a contributor workflow.
+The shipped hook set covers code-quality checks and REUSE/license metadata
+validation — worth installing early in any contributor workflow.
 
 ## CI-Friendly Shell Usage
 
-For a plain shell-based CI job, this is the simplest baseline:
+The simplest CI baseline:
 
 ```bash
 cmakefmt --check .
 ```
 
-If you want quieter output in CI logs:
+For quieter CI logs:
 
 ```bash
 cmakefmt --check --quiet .
 ```
 
-If you want machine-readable output:
+For machine-readable output that scripts or dashboards can consume:
 
 ```bash
 cmakefmt --check --report-format json .
@@ -125,24 +125,24 @@ cmakefmt --check --report-format json .
 
 ## Editor And Stdin Workflows
 
-Many editor integrations format a buffer through stdin instead of giving the
-tool a real path. In that case, use `--stdin-path` so config discovery and
-diagnostics still behave as if the file lived on disk:
+Many editor integrations pipe a buffer through stdin rather than passing a real
+file path. Use `--stdin-path` to give config discovery and diagnostics the
+on-disk context they need:
 
 ```bash
 cat src/CMakeLists.txt | cmakefmt - --stdin-path src/CMakeLists.txt
 ```
 
-That is also the right pattern for ad-hoc scripts and editor commands.
+This is also the right pattern for ad-hoc scripts and custom editor commands.
 
 ## Config Bootstrap Tips
 
-If your project uses many custom CMake functions/macros:
+If your project uses many custom CMake functions or macros:
 
 - start from `--dump-config`
 - keep the file as `.cmakefmt.yaml`
-- define syntax under `commands:`
-- use `per_command_overrides:` only for layout/style tweaks
+- define command syntax under `commands:`
+- use `per_command_overrides:` only for layout and style tweaks
 
 If you are debugging config discovery:
 
@@ -154,7 +154,7 @@ cmakefmt --explain-config src/CMakeLists.txt
 
 ## Local Docs Preview
 
-Use `mdbook` to preview the published docs locally:
+Preview the published docs locally with `mdbook`:
 
 ```bash
 mdbook serve site
@@ -170,8 +170,6 @@ Make sure Cargo's install bin directory is on your `PATH`.
 
 ### The formatter is using the wrong config
 
-Use:
-
 ```bash
 cmakefmt --show-config-path path/to/CMakeLists.txt
 cmakefmt --explain-config path/to/CMakeLists.txt
@@ -179,11 +177,9 @@ cmakefmt --explain-config path/to/CMakeLists.txt
 
 ### A hook or script only sees stdin and ignores my project config
 
-Use `--stdin-path` with the buffer's real project-relative path.
+Pass `--stdin-path` with the buffer's real project-relative path.
 
 ### I want TOML instead of YAML
-
-That is supported:
 
 ```bash
 cmakefmt --dump-config toml > .cmakefmt.toml

@@ -1,8 +1,8 @@
 # CLI Reference
 
-This page is the complete reference for the `cmakefmt` command-line interface.
-If you only want to get productive quickly, read the [Install](install.md) page
-first and come back here when you want to understand the full surface.
+The complete reference for everything `cmakefmt` can do from the command line.
+If you just want to get up and running, start with [Install](install.md) first
+and come back here when you want the full picture.
 
 ## Synopsis
 
@@ -21,12 +21,12 @@ cmakefmt [OPTIONS] [FILES]...
 
 ## How Input Selection Works
 
-The most important rule to remember is:
+One rule governs everything:
 
 - **direct file arguments always win**
 
-If you pass a file path explicitly, `cmakefmt` will process it even if an
-ignore file or regex would have excluded it during discovery.
+If you pass a file path explicitly, `cmakefmt` processes it even if an ignore
+file or regex would have excluded it during discovery.
 
 Ignore rules only affect:
 
@@ -106,7 +106,7 @@ Ignore rules only affect:
 cmakefmt CMakeLists.txt
 ```
 
-This prints the formatted file to stdout and leaves the file on disk unchanged.
+Prints the formatted file to stdout. The file on disk is untouched.
 
 ### Rewrite Files In Place
 
@@ -114,7 +114,7 @@ This prints the formatted file to stdout and leaves the file on disk unchanged.
 cmakefmt --in-place .
 ```
 
-This is the "apply formatting now" mode.
+The "apply formatting now" mode. Every discovered CMake file gets rewritten.
 
 ### Use `--check` In CI
 
@@ -122,7 +122,7 @@ This is the "apply formatting now" mode.
 cmakefmt --check .
 ```
 
-Typical human-mode effect:
+Typical human-mode output:
 
 ```text
 would reformat src/foo/CMakeLists.txt
@@ -131,8 +131,8 @@ would reformat cmake/Toolchain.cmake
 summary: selected=12 changed=2 unchanged=10 failed=0
 ```
 
-If nothing would change, the exit code is `0`. If one or more files would
-change, the exit code is `1`.
+Exit code `0` means nothing would change. Exit code `1` means at least one
+file is out of format — exactly what CI needs.
 
 ### List Only The Files That Would Change
 
@@ -147,7 +147,8 @@ cmake/Toolchain.cmake
 cmake/Warnings.cmake
 ```
 
-This is useful for editor integration, scripts, and review tooling.
+Useful for editor integration, scripts, and review tooling that needs a
+precise list without actually reformatting anything.
 
 ### Show The Actual Patch
 
@@ -181,7 +182,7 @@ Typical effect:
 summary: selected=48 changed=3 unchanged=45 failed=0
 ```
 
-This is useful when you want a clean CI log but still want a reliable exit code.
+A clean log with a reliable exit code — ideal for high-volume CI pipelines.
 
 ### Continue Past Bad Files
 
@@ -198,7 +199,7 @@ error: failed to read vendor/missing.cmake:...
 summary: selected=48 changed=3 unchanged=43 failed=2
 ```
 
-Without `--keep-going`, a human run still stops at the first file-level error.
+Without `--keep-going`, the run stops at the first file-level error.
 
 ### Format Only Staged Files
 
@@ -206,8 +207,8 @@ Without `--keep-going`, a human run still stops at the first file-level error.
 cmakefmt --staged --check
 ```
 
-This is the easiest pre-commit or pre-push workflow when you only want to
-touch files that are already part of the current Git change.
+The easiest pre-commit or pre-push workflow — only touches files that are
+already part of the current Git change.
 
 ### Format Only Changed Files Since A Ref
 
@@ -215,7 +216,8 @@ touch files that are already part of the current Git change.
 cmakefmt --changed --since origin/main --check
 ```
 
-This is useful in review workflows where you want to check "what this branch changed".
+Perfect for PR workflows. Checks only "what this branch changed" rather than
+the entire repository.
 
 ### Feed Paths From Another Tool
 
@@ -224,7 +226,8 @@ git diff --name-only --diff-filter=ACMR origin/main...HEAD | \
   cmakefmt --files-from - --check
 ```
 
-`--files-from` accepts newline-delimited or NUL-delimited lists.
+`--files-from` accepts newline-delimited or NUL-delimited path lists, so it
+composites cleanly with any tool that can emit file paths.
 
 ### Stdin With Correct Config Discovery
 
@@ -232,7 +235,7 @@ git diff --name-only --diff-filter=ACMR origin/main...HEAD | \
 cat src/CMakeLists.txt | cmakefmt - --stdin-path src/CMakeLists.txt
 ```
 
-Without `--stdin-path`, stdin formatting has no real on-disk context for config
+Without `--stdin-path`, stdin formatting has no on-disk context for config
 discovery or path-sensitive diagnostics.
 
 ### Partial Formatting For Editor Workflows
@@ -263,7 +266,8 @@ cmakefmt --show-config src/CMakeLists.txt
 cmakefmt --show-config=toml src/CMakeLists.txt
 ```
 
-This prints the fully resolved config after discovery plus any CLI overrides.
+Prints the fully resolved config after discovery plus any CLI overrides.
+No more guessing what the formatter is actually using.
 
 ### Explain Config Resolution
 
@@ -294,8 +298,7 @@ larger custom command specs.
 cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
 ```
 
-This is the fastest way to migrate an existing legacy config into the current
-`cmakefmt` schema.
+The fastest path through a legacy config migration.
 
 ## Discovery Precedence And Filtering Rules
 
@@ -316,7 +319,8 @@ For parse and config failures, `cmakefmt` prints:
 - likely-cause hints when possible
 - a repro hint using `--debug --check`
 
-For formatting surprises rather than hard failures, add `--debug`.
+When formatting results surprise you rather than hard-failing, reach for
+`--debug` first.
 
 ## Related Reading
 

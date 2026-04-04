@@ -1,28 +1,28 @@
 # Library API
 
-`cmakefmt` is primarily a CLI tool, but the crate already exposes a useful
-embedded API for Rust code that wants to parse or format CMake sources.
-
-This page focuses on the entry points you are most likely to use in real code.
+`cmakefmt` is primarily a CLI tool, but the crate already exposes a capable
+embedded API for Rust code that wants to parse or format CMake sources
+in-process — no subprocess, no shell escape, no overhead.
 
 ## When To Use The Library
 
-The crate is a good fit if you want to:
+The crate is a strong fit when you want to:
 
 - format generated CMake from Rust code
 - build editor or IDE tooling around CMake formatting
 - run `cmakefmt` in-process instead of spawning a subprocess
 - experiment with custom command registries
-- parse CMake and inspect the AST
+- parse CMake and inspect the AST directly
 
 ## Crate Status
 
-The library API is usable now, but the project is still pre-`1.0`. Expect some
-surface churn until the public alpha/release phases settle compatibility.
+The library API is usable today, but the project is still pre-`1.0`. Expect
+some surface evolution until the public alpha/release phases settle
+compatibility guarantees.
 
 ## Public Entry Points
 
-The most important items today are:
+The most important items today:
 
 - `format_source`
 - `format_source_with_debug`
@@ -35,7 +35,7 @@ The most important items today are:
 - `Error`
 - `Result`
 
-You can also reach the lower-level parser and registry modules through:
+Lower-level access is available through:
 
 - `cmakefmt::parser`
 - `cmakefmt::spec::registry::CommandRegistry`
@@ -53,7 +53,7 @@ fn main() -> Result<(), cmakefmt::Error> {
 }
 ```
 
-This is the simplest entry point when you already have source text in memory.
+The simplest entry point when you already have source text in memory.
 
 ## Formatting With A Tweaked Config
 
@@ -78,12 +78,12 @@ target_link_libraries(foo PUBLIC bar baz)
 }
 ```
 
-This is the right pattern when your application wants to supply explicit
-formatter policy at runtime.
+The right pattern when your application needs to supply formatter policy at
+runtime rather than discovering it from disk.
 
 ## Loading Config From Disk
 
-If you want the same config-loading behavior the CLI uses, start with `Config`:
+To use the same config-loading behavior the CLI uses:
 
 ```rust
 use std::path::Path;
@@ -97,7 +97,7 @@ fn main() -> Result<(), cmakefmt::Error> {
 }
 ```
 
-You can also merge multiple explicit config files in precedence order:
+Merge multiple explicit config files in precedence order:
 
 ```rust
 use std::path::PathBuf;
@@ -114,7 +114,7 @@ fn main() -> Result<(), cmakefmt::Error> {
 }
 ```
 
-And if you want to ask which config files would be discovered for a target:
+Ask which config files would be discovered for a given target:
 
 ```rust
 use std::path::Path;
@@ -131,8 +131,8 @@ fn main() {
 
 ## Formatting With Debug Decisions
 
-If you are building tooling and want insight into what the formatter decided,
-use the debug variant:
+Building tooling and want insight into what the formatter decided? Use the
+debug variant:
 
 ```rust
 use cmakefmt::{Config, format_source_with_debug};
@@ -150,13 +150,13 @@ fn main() -> Result<(), cmakefmt::Error> {
 }
 ```
 
-The returned debug lines are the same kind of formatter-decision detail that
-the CLI emits under `--debug`.
+The returned debug lines are the same formatter-decision detail that the CLI
+emits under `--debug`.
 
 ## Using A Custom Command Registry
 
-If you need syntax that is not part of the built-in registry, use
-`CommandRegistry` directly:
+For syntax that is not part of the built-in registry, use `CommandRegistry`
+directly:
 
 ```rust
 use cmakefmt::{Config, format_source_with_registry};
@@ -183,11 +183,11 @@ nargs = "+"
 }
 ```
 
-That is the main embedded path for generated/custom CMake DSLs.
+This is the primary embedded path for generated or custom CMake DSLs.
 
 ## Parsing Without Formatting
 
-If you only need the parser:
+When you only need the AST:
 
 ```rust
 use cmakefmt::parser::parse;
@@ -199,13 +199,13 @@ fn main() -> Result<(), cmakefmt::Error> {
 }
 ```
 
-This is useful for analysis tools, migration tooling, or experiments that want
-the CMake AST but not the formatter.
+Useful for analysis tools, migration tooling, or experiments that want the
+CMake parse tree but not the formatter.
 
 ## Error Model
 
 The library uses a shared `cmakefmt::Error` type across parsing, config
-loading, registry loading, and formatting.
+loading, registry loading, and formatting:
 
 | Error kind | Meaning |
 | --- | --- |
@@ -215,15 +215,13 @@ loading, registry loading, and formatting.
 | `Error::Io` | file I/O failed |
 | `Error::Formatter` | a formatter-layer invariant or unsupported case was hit |
 
-For parse/config/spec errors, the library keeps file-path and location context
-where possible so that callers can surface useful diagnostics to users.
+For parse, config, and spec errors, the library retains file-path and location
+context so callers can surface useful diagnostics to users.
 
 ## Current Limits
 
-- the public API is useful, but still smaller than the CLI feature surface
-- library stability is not promised yet because the crate is still pre-`1.0`
-- most workflow features, such as Git-aware selection and ignore-file handling,
-  live in the CLI layer rather than the formatting API itself
+- the public API is useful today, but still smaller than the CLI feature surface
+- library stability is not promised yet — the crate is still pre-`1.0`
+- workflow features like Git-aware selection and ignore-file handling live in the CLI layer, not the formatting API itself
 
-If you need deeper implementation details, continue with
-[Architecture](architecture.md).
+For deeper implementation details, continue with [Architecture](architecture.md).

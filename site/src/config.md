@@ -1,13 +1,13 @@
 # Config Reference
 
-This page explains the full user-facing config schema for `cmakefmt`.
+Everything you need to know to tune `cmakefmt` for your project.
 
 The short version:
 
 - user config may be YAML or TOML
 - YAML is the recommended default for hand-edited configs
 - custom command syntax goes under `commands:`
-- command-specific layout/style tweaks go under `per_command_overrides:`
+- command-specific layout and style tweaks go under `per_command_overrides:`
 
 ## Config Discovery Order
 
@@ -21,7 +21,7 @@ For a given target file, `cmakefmt` resolves config in this order:
 If multiple supported config filenames exist in the same directory, YAML is
 preferred over TOML.
 
-Use these commands when you want to inspect what happened:
+When you want to see exactly what happened:
 
 ```bash
 cmakefmt --show-config-path src/CMakeLists.txt
@@ -49,7 +49,7 @@ Generate the full starter template with:
 cmakefmt --dump-config > .cmakefmt.yaml
 ```
 
-If you want TOML instead:
+If you prefer TOML:
 
 ```bash
 cmakefmt --dump-config toml > .cmakefmt.toml
@@ -135,11 +135,11 @@ format:
   line_width: 100
 ```
 
-Use a larger value if your project prefers wider CMake calls.
+Raise this if your project prefers wider CMake calls.
 
 ### `tab_size`
 
-Indent width, in spaces, when `use_tabs` is `false`.
+Indent width in spaces when `use_tabs` is `false`.
 
 ```yaml
 format:
@@ -155,32 +155,31 @@ format:
   use_tabs: true
 ```
 
-This affects leading indentation only. It does not change internal alignment
-rules beyond the indentation unit.
+This affects leading indentation only. Internal alignment rules use the
+configured indentation unit but are not otherwise changed.
 
 ### `max_empty_lines`
 
-Maximum number of consecutive blank lines preserved by formatting.
+Maximum number of consecutive blank lines to preserve.
 
 ```yaml
 format:
   max_empty_lines: 1
 ```
 
-If an input file contains larger blank-line runs, `cmakefmt` will clamp them
-down to this limit.
+Blank-line runs larger than this limit are clamped down. Vertical breathing room is preserved; runaway gaps are not.
 
 ### `max_hanging_wrap_lines`
 
-Maximum number of lines that a hanging-wrap layout is allowed to consume before
-the formatter falls back to a more vertical layout.
+Maximum number of lines a hanging-wrap layout may consume before the formatter
+falls back to a more vertical layout.
 
 ```yaml
 format:
   max_hanging_wrap_lines: 2
 ```
 
-Use a smaller value to force more aggressively vertical layouts.
+Lower values force more aggressively vertical output.
 
 ### `max_hanging_wrap_positional_args`
 
@@ -192,7 +191,7 @@ format:
   max_hanging_wrap_positional_args: 6
 ```
 
-This is especially noticeable on commands with long source/header lists.
+Most noticeable on commands with long source or header lists.
 
 ### `max_hanging_wrap_groups`
 
@@ -203,8 +202,7 @@ format:
   max_hanging_wrap_groups: 2
 ```
 
-If a command becomes keyword-heavy, lowering this value pushes it toward a more
-vertical layout earlier.
+Lower this to push keyword-heavy commands toward vertical layout sooner.
 
 ### `dangle_parens`
 
@@ -215,7 +213,7 @@ format:
   dangle_parens: true
 ```
 
-Example shape:
+Effect:
 
 ```cmake
 target_link_libraries(
@@ -250,8 +248,7 @@ format:
   min_prefix_length: 4
 ```
 
-Most users should leave this alone unless they are tuning layout behavior very
-deliberately.
+Leave this alone unless you are deliberately tuning layout behavior.
 
 ### `max_prefix_length`
 
@@ -262,7 +259,7 @@ format:
   max_prefix_length: 10
 ```
 
-Like `min_prefix_length`, this is mainly a layout-tuning knob rather than a
+Like `min_prefix_length`, this is a layout-tuning knob rather than a
 day-one config option.
 
 ### `space_before_control_paren`
@@ -304,7 +301,7 @@ endfunction ()
 
 ### `command_case`
 
-Controls casing of command names.
+Controls the casing of command names.
 
 Allowed values:
 
@@ -319,7 +316,7 @@ style:
 
 ### `keyword_case`
 
-Controls casing of recognized keywords and flags.
+Controls the casing of recognized keywords and flags.
 
 Allowed values:
 
@@ -332,18 +329,10 @@ style:
   keyword_case: upper
 ```
 
-Example:
+Example — with `command_case: lower` and `keyword_case: upper`:
 
 ```cmake
 target_link_libraries(foo PUBLIC bar)
-```
-
-with:
-
-```yaml
-style:
-  command_case: lower
-  keyword_case: upper
 ```
 
 stays:
@@ -352,15 +341,7 @@ stays:
 target_link_libraries(foo PUBLIC bar)
 ```
 
-and with:
-
-```yaml
-style:
-  command_case: upper
-  keyword_case: lower
-```
-
-becomes:
+With `command_case: upper` and `keyword_case: lower`:
 
 ```cmake
 TARGET_LINK_LIBRARIES(foo public bar)
@@ -377,8 +358,8 @@ markup:
   enable_markup: true
 ```
 
-This allows the formatter to treat some comments as lists, fences, and rulers
-instead of opaque text.
+When enabled, the formatter can recognize lists, fences, and rulers inside
+comments rather than treating them as opaque text.
 
 ### `reflow_comments`
 
@@ -389,18 +370,20 @@ markup:
   reflow_comments: true
 ```
 
-If you want comments preserved more literally, leave this `false`.
+Leave this `false` if you want comments preserved more literally.
 
 ### `first_comment_is_literal`
 
-Preserve the first comment block in a file literally.
+Preserve the first comment block in a file without any reflowing or markup
+processing.
 
 ```yaml
 markup:
   first_comment_is_literal: true
 ```
 
-This is often useful for license headers or hand-crafted introductory comments.
+Useful for license headers or hand-crafted introductory comments that must stay
+exactly as written.
 
 ### `literal_comment_pattern`
 
@@ -411,7 +394,7 @@ markup:
   literal_comment_pattern: "^\\s*NOTE:"
 ```
 
-Use this for project-specific comment conventions that should stay untouched.
+Use this for project-specific comment conventions that must stay untouched.
 
 ### `bullet_char`
 
@@ -440,7 +423,7 @@ markup:
   fence_pattern: "^\\s*[`~]{3}[^`\\n]*$"
 ```
 
-Most users should keep the default unless they have a strong house style.
+Keep the default unless your project has a strong house style.
 
 ### `ruler_pattern`
 
@@ -475,7 +458,7 @@ consistently, keep this enabled.
 ## Per-command Overrides
 
 Use `per_command_overrides:` to change formatting knobs for one command name
-without changing that command's syntax.
+without touching that command's argument syntax.
 
 Example:
 
@@ -503,12 +486,13 @@ Supported override fields:
 - `max_hanging_wrap_positional_args`
 - `max_hanging_wrap_groups`
 
-Use this when you want a command to format differently. Do **not** use it to
-define a command's arguments.
+Use this when you want a command to format differently from the global defaults.
+Do **not** use it to define a command's argument structure — that belongs in
+`commands:`.
 
 ## Custom Command Specs
 
-Use `commands:` to teach `cmakefmt` about custom functions/macros or to
+Use `commands:` to teach `cmakefmt` about custom functions and macros, or to
 override the built-in shape of an existing command.
 
 Example:
@@ -533,13 +517,15 @@ This tells `cmakefmt` that:
 - `SOURCES` starts a keyword section with one or more values
 - `LIBRARIES` starts a keyword section with one or more values
 
-For larger custom specs, YAML is much easier to maintain than TOML. That is why
-the default starter config is YAML.
+Once the formatter knows the structure, it can group and wrap the command
+intelligently — instead of treating every token as an undifferentiated argument.
+For larger custom specs, YAML is much easier to maintain than TOML, which is
+why the default starter config is YAML.
 
 ## Old Draft Key Names
 
 The current `cmakefmt` config schema only accepts the clearer names on this
-page. Older local draft names such as:
+page. If you have an older local config using names such as:
 
 - `use_tabchars`
 - `max_pargs_hwrap`
@@ -547,7 +533,8 @@ page. Older local draft names such as:
 - `separate_ctrl_name_with_space`
 - `separate_fn_name_with_space`
 
-should be updated before use.
+update them before use. `cmakefmt` fails fast on unknown config keys rather
+than silently ignoring them — so you will know immediately.
 
 ## Related Reading
 
