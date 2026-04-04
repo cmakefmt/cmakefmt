@@ -312,6 +312,23 @@ fn check_does_not_modify_file() {
     assert_eq!(contents, original);
 }
 
+#[test]
+fn quiet_check_emits_summary_without_per_file_lines() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--check", "--quiet", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("summary: selected=1, changed=1, unchanged=0, failed=0"));
+    assert!(!stderr.contains("would be reformatted"));
+}
+
 // ── Error handling ──────────────────────────────────────────────────────────
 
 #[test]
@@ -345,6 +362,53 @@ fn parse_errors_include_context_and_repro_hint() {
     assert!(stderr.contains(file.to_str().unwrap()));
     assert!(stderr.contains("parser detail:"));
     assert!(stderr.contains("repro: cmakefmt --debug --check"));
+}
+
+#[test]
+fn keep_going_formats_other_files_and_reports_error_summary() {
+    let dir = tempfile::tempdir().unwrap();
+    let good = dir.path().join("good.cmake");
+    let bad = dir.path().join("bad.cmake");
+    write_file(&good, "set(  GOOD  value )\n");
+    write_file(&bad, "message(FATAL_ERROR \"unterminated\n");
+
+    let output = cmakefmt()
+        .args(["--keep-going", "--in-place", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(std::fs::read_to_string(&good).unwrap(), "set(GOOD value)\n");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("failed to parse"));
+    assert!(stderr.contains("summary: selected=2, changed=1, unchanged=0, failed=1"));
+}
+
+#[test]
+fn keep_going_json_report_includes_errors() {
+    let dir = tempfile::tempdir().unwrap();
+    let good = dir.path().join("good.cmake");
+    let bad = dir.path().join("bad.cmake");
+    write_file(&good, "set(  GOOD  value )\n");
+    write_file(&bad, "message(FATAL_ERROR \"unterminated\n");
+
+    let output = cmakefmt()
+        .args([
+            "--keep-going",
+            "--report-format",
+            "json",
+            "--check",
+            dir.path().to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["summary"]["selected"], 2);
+    assert_eq!(report["summary"]["failed"], 1);
+    assert_eq!(report["summary"]["changed"], 1);
+    assert_eq!(report["errors"].as_array().unwrap().len(), 1);
 }
 
 #[test]
@@ -1288,6 +1352,8 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--no-gitignore"));
     assert!(stdout.contains("--files-from <PATH>"));
     assert!(stdout.contains("--diff"));
+    assert!(stdout.contains("--quiet"));
+    assert!(stdout.contains("--keep-going"));
     assert!(stdout.contains("--staged"));
     assert!(stdout.contains("--changed"));
     assert!(stdout.contains("--since <REF>"));

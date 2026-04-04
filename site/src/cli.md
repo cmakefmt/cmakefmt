@@ -45,6 +45,8 @@ cmakefmt [OPTIONS] [FILES]...
 | Flag | Meaning |
 | --- | --- |
 | `--debug` | Emit discovery, config, barrier, and formatter diagnostics to stderr. |
+| `--quiet` | Suppress per-file human output and keep only summaries plus actual errors. |
+| `--keep-going` | Continue processing later files after a file-level parse/format error. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. If omitted, formatting stays single-threaded. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
@@ -84,6 +86,8 @@ cmakefmt --diff CMakeLists.txt
 cmakefmt --report-format json --check .
 cmakefmt --staged --check
 cmakefmt --changed --since origin/main --check
+cmakefmt --check --quiet .
+cmakefmt --keep-going --in-place .
 git diff --name-only --diff-filter=ACMR origin/main...HEAD | cmakefmt --files-from - --check
 cat CMakeLists.txt | cmakefmt - --stdin-path subdir/CMakeLists.txt
 cmakefmt --stdin-path src/CMakeLists.txt --lines 10:25 -
@@ -106,6 +110,10 @@ cmakefmt --debug --check tests/fixtures/real_world
 For parse and config failures, `cmakefmt` prints a file path, line/column,
 source snippet, likely-cause hint when possible, and a repro command using
 `--debug --check`.
+
+On multi-file human runs, `cmakefmt` also prints an end-of-run summary with
+selected / changed / unchanged / failed counts. `--keep-going` lets the run
+finish and aggregate file-level failures instead of failing immediately.
 
 For issue reports, capture:
 

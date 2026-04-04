@@ -143,6 +143,7 @@ Check formatting in CI or pre-push hooks:
 
 ```bash
 cmakefmt --check CMakeLists.txt
+cmakefmt --check --quiet .
 ```
 
 List the files that would be reformatted without modifying them:
@@ -162,6 +163,12 @@ Read from stdin:
 
 ```bash
 cat CMakeLists.txt | cmakefmt -
+```
+
+Continue formatting other files even if one file fails:
+
+```bash
+cmakefmt --keep-going --in-place .
 ```
 
 Use an explicit config file:
@@ -230,6 +237,8 @@ cmakefmt [OPTIONS] [FILES]...
       --dump-config
       --convert-legacy-config <PATH>
       --debug
+      --quiet
+      --keep-going
       --diff
       --staged
       --changed
@@ -259,6 +268,10 @@ Exit codes:
 - `0`: success
 - `1`: `--check` or `--list-files` found files that would change
 - `2`: parse, config, or I/O error
+
+For human multi-file runs, `cmakefmt` prints an end-of-run summary with
+selected / changed / unchanged / failed counts. `--quiet` suppresses per-file
+human chatter and keeps only the summary plus any actual errors.
 
 Discovery rules:
 

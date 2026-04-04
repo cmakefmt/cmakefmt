@@ -97,6 +97,7 @@ struct Cli {
     #[arg(
         long = "list-files",
         help_heading = "Output Modes",
+        conflicts_with = "quiet",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
@@ -178,6 +179,29 @@ struct Cli {
         conflicts_with = "convert_config_paths"
     )]
     debug: bool,
+
+    /// Suppress per-file human output and emit only end-of-run summaries.
+    ///
+    /// This is intended for quieter `--check` and `--in-place` automation
+    /// workflows. It does not suppress actual errors.
+    #[arg(
+        long,
+        help_heading = "Execution",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    quiet: bool,
+
+    /// Continue processing other files after a file-level parse or format error.
+    ///
+    /// Without this flag, human runs still fail at the first file error.
+    #[arg(
+        long = "keep-going",
+        help_heading = "Execution",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    keep_going: bool,
 
     /// Print a unified diff instead of full formatted output.
     #[arg(
@@ -423,7 +447,6 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ));
     }
     let parallel_jobs = resolve_parallel_jobs(cli.parallel)?;
-    let mut any_would_change = false;
     let progress = ProgressReporter::new(cli.progress_bar, cli.in_place, targets.len());
 
     if cli.debug {
@@ -434,14 +457,56 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ));
     }
 
-    let results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
+    let target_results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
         process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout, &progress)?
     } else {
         if cli.debug && parallel_jobs > 1 && targets.iter().any(|target| !target.is_path()) {
             log_debug("parallel mode ignored because stdin input must run serially");
         }
-        process_targets_serial(&targets, cli, colorize_stdout, &progress)?
+        process_targets_serial(&targets, cli, colorize_stdout, &progress)
     };
+    let mut results = Vec::new();
+    let mut failures = Vec::new();
+    let mut summary = RunSummary {
+        selected: targets.len(),
+        ..RunSummary::default()
+    };
+
+    for target_result in target_results {
+        match target_result {
+            Ok(result) => {
+                if result.would_change {
+                    summary.changed += 1;
+                } else {
+                    summary.unchanged += 1;
+                }
+                results.push(result);
+            }
+            Err(err) => {
+                if !cli.keep_going {
+                    return Err(err);
+                }
+                summary.failed += 1;
+                let rendered_error = render_cli_error(&err);
+                let display_name = match &err {
+                    cmakefmt::Error::ParseContext { display_name, .. } => display_name.clone(),
+                    cmakefmt::Error::Config { path, .. } => path.display().to_string(),
+                    cmakefmt::Error::Spec { path, .. } => path.display().to_string(),
+                    cmakefmt::Error::Formatter(message) => message
+                        .split(':')
+                        .next()
+                        .unwrap_or("<unknown>")
+                        .trim()
+                        .to_owned(),
+                    cmakefmt::Error::Io(_) | cmakefmt::Error::Parse(_) => "<unknown>".to_owned(),
+                };
+                failures.push(FailedTarget {
+                    display_name,
+                    rendered_error,
+                });
+            }
+        }
+    }
     let multi_target_stdout = stdout_mode && results.len() > 1;
 
     if cli.report_format == ReportFormat::Json {
@@ -456,11 +521,14 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         println!(
             "{}",
-            serde_json::to_string_pretty(&build_json_report(&results, cli)).map_err(|err| {
-                cmakefmt::Error::Formatter(format!("failed to build JSON report: {err}"))
-            })?
+            serde_json::to_string_pretty(&build_json_report(&results, &failures, &summary, cli))
+                .map_err(|err| {
+                    cmakefmt::Error::Formatter(format!("failed to build JSON report: {err}"))
+                })?
         );
-        return if (cli.check || cli.list_files) && results.iter().any(|r| r.would_change) {
+        return if !failures.is_empty() {
+            Ok(EXIT_ERROR)
+        } else if (cli.check || cli.list_files) && results.iter().any(|r| r.would_change) {
             Ok(EXIT_CHECK_FAILED)
         } else {
             Ok(EXIT_OK)
@@ -474,14 +542,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
             }
         }
 
-        any_would_change |= result.would_change;
-
         if cli.list_files {
             if result.would_change {
                 println!("{}", result.display_name);
             }
         } else if cli.check {
-            if result.would_change {
+            if result.would_change && !cli.quiet {
                 eprintln!("{} would be reformatted", result.display_name);
             }
         } else if cli.in_place {
@@ -521,7 +587,19 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
     }
 
-    if (cli.check || cli.list_files) && any_would_change {
+    if !failures.is_empty() {
+        for failure in &failures {
+            eprintln!("{}", failure.rendered_error);
+        }
+    }
+
+    if should_print_human_summary(cli, &summary, &failures, results.len()) {
+        eprintln!("{}", render_human_summary(&summary));
+    }
+
+    if !failures.is_empty() {
+        Ok(EXIT_ERROR)
+    } else if (cli.check || cli.list_files) && summary.changed > 0 {
         Ok(EXIT_CHECK_FAILED)
     } else {
         Ok(EXIT_OK)
@@ -804,10 +882,23 @@ struct ProcessedTarget {
     debug_lines: Vec<String>,
 }
 
+struct FailedTarget {
+    display_name: String,
+    rendered_error: String,
+}
+
 #[derive(Debug, Serialize)]
 struct JsonReport {
     mode: &'static str,
+    summary: RunSummary,
     files: Vec<JsonFileReport>,
+    errors: Vec<JsonErrorReport>,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonErrorReport {
+    display_name: String,
+    error: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -821,12 +912,20 @@ struct JsonFileReport {
     debug_lines: Vec<String>,
 }
 
+#[derive(Debug, Default, Serialize)]
+struct RunSummary {
+    selected: usize,
+    changed: usize,
+    unchanged: usize,
+    failed: usize,
+}
+
 fn process_targets_serial(
     targets: &[InputTarget],
     cli: &Cli,
     colorize_stdout: bool,
     progress: &ProgressReporter,
-) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
+) -> Vec<Result<ProcessedTarget, cmakefmt::Error>> {
     targets
         .iter()
         .map(|target| process_target(target, cli, colorize_stdout, progress))
@@ -839,18 +938,18 @@ fn process_targets_parallel(
     parallel_jobs: usize,
     colorize_stdout: bool,
     progress: &ProgressReporter,
-) -> Result<Vec<ProcessedTarget>, cmakefmt::Error> {
+) -> Result<Vec<Result<ProcessedTarget, cmakefmt::Error>>, cmakefmt::Error> {
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(parallel_jobs)
         .build()
         .map_err(|err| cmakefmt::Error::Formatter(format!("failed to build thread pool: {err}")))?;
 
-    pool.install(|| {
+    Ok(pool.install(|| {
         targets
             .par_iter()
             .map(|target| process_target(target, cli, colorize_stdout, progress))
-            .collect()
-    })
+            .collect::<Vec<Result<ProcessedTarget, cmakefmt::Error>>>()
+    }))
 }
 
 fn process_target(
@@ -1243,7 +1342,12 @@ fn apply_line_ranges(
     }
 }
 
-fn build_json_report(results: &[ProcessedTarget], cli: &Cli) -> JsonReport {
+fn build_json_report(
+    results: &[ProcessedTarget],
+    failures: &[FailedTarget],
+    summary: &RunSummary,
+    cli: &Cli,
+) -> JsonReport {
     let mode = if cli.in_place {
         "in-place"
     } else if cli.check {
@@ -1258,6 +1362,12 @@ fn build_json_report(results: &[ProcessedTarget], cli: &Cli) -> JsonReport {
 
     JsonReport {
         mode,
+        summary: RunSummary {
+            selected: summary.selected,
+            changed: summary.changed,
+            unchanged: summary.unchanged,
+            failed: summary.failed,
+        },
         files: results
             .iter()
             .map(|result| JsonFileReport {
@@ -1277,7 +1387,44 @@ fn build_json_report(results: &[ProcessedTarget], cli: &Cli) -> JsonReport {
                 },
             })
             .collect(),
+        errors: failures
+            .iter()
+            .map(|failure| JsonErrorReport {
+                display_name: failure.display_name.clone(),
+                error: failure.rendered_error.clone(),
+            })
+            .collect(),
     }
+}
+
+fn should_print_human_summary(
+    cli: &Cli,
+    summary: &RunSummary,
+    failures: &[FailedTarget],
+    successful_results: usize,
+) -> bool {
+    if cli.report_format != ReportFormat::Human {
+        return false;
+    }
+
+    let stdout_mode = !cli.list_files && !cli.check && !cli.in_place && !cli.diff;
+    if stdout_mode {
+        return cli.quiet || !failures.is_empty();
+    }
+
+    cli.quiet
+        || !failures.is_empty()
+        || cli.check
+        || cli.in_place
+        || (cli.diff && successful_results > 1)
+        || summary.selected > 1
+}
+
+fn render_human_summary(summary: &RunSummary) -> String {
+    format!(
+        "summary: selected={}, changed={}, unchanged={}, failed={}",
+        summary.selected, summary.changed, summary.unchanged, summary.failed
+    )
 }
 
 fn describe_config_sources(config_sources: &[PathBuf]) -> String {
