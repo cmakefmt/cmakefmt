@@ -683,12 +683,12 @@ fn no_args_discovers_cmake_files_recursively() {
     write_file(&ignored, "set(  IGNORED  value )\n");
 
     let output = cmakefmt()
-        .args(["--list-files"])
+        .args(["--list-input-files"])
         .current_dir(dir.path())
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("CMakeLists.txt"));
     assert!(stdout.contains("CompilerWarnings.cmake"));
@@ -706,11 +706,11 @@ fn cmakefmtignore_filters_recursive_discovery() {
     write_file(&dir.path().join(".cmakefmtignore"), "ignored.cmake\n");
 
     let output = cmakefmt()
-        .args(["--list-files", dir.path().to_str().unwrap()])
+        .args(["--list-input-files", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("keep.cmake"));
     assert!(!stdout.contains("ignored.cmake"));
@@ -729,7 +729,7 @@ fn explicit_ignore_path_filters_recursive_discovery() {
 
     let output = cmakefmt()
         .args([
-            "--list-files",
+            "--list-input-files",
             "--ignore-path",
             ignore_file.to_str().unwrap(),
             dir.path().to_str().unwrap(),
@@ -737,7 +737,7 @@ fn explicit_ignore_path_filters_recursive_discovery() {
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("keep.cmake"));
     assert!(!stdout.contains("ignored.cmake"));
@@ -752,11 +752,11 @@ fn explicit_file_argument_bypasses_ignore_rules() {
     write_file(&dir.path().join(".cmakefmtignore"), "ignored.cmake\n");
 
     let output = cmakefmt()
-        .args(["--list-files", ignored.to_str().unwrap()])
+        .args(["--list-input-files", ignored.to_str().unwrap()])
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0));
     assert!(String::from_utf8_lossy(&output.stdout).contains("ignored.cmake"));
 }
 
@@ -769,20 +769,20 @@ fn no_gitignore_allows_gitignored_files() {
     write_file(&ignored, "set(  IGNORE  value )\n");
 
     let default_output = cmakefmt()
-        .args(["--list-files", dir.path().to_str().unwrap()])
+        .args(["--list-input-files", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
     assert_eq!(default_output.status.code(), Some(0));
 
     let no_gitignore_output = cmakefmt()
         .args([
-            "--list-files",
+            "--list-input-files",
             "--no-gitignore",
             dir.path().to_str().unwrap(),
         ])
         .output()
         .unwrap();
-    assert_eq!(no_gitignore_output.status.code(), Some(1));
+    assert_eq!(no_gitignore_output.status.code(), Some(0));
     assert!(String::from_utf8_lossy(&no_gitignore_output.stdout).contains("ignored.cmake"));
 }
 
@@ -796,11 +796,11 @@ fn directory_input_discovers_only_cmake_files() {
     write_file(&ignored, "set(  NOPE  value )\n");
 
     let output = cmakefmt()
-        .args(["--list-files", dir.path().to_str().unwrap()])
+        .args(["--list-input-files", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("toolchain.cmake.in"));
     assert!(!stdout.contains("ignore.txt"));
@@ -817,7 +817,7 @@ fn file_regex_filters_discovered_files() {
 
     let output = cmakefmt()
         .args([
-            "--list-files",
+            "--list-input-files",
             "--path-regex",
             "Keep",
             dir.path().to_str().unwrap(),
@@ -825,14 +825,14 @@ fn file_regex_filters_discovered_files() {
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(0));
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("KeepThis.cmake"));
     assert!(!stdout.contains("SkipThis.cmake"));
 }
 
 #[test]
-fn list_files_reports_only_changed_targets() {
+fn list_input_files_reports_selected_targets_even_if_clean() {
     let dir = tempfile::tempdir().unwrap();
     let changed = dir.path().join("changed.cmake");
     let clean = dir.path().join("clean.cmake");
@@ -841,7 +841,27 @@ fn list_files_reports_only_changed_targets() {
     write_file(&clean, "set(FOO bar)\n");
 
     let output = cmakefmt()
-        .args(["--list-files", dir.path().to_str().unwrap()])
+        .args(["--list-input-files", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("changed.cmake"));
+    assert!(stdout.contains("clean.cmake"));
+}
+
+#[test]
+fn list_changed_files_reports_only_changed_targets() {
+    let dir = tempfile::tempdir().unwrap();
+    let changed = dir.path().join("changed.cmake");
+    let clean = dir.path().join("clean.cmake");
+
+    write_file(&changed, "set(  FOO  bar )\n");
+    write_file(&clean, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--list-changed-files", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -849,6 +869,27 @@ fn list_files_reports_only_changed_targets() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("changed.cmake"));
     assert!(!stdout.contains("clean.cmake"));
+}
+
+#[test]
+fn list_input_files_rejects_json_report_mode() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--list-input-files",
+            "--report-format",
+            "json",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("--list-input-files only supports human output"));
 }
 
 #[test]
@@ -870,7 +911,7 @@ fn staged_selects_only_staged_cmake_files() {
     git(dir.path(), &["add", "staged.cmake"]);
 
     let output = cmakefmt()
-        .args(["--list-files", "--staged"])
+        .args(["--list-changed-files", "--staged"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -898,7 +939,7 @@ fn changed_since_selects_only_changed_files() {
     write_file(&changed, "set(  CHANGED  value )\n");
 
     let output = cmakefmt()
-        .args(["--list-files", "--changed", "--since", &baseline])
+        .args(["--list-changed-files", "--changed", "--since", &baseline])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -1574,7 +1615,8 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--no-config"));
     assert!(stdout.contains("--convert-legacy-config <PATH>"));
     assert!(stdout.contains("-l, --line-width <LINE_WIDTH>"));
-    assert!(stdout.contains("--list-files"));
+    assert!(stdout.contains("--list-changed-files"));
+    assert!(stdout.contains("--list-input-files"));
     assert!(stdout.contains("--path-regex <REGEX>"));
     assert!(stdout.contains("--ignore-path <PATH>"));
     assert!(stdout.contains("--no-gitignore"));

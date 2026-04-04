@@ -118,7 +118,7 @@ Embedding `cmakefmt` as a library?
 Preview which files would change before touching anything:
 
 ```bash
-cmakefmt --list-files .
+cmakefmt --list-changed-files .
 ```
 
 See the exact patch instead of applying it:

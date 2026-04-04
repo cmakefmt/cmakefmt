@@ -87,7 +87,8 @@ struct Cli {
         short = 'i',
         long = "in-place",
         help_heading = "Output Modes",
-        conflicts_with = "list_files",
+        conflicts_with = "list_changed_files",
+        conflicts_with = "list_input_files",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
@@ -97,6 +98,7 @@ struct Cli {
     #[arg(
         long,
         help_heading = "Output Modes",
+        conflicts_with = "list_input_files",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
@@ -104,13 +106,29 @@ struct Cli {
 
     /// Print only the files that would change, without modifying them.
     #[arg(
-        long = "list-files",
+        long = "list-changed-files",
+        alias = "list-files",
         help_heading = "Output Modes",
+        conflicts_with = "quiet",
+        conflicts_with = "list_input_files",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    list_changed_files: bool,
+
+    /// Print the selected input files after discovery/filtering, without formatting them.
+    #[arg(
+        long = "list-input-files",
+        help_heading = "Output Modes",
+        conflicts_with = "check",
+        conflicts_with = "list_changed_files",
+        conflicts_with = "in_place",
+        conflicts_with = "diff",
         conflicts_with = "quiet",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths"
     )]
-    list_files: bool,
+    list_input_files: bool,
 
     /// Filter recursively discovered CMake paths with a regex.
     ///
@@ -207,7 +225,8 @@ struct Cli {
         help_heading = "Config And Conversion",
         conflicts_with = "dump_config",
         conflicts_with = "check",
-        conflicts_with = "list_files",
+        conflicts_with = "list_changed_files",
+        conflicts_with = "list_input_files",
         conflicts_with = "in_place",
         conflicts_with = "debug",
         conflicts_with = "parallel",
@@ -494,10 +513,17 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return run_config_introspection(cli);
     }
 
-    let stdout_mode = !cli.list_files && !cli.check && !cli.in_place;
+    let stdout_mode =
+        !cli.list_changed_files && !cli.list_input_files && !cli.check && !cli.in_place;
     let colorize_stdout = stdout_mode && should_colorize_stdout(cli.colour);
     let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
     let targets = collect_targets(cli, file_filter.as_ref())?;
+    if cli.list_input_files {
+        for target in &targets {
+            println!("{}", target.display_name(cli.stdin_path.as_deref()));
+        }
+        return Ok(EXIT_OK);
+    }
     if !cli.line_ranges.is_empty() && targets.len() != 1 {
         return Err(cmakefmt::Error::Formatter(
             "--lines requires exactly one formatting target".to_owned(),
@@ -585,7 +611,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         );
         return if !failures.is_empty() {
             Ok(EXIT_ERROR)
-        } else if (cli.check || cli.list_files) && results.iter().any(|r| r.would_change) {
+        } else if (cli.check || cli.list_changed_files) && results.iter().any(|r| r.would_change) {
             Ok(EXIT_CHECK_FAILED)
         } else {
             Ok(EXIT_OK)
@@ -599,7 +625,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
             }
         }
 
-        if cli.list_files {
+        if cli.list_changed_files {
             if result.would_change {
                 println!("{}", result.display_name);
             }
@@ -656,7 +682,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     if !failures.is_empty() {
         Ok(EXIT_ERROR)
-    } else if (cli.check || cli.list_files) && summary.changed > 0 {
+    } else if (cli.check || cli.list_changed_files) && summary.changed > 0 {
         Ok(EXIT_CHECK_FAILED)
     } else {
         Ok(EXIT_OK)
@@ -693,14 +719,26 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
         ));
     }
 
-    if cli.diff && cli.list_files {
+    if cli.diff && cli.list_changed_files {
         return Err(cmakefmt::Error::Formatter(
-            "--diff cannot be combined with --list-files".to_owned(),
+            "--diff cannot be combined with --list-changed-files".to_owned(),
+        ));
+    }
+
+    if cli.list_input_files && cli.report_format != ReportFormat::Human {
+        return Err(cmakefmt::Error::Formatter(
+            "--list-input-files only supports human output".to_owned(),
+        ));
+    }
+
+    if cli.list_input_files && !cli.line_ranges.is_empty() {
+        return Err(cmakefmt::Error::Formatter(
+            "--list-input-files cannot be combined with --lines".to_owned(),
         ));
     }
 
     if is_config_introspection_mode(cli) {
-        if cli.check || cli.list_files || cli.in_place || cli.diff {
+        if cli.check || cli.list_changed_files || cli.list_input_files || cli.in_place || cli.diff {
             return Err(cmakefmt::Error::Formatter(
                 "config introspection flags cannot be combined with formatting output modes"
                     .to_owned(),
@@ -1081,6 +1119,15 @@ enum InputTarget {
 impl InputTarget {
     fn is_path(&self) -> bool {
         matches!(self, InputTarget::Path(_))
+    }
+
+    fn display_name(&self, stdin_path: Option<&Path>) -> String {
+        match self {
+            Self::Stdin => stdin_path
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|| "<stdin>".to_owned()),
+            Self::Path(path) => path.display().to_string(),
+        }
     }
 }
 
@@ -1565,8 +1612,10 @@ fn build_json_report(
         "in-place"
     } else if cli.check {
         "check"
-    } else if cli.list_files {
-        "list-files"
+    } else if cli.list_changed_files {
+        "list-changed-files"
+    } else if cli.list_input_files {
+        "list-input-files"
     } else if cli.diff {
         "diff"
     } else {
@@ -1588,7 +1637,11 @@ fn build_json_report(
                 path: result.path.as_ref().map(|path| path.display().to_string()),
                 would_change: result.would_change,
                 changed_lines: result.changed_lines.clone(),
-                formatted: (!cli.in_place && !cli.check && !cli.list_files && !cli.diff)
+                formatted: (!cli.in_place
+                    && !cli.check
+                    && !cli.list_changed_files
+                    && !cli.list_input_files
+                    && !cli.diff)
                     .then(|| result.formatted.clone()),
                 diff: cli
                     .diff
@@ -1620,7 +1673,11 @@ fn should_print_human_summary(
         return false;
     }
 
-    let stdout_mode = !cli.list_files && !cli.check && !cli.in_place && !cli.diff;
+    let stdout_mode = !cli.list_changed_files
+        && !cli.list_input_files
+        && !cli.check
+        && !cli.in_place
+        && !cli.diff;
     if stdout_mode {
         return cli.quiet || !failures.is_empty();
     }
@@ -2076,7 +2133,8 @@ mod tests {
             "ignore-path",
             "keep-going",
             "lines",
-            "list-files",
+            "list-changed-files",
+            "list-input-files",
             "no-config",
             "no-gitignore",
             "parallel",

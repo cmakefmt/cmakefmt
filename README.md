@@ -112,10 +112,10 @@ Emit a machine-readable report for tooling:
 cmakefmt --report-format json --check .
 ```
 
-Honor `.cmakefmtignore` and extra ignore files during discovery:
+Honor `.cmakefmtignore` and extra ignore files while listing changed files:
 
 ```bash
-cmakefmt --ignore-path ci/cmakefmt.ignore --list-files .
+cmakefmt --ignore-path ci/cmakefmt.ignore --list-changed-files .
 ```
 
 Format stdin using a virtual on-disk path for config discovery:
@@ -158,14 +158,21 @@ cmakefmt --check --quiet .
 List the files that would be reformatted without modifying them:
 
 ```bash
-cmakefmt --list-files
-cmakefmt --list-files path/to/project
+cmakefmt --list-changed-files
+cmakefmt --list-changed-files path/to/project
 ```
 
 Restrict recursive discovery with a regex:
 
 ```bash
-cmakefmt --list-files --path-regex 'modules|toolchain' .
+cmakefmt --list-changed-files --path-regex 'modules|toolchain' .
+```
+
+List the selected CMake input files without formatting them:
+
+```bash
+cmakefmt --list-input-files
+cmakefmt --list-input-files path/to/project
 ```
 
 Read from stdin:
@@ -269,7 +276,8 @@ cmakefmt [OPTIONS] [FILES]...
 
   -i, --in-place
       --check
-      --list-files
+      --list-changed-files
+      --list-input-files
       --path-regex <REGEX>
       --ignore-path <PATH>
       --no-gitignore
@@ -310,7 +318,7 @@ as an alias for `--config-file` to ease migration.
 Exit codes:
 
 - `0`: success
-- `1`: `--check` or `--list-files` found files that would change
+- `1`: `--check` or `--list-changed-files` found files that would change
 - `2`: parse, config, or I/O error
 
 For human multi-file runs, `cmakefmt` prints an end-of-run summary with

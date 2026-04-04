@@ -16,8 +16,8 @@ Check how you invoked it:
 See exactly what was found and why:
 
 ```bash
-cmakefmt --list-files .
-cmakefmt --debug --list-files .
+cmakefmt --list-input-files .
+cmakefmt --debug --list-input-files .
 ```
 
 ## The Wrong Config File Was Used

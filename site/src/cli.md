@@ -55,7 +55,8 @@ Ignore rules only affect:
 | --- | --- |
 | `-i`, `--in-place` | Rewrite files on disk instead of printing formatted output. |
 | `--check` | Exit with code `1` when any selected file would change. |
-| `--list-files` | Print only the files that would change. |
+| `--list-changed-files` | Print only the files that would change after formatting. |
+| `--list-input-files` | Print the selected input files after discovery and filtering, without formatting them. |
 | `--diff` | Print a unified diff instead of the full formatted output. |
 | `--report-format <human\|json>` | Switch between human terminal output and machine-readable JSON. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
@@ -95,7 +96,7 @@ Ignore rules only affect:
 ## Exit Codes
 
 - `0`: success
-- `1`: `--check` or `--list-files` found files that would change
+- `1`: `--check` or `--list-changed-files` found files that would change
 - `2`: parse, config, regex, or I/O error
 
 ## Common Examples
@@ -137,7 +138,7 @@ file is out of format — exactly what CI needs.
 ### List Only The Files That Would Change
 
 ```bash
-cmakefmt --list-files --path-regex 'cmake|toolchain' .
+cmakefmt --list-changed-files --path-regex 'cmake|toolchain' .
 ```
 
 Typical output:
@@ -149,6 +150,24 @@ cmake/Warnings.cmake
 
 Useful for editor integration, scripts, and review tooling that needs a
 precise list without actually reformatting anything.
+
+### List The Selected Input Files Without Formatting Them
+
+```bash
+cmakefmt --list-input-files --path-regex 'cmake|toolchain' .
+```
+
+Typical output:
+
+```text
+cmake/Toolchain.cmake
+cmake/Warnings.cmake
+cmake/modules/CompilerOptions.cmake
+```
+
+This is the pure discovery mode. It walks the file tree, applies ignore files
+and filters, then prints the selected CMake inputs without parsing or formatting
+them.
 
 ### Show The Actual Patch
 
