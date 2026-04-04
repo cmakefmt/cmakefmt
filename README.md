@@ -277,7 +277,7 @@ cmakefmt [OPTIONS] [FILES]...
       --dump-config
       --show-config [<FORMAT>]
       --show-config-path
-      --explain-config <PATH>
+      --explain-config
       --convert-legacy-config <PATH>
       --debug
       --quiet

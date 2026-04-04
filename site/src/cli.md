@@ -77,7 +77,7 @@ Ignore rules only affect:
 | `--dump-config [FORMAT]` | Print a starter config template and exit. Defaults to YAML; pass `toml` for TOML. |
 | `--show-config [FORMAT]` | Print the effective config for a single target and exit. Defaults to YAML; pass `toml` for TOML. |
 | `--show-config-path` | Print the selected config file path for a single target and exit. `--find-config-path` is an alias. |
-| `--explain-config <PATH>` | Explain config resolution for a target path, including selected files and CLI overrides. |
+| `--explain-config` | Explain config resolution for a single target, or for the current working directory when no explicit file is given. |
 | `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
 ## Config Override Flags

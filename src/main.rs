@@ -50,7 +50,8 @@ config format for larger custom-command specs.
 
 Use --show-config-path to inspect which config file was selected, --show-config
 to inspect the effective config after CLI overrides, and --explain-config for
-a fuller human-readable explanation of config resolution.";
+a fuller human-readable explanation of config resolution for a target or the
+current working directory.";
 
 /// A fast, correct CMake formatter.
 #[derive(Parser, Debug)]
@@ -186,17 +187,16 @@ struct Cli {
     )]
     show_config_path: bool,
 
-    /// Explain config resolution for a target path and exit.
+    /// Explain config resolution for a single target or the current directory and exit.
     #[arg(
         long = "explain-config",
-        value_name = "PATH",
         help_heading = "Config And Conversion",
         conflicts_with = "dump_config",
         conflicts_with = "convert_config_paths",
         conflicts_with = "show_config",
         conflicts_with = "show_config_path"
     )]
-    explain_config: Option<PathBuf>,
+    explain_config: bool,
 
     /// Convert legacy cmake-format JSON, YAML, or Python config files.
     ///
@@ -490,7 +490,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     validate_cli(cli)?;
 
-    if cli.show_config.is_some() || cli.show_config_path || cli.explain_config.is_some() {
+    if cli.show_config.is_some() || cli.show_config_path || cli.explain_config {
         return run_config_introspection(cli);
     }
 
@@ -722,12 +722,13 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
 }
 
 fn is_config_introspection_mode(cli: &Cli) -> bool {
-    cli.show_config.is_some() || cli.show_config_path || cli.explain_config.is_some()
+    cli.show_config.is_some() || cli.show_config_path || cli.explain_config
 }
 
 fn run_config_introspection(cli: &Cli) -> Result<u8, cmakefmt::Error> {
-    if let Some(path) = &cli.explain_config {
-        return explain_config(cli, path);
+    if cli.explain_config {
+        let target = resolve_config_probe_target(cli)?;
+        return explain_config(cli, target.as_deref().unwrap_or(Path::new(".")));
     }
 
     let target = resolve_config_probe_target(cli)?;

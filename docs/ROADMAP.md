@@ -754,7 +754,7 @@ not just faster.
   - config introspection and explanation:
     - `--show-config`
     - `--show-config-path`
-    - `--explain-config <PATH>`
+    - `--explain-config`
   - config-discovery shortcuts for tooling:
     - `--find-config-path`
     - `--no-config`

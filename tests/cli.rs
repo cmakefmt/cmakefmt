@@ -1244,6 +1244,26 @@ fn show_config_path_prints_nearest_config() {
 }
 
 #[test]
+fn show_config_path_accepts_file_before_flag() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join(".cmakefmt.yaml");
+    write_file(&config, "style:\n  command_case: upper\n");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([file.to_str().unwrap(), "--show-config-path"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        format!("{}\n", config.display())
+    );
+}
+
+#[test]
 fn find_config_path_alias_works() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join(".cmakefmt.yaml");
@@ -1308,6 +1328,44 @@ fn explain_config_reports_sources_and_overrides() {
     assert!(stdout.contains("cli overrides: line_width=120"));
     assert!(stdout.contains("effective config:"));
     assert!(stdout.contains("line_width: 120"));
+}
+
+#[test]
+fn explain_config_uses_explicit_file_argument() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join(".cmakefmt.yaml");
+    write_file(&config, "format:\n  line_width: 99\n");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([file.to_str().unwrap(), "--explain-config"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains(&format!("target: {}", file.display())));
+    assert!(stdout.contains("config mode: discovered from the target path"));
+}
+
+#[test]
+fn explain_config_defaults_to_current_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join(".cmakefmt.yaml");
+    write_file(&config, "format:\n  line_width: 99\n");
+
+    let output = cmakefmt()
+        .arg("--explain-config")
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("target: ."));
+    assert!(stdout.contains("config mode: discovered from the target path"));
+    assert!(stdout.contains("./.cmakefmt.yaml"));
 }
 
 #[test]
@@ -1509,7 +1567,7 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--show-config[=<FORMAT>]"));
     assert!(stdout.contains("--show-config-path"));
     assert!(stdout.contains("--find-config-path"));
-    assert!(stdout.contains("--explain-config <PATH>"));
+    assert!(stdout.contains("--explain-config"));
     assert!(stdout.contains("--in-place"));
     assert!(stdout.contains("-c, --config-file <PATH>"));
     assert!(stdout.contains("--config-file <PATH>"));
