@@ -28,7 +28,7 @@ running with:
 ```bash
 cmakefmt --show-config-path path/to/CMakeLists.txt
 cmakefmt --show-config path/to/CMakeLists.txt
-cmakefmt --explain-config path/to/CMakeLists.txt
+cmakefmt --explain-config
 ```
 
 These commands tell you:

@@ -86,7 +86,7 @@ Make the resolution process visible with:
 ```bash
 cmakefmt --show-config-path src/CMakeLists.txt
 cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --explain-config src/CMakeLists.txt
+cmakefmt --explain-config
 ```
 
 ### CLI Workflow Layer

@@ -26,7 +26,7 @@ When you want to see exactly what happened:
 ```bash
 cmakefmt --show-config-path src/CMakeLists.txt
 cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --explain-config src/CMakeLists.txt
+cmakefmt --explain-config
 ```
 
 ## Recommended Starter File

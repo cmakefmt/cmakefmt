@@ -149,7 +149,7 @@ If you are debugging config discovery:
 ```bash
 cmakefmt --show-config-path src/CMakeLists.txt
 cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --explain-config src/CMakeLists.txt
+cmakefmt --explain-config
 ```
 
 ## Local Docs Preview
@@ -172,7 +172,7 @@ Make sure Cargo's install bin directory is on your `PATH`.
 
 ```bash
 cmakefmt --show-config-path path/to/CMakeLists.txt
-cmakefmt --explain-config path/to/CMakeLists.txt
+cmakefmt --explain-config
 ```
 
 ### A hook or script only sees stdin and ignores my project config

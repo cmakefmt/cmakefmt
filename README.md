@@ -226,7 +226,7 @@ cmakefmt --show-config=toml src/CMakeLists.txt
 Explain config resolution in more detail:
 
 ```bash
-cmakefmt --explain-config src/CMakeLists.txt
+cmakefmt --explain-config
 ```
 
 Ignore discovered config files entirely and use only defaults plus CLI

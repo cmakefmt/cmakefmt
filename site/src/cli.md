@@ -272,7 +272,7 @@ No more guessing what the formatter is actually using.
 ### Explain Config Resolution
 
 ```bash
-cmakefmt --explain-config src/CMakeLists.txt
+cmakefmt --explain-config
 ```
 
 Typical output includes:
