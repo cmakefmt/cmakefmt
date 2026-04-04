@@ -29,7 +29,7 @@ until all criteria for the current phase are met.
 ### Acceptance criteria
 
 - [x] All fixture files in `tests/fixtures/` parse without error
-- [ ] The following real-world files parse correctly:
+- [x] The following real-world files parse correctly:
   - CMake's own `CMakeLists.txt`
   - LLVM's top-level `CMakeLists.txt`
   - A Qt module `CMakeLists.txt`
@@ -124,7 +124,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ## Phase 5 — Configuration
 
-**Goal**: Formatter behaviour is fully configurable via TOML.
+**Goal**: Formatter behaviour is fully configurable via user config files.
 
 ### Tasks
 
@@ -669,12 +669,67 @@ not just faster.
   - expose basic settings such as binary path, args, and config file
   - work on macOS, Linux, and Windows
   - publish to the VS Code Marketplace and Open VSX if practical
+- [ ] Evaluate additional workflow features that would make `cmakefmt`
+      meaningfully stronger than `cmake-format` before alpha
+  - lower-noise automation modes:
+    - `--quiet`
+    - optional summary-only output for CI and pre-commit use
+  - multi-file failure handling:
+    - `--keep-going` / continue-on-error batch mode
+    - end-of-run aggregated error summaries instead of fail-fast only
+  - config introspection and explanation:
+    - `--show-config`
+    - `--show-config-path`
+    - `--explain-config <PATH>`
+  - config-discovery shortcuts for tooling:
+    - `--find-config-path`
+    - `--no-config`
+    - possibly a `--config-precedence` mode for editor integrations
+  - incremental cache support for repeated large-repo runs:
+    - `--cache`
+    - `--cache-location`
+    - `--cache-strategy` (`metadata` vs `content`)
+  - formatter safety / confidence modes:
+    - `--verify` or `--safe` to reject output if the parse tree changes
+    - `--fast` to skip that verification when users explicitly want speed
+  - version pinning support:
+    - `--required-version`
+    - optional config-file equivalent so teams can lock formatter behavior
+  - editor-grade machine output:
+    - output replacements instead of full-file text
+    - cursor-position translation for editor integrations
+    - explicit byte-range formatting in addition to line ranges if it proves simpler for editors
+  - richer CI/reporting formats:
+    - `--reporter github`
+    - `--reporter checkstyle`
+    - `--reporter junit`
+    - `--reporter sarif`
+  - human-oriented batch summaries:
+    - scanned / selected / changed / unchanged / skipped / failed counts
+    - final summary output tailored for check-mode and in-place runs
+  - gradual-adoption controls for large legacy repos:
+    - opt-in format pragma support (`--require-pragma` style behavior)
+    - possibly pragma insertion for migration tooling
+  - skip visibility and discovery explanation:
+    - explain why files were skipped by `.cmakefmtignore`
+    - explain why files were skipped by `.gitignore`
+    - explain why files were skipped by `--path-regex`, `--changed`, or `--staged`
+    - make these reasons visible in `--debug` and/or dedicated explain modes
+  - benchmark governance and regression tracking:
+    - define how benchmark baselines are stored and compared from release to release
+    - add benchmark CI or scheduled benchmark runs with artifact retention
+    - define a regression review policy before alpha
+  - formatting stability policy:
+    - define what level of formatting churn is acceptable across alpha releases
+    - document when a change is "style bug fix" vs "style break"
+    - publish rollout advice for teams pinning formatter versions
 - [ ] Ensure release-quality polish around distribution
   - `--version` reports the expected semver and commit/tag metadata where appropriate
   - shell completions are generated and shipped in release artifacts
   - man page / CLI reference is generated if we decide to maintain one
   - licenses for bundled artifacts/extensions/actions are correct
   - release docs explain how user config discovery works in packaged installs
+  - release docs explain formatter stability expectations across alpha versions
 
 ### Acceptance criteria
 
