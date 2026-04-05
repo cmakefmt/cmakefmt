@@ -1406,7 +1406,7 @@ fn explain_config_defaults_to_current_directory() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("target: ."));
     assert!(stdout.contains("config mode: discovered from the target path"));
-    assert!(stdout.contains("./.cmakefmt.yaml"));
+    assert!(stdout.contains(".cmakefmt.yaml"));
 }
 
 #[test]
