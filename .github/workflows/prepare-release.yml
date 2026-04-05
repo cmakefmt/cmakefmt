@@ -30,6 +30,7 @@ jobs:
         with:
           ref: ${{ inputs.branch }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Validate version format
         shell: bash
@@ -103,7 +104,14 @@ jobs:
 
       - name: Push commit and tag
         shell: bash
+        env:
+          RELEASE_WORKFLOW_TOKEN: ${{ secrets.RELEASE_WORKFLOW_TOKEN }}
         run: |
           set -euo pipefail
+          if [[ -z "${RELEASE_WORKFLOW_TOKEN}" ]]; then
+            echo "RELEASE_WORKFLOW_TOKEN secret is not configured."
+            exit 1
+          fi
+          git remote set-url origin "https://x-access-token:${RELEASE_WORKFLOW_TOKEN}@github.com/${{ github.repository }}.git"
           git push origin "HEAD:${{ inputs.branch }}"
           git push origin "v${{ inputs.version }}"
