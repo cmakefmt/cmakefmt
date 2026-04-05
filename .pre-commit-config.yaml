@@ -28,9 +28,9 @@ repos:
   - repo: local
     hooks:
       - id: cargo-fmt
-        name: cargo fmt --all --check
+        name: cargo fmt --all
         entry: cargo
-        args: [fmt, --all, --check]
+        args: [fmt, --all]
         language: system
         pass_filenames: false
 
