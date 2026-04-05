@@ -28,6 +28,6 @@ Update the benchmark suite when:
 - a new major capability is added to the CLI or library
 - a hot path changes significantly
 - a new benchmark corpus shape is needed
-- methodology in `docs/PERFORMANCE.md` changes
+- methodology in `docs/src/performance.md` changes
 
 Keep benchmark names stable unless there is a strong reason to rename them.

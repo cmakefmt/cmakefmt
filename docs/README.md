@@ -1,38 +1,28 @@
-# Documentation
+# `docs/`
 
-This directory holds long-form project documentation and reference material.
+This directory contains the `mdBook` source for the GitHub Pages
+documentation site for `cmakefmt`.
 
-## What Lives Here
+## Local Preview
 
-- `ARCHITECTURE.md`
-  - formatter/parser/spec design notes
-- `PERFORMANCE.md`
-  - benchmark methodology, profiler notes, and current performance signal
+Use `mdbook` to preview or build the docs locally:
 
-Parser grammar source of truth is `src/parser/cmake.pest`.
+```bash
+mdbook serve docs
+```
 
-## User-Facing Docs
+Then open the local URL printed by `mdbook`, usually
+<http://localhost:3000>.
 
-The user-facing documentation site source lives under `site/`.
+To build the static site without serving it:
 
-That site covers:
+```bash
+mdbook build docs
+```
 
-- installation
-- CLI reference
-- configuration reference
-- formatter behavior
-- `cmake-format` migration
-- library/API usage
-- release notes / changelog
+## Rules
 
-## Contributor Notes
-
-If you change user-visible behavior, keep these aligned:
-
-- `README.md`
-- `site/`
-- `CHANGELOG.md`
-- this directory's long-form reference docs where relevant
-
-Use [CONTRIBUTING.md](../CONTRIBUTING.md)
-as the source of truth for what needs to move together.
+- keep `docs/src/SUMMARY.md` in sync with the available chapters
+- if you add a new primary docs page, add it to `docs/src/SUMMARY.md`
+- keep the site content aligned with `README.md`, `CHANGELOG.md`, and
+  `CONTRIBUTING.md`

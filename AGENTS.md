@@ -51,10 +51,9 @@ cmakefmt/
 ├── AGENTS.md                  ← this file
 ├── Cargo.toml
 ├── docs/
-│   ├── ARCHITECTURE.md        ← design decisions + data structures
-│   ├── PERFORMANCE.md         ← benchmarking guide + how to compare runs
-│   ├── ROADMAP.md             ← phased milestones + acceptance criteria
-│   └── cmake-grammar.md       ← full CMake language grammar reference
+│   ├── README.md              ← docs site contributor notes
+│   ├── book.toml              ← mdBook configuration
+│   └── src/                   ← docs source published to cmakefmt.dev
 ├── src/
 │   ├── main.rs                ← CLI entry point (clap)
 │   ├── lib.rs                 ← public API (format_source, format_file)
@@ -110,7 +109,7 @@ Types of comments in CMake:
 4. `~/.cmake-format.toml` (user default)
 5. Built-in defaults
 
-The full config schema is documented in `docs/ARCHITECTURE.md` (Config section).
+The full config schema is documented in `docs/src/config.md`.
 Config sections: `[format]`, `[style]`, `[markup]`, `[per_command.<name>]`.
 Goal: match or exceed every useful option from the original cmake-format tool.
 

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # `cmakefmt`
 
 [![CI](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml)

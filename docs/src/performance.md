@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # Performance
 
 `cmakefmt` is fast enough that you never have to think twice about running it
@@ -6,8 +12,7 @@ not an accident. Speed is a design goal, not a side effect.
 
 ## Current Benchmark Signal
 
-The repository keeps a fuller benchmark record in `docs/PERFORMANCE.md`. The
-headline numbers from the current local benchmark set:
+The headline numbers from the current local benchmark set:
 
 | Metric | Current local signal |
 | --- | --- |

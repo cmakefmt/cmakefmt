@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # Migration From `cmake-format`
 
 Switching to `cmakefmt` is designed to be straightforward. The goal is easy

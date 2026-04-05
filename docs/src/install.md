@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # Install
 
 Get `cmakefmt` running, wire it into your project, and never think about CMake
@@ -190,7 +196,7 @@ cmakefmt --explain-config
 Preview the published docs locally with `mdbook`:
 
 ```bash
-mdbook serve site
+mdbook serve docs
 ```
 
 Then open the local URL that `mdbook` prints.

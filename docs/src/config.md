@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # Config Reference
 
 Everything you need to know to tune `cmakefmt` for your project.

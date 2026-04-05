@@ -1,8 +1,13 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
 # Architecture
 
 A user-facing overview of how `cmakefmt` works and why it is built the way it
-is. For the deeper implementation notes, see `docs/ARCHITECTURE.md` in the
-repository.
+is.
 
 ## Mental Model
 

@@ -71,7 +71,7 @@ This project is independent from other Rust implementations, including:
 Geometric-mean speedup across the full corpus: **`20.69×`**.
 On a 220-file batch, `--parallel 8` improves throughput by **`3.80×`** vs serial.
 
-Full methodology and profiler notes: [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+Full methodology and profiler notes: [cmakefmt.dev/performance.html](https://cmakefmt.dev/performance.html).
 
 Refresh the pinned local corpus and generate local before/after review artefacts with:
 
@@ -128,23 +128,23 @@ cmakefmt --staged --check
 
 ## Common Workflows
 
-| Task | Command |
-|------|---------|
-| Format file to stdout | `cmakefmt CMakeLists.txt` |
-| Rewrite files in place | `cmakefmt --in-place .` |
-| CI check | `cmakefmt --check .` |
-| Preview which files would change | `cmakefmt --list-changed-files .` |
-| See the exact patch | `cmakefmt --diff CMakeLists.txt` |
-| Verify semantics while formatting to stdout | `cmakefmt --verify CMakeLists.txt` |
-| Pre-commit guard (staged files only) | `cmakefmt --staged --check` |
-| PR-scoped check | `cmakefmt --changed --since origin/main --check` |
-| Machine-readable CI output | `cmakefmt --check --report-format json .` |
-| GitHub Actions annotations | `cmakefmt --check --report-format github .` |
-| Checkstyle / JUnit / SARIF output | `cmakefmt --check --report-format checkstyle .` |
-| Pin the required binary version in CI | `cmakefmt --required-version 0.1.0 --check .` |
-| Speed up repeated large-repo checks | `cmakefmt --cache --check .` |
-| Roll out formatting file-by-file | `cmakefmt --require-pragma --check .` |
-| Read from stdin | `cat CMakeLists.txt \| cmakefmt -` |
+| Task                                        | Command                                          |
+|---------------------------------------------|--------------------------------------------------|
+| Format file to stdout                       | `cmakefmt CMakeLists.txt`                        |
+| Rewrite files in place                      | `cmakefmt --in-place .`                          |
+| CI check                                    | `cmakefmt --check .`                             |
+| Preview which files would change            | `cmakefmt --list-changed-files .`                |
+| See the exact patch                         | `cmakefmt --diff CMakeLists.txt`                 |
+| Verify semantics while formatting to stdout | `cmakefmt --verify CMakeLists.txt`               |
+| Pre-commit guard (staged files only)        | `cmakefmt --staged --check`                      |
+| PR-scoped check                             | `cmakefmt --changed --since origin/main --check` |
+| Machine-readable CI output                  | `cmakefmt --check --report-format json .`        |
+| GitHub Actions annotations                  | `cmakefmt --check --report-format github .`      |
+| Checkstyle / JUnit / SARIF output           | `cmakefmt --check --report-format checkstyle .`  |
+| Pin the required binary version in CI       | `cmakefmt --required-version 0.1.0 --check .`    |
+| Speed up repeated large-repo checks         | `cmakefmt --cache --check .`                     |
+| Roll out formatting file-by-file            | `cmakefmt --require-pragma --check .`            |
+| Read from stdin                             | `cat CMakeLists.txt \| cmakefmt -`               |
 
 ## Configuration
 
@@ -238,28 +238,50 @@ Full API docs: [cmakefmt.dev/api.html](https://cmakefmt.dev/api.html).
 
 ## Documentation
 
-Start here: [cmakefmt.dev](https://cmakefmt.dev).
+Start here: [https://cmakefmt.dev](https://cmakefmt.dev).
 
-| Doc | Description |
-|-----|-------------|
-| [Install](https://cmakefmt.dev/install.html) | Install options, first-project setup, CI wiring |
-| [Coverage](https://cmakefmt.dev/coverage.html) | How coverage is measured, published, and interpreted |
-| [Release Channels](https://cmakefmt.dev/release.html) | Alpha contract, support levels, release artifacts, and shell completions |
-| [CLI Reference](https://cmakefmt.dev/cli.html) | Every flag, exit code, and discovery rule |
-| [Config Reference](https://cmakefmt.dev/config.html) | Full config schema with examples |
-| [Formatter Behavior](https://cmakefmt.dev/behavior.html) | How the formatter makes layout decisions |
-| [Migration from `cmake-format`](https://cmakefmt.dev/migration.html) | Incremental rollout guide and CLI mapping |
-| [Library API](https://cmakefmt.dev/api.html) | Embedding `cmakefmt` in your own Rust tools |
-| [Troubleshooting](https://cmakefmt.dev/troubleshooting.html) | Common issues and debug workflow |
-| [Performance](docs/PERFORMANCE.md) | Benchmark methodology and profiler notes |
-| [Contributing](CONTRIBUTING.md) | How to contribute, run tests, and open PRs |
-| [Changelog](CHANGELOG.md) | What's changed in each release |
+| Doc                                                                  | Description                                                              |
+|----------------------------------------------------------------------|--------------------------------------------------------------------------|
+| [Install](https://cmakefmt.dev/install.html)                         | Install options, first-project setup, CI wiring                          |
+| [Coverage](https://cmakefmt.dev/coverage.html)                       | How coverage is measured, published, and interpreted                     |
+| [Release Channels](https://cmakefmt.dev/release.html)                | Alpha contract, support levels, release artifacts, and shell completions |
+| [CLI Reference](https://cmakefmt.dev/cli.html)                       | Every flag, exit code, and discovery rule                                |
+| [Config Reference](https://cmakefmt.dev/config.html)                 | Full config schema with examples                                         |
+| [Formatter Behavior](https://cmakefmt.dev/behavior.html)             | How the formatter makes layout decisions                                 |
+| [Migration from `cmake-format`](https://cmakefmt.dev/migration.html) | Incremental rollout guide and CLI mapping                                |
+| [Library API](https://cmakefmt.dev/api.html)                         | Embedding `cmakefmt` in your own Rust tools                              |
+| [Troubleshooting](https://cmakefmt.dev/troubleshooting.html)         | Common issues and debug workflow                                         |
+| [Performance](https://cmakefmt.dev/performance.html)                 | Benchmark methodology and profiler notes                                 |
+| [Contributing](CONTRIBUTING.md)                                      | How to contribute, run tests, and open PRs                               |
+| [Changelog](CHANGELOG.md)                                            | What's changed in each release                                           |
 
 Preview the full docs locally:
 
 ```bash
-mdbook serve site
+mdbook serve docs
 ```
+
+## Project Layout
+
+```text
+cmakefmt/
+├── docs/        # mdBook source published to cmakefmt.dev
+├── src/         # CLI, library API, parser, config, spec, formatter
+├── tests/       # integration tests, snapshots, and fixtures
+├── benches/     # Criterion benchmarks
+├── scripts/     # repo maintenance and docs helpers
+└── .github/     # CI and Pages workflows
+```
+
+Key modules under `src/`:
+
+- `main.rs`: CLI entry point and workflow orchestration
+- `lib.rs`: public library API
+- `config/`: config loading, merging, and legacy conversion
+- `parser/`: `pest` grammar, AST, and parse pipeline
+- `spec/`: built-in and user-defined command registry
+- `formatter/`: AST-to-doc formatting logic and comment handling
+- `files.rs`: file discovery and ignore handling
 
 ## Development
 

@@ -1,4 +1,4 @@
 /target
-/site/book
+/docs/book
 .cmakefmt-cache/
 *.pending-snap
