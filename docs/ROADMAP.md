@@ -391,7 +391,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - add the build/deploy workflow
   - ensure local preview instructions exist
   - ensure versioned or release-tagged docs policy is clear
-- [ ] Do a full documentation overhaul before alpha
+- [x] Do a full documentation overhaul before alpha
   - rewrite `docs/ARCHITECTURE.md` so it clearly explains how parsing, command-spec resolution,
     layout selection, comment preservation, barriers, and CLI execution fit together
   - expand the published architecture page to explain the pipeline in user-facing terms,
@@ -456,10 +456,10 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 - [x] The GitHub Pages docs site builds cleanly and is linked from `README.md`
 - [x] User-visible changes have a documented changelog/release-note path
 - [x] Public library APIs and exported data structures are documented well enough to generate useful API docs with `cargo doc --no-deps`
-- [ ] The landing page makes a compelling, evidence-backed case for trying `cmakefmt`
-- [ ] The architecture, API, behavior, CLI, config, and install pages all contain enough concrete examples
+- [x] The landing page makes a compelling, evidence-backed case for trying `cmakefmt`
+- [x] The architecture, API, behavior, CLI, config, and install pages all contain enough concrete examples
       that a user can solve common tasks without reading the source
-- [ ] Config docs are navigable enough that a user can jump directly to any single option and understand its effect quickly
+- [x] Config docs are navigable enough that a user can jump directly to any single option and understand its effect quickly
 
 ---
 
