@@ -403,6 +403,7 @@ fn merge_flags(base: &mut IndexSet<String>, override_flags: IndexSet<String>) {
 mod tests {
     use super::*;
     use crate::spec::NArgs;
+    use std::fs;
 
     #[test]
     fn registry_has_target_link_libraries_keywords() {
@@ -878,5 +879,100 @@ nargs = 1
         );
         assert!(form.kwargs.contains_key("PUBLIC"));
         assert_eq!(form.kwargs["LINKER_LANGUAGE"].nargs, NArgs::Fixed(1));
+    }
+
+    #[test]
+    fn uppercase_lookup_uses_builtin_normalization() {
+        let registry = CommandRegistry::load().unwrap();
+        assert!(registry.contains_builtin("TARGET_LINK_LIBRARIES"));
+        let CommandSpec::Single(form) = registry.get("TARGET_LINK_LIBRARIES") else {
+            panic!()
+        };
+        assert!(form.kwargs.contains_key("PUBLIC"));
+        assert!(form.kwargs.contains_key("PRIVATE"));
+    }
+
+    #[test]
+    fn from_builtins_and_yaml_override_file_merges_entries() {
+        let dir = tempfile::tempdir().unwrap();
+        let overrides = dir.path().join("override.yaml");
+        fs::write(
+            &overrides,
+            r#"
+commands:
+  target_link_libraries:
+    kwargs:
+      linker_language:
+        nargs: 1
+"#,
+        )
+        .unwrap();
+
+        let registry = CommandRegistry::from_builtins_and_overrides(Some(&overrides)).unwrap();
+        let CommandSpec::Single(form) = registry.get("target_link_libraries") else {
+            panic!()
+        };
+        assert_eq!(form.kwargs["LINKER_LANGUAGE"].nargs, NArgs::Fixed(1));
+    }
+
+    #[test]
+    fn merge_override_file_reports_structured_toml_parse_errors() {
+        let mut registry = CommandRegistry::load().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("override.toml");
+        fs::write(&path, "[commands.bad]\npargs = [\n").unwrap();
+
+        let err = registry.merge_override_file(&path).unwrap_err();
+        match err {
+            Error::Spec { details, .. } => {
+                assert_eq!(details.format, "TOML");
+                assert!(details.line.is_some());
+                assert!(details.column.is_some());
+            }
+            other => panic!("expected spec parse error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn merge_override_file_reports_structured_yaml_parse_errors() {
+        let mut registry = CommandRegistry::load().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("override.yaml");
+        fs::write(&path, "commands:\n  target_link_libraries: [\n").unwrap();
+
+        let err = registry.merge_override_file(&path).unwrap_err();
+        match err {
+            Error::Spec { details, .. } => {
+                assert_eq!(details.format, "YAML");
+                assert!(details.line.is_some());
+                assert!(details.column.is_some());
+            }
+            other => panic!("expected spec parse error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn override_with_mismatched_shape_replaces_base_command_spec() {
+        let mut registry = CommandRegistry::load().unwrap();
+        registry
+            .merge_override_str(
+                r#"
+[commands.cmake_minimum_required.forms.VERSION]
+pargs = 1
+"#,
+                PathBuf::from("override.toml"),
+            )
+            .unwrap();
+
+        let CommandSpec::Discriminated { .. } = registry.get("cmake_minimum_required") else {
+            panic!("expected discriminated command after mismatched override")
+        };
+        assert_eq!(
+            registry
+                .get("cmake_minimum_required")
+                .form_for(Some("VERSION"))
+                .pargs,
+            NArgs::Fixed(1)
+        );
     }
 }

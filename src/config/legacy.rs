@@ -1159,6 +1159,106 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn convert_legacy_requires_input_paths() {
+        let err = convert_legacy_config_files(&[]).unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("--convert-legacy-config requires at least one input path"));
+    }
+
+    #[test]
+    fn unsupported_legacy_extension_returns_error() {
+        let err = detect_legacy_format(Path::new("legacy.txt")).unwrap_err();
+        assert!(err.to_string().contains("unsupported legacy config format"));
+    }
+
+    #[test]
+    fn python_helpers_handle_comments_and_assignments() {
+        assert_eq!(
+            strip_python_comment(r#"value = "http://example.com#frag"  # comment"#).trim_end(),
+            r#"value = "http://example.com#frag""#
+        );
+        assert_eq!(
+            parse_python_assignment("line_width = 100"),
+            Some(("line_width", "100"))
+        );
+        assert_eq!(parse_python_assignment("not valid key = 1"), None);
+        assert_eq!(
+            parse_python_section_header(r#"with section("format"):"#),
+            Some("format".to_owned())
+        );
+    }
+
+    #[test]
+    fn python_literal_parser_handles_core_types() {
+        let path = Path::new("legacy.py");
+        assert_eq!(
+            parse_python_literal(path, "{'a': [1, 'x'], 'b': True, 'c': None}").unwrap(),
+            LegacyValue::Table(BTreeMap::from([
+                (
+                    "a".to_owned(),
+                    LegacyValue::Array(vec![
+                        LegacyValue::Integer(1),
+                        LegacyValue::String("x".to_owned()),
+                    ]),
+                ),
+                ("b".to_owned(), LegacyValue::Bool(true)),
+                ("c".to_owned(), LegacyValue::Null),
+            ]))
+        );
+        assert_eq!(
+            parse_python_literal(path, r#"r"c:\tmp\file""#).unwrap(),
+            LegacyValue::String(r#"c:\tmp\file"#.to_owned())
+        );
+    }
+
+    #[test]
+    fn parse_nargs_string_supports_all_supported_forms() {
+        assert_eq!(parse_nargs_string("*"), Some(NArgs::ZeroOrMore));
+        assert_eq!(parse_nargs_string("+"), Some(NArgs::OneOrMore));
+        assert_eq!(parse_nargs_string("?"), Some(NArgs::Optional));
+        assert_eq!(parse_nargs_string("2+"), Some(NArgs::AtLeast(2)));
+        assert_eq!(parse_nargs_string("3"), Some(NArgs::Fixed(3)));
+        assert_eq!(parse_nargs_string("bogus"), None);
+    }
+
+    #[test]
+    fn converts_canonical_case_and_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            r#"
+format:
+  command_case: canonical
+"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path]).unwrap();
+        assert!(converted.contains("command_case = \"lower\""));
+        assert!(converted.contains("mapped to \"lower\""));
+    }
+
+    #[test]
+    fn unknown_options_are_reported_in_conversion_notes() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(
+            &path,
+            r#"{
+  "format": {"line_width": 90, "unknown_key": true},
+  "misc": {"nope": 1}
+}"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path]).unwrap();
+        assert!(converted.contains("unsupported legacy option [format].unknown_key"));
+        assert!(converted.contains("unsupported legacy option [misc].nope"));
+    }
+
+    #[test]
     fn converts_legacy_json_config() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("legacy.json");

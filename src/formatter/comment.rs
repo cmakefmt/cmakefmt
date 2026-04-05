@@ -117,3 +117,51 @@ fn should_preserve_comment_verbatim(text: &str, config: &Config) -> bool {
 
     false
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn reflow_config() -> Config {
+        Config {
+            enable_markup: true,
+            reflow_comments: true,
+            ..Config::default()
+        }
+    }
+
+    #[test]
+    fn bracket_comments_preserve_newlines() {
+        let comment = Comment::Bracket("#[[a\r\nb]]".to_owned());
+        let lines = format_comment_lines(&comment, &Config::default(), 0, 80);
+        assert_eq!(lines, vec!["#[[a".to_owned(), "b]]".to_owned()]);
+    }
+
+    #[test]
+    fn line_comment_reflows_when_enabled() {
+        let comment = Comment::Line(
+            "# this is a long comment that should wrap when line width is small".to_owned(),
+        );
+        let lines = format_comment_lines(&comment, &reflow_config(), 2, 24);
+        assert!(lines.len() > 1);
+        assert!(lines.iter().all(|line| line.starts_with("# ")));
+    }
+
+    #[test]
+    fn line_comment_preserves_for_barrier_directive() {
+        let original = "# cmake-format: off".to_owned();
+        let comment = Comment::Line(original.clone());
+        let lines = format_comment_lines(&comment, &reflow_config(), 0, 8);
+        assert_eq!(lines, vec![original]);
+    }
+
+    #[test]
+    fn line_comment_preserves_when_matching_literal_pattern() {
+        let mut config = reflow_config();
+        config.literal_comment_pattern = r"^#\s*DO_NOT_WRAP".to_owned();
+        let original = "# DO_NOT_WRAP this must stay as-is".to_owned();
+        let comment = Comment::Line(original.clone());
+        let lines = format_comment_lines(&comment, &config, 0, 8);
+        assert_eq!(lines, vec![original]);
+    }
+}

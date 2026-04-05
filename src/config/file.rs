@@ -1003,4 +1003,144 @@ command_case = "upper"
         let err = result.unwrap_err();
         assert!(err.to_string().contains("config error"));
     }
+
+    #[test]
+    fn config_from_yaml_file_applies_all_sections_and_overrides() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join(CONFIG_FILE_NAME_YAML);
+        fs::write(
+            &config_path,
+            r#"
+format:
+  line_width: 96
+  tab_size: 3
+  use_tabs: true
+  max_empty_lines: 2
+  max_hanging_wrap_lines: 4
+  max_hanging_wrap_positional_args: 7
+  max_hanging_wrap_groups: 5
+  dangle_parens: true
+  dangle_align: open
+  min_prefix_length: 2
+  max_prefix_length: 12
+  space_before_control_paren: true
+  space_before_definition_paren: true
+style:
+  command_case: unchanged
+  keyword_case: lower
+markup:
+  enable_markup: false
+  reflow_comments: true
+  first_comment_is_literal: false
+  literal_comment_pattern: '^\\s*KEEP'
+  bullet_char: '-'
+  enum_char: ')'
+  fence_pattern: '^\\s*(```+).*'
+  ruler_pattern: '^\\s*={5,}\\s*$'
+  hashruler_min_length: 42
+  canonicalize_hashrulers: false
+per_command_overrides:
+  my_custom_command:
+    line_width: 101
+    tab_size: 5
+    dangle_parens: false
+    dangle_align: prefix
+    max_hanging_wrap_positional_args: 8
+    max_hanging_wrap_groups: 9
+"#,
+        )
+        .unwrap();
+
+        let config = Config::from_file(&config_path).unwrap();
+        assert_eq!(config.line_width, 96);
+        assert_eq!(config.tab_size, 3);
+        assert!(config.use_tabchars);
+        assert_eq!(config.max_empty_lines, 2);
+        assert_eq!(config.max_lines_hwrap, 4);
+        assert_eq!(config.max_pargs_hwrap, 7);
+        assert_eq!(config.max_subgroups_hwrap, 5);
+        assert!(config.dangle_parens);
+        assert_eq!(config.dangle_align, DangleAlign::Open);
+        assert_eq!(config.min_prefix_chars, 2);
+        assert_eq!(config.max_prefix_chars, 12);
+        assert!(config.separate_ctrl_name_with_space);
+        assert!(config.separate_fn_name_with_space);
+        assert_eq!(config.command_case, CaseStyle::Unchanged);
+        assert_eq!(config.keyword_case, CaseStyle::Lower);
+        assert!(!config.enable_markup);
+        assert!(config.reflow_comments);
+        assert!(!config.first_comment_is_literal);
+        assert_eq!(config.literal_comment_pattern, "^\\\\s*KEEP");
+        assert_eq!(config.bullet_char, "-");
+        assert_eq!(config.enum_char, ")");
+        assert_eq!(config.fence_pattern, "^\\\\s*(```+).*");
+        assert_eq!(config.ruler_pattern, "^\\\\s*={5,}\\\\s*$");
+        assert_eq!(config.hashruler_min_length, 42);
+        assert!(!config.canonicalize_hashrulers);
+        let per_command = config
+            .per_command_overrides
+            .get("my_custom_command")
+            .unwrap();
+        assert_eq!(per_command.line_width, Some(101));
+        assert_eq!(per_command.tab_size, Some(5));
+        assert_eq!(per_command.dangle_parens, Some(false));
+        assert_eq!(per_command.dangle_align, Some(DangleAlign::Prefix));
+        assert_eq!(per_command.max_pargs_hwrap, Some(8));
+        assert_eq!(per_command.max_subgroups_hwrap, Some(9));
+    }
+
+    #[test]
+    fn detect_config_format_supports_yaml_and_rejects_unknown() {
+        assert!(matches!(
+            detect_config_format(Path::new(".cmakefmt.yml")).unwrap(),
+            ConfigFileFormat::Yaml
+        ));
+        assert!(matches!(
+            detect_config_format(Path::new("tooling/settings.yaml")).unwrap(),
+            ConfigFileFormat::Yaml
+        ));
+        assert!(matches!(
+            detect_config_format(Path::new("project.toml")).unwrap(),
+            ConfigFileFormat::Toml
+        ));
+        let err = detect_config_format(Path::new("config.json")).unwrap_err();
+        assert!(err.to_string().contains("unsupported config format"));
+    }
+
+    #[test]
+    fn yaml_config_with_legacy_per_command_key_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join(CONFIG_FILE_NAME_YAML);
+        fs::write(
+            &config_path,
+            "per_command:\n  message:\n    line_width: 120\n",
+        )
+        .unwrap();
+        let err = Config::from_file(&config_path).unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("`per_command` has been renamed to `per_command_overrides`"));
+    }
+
+    #[test]
+    fn invalid_yaml_reports_line_and_column() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join(CONFIG_FILE_NAME_YAML);
+        fs::write(&config_path, "format:\n  line_width: [\n").unwrap();
+
+        let err = Config::from_file(&config_path).unwrap_err();
+        match err {
+            Error::Config { details, .. } => {
+                assert_eq!(details.format, "YAML");
+                assert!(details.line.is_some());
+                assert!(details.column.is_some());
+            }
+            other => panic!("expected config parse error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn toml_line_col_returns_none_when_offset_is_missing() {
+        assert_eq!(toml_line_col("line = true\n", None), (None, None));
+    }
 }

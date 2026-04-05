@@ -370,6 +370,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn nargs_serialize_round_trip() {
+        let values = [
+            NArgs::Fixed(3),
+            NArgs::ZeroOrMore,
+            NArgs::OneOrMore,
+            NArgs::Optional,
+            NArgs::AtLeast(2),
+        ];
+        for value in values {
+            let encoded = serde_json::to_string(&value).unwrap();
+            let decoded: NArgs = serde_json::from_str(&encoded).unwrap();
+            assert_eq!(decoded, value);
+        }
+    }
+
+    #[test]
+    fn nargs_invalid_pattern_is_rejected() {
+        let err = toml::from_str::<KwargSpec>("nargs = \"abc+\"\n").unwrap_err();
+        assert!(err.to_string().contains("invalid NArgs pattern"));
+    }
+
+    #[test]
     fn nargs_integer() {
         let src = "nargs = 1\n";
         let spec: KwargSpec = toml::from_str(src).unwrap();
@@ -435,6 +457,48 @@ pargs = "+"
         assert!(matches!(spec, CommandSpec::Discriminated { .. }));
         let form = spec.form_for(Some("targets"));
         assert!(form.kwargs.contains_key("DESTINATION"));
+    }
+
+    #[test]
+    fn discriminated_command_uses_fallback_when_no_key_matches() {
+        let src = r#"
+[forms.FILE]
+pargs = 1
+
+[fallback]
+pargs = 2
+"#;
+        let spec: CommandSpec = toml::from_str(src).unwrap();
+        let form = spec.form_for(Some("unknown"));
+        assert_eq!(form.pargs, NArgs::Fixed(2));
+    }
+
+    #[test]
+    fn command_spec_override_into_full_spec_normalizes_casing() {
+        let override_spec = CommandSpecOverride::Single(CommandFormOverride {
+            pargs: Some(NArgs::Fixed(1)),
+            flags: ["quiet".to_owned()].into_iter().collect(),
+            kwargs: [(
+                "sources".to_owned(),
+                KwargSpecOverride {
+                    nargs: Some(NArgs::OneOrMore),
+                    ..KwargSpecOverride::default()
+                },
+            )]
+            .into_iter()
+            .collect(),
+            layout: Some(LayoutOverridesOverride {
+                always_wrap: Some(true),
+                ..LayoutOverridesOverride::default()
+            }),
+        });
+
+        let full = override_spec.into_full_spec();
+        let form = full.form_for(None);
+        assert!(form.flags.contains("QUIET"));
+        assert!(form.kwargs.contains_key("SOURCES"));
+        assert_eq!(form.kwargs["SOURCES"].nargs, NArgs::OneOrMore);
+        assert_eq!(form.layout.as_ref().unwrap().always_wrap, Some(true));
     }
 
     #[test]
