@@ -535,9 +535,9 @@ Each module has `#[cfg(test)]` tests for its core logic.
 
 ### Snapshot tests (`insta`)
 
-Every distinct formatting behaviour has a snapshot test. Snapshots are
-committed to the repo and reviewed before merging. Located in
-`tests/snapshots/`.
+Every distinct formatting behaviour has a snapshot test in
+`tests/snapshots.rs`. Most expectations are inline `insta` snapshots and are
+reviewed in normal diffs before merging.
 
 ### Idempotency tests
 

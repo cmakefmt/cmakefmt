@@ -19,8 +19,6 @@ This directory contains integration coverage for the crate and CLI.
 
 - `fixtures/`
   - source inputs grouped by purpose
-- `snapshots/`
-  - expected formatted outputs for snapshot-backed tests
 
 When adding a new behavior regression, prefer:
 

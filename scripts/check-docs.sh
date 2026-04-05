@@ -14,7 +14,7 @@ required_files=(
   "src/README.md"
   "tests/README.md"
   "tests/fixtures/README.md"
-  "tests/snapshots/README.md"
+  "tests/snapshots.rs"
   "benches/README.md"
   "site/README.md"
   "site/book.toml"

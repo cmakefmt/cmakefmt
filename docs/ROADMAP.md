@@ -376,8 +376,8 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
     - purpose of each Rust test module
   - `tests/fixtures/`
     - fixture categories and how to add/update them
-  - `tests/snapshots/`
-    - what snapshot files represent and when they should change
+  - `tests/snapshots.rs`
+    - how inline snapshot expectations are updated and reviewed
   - `benches/`
     - benchmark intent and how to extend the suite
   - `docs/`

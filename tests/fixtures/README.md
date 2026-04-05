@@ -18,5 +18,5 @@ Fixture inputs are grouped by intent.
 - keep fixtures minimal unless they are intentionally real-world
 - keep upstream provenance and fetch instructions in `real_world/SOURCES.md`
 - use the fetch script to populate `target/real-world-corpus/` locally
-- if a change updates expected formatting, update the corresponding snapshot in
-  `tests/snapshots/`
+- if a change updates expected formatting, update the corresponding
+  `insta::assert_snapshot!` expectation in `tests/snapshots.rs`
