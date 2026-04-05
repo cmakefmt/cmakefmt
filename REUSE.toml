@@ -16,6 +16,7 @@ path = [
   "Cargo.toml",
   "LICENSE",
   "README.md",
+  "assets/logo.png",
   "docs/*.md",
   "scripts/*.py",
   "scripts/*.sh",

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="cmakefmt logo" width="100%"/>
+</p>
+
 <h1><code>cmakefmt</code></h1>
 
 [![CI](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml)
