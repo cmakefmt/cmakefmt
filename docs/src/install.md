@@ -72,6 +72,34 @@ cmakefmt --generate-man-page > cmakefmt.1
 Those outputs are intended for packaging and release artifacts, but they are
 also useful for local shell setup.
 
+## Shell Completions
+
+Release archives include shell completion scripts for the supported shells:
+
+- `cmakefmt.bash` for Bash
+- `_cmakefmt` for Zsh
+- `cmakefmt.fish` for Fish
+
+The Zsh file intentionally uses the conventional completion-function name
+`_cmakefmt` rather than a `.zsh` suffix.
+
+You can also regenerate the same files locally:
+
+```bash
+cmakefmt --generate-completion bash > cmakefmt.bash
+cmakefmt --generate-completion zsh > _cmakefmt
+cmakefmt --generate-completion fish > cmakefmt.fish
+```
+
+Typical install locations:
+
+- Bash: a directory sourced by your shell startup, or your distro's bash-completion directory
+- Zsh: a directory on your `fpath`, then run `autoload -Uz compinit && compinit`
+- Fish: `~/.config/fish/completions/`
+
+If you only need a temporary local setup, keeping the files in your repository
+or dotfiles tree and sourcing them from your shell startup files is fine too.
+
 ## First Project Setup
 
 Dump a starter config into your repo root:

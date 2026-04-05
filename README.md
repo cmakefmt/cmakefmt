@@ -102,6 +102,7 @@ Package-manager distribution (Homebrew, crates.io, pre-built binaries) is still
 being rolled out.
 
 Planned release channels and support levels are documented at [cmakefmt.dev/release.html](https://cmakefmt.dev/release.html).
+Shell completion installation guidance lives in [cmakefmt.dev/install.html](https://cmakefmt.dev/install.html).
 
 ## Quick Start
 
