@@ -4,12 +4,6 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to release (for example: v1.0.0-alpha.1)"
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -25,14 +19,12 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Verify tag matches Cargo.toml version
         shell: bash
         run: |
           set -euo pipefail
-          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          TAG="${{ github.ref_name }}"
           TAG_VERSION="${TAG#v}"
           CARGO_VERSION="$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')"
           if [[ "${TAG_VERSION}" != "${CARGO_VERSION}" ]]; then
@@ -75,8 +67,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -102,11 +92,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            VERSION="$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')"
-          fi
+          VERSION="${GITHUB_REF_NAME#v}"
           echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Package release archive (Unix)
@@ -157,8 +143,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -193,8 +177,8 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2.6.1
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
-          prerelease: ${{ contains(github.ref_name, '-') || contains(inputs.tag, '-') }}
+          tag_name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           files: |
             dist/*
