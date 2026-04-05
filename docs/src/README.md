@@ -160,8 +160,8 @@ cmakefmt --show-config src/CMakeLists.txt
 
 ## Current Status
 
-`cmakefmt` is pre-`1.0` — honest about it, but already genuinely useful. Active
-development is focused on:
+The repository is stable and actively maintained. `cmakefmt` is still
+pre-`1.0`, and active development is focused on:
 
 - polishing documentation and the onboarding experience
 - tightening release and distribution channels

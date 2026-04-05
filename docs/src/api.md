@@ -22,9 +22,9 @@ The crate is a strong fit when you want to:
 
 ## Crate Status
 
-The library API is usable today, but the project is still pre-`1.0`. Expect
-some surface evolution until the public alpha/release phases settle
-compatibility guarantees.
+The library API is usable today. This repository is stable, but the crate is
+still pre-`1.0`, so expect some surface evolution before long-term
+compatibility guarantees settle.
 
 ## Public Entry Points
 

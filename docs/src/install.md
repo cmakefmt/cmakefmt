@@ -11,29 +11,29 @@ formatting again.
 
 ## Current Installation Options
 
-`cmakefmt` has not yet reached its public alpha release, so the supported paths
-today are repository-based:
+This repository is stable and actively maintained. Today, the supported install
+paths are repository-based:
 
 - build from source with `cargo build --release`
 - install from this checkout with `cargo install --path .`
 
-First-party package-manager distribution is coming in the alpha-release phase.
-Until then, Cargo is the fastest path to a working binary.
+First-party package-manager distribution is still being rolled out. Until then,
+Cargo is the fastest path to a working binary.
 
 ## Support Levels
 
-The alpha-release plan separates channels into explicit support levels so users
-know what to trust:
+The release plan separates channels into explicit support levels so users know
+what to trust:
 
 | Channel | Planned support level | Notes |
 |---------|------------------------|-------|
 | `cargo install cmakefmt-rust` | Officially maintained | The reference install path for developers already using Rust. |
 | GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
 | Docs site / CLI reference | Officially maintained | Should stay in lock-step with each tagged release. |
-| Homebrew / `winget` / Scoop | Officially maintained | Planned first-party package-manager channels during alpha. |
-| Additional package managers (`npm`, AUR, Nix, containers, etc.) | Automated or best-effort during alpha | Useful, but not blockers for the very first alpha. |
+| Homebrew / `winget` / Scoop | Officially maintained | Planned first-party package-manager channels. |
+| Additional package managers (`npm`, AUR, Nix, containers, etc.) | Automated or best-effort | Useful channels, but not the first rollout priority. |
 
-Until the first public alpha lands, repository-based installs remain the only
+Until tagged distribution channels land, repository-based installs remain the
 fully supported path.
 
 ## Build From This Repository
@@ -216,15 +216,15 @@ cargo install --path . --force
 cargo uninstall cmakefmt-rust
 ```
 
-### Pin a specific prerelease in CI later
+### Pin a specific release in CI later
 
-Once the alpha release exists, prefer explicit version pins:
+Once release tags exist, prefer explicit version pins:
 
 ```bash
-cargo install cmakefmt-rust --version 1.0.0-alpha.1
+cargo install cmakefmt-rust --version <tagged-version>
 ```
 
-The alpha docs and release notes will also publish SHA-256 sums for release
+The release docs and release notes will also publish SHA-256 sums for release
 artifacts so non-Cargo installs can verify downloads.
 
 ## Troubleshooting Install Issues

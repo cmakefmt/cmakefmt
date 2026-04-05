@@ -82,7 +82,8 @@ scripts/review-real-world-corpus.sh
 
 ## Installation
 
-`cmakefmt` has not yet reached its public alpha release. Until then, build from this repository:
+This repository is stable and actively maintained. For now, install `cmakefmt`
+directly from this checkout:
 
 ```bash
 git clone <this-repo>
@@ -96,7 +97,8 @@ Verify:
 cmakefmt --version
 ```
 
-Package-manager distribution (Homebrew, crates.io, pre-built binaries) is coming in the alpha-release phase.
+Package-manager distribution (Homebrew, crates.io, pre-built binaries) is still
+being rolled out.
 
 Planned release channels and support levels are documented at [cmakefmt.dev/release.html](https://cmakefmt.dev/release.html).
 
@@ -302,9 +304,9 @@ pre-commit install --hook-type pre-push
 
 ## Status
 
-`cmakefmt` is pre-`1.0` — honest about it, but already genuinely useful.
-The formatter is actively developed; large-codebase parallel surveying, release packaging,
-and package-manager distribution are still in progress.
+The repository is stable and actively maintained. `cmakefmt` is still
+pre-`1.0`, so release packaging, package-manager distribution, and some output
+or API details may continue to evolve.
 
 Hit something unexpected? See [Troubleshooting](https://cmakefmt.dev/troubleshooting.html) or run:
 
