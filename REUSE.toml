@@ -18,6 +18,7 @@ path = [
   "README.md",
   "assets/logo.png",
   "docs/*.md",
+  "packaging/homebrew/README.md",
   "scripts/*.py",
   "scripts/*.sh",
   "site/README.md",

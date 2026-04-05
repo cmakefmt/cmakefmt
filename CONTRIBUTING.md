@@ -42,6 +42,13 @@ flag to appear in the dumped config template. If a new long flag is
 intentionally operational-only, add it to the non-config allowlist in that
 test.
 
+Operational-only flags still need:
+
+- docs if they are user-visible
+- integration tests in `tests/cli.rs`
+- a review of the non-config allowlist in the dump-config guard test in
+  `src/main.rs`
+
 ## If You Add Or Change A Config Option
 
 Update the runtime config model in `src/config/mod.rs`.
@@ -125,6 +132,17 @@ Keep these aligned:
 - `.pre-commit-config.yaml` if local hygiene should enforce it
 - `README.md` if users should know about it
 
+Release tooling has a split ownership model:
+
+- `.github/workflows/prepare-release.yml`
+  - owns version bumps, lockfile refresh, commit creation, tagging, and push
+- `.github/workflows/release.yml`
+  - builds, verifies, and publishes from an existing tag
+- `packaging/homebrew/`
+  - stores the Homebrew formula template and notes
+  - the rendered formula is generated as a release artifact, not maintained as
+    a versioned formula file in-tree
+
 ## If You Add Or Change User Docs
 
 Keep these aligned:
@@ -161,6 +179,22 @@ still build:
 ```bash
 cargo doc --no-deps
 ```
+
+## If You Add Or Edit Licensed Files
+
+Keep REUSE metadata aligned with the change.
+
+- If you add a new prose/config/documentation file that should be covered by
+  `REUSE.toml`, add an annotation for its path instead of copying SPDX headers
+  into the file unless an inline header is required for that file type.
+- If you edit a file in a new calendar year and its copyright year is encoded
+  inline or in `REUSE.toml`, update the year so the metadata still matches the
+  file history.
+
+Check:
+
+- `REUSE.toml`
+- any inline SPDX header on the edited file
 
 ## Before You Finish A Change
 

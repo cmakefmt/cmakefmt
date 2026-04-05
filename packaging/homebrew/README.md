@@ -1,9 +1,3 @@
-<!--
-SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
-
-SPDX-License-Identifier: MIT OR Apache-2.0
--->
-
 # Homebrew Packaging
 
 This directory contains the Homebrew formula template used for `cmakefmt`
