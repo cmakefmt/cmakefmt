@@ -23,9 +23,6 @@ commit_args = ""
 filename = "Cargo.toml"
 
 [[tool.bumpversion.files]]
-filename = "Cargo.lock"
-
-[[tool.bumpversion.files]]
 filename = "README.md"
 
 [[tool.bumpversion.files]]

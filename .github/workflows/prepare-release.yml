@@ -61,7 +61,7 @@ jobs:
 
       - name: Refresh Cargo.lock
         shell: bash
-        run: cargo metadata --format-version 1 > /dev/null
+        run: cargo generate-lockfile
 
       - name: Verify docs checks
         shell: bash
