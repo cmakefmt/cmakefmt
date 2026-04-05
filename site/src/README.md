@@ -1,8 +1,8 @@
 # `cmakefmt`
 
-[![CI](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml)
-[![Pages](https://github.com/puneetmatharu/cmakefmt/actions/workflows/pages.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/pages.yml)
-[![Coverage](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml)
+[![CI](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml)
+[![Pages](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml)
+[![Coverage](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml)
 
 **A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
@@ -12,6 +12,10 @@ Python tool from the `cmakelang` project. Instead of patching around its limits,
 your CI budget, and your build system.
 
 Same spirit. No Python. No compromises.
+
+Crates.io package name: `cmakefmt-rust` (CLI binary remains `cmakefmt`).
+This project is independent from other Rust implementations, including
+`azais-corentin/cmakefmt` and `yamadapc/cmakefmt`.
 
 ## Why `cmakefmt`?
 

@@ -2312,7 +2312,7 @@ fn build_sarif_report(results: &[ProcessedTarget], failures: &[FailedTarget]) ->
             "tool": {
                 "driver": {
                     "name": "cmakefmt",
-                    "informationUri": "https://github.com/puneetmatharu/cmakefmt",
+                    "informationUri": "https://github.com/cmakefmt/cmakefmt",
                     "rules": [
                         {
                             "id": "cmakefmt/would-reformat",

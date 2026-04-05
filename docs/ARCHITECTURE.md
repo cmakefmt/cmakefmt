@@ -342,7 +342,6 @@ just cosmetic.
 ## Related Docs
 
 - `docs/PERFORMANCE.md`
-- `docs/ROADMAP.md`
 - `site/src/architecture.md`
 
 ```toml

@@ -1,12 +1,12 @@
 [package]
-name = "cmakefmt"
+name = "cmakefmt-rust"
 version = "0.1.0"
 edition = "2021"
 description = "A fast, correct CMake formatter"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/puneetmatharu/cmakefmt"
-homepage = "https://github.com/puneetmatharu/cmakefmt"
-documentation = "https://puneetmatharu.github.io/cmakefmt/"
+repository = "https://github.com/cmakefmt/cmakefmt"
+homepage = "https://github.com/cmakefmt/cmakefmt"
+documentation = "https://cmakefmt.github.io/cmakefmt/"
 readme = "README.md"
 keywords = ["cmake", "formatter", "formatting", "cli", "developer-tools"]
 categories = ["command-line-utilities", "development-tools"]

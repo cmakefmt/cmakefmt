@@ -30,7 +30,7 @@ contract and channels that are convenient but lower-priority during alpha.
 | Channel | Support level | What to expect |
 |---------|----------------|----------------|
 | GitHub Releases binaries | Officially maintained | Release artifacts and checksums published for supported platforms. |
-| `cargo install cmakefmt` | Officially maintained | Curated crates.io package with the same source tree used for releases. |
+| `cargo install cmakefmt-rust` | Officially maintained | Curated crates.io package with the same source tree used for releases. |
 | Documentation site | Officially maintained | Updated as part of the tagged release. |
 | Homebrew / `winget` / Scoop | Officially maintained during alpha | These are the first package-manager targets after GitHub Releases and crates.io. |
 | Additional package managers / wrappers | Best effort during alpha | Useful distribution channels, but not all are blockers for `alpha.1`. |
@@ -71,5 +71,5 @@ is to keep those changes understandable and intentional:
 - formatter churn should be documented in the changelog
 - teams should pin an explicit alpha version in CI if output stability matters
 
-The release process and support policy are also documented for contributors in
-[docs/RELEASING.md](../../docs/RELEASING.md).
+Release notes and support policy updates are published with each tagged release
+and reflected in the project changelog.

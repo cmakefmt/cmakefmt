@@ -4,14 +4,19 @@
 
 <h1><code>cmakefmt</code></h1>
 
-[![CI](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml)
-[![Pages](https://github.com/puneetmatharu/cmakefmt/actions/workflows/pages.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/pages.yml)
-[![Coverage](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml)
+[![CI](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml)
+[![Pages](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml)
+[![Coverage](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml)
 
 **A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
 `cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format) tool with a
 single native binary. Same spirit. No Python. No compromises.
+
+Crates.io package name: `cmakefmt-rust` (CLI binary remains `cmakefmt`).
+This project is independent from other Rust implementations, including:
+[`azais-corentin/cmakefmt`](https://github.com/azais-corentin/cmakefmt) and
+[`yamadapc/cmakefmt`](https://github.com/yamadapc/cmakefmt).
 
 <h2>Contents</h2>
 

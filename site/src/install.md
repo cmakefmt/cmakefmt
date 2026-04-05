@@ -21,7 +21,7 @@ know what to trust:
 
 | Channel | Planned support level | Notes |
 |---------|------------------------|-------|
-| `cargo install cmakefmt` | Officially maintained | The reference install path for developers already using Rust. |
+| `cargo install cmakefmt-rust` | Officially maintained | The reference install path for developers already using Rust. |
 | GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
 | Docs site / CLI reference | Officially maintained | Should stay in lock-step with each tagged release. |
 | Homebrew / `winget` / Scoop | Officially maintained | Planned first-party package-manager channels during alpha. |
@@ -207,7 +207,7 @@ cargo install --path . --force
 ### Remove a Cargo-installed binary
 
 ```bash
-cargo uninstall cmakefmt
+cargo uninstall cmakefmt-rust
 ```
 
 ### Pin a specific prerelease in CI later
@@ -215,7 +215,7 @@ cargo uninstall cmakefmt
 Once the alpha release exists, prefer explicit version pins:
 
 ```bash
-cargo install cmakefmt --version 1.0.0-alpha.1
+cargo install cmakefmt-rust --version 1.0.0-alpha.1
 ```
 
 The alpha docs and release notes will also publish SHA-256 sums for release
