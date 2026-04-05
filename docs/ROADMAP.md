@@ -700,7 +700,7 @@ not just faster.
   - document what is intentionally excluded from coverage reporting
 - [x] Finish crates.io packaging metadata before alpha
   - complete `Cargo.toml` metadata: repository, homepage/docs URL, keywords, categories, and README linkage
-- [ ] Verify crates.io packaging before alpha
+- [x] Verify crates.io packaging before alpha
   - verify the packaged README renders well on crates.io
   - verify `cargo install cmakefmt` works from a packaged tarball before the real publish
 - [x] Write installation and upgrade documentation
@@ -832,7 +832,7 @@ not just faster.
 
 ### Acceptance criteria
 
-- [ ] `cargo publish --dry-run` succeeds
+- [x] `cargo publish --dry-run` succeeds
 - [x] `reuse lint` succeeds and the repo has a consistent final license story
 - [x] Real-world validation no longer requires checked-in copied upstream fixture trees in the main repo
 - [ ] Tagging `v1.0.0-alpha.1` from a clean commit can produce a complete release candidate without manual file editing
