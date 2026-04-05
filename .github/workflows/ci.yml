@@ -46,3 +46,11 @@ jobs:
 
       - name: Build API docs
         run: cargo doc --no-deps
+
+      - name: Install cargo-audit
+        if: matrix.os == 'ubuntu-latest'
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Security audit
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo audit

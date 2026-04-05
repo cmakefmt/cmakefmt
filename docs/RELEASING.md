@@ -28,6 +28,7 @@ churn should pin an explicit prerelease version.
    - `cargo fmt --all --check`
    - `cargo clippy --all-targets -- -D warnings`
    - `cargo test`
+   - `cargo audit`
    - `bash scripts/check-docs.sh`
    - `reuse --no-multiprocessing lint`
 3. Review performance and coverage status.
