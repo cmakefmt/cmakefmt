@@ -14,6 +14,22 @@ today are repository-based:
 First-party package-manager distribution is coming in the alpha-release phase.
 Until then, Cargo is the fastest path to a working binary.
 
+## Support Levels
+
+The alpha-release plan separates channels into explicit support levels so users
+know what to trust:
+
+| Channel | Planned support level | Notes |
+|---------|------------------------|-------|
+| `cargo install cmakefmt` | Officially maintained | The reference install path for developers already using Rust. |
+| GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
+| Docs site / CLI reference | Officially maintained | Should stay in lock-step with each tagged release. |
+| Homebrew / `winget` / Scoop | Officially maintained | Planned first-party package-manager channels during alpha. |
+| Additional package managers (`npm`, AUR, Nix, containers, etc.) | Automated or best-effort during alpha | Useful, but not blockers for the very first alpha. |
+
+Until the first public alpha lands, repository-based installs remain the only
+fully supported path.
+
 ## Build From This Repository
 
 ```bash
@@ -38,6 +54,17 @@ Verify the binary is on your path:
 cmakefmt --version
 cmakefmt --help
 ```
+
+You can also inspect release-oriented helper outputs directly from the built
+binary:
+
+```bash
+cmakefmt --generate-completion bash > cmakefmt.bash
+cmakefmt --generate-man-page > cmakefmt.1
+```
+
+Those outputs are intended for packaging and release artifacts, but they are
+also useful for local shell setup.
 
 ## First Project Setup
 
@@ -161,6 +188,32 @@ mdbook serve site
 ```
 
 Then open the local URL that `mdbook` prints.
+
+## Upgrade And Uninstall
+
+### Upgrade a local source install
+
+```bash
+git pull --ff-only
+cargo install --path . --force
+```
+
+### Remove a Cargo-installed binary
+
+```bash
+cargo uninstall cmakefmt
+```
+
+### Pin a specific prerelease in CI later
+
+Once the alpha release exists, prefer explicit version pins:
+
+```bash
+cargo install cmakefmt --version 1.0.0-alpha.1
+```
+
+The alpha docs and release notes will also publish SHA-256 sums for release
+artifacts so non-Cargo installs can verify downloads.
 
 ## Troubleshooting Install Issues
 

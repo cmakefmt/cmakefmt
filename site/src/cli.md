@@ -76,6 +76,8 @@ Ignore rules only affect:
 | Flag | Meaning |
 | --- | --- |
 | `--dump-config [FORMAT]` | Print a starter config template and exit. Defaults to YAML; pass `toml` for TOML. |
+| `--generate-completion <SHELL>` | Print shell completions for packaging or local shell setup. |
+| `--generate-man-page` | Print a roff man page for packagers and Unix-like installs. |
 | `--show-config [FORMAT]` | Print the effective config for a single target and exit. Defaults to YAML; pass `toml` for TOML. |
 | `--show-config-path` | Print the selected config file path for a single target and exit. `--find-config-path` is an alias. |
 | `--explain-config` | Explain config resolution for a single target, or for the current working directory when no explicit file is given. |

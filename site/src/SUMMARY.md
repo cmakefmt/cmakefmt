@@ -2,6 +2,7 @@
 
 - [Documentation Home](README.md)
 - [Install](install.md)
+- [Release Channels](release.md)
 - [Performance](performance.md)
 - [CLI Reference](cli.md)
 - [Config Reference](config.md)

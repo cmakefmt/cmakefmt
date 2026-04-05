@@ -10,7 +10,8 @@ use std::process::ExitCode;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, ValueEnum};
+use clap_complete::{generate, Shell};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
     convert_legacy_config_files, default_config_template_for,
@@ -58,6 +59,7 @@ current working directory.";
 #[command(
     name = "cmakefmt",
     version,
+    long_version = env!("CMAKEFMT_CLI_LONG_VERSION"),
     about = "Parse CMake listfiles and format them nicely.",
     long_about = LONG_ABOUT
 )]
@@ -175,6 +177,33 @@ struct Cli {
         default_missing_value = "yaml"
     )]
     dump_config: Option<DumpConfigFormat>,
+
+    /// Generate shell completion scripts and print them to stdout.
+    #[arg(
+        long = "generate-completion",
+        value_enum,
+        value_name = "SHELL",
+        help_heading = "Release And Packaging",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths",
+        conflicts_with = "show_config",
+        conflicts_with = "show_config_path",
+        conflicts_with = "explain_config"
+    )]
+    generate_completion: Option<Shell>,
+
+    /// Generate a roff man page and print it to stdout.
+    #[arg(
+        long = "generate-man-page",
+        help_heading = "Release And Packaging",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths",
+        conflicts_with = "generate_completion",
+        conflicts_with = "show_config",
+        conflicts_with = "show_config_path",
+        conflicts_with = "explain_config"
+    )]
+    generate_man_page: bool,
 
     /// Print the effective config for a single target and exit.
     ///
@@ -494,6 +523,20 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return Ok(EXIT_OK);
     }
 
+    if let Some(shell) = cli.generate_completion {
+        let mut command = Cli::command();
+        generate(shell, &mut command, "cmakefmt", &mut io::stdout());
+        return Ok(EXIT_OK);
+    }
+
+    if cli.generate_man_page {
+        let command = Cli::command();
+        clap_mangen::Man::new(command)
+            .render(&mut io::stdout())
+            .map_err(cmakefmt::Error::Io)?;
+        return Ok(EXIT_OK);
+    }
+
     if !cli.convert_config_paths.is_empty() {
         if !cli.files.is_empty() {
             return Err(cmakefmt::Error::Formatter(
@@ -716,6 +759,29 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
     if cli.stdin_path.is_some() && !cli.files.iter().any(|file| file == "-") {
         return Err(cmakefmt::Error::Formatter(
             "--stdin-path requires stdin input via `cmakefmt -`".to_owned(),
+        ));
+    }
+
+    if (cli.generate_completion.is_some() || cli.generate_man_page)
+        && (!cli.files.is_empty()
+            || !cli.files_from.is_empty()
+            || !cli.config_paths.is_empty()
+            || cli.no_config
+            || cli.debug
+            || cli.quiet
+            || cli.keep_going
+            || cli.diff
+            || cli.check
+            || cli.in_place
+            || cli.list_changed_files
+            || cli.list_input_files
+            || cli.staged
+            || cli.changed
+            || cli.stdin_path.is_some()
+            || !cli.line_ranges.is_empty())
+    {
+        return Err(cmakefmt::Error::Formatter(
+            "completion/man-page generation cannot be combined with formatting or config-introspection inputs".to_owned(),
         ));
     }
 

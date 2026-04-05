@@ -75,6 +75,8 @@ cmakefmt --version
 
 Package-manager distribution (Homebrew, crates.io, pre-built binaries) is coming in the alpha-release phase.
 
+Planned release channels and support levels are documented in [site/src/release.md](site/src/release.md).
+
 ## Quick Start
 
 **1. Generate a starter config in your project root:**
@@ -212,6 +214,7 @@ Start here: [Docs Landing Page](site/src/README.md).
 | Doc | Description |
 |-----|-------------|
 | [Install](site/src/install.md) | Install options, first-project setup, CI wiring |
+| [Release Channels](site/src/release.md) | Alpha contract, support levels, release artifacts, and shell completions |
 | [CLI Reference](site/src/cli.md) | Every flag, exit code, and discovery rule |
 | [Config Reference](site/src/config.md) | Full config schema with examples |
 | [Formatter Behavior](site/src/behavior.md) | How the formatter makes layout decisions |

@@ -1592,6 +1592,30 @@ fn version_flag() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("cmakefmt"));
+    assert!(stdout.contains(env!("CARGO_PKG_VERSION")));
+}
+
+#[test]
+fn generate_completion_outputs_bash_script() {
+    let output = cmakefmt()
+        .args(["--generate-completion", "bash"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("_cmakefmt"));
+    assert!(stdout.contains("complete -F"));
+}
+
+#[test]
+fn generate_man_page_outputs_roff() {
+    let output = cmakefmt().arg("--generate-man-page").output().unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains(".TH cmakefmt"));
+    assert!(stdout.contains("Parse CMake listfiles and format them nicely."));
 }
 
 #[test]
@@ -1605,6 +1629,8 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains(".cmakefmt.toml"));
     assert!(stdout.contains("--colour <COLOUR>"));
     assert!(stdout.contains("--dump-config [<FORMAT>]"));
+    assert!(stdout.contains("--generate-completion <SHELL>"));
+    assert!(stdout.contains("--generate-man-page"));
     assert!(stdout.contains("--show-config[=<FORMAT>]"));
     assert!(stdout.contains("--show-config-path"));
     assert!(stdout.contains("--find-config-path"));
