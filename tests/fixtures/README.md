@@ -11,12 +11,12 @@ Fixture inputs are grouped by intent.
 - `edge_cases/`
   - parser/formatter edge behavior that is easy to regress
 - `real_world/`
-  - checked-in upstream examples used for real-world validation
+  - manifest and helper files for the fetched real-world validation corpus
 
 ## Rules
 
 - keep fixtures minimal unless they are intentionally real-world
-- if a fixture is copied from upstream, keep provenance in
-  `real_world/SOURCES.md`
+- keep upstream provenance and fetch instructions in `real_world/SOURCES.md`
+- use the fetch script to populate `target/real-world-corpus/` locally
 - if a change updates expected formatting, update the corresponding snapshot in
   `tests/snapshots/`

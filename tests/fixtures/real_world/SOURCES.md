@@ -1,7 +1,24 @@
 # Real-World Fixture Sources
 
-Each fixture below is a checked-in copy of a real upstream `CMakeLists.txt`
-captured for formatter regression testing on April 2, 2026.
+The upstream real-world corpus is no longer checked into the repository.
+Instead, `tests/fixtures/real_world/manifest.toml` pins the fixture list and
+expected content hashes, and `scripts/fetch-real-world-corpus.py` downloads the
+files into `target/real-world-corpus/` on demand.
+
+To populate the local corpus:
+
+```bash
+python3 scripts/fetch-real-world-corpus.py
+```
+
+To generate local before/after review artefacts:
+
+```bash
+scripts/review-real-world-corpus.sh
+```
+
+The manifest was captured on April 2, 2026 and verifies each fetched file by
+SHA-256 so drift is explicit.
 
 - `abseil/CMakeLists.txt`
   Source: `https://github.com/abseil/abseil-cpp/blob/master/CMakeLists.txt`

@@ -11,7 +11,7 @@ This directory contains integration coverage for the crate and CLI.
 - `parser_fixtures.rs`
   - ensures all parser fixtures continue to parse
 - `real_world.rs`
-  - validates the real-world corpus and snapshot alignment
+  - validates the fetched real-world corpus manifest and local idempotency
 - `snapshots.rs`
   - focused formatting behavior regressions
 
@@ -26,4 +26,4 @@ When adding a new behavior regression, prefer:
 
 1. a focused snapshot in `snapshots.rs`
 2. a fixture if the input is reused
-3. a real-world corpus update only when the issue is genuinely corpus-shaped
+3. a real-world corpus manifest or review update only when the issue is genuinely corpus-shaped

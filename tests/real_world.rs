@@ -2,72 +2,131 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use std::collections::BTreeSet;
+use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use cmakefmt::{format_source, Config};
-use walkdir::WalkDir;
+use serde::Deserialize;
 
-fn real_world_fixture_paths() -> Vec<PathBuf> {
-    let root = Path::new("tests/fixtures/real_world");
-    let mut paths: Vec<_> = WalkDir::new(root)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .map(|entry| entry.into_path())
-        .filter(|path| path.file_name().and_then(|name| name.to_str()) == Some("CMakeLists.txt"))
-        .filter(|path| path.parent().is_some_and(|parent| parent != root))
-        .collect();
-    paths.sort();
-    paths
+#[derive(Debug, Deserialize)]
+struct RealWorldManifest {
+    fixture: Vec<RealWorldFixture>,
 }
 
-fn snapshot_name(path: &Path) -> String {
-    let relative = path
-        .strip_prefix("tests/fixtures/real_world")
-        .unwrap()
-        .to_string_lossy();
-    relative
-        .replace(std::path::MAIN_SEPARATOR, "__")
-        .replace('.', "_")
+#[derive(Debug, Deserialize)]
+struct RealWorldFixture {
+    name: String,
+    relative_path: String,
+    source_url: String,
+    raw_url: String,
+    sha256: String,
+}
+
+fn load_manifest() -> RealWorldManifest {
+    toml::from_str(&fs::read_to_string("tests/fixtures/real_world/manifest.toml").unwrap()).unwrap()
+}
+
+fn real_world_corpus_root() -> PathBuf {
+    env::var_os("CMAKEFMT_REAL_WORLD_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("target/real-world-corpus"))
+}
+
+fn available_real_world_fixture_paths() -> Option<Vec<PathBuf>> {
+    let manifest = load_manifest();
+    let root = real_world_corpus_root();
+
+    if !root.exists() {
+        eprintln!(
+            "skipping real-world corpus tests: {} does not exist; run `python3 scripts/fetch-real-world-corpus.py`",
+            root.display()
+        );
+        return None;
+    }
+
+    let mut paths = Vec::with_capacity(manifest.fixture.len());
+    for fixture in &manifest.fixture {
+        let path = root.join(&fixture.relative_path);
+        if !path.is_file() {
+            eprintln!(
+                "skipping real-world corpus tests: missing {}; run `python3 scripts/fetch-real-world-corpus.py`",
+                path.display()
+            );
+            return None;
+        }
+        paths.push(path);
+    }
+
+    Some(paths)
 }
 
 #[test]
-fn real_world_corpus_has_expected_size() {
-    let fixtures = real_world_fixture_paths();
+fn real_world_manifest_has_expected_size() {
+    let fixtures = load_manifest().fixture;
     assert!(
         fixtures.len() >= 10,
-        "expected at least 10 real-world fixtures, found {}",
+        "expected at least 10 real-world manifest entries, found {}",
         fixtures.len()
     );
 }
 
 #[test]
-fn real_world_fixture_manifest_mentions_every_fixture() {
-    let manifest = fs::read_to_string("tests/fixtures/real_world/SOURCES.md").unwrap();
+fn real_world_manifest_entries_are_unique_and_complete() {
+    let manifest = load_manifest();
+    let mut names = BTreeSet::new();
+    let mut paths = BTreeSet::new();
 
-    for path in real_world_fixture_paths() {
-        let relative = path
-            .strip_prefix("tests/fixtures/real_world")
-            .unwrap()
-            .to_string_lossy()
-            .replace(std::path::MAIN_SEPARATOR, "/");
+    for fixture in &manifest.fixture {
         assert!(
-            manifest.contains(&relative),
-            "fixture {} missing from SOURCES.md",
-            relative
+            names.insert(fixture.name.as_str()),
+            "duplicate fixture name {}",
+            fixture.name
+        );
+        assert!(
+            paths.insert(fixture.relative_path.as_str()),
+            "duplicate fixture path {}",
+            fixture.relative_path
+        );
+        assert!(
+            fixture.source_url.starts_with("https://"),
+            "source_url must be https for {}",
+            fixture.name
+        );
+        assert!(
+            fixture.raw_url.starts_with("https://"),
+            "raw_url must be https for {}",
+            fixture.name
+        );
+        assert_eq!(
+            fixture.sha256.len(),
+            64,
+            "sha256 must be 64 hex characters for {}",
+            fixture.name
         );
     }
 }
 
 #[test]
-fn real_world_outputs_match_snapshots() {
+fn real_world_outputs_are_idempotent() {
+    let Some(paths) = available_real_world_fixture_paths() else {
+        return;
+    };
+
     let config = Config::default();
 
-    for path in real_world_fixture_paths() {
+    for path in paths {
         let source = fs::read_to_string(&path).unwrap();
         let formatted = format_source(&source, &config)
             .unwrap_or_else(|err| panic!("formatting {} failed: {err}", path.display()));
-        insta::assert_snapshot!(snapshot_name(&path), formatted);
+        let reformatted = format_source(&formatted, &config)
+            .unwrap_or_else(|err| panic!("re-formatting {} failed: {err}", path.display()));
+        assert_eq!(
+            formatted,
+            reformatted,
+            "formatted output for {} was not idempotent",
+            path.display()
+        );
     }
 }

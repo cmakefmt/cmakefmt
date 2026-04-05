@@ -50,6 +50,13 @@ Geometric-mean speedup across the full corpus: **`20.77×`**.
 
 Full methodology and profiler notes: [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
+Refresh the pinned local corpus and generate local before/after review artefacts with:
+
+```bash
+python3 scripts/fetch-real-world-corpus.py
+scripts/review-real-world-corpus.sh
+```
+
 ## Installation
 
 `cmakefmt` has not yet reached its public alpha release. Until then, build from this repository:
@@ -174,6 +181,8 @@ fn main() -> Result<(), cmakefmt::Error> {
 Full API docs: [site/src/api.md](site/src/api.md).
 
 ## Documentation
+
+Start here: [Docs Landing Page](site/src/README.md).
 
 | Doc | Description |
 |-----|-------------|

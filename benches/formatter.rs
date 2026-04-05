@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use std::hint::black_box;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use cmakefmt::files::{discover_cmake_files_with_options, DiscoveryOptions};
@@ -72,8 +73,18 @@ fn large_synthetic_source() -> String {
     out
 }
 
+fn representative_real_world_source() -> String {
+    let root = std::env::var_os("CMAKEFMT_REAL_WORLD_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("target/real-world-corpus"));
+    let preferred = root.join("qtbase_network/CMakeLists.txt");
+    std::fs::read_to_string(&preferred).unwrap_or_else(|_| {
+        include_str!("../tests/fixtures/real_world/monorepo_root.cmake").to_string()
+    })
+}
+
 fn parse_benchmarks(c: &mut Criterion) {
-    let real_world = include_str!("../tests/fixtures/real_world/qtbase_network/CMakeLists.txt");
+    let real_world = representative_real_world_source();
     let large = large_synthetic_source();
     let mut group = c.benchmark_group("parse");
     group.warm_up_time(Duration::from_secs(2));
@@ -85,9 +96,11 @@ fn parse_benchmarks(c: &mut Criterion) {
         b.iter(|| cmakefmt::parser::parse(black_box(small_source())).expect("parse should succeed"))
     });
     group.bench_function(
-        BenchmarkId::from_parameter("real_world_qtbase_network"),
+        BenchmarkId::from_parameter("representative_real_world"),
         |b| {
-            b.iter(|| cmakefmt::parser::parse(black_box(real_world)).expect("parse should succeed"))
+            b.iter(|| {
+                cmakefmt::parser::parse(black_box(&real_world)).expect("parse should succeed")
+            })
         },
     );
     group.bench_function(BenchmarkId::from_parameter("large_synthetic"), |b| {
@@ -100,10 +113,8 @@ fn formatter_only_benchmarks(c: &mut Criterion) {
     let config = cmakefmt::Config::default();
     let registry = CommandRegistry::builtins();
     let small = cmakefmt::parser::parse(small_source()).expect("parse should succeed");
-    let real_world = cmakefmt::parser::parse(include_str!(
-        "../tests/fixtures/real_world/qtbase_network/CMakeLists.txt"
-    ))
-    .expect("parse should succeed");
+    let real_world =
+        cmakefmt::parser::parse(&representative_real_world_source()).expect("parse should succeed");
     let large = cmakefmt::parser::parse(&large_synthetic_source()).expect("parse should succeed");
     let mut group = c.benchmark_group("format_ast");
     group.warm_up_time(Duration::from_secs(2));
@@ -115,7 +126,7 @@ fn formatter_only_benchmarks(c: &mut Criterion) {
         b.iter(|| formatter::format_file(black_box(&small), &config, registry).expect("format"))
     });
     group.bench_function(
-        BenchmarkId::from_parameter("real_world_qtbase_network"),
+        BenchmarkId::from_parameter("representative_real_world"),
         |b| {
             b.iter(|| {
                 formatter::format_file(black_box(&real_world), &config, registry).expect("format")
@@ -130,7 +141,7 @@ fn formatter_only_benchmarks(c: &mut Criterion) {
 
 fn end_to_end_benchmarks(c: &mut Criterion) {
     let config = cmakefmt::Config::default();
-    let real_world = include_str!("../tests/fixtures/real_world/qtbase_network/CMakeLists.txt");
+    let real_world = representative_real_world_source();
     let comment_heavy = comment_heavy_source();
     let large = large_synthetic_source();
     let mut group = c.benchmark_group("format_source");
@@ -143,8 +154,8 @@ fn end_to_end_benchmarks(c: &mut Criterion) {
         b.iter(|| cmakefmt::format_source(black_box(small_source()), &config).expect("format"))
     });
     group.bench_function(
-        BenchmarkId::from_parameter("real_world_qtbase_network"),
-        |b| b.iter(|| cmakefmt::format_source(black_box(real_world), &config).expect("format")),
+        BenchmarkId::from_parameter("representative_real_world"),
+        |b| b.iter(|| cmakefmt::format_source(black_box(&real_world), &config).expect("format")),
     );
     group.bench_function(BenchmarkId::from_parameter("comment_heavy"), |b| {
         b.iter(|| cmakefmt::format_source(black_box(&comment_heavy), &config).expect("format"))

@@ -1,0 +1,75 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+captured_on = "2026-04-02"
+
+[[fixture]]
+name = "abseil"
+relative_path = "abseil/CMakeLists.txt"
+source_url = "https://github.com/abseil/abseil-cpp/blob/master/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/abseil/abseil-cpp/master/CMakeLists.txt"
+sha256 = "d22c5de2ae29aa2935dd95e7671f4e46b054214717d325cf7a4d3622c03a61dd"
+
+[[fixture]]
+name = "catch2"
+relative_path = "catch2/CMakeLists.txt"
+source_url = "https://github.com/catchorg/Catch2/blob/devel/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/catchorg/Catch2/devel/CMakeLists.txt"
+sha256 = "a8ed23482070a736ddece9b499cb423e251dddc8c9daf57ede53232a05cab5b0"
+
+[[fixture]]
+name = "cli11"
+relative_path = "cli11/CMakeLists.txt"
+source_url = "https://github.com/CLIUtils/CLI11/blob/main/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/CLIUtils/CLI11/main/CMakeLists.txt"
+sha256 = "3689ee4283c0fbdb00f69b896f96993ac8279cabcd975a83aa1ce48976091dad"
+
+[[fixture]]
+name = "cmake_cmbzip2"
+relative_path = "cmake_cmbzip2/CMakeLists.txt"
+source_url = "https://github.com/Kitware/CMake/blob/master/Utilities/cmbzip2/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/Kitware/CMake/master/Utilities/cmbzip2/CMakeLists.txt"
+sha256 = "c4f7269284796e496467fd4abe772e17791185b12f7864fd1abeca7a1f84c3ba"
+
+[[fixture]]
+name = "googletest"
+relative_path = "googletest/CMakeLists.txt"
+source_url = "https://github.com/google/googletest/blob/main/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/google/googletest/main/CMakeLists.txt"
+sha256 = "62e3c7a967a01c0b1a37b1193538caae1d40d7553e7249a43a75d7afedfcf0c4"
+
+[[fixture]]
+name = "llvm_tablegen"
+relative_path = "llvm_tablegen/CMakeLists.txt"
+source_url = "https://github.com/llvm/llvm-project/blob/main/llvm/utils/TableGen/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/llvm/llvm-project/main/llvm/utils/TableGen/CMakeLists.txt"
+sha256 = "6990ef0d0fccb6850c785bb5fb87334a06440c5adaade9a494f21957989894ea"
+
+[[fixture]]
+name = "nlohmann_json"
+relative_path = "nlohmann_json/CMakeLists.txt"
+source_url = "https://github.com/nlohmann/json/blob/develop/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/nlohmann/json/develop/CMakeLists.txt"
+sha256 = "2fe5d9852d1849577370087c3cb1f869e10cf1954cf55934760a66a5792d3c1c"
+
+[[fixture]]
+name = "opencv_flann"
+relative_path = "opencv_flann/CMakeLists.txt"
+source_url = "https://github.com/opencv/opencv/blob/4.x/modules/flann/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/opencv/opencv/4.x/modules/flann/CMakeLists.txt"
+sha256 = "4518f02a30bef1d5554fb54f929649986478258336fa89f77425f37a8c5f0fee"
+
+[[fixture]]
+name = "protobuf"
+relative_path = "protobuf/CMakeLists.txt"
+source_url = "https://github.com/protocolbuffers/protobuf/blob/main/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/protocolbuffers/protobuf/main/CMakeLists.txt"
+sha256 = "2e02cd4de9c1ddb0d8c7aa59144dfb9538df5e04e9db08d89c09eff48b412468"
+
+[[fixture]]
+name = "qtbase_network"
+relative_path = "qtbase_network/CMakeLists.txt"
+source_url = "https://github.com/qt/qtbase/blob/dev/src/network/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/qt/qtbase/dev/src/network/CMakeLists.txt"
+sha256 = "d00fa8dbc6baf6c7de89cafdf3f447cc864a2d538dc95f312c8a080725b65c85"

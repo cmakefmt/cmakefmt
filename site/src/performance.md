@@ -31,6 +31,12 @@ on real `CMakeLists.txt` files drawn from projects including:
 - nlohmann/json
 - protobuf
 
+Fetch the pinned local corpus before rerunning those comparisons:
+
+```bash
+python3 scripts/fetch-real-world-corpus.py
+```
+
 Results across that corpus:
 
 - `cmakefmt` was faster on **every single fixture**

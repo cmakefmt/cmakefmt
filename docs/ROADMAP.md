@@ -199,7 +199,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 - [x] Collect 10+ real-world `CMakeLists.txt` files from popular projects
   (CMake, LLVM, Qt, OpenCV, Boost, abseil, googletest, etc.)
-- [x] Add them to `tests/fixtures/real_world/`
+- [x] Add them to a deterministic real-world corpus harness
 - [x] Run formatter on all of them; manually review output
 - [x] Fix any formatting regressions found
 - [x] Snapshot all real-world outputs
@@ -223,7 +223,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   (parser, formatter, CLI file discovery, config loading, check mode, in-place mode)
 - [x] Build a dedicated benchmark corpus with representative inputs:
   - small synthetic files for parser/layout microbenchmarks
-  - medium real-world files from `tests/fixtures/real_world/`
+  - medium real-world files from the pinned review corpus
   - at least one large stress file (~1000+ lines)
   - command-heavy cases (`install`, `file`, `string`, `list`, target commands)
   - comment-heavy files and barrier/fence-heavy files
@@ -274,7 +274,7 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
   - commands used to reproduce results
 - [x] Run the head-to-head `cmakefmt` vs `cmake-format` benchmark and publish results in `README.md`
   - Install `cmake-format` (`pip install cmakelang`) in the benchmark environment
-  - Run both tools against every file in `tests/fixtures/real_world/`
+  - Run both tools against every file in the pinned real-world corpus
   - Measure wall-clock time (hyperfine or criterion shell benchmark)
   - Report speedup factor for each file and overall geometric mean
   - Include results table in `README.md`

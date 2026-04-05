@@ -556,8 +556,9 @@ This validates parser correctness independently of the formatter.
 - `basic/` — simple commands, argument types
 - `comments/` — all comment positions and types
 - `edge_cases/` — bracket args, deep nesting, very long lines, empty files
-- `real_world/` — real `CMakeLists.txt` files from popular open-source
-  projects (CMake itself, LLVM, Qt, OpenCV, etc.)
+- `real_world/` — manifest and helper files for a fetched corpus of real
+  `CMakeLists.txt` files from popular open-source projects (CMake itself,
+  LLVM, Qt, OpenCV, etc.)
 
 ### Benchmarks
 

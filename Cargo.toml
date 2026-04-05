@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 description = "A fast, correct CMake formatter"
 license = "MIT OR Apache-2.0"
+include = [
+  "/Cargo.toml",
+  "/LICENSE",
+  "/LICENSES/Apache-2.0.txt",
+  "/LICENSES/MIT.txt",
+  "/README.md",
+  "/src/**",
+]
 
 [[bin]]
 name = "cmakefmt"

@@ -197,9 +197,16 @@ parser work than from micro-optimizing command lookup.
 The real-world corpus comparison was measured with:
 
 ```bash
+python3 scripts/fetch-real-world-corpus.py
 hyperfine --warmup 3 --runs 20 \
-  "./target/release/cmakefmt 'tests/fixtures/real_world/<fixture>' >/dev/null" \
-  "cmake-format 'tests/fixtures/real_world/<fixture>' >/dev/null"
+  "./target/release/cmakefmt 'target/real-world-corpus/<fixture>' >/dev/null" \
+  "cmake-format 'target/real-world-corpus/<fixture>' >/dev/null"
+```
+
+To generate local before/after review artefacts for the same corpus:
+
+```bash
+scripts/review-real-world-corpus.sh
 ```
 
 Results:
