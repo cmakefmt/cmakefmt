@@ -15,7 +15,7 @@ Same spirit. No Python. No compromises.
 
 ## Why `cmakefmt`?
 
-- **20× faster — not a typo.** `cmakefmt` hits a `20.77x` geometric-mean
+- **20× faster — not a typo.** `cmakefmt` hits a `20.69x` geometric-mean
   speedup over `cmake-format` on real-world CMake corpora. Pre-commit hooks that
   once made you wince now finish before you blink.
 - **Zero dependencies. One binary.** No Python environment, no virtualenv
@@ -40,11 +40,14 @@ The numbers speak for themselves:
 
 | Metric | Signal |
 | --- | --- |
-| Geometric-mean speedup vs `cmake-format` | **`20.77x`** |
-| End-to-end `format_source` on large synthetic input | `8.6263 ms .. 8.8934 ms` |
-| Parser-only large synthetic input | `6.9304 ms .. 6.9677 ms` |
-| Serial whole-corpus batch | `109.5 ms ± 1.3 ms` |
-| `--parallel 8` whole-corpus batch | **`31.9 ms ± 1.0 ms`** |
+| Geometric-mean speedup vs `cmake-format` | **`20.69x`** |
+| End-to-end `format_source`, large synthetic input (1000+ lines) | estimate `8.8248 ms` (95% CI `8.8018–8.8519 ms`) |
+| Parser-only, large synthetic input | estimate `7.1067 ms` (95% CI `7.0793–7.1359 ms`) |
+| Serial whole-corpus batch (220 files) | `184.5 ms ± 1.3 ms` |
+| `--parallel 8` whole-corpus batch | **`48.5 ms ± 1.5 ms`** |
+
+95% CI is the Criterion-reported confidence interval: the range within which the
+true mean is expected to fall 95% of the time.
 
 Fast enough for local dev, pre-commit hooks, editor integrations, *and* CI — all
 at once. The only question is: why settle for slower?

@@ -10,8 +10,8 @@ This directory holds long-form project documentation and reference material.
   - benchmark methodology, profiler notes, and current performance signal
 - `ROADMAP.md`
   - project phases, deliverables, and acceptance criteria
-- `cmake-grammar.md`
-  - grammar reference and language-specific parsing notes
+
+Parser grammar source of truth is `src/parser/cmake.pest`.
 
 ## User-Facing Docs
 

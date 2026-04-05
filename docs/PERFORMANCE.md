@@ -132,7 +132,7 @@ If the change is significant, summarize it in `README.md` as well.
 
 ## Benchmark Environment
 
-The current local numbers below were captured on 2026-04-02 with:
+The current local numbers below were captured on 2026-04-05 with:
 
 - macOS `26.3.1` on `aarch64-apple-darwin`
 - `10` logical CPUs
@@ -142,12 +142,13 @@ The current local numbers below were captured on 2026-04-02 with:
 
 ## Current Local Signal
 
-Criterion:
+Criterion reports `[lower bound, point estimate, upper bound]` for the
+95% confidence interval:
 
-- `parse/large_synthetic`: `6.9304 ms .. 6.9677 ms`
-- `format_ast/large_synthetic`: `1.5227 ms .. 1.5534 ms`
-- `format_source/large_synthetic`: `8.6263 ms .. 8.8934 ms`
-- `format_source_with_debug/barrier_heavy`: `315.51 µs .. 319.36 µs`
+- `parse/large_synthetic`: estimate `7.1067 ms` (95% CI `7.0793 ms` to `7.1359 ms`)
+- `format_ast/large_synthetic`: estimate `1.7545 ms` (95% CI `1.7425 ms` to `1.7739 ms`)
+- `format_source/large_synthetic`: estimate `8.8248 ms` (95% CI `8.8018 ms` to `8.8519 ms`)
+- `format_source_with_debug/barrier_heavy`: estimate `313.98 µs` (95% CI `311.89 µs` to `317.54 µs`)
 
 Interpretation:
 
@@ -213,19 +214,22 @@ Results:
 
 | Fixture | Lines | `cmakefmt` ms | `cmake-format` ms | Speedup |
 | --- | ---: | ---: | ---: | ---: |
-| `abseil/CMakeLists.txt` | 204 | 4.467 | 114.576 | 25.65x |
-| `catch2/CMakeLists.txt` | 231 | 4.558 | 101.606 | 22.29x |
-| `cli11/CMakeLists.txt` | 283 | 4.458 | 118.954 | 26.68x |
-| `cmake_cmbzip2/CMakeLists.txt` | 25 | 3.957 | 59.156 | 14.95x |
-| `googletest/CMakeLists.txt` | 36 | 4.138 | 60.558 | 14.64x |
-| `llvm_tablegen/CMakeLists.txt` | 83 | 4.257 | 73.627 | 17.30x |
-| `monorepo_root.cmake` | 40 | 4.330 | 69.929 | 16.15x |
-| `nlohmann_json/CMakeLists.txt` | 237 | 4.717 | 131.813 | 27.95x |
-| `opencv_flann/CMakeLists.txt` | 2 | 3.899 | 49.754 | 12.76x |
-| `protobuf/CMakeLists.txt` | 201 | 4.631 | 85.811 | 18.53x |
-| `qtbase_network/CMakeLists.txt` | 420 | 5.557 | 279.420 | 50.28x |
+| `abseil/CMakeLists.txt` | 280 | 5.804 | 168.570 | 29.04x |
+| `catch2/CMakeLists.txt` | 230 | 5.768 | 105.614 | 18.31x |
+| `cli11/CMakeLists.txt` | 283 | 5.570 | 120.994 | 21.72x |
+| `cmake_cmbzip2/CMakeLists.txt` | 25 | 5.042 | 61.751 | 12.25x |
+| `googletest/CMakeLists.txt` | 36 | 5.004 | 62.439 | 12.48x |
+| `ggml/CMakeLists.txt` | 498 | 7.773 | 210.200 | 27.04x |
+| `llama_cpp/CMakeLists.txt` | 286 | 6.257 | 126.584 | 20.23x |
+| `llvm_tablegen/CMakeLists.txt` | 83 | 5.172 | 75.429 | 14.58x |
+| `nlohmann_json/CMakeLists.txt` | 237 | 5.705 | 138.936 | 24.35x |
+| `mariadb_server/CMakeLists.txt` | 656 | 9.774 | 473.879 | 48.49x |
+| `opencv_flann/CMakeLists.txt` | 2 | 4.719 | 51.497 | 10.91x |
+| `protobuf/CMakeLists.txt` | 351 | 6.226 | 111.802 | 17.96x |
+| `spdlog/CMakeLists.txt` | 413 | 9.204 | 213.649 | 23.21x |
+| `qtbase_network/CMakeLists.txt` | 420 | 8.146 | 284.355 | 34.91x |
 
-Geometric-mean speedup across the full real-world corpus: `20.77x`.
+Geometric-mean speedup across the full real-world corpus: `20.69x`.
 
 Notes:
 
@@ -248,19 +252,65 @@ hyperfine --warmup 3 --runs 15 \
 
 Results:
 
-- default single-threaded: `109.5 ms ± 1.3 ms`
-- `--parallel 2`: `71.8 ms ± 1.5 ms` (`1.53x` faster than serial)
-- `--parallel 4`: `44.3 ms ± 4.1 ms` (`2.47x` faster than serial)
-- `--parallel 8`: `31.9 ms ± 1.0 ms` (`3.43x` faster than serial)
+- default single-threaded: `184.5 ms ± 1.3 ms`
+- `--parallel 2`: `111.5 ms ± 11.9 ms` (`1.65x` faster than serial)
+- `--parallel 4`: `64.7 ms ± 1.1 ms` (`2.85x` faster than serial)
+- `--parallel 8`: `48.5 ms ± 1.5 ms` (`3.80x` faster than serial)
 
-Peak memory was measured with `/usr/bin/time -l`:
+Peak memory was measured with `/usr/bin/time -l`.
 
-- serial: `8159232` max resident set size, `6685568` peak memory footprint
-- `--parallel 8`: `15876096` max resident set size, `14418880` peak memory footprint
+**RSS (Resident Set Size)** is the peak RAM physically held in memory by the process.
+**Peak memory footprint** is the peak total virtual memory committed by the process (a macOS-specific metric).
+
+| Mode | RSS | Peak footprint |
+| --- | --- | --- |
+| serial | `13.2 MB` | `10.2 MB` |
+| `--parallel 8` | `20.7 MB` | `17.8 MB` |
+
+## Phase 12 Large-Repository Survey (`oomph-lib`)
+
+Late-stage parallelism validation was run on a local checkout of:
+
+- repo: `https://github.com/oomph-lib/oomph-lib`
+- local path: `/Users/PuneetMatharu/Dropbox/programming/oomph-lib/oomph-lib-repos/forked-oomph-lib`
+- discovered CMake files: `612`
+
+Command shape:
+
+```bash
+hyperfine --warmup 1 --runs 8 \
+  "./target/release/cmakefmt /path/to/oomph-lib >/dev/null" \
+  "./target/release/cmakefmt --parallel 2 /path/to/oomph-lib >/dev/null" \
+  "./target/release/cmakefmt --parallel 4 /path/to/oomph-lib >/dev/null" \
+  "./target/release/cmakefmt --parallel 8 /path/to/oomph-lib >/dev/null"
+```
+
+Results:
+
+- default single-threaded: `412.5 ms ± 9.0 ms`
+- `--parallel 2`: `296.0 ms ± 3.5 ms` (`1.41x` faster than serial)
+- `--parallel 4`: `191.8 ms ± 4.7 ms` (`2.15x` faster than serial)
+- `--parallel 8`: `152.5 ms ± 2.8 ms` (`2.71x` faster than serial)
+
+Peak memory with `/usr/bin/time -l`:
+
+| Mode | RSS | Peak footprint |
+| --- | --- | --- |
+| serial | `11.3 MB` | `8.1 MB` |
+| `--parallel 8` | `17.0 MB` | `13.9 MB` |
+
+Direct baseline against `cmake-format` on the same full repository (`612`
+discovered files), measured with `/usr/bin/time -l`:
+
+| Tool | Wall time | RSS |
+| --- | --- | --- |
+| `cmake-format` (sequential) | `45.69 s` | `22.5 MB` |
+| `cmakefmt` serial | `0.47 s` | `11.7 MB` (`~97x` faster) |
+| `cmakefmt --parallel 8` | `0.19 s` | `17.1 MB` (`~240x` faster) |
 
 Interpretation:
 
 - opt-in parallel mode scales well on the current benchmark corpus
-- peak RSS is roughly doubled at `--parallel 8`, which is acceptable for this
-  corpus size but still justifies keeping the default execution mode
-  single-threaded until larger-codebase surveys are complete
+- peak RSS roughly doubles at `--parallel 8` compared to serial, which is
+  acceptable for this corpus size, but is why serial remains the default
+  until larger-codebase surveys are complete

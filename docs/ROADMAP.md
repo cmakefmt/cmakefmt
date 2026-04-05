@@ -551,14 +551,18 @@ Uses the command spec registry from Phase 2 to drive keyword-aware grouping.
 
 ### Tasks
 
-- [ ] Survey `cmakefmt --parallel` on very large codebases for RAM and system impact
+- [x] Survey `cmakefmt --parallel` on very large codebases for RAM and system impact
       before ever considering a change from the default single-threaded execution
       model to a CPU-count default
-- [ ] Use `oomph-lib` as a late-stage large-repository validation target for this survey
+- [x] Use `oomph-lib` as a late-stage large-repository validation target for this survey
       - local checkout: `/Users/PuneetMatharu/Dropbox/programming/oomph-lib/oomph-lib-repos/forked-oomph-lib`
       - upstream repo: `https://github.com/oomph-lib/oomph-lib`
       - do not commit any `oomph-lib` CMake files or derived fixtures into this repository
       - keep this repository-specific validation scoped to Phase 12 only
+      - measured locally on 2026-04-05 (`612` discovered CMake files):
+        - serial: `412.5 ms ± 9.0 ms`
+        - `--parallel 8`: `152.5 ms ± 2.8 ms` (`2.71x` speedup)
+        - max RSS: `11862016` (serial) vs `17842176` (`--parallel 8`)
 
 ---
 

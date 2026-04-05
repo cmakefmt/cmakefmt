@@ -341,7 +341,6 @@ just cosmetic.
 
 ## Related Docs
 
-- `docs/cmake-grammar.md`
 - `docs/PERFORMANCE.md`
 - `docs/ROADMAP.md`
 - `site/src/architecture.md`
