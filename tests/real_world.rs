@@ -19,6 +19,8 @@ struct RealWorldManifest {
 struct RealWorldFixture {
     name: String,
     relative_path: String,
+    branch: String,
+    commit: String,
     source_url: String,
     raw_url: String,
     sha256: String,
@@ -95,8 +97,29 @@ fn real_world_manifest_entries_are_unique_and_complete() {
             fixture.name
         );
         assert!(
+            !fixture.branch.is_empty(),
+            "branch must be present for {}",
+            fixture.name
+        );
+        assert_eq!(
+            fixture.commit.len(),
+            40,
+            "commit must be 40 hex characters for {}",
+            fixture.name
+        );
+        assert!(
+            fixture.source_url.contains(&fixture.commit),
+            "source_url must be pinned to the manifest commit for {}",
+            fixture.name
+        );
+        assert!(
             fixture.raw_url.starts_with("https://"),
             "raw_url must be https for {}",
+            fixture.name
+        );
+        assert!(
+            fixture.raw_url.contains(&fixture.commit),
+            "raw_url must be pinned to the manifest commit for {}",
             fixture.name
         );
         assert_eq!(

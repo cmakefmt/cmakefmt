@@ -17,29 +17,33 @@ To generate local before/after review artefacts:
 scripts/review-real-world-corpus.sh
 ```
 
-The manifest was captured on April 2, 2026 and verifies each fetched file by
-SHA-256 so drift is explicit.
+The manifest was captured on April 2, 2026 and now pins each fixture to both:
+
+- an immutable upstream commit hash
+- an expected SHA-256 of the fetched file contents
+
+That way branch movement upstream does not silently change the corpus.
 
 - `abseil/CMakeLists.txt`
-  Source: `https://github.com/abseil/abseil-cpp/blob/master/CMakeLists.txt`
+  Source branch at capture time: `master`
 - `catch2/CMakeLists.txt`
-  Source: `https://github.com/catchorg/Catch2/blob/devel/CMakeLists.txt`
+  Source branch at capture time: `devel`
 - `cli11/CMakeLists.txt`
-  Source: `https://github.com/CLIUtils/CLI11/blob/main/CMakeLists.txt`
+  Source branch at capture time: `main`
 - `cmake_cmbzip2/CMakeLists.txt`
-  Source: `https://github.com/Kitware/CMake/blob/master/Utilities/cmbzip2/CMakeLists.txt`
+  Source branch at capture time: `master`
 - `googletest/CMakeLists.txt`
-  Source: `https://github.com/google/googletest/blob/main/CMakeLists.txt`
+  Source branch at capture time: `main`
 - `llvm_tablegen/CMakeLists.txt`
-  Source: `https://github.com/llvm/llvm-project/blob/main/llvm/utils/TableGen/CMakeLists.txt`
+  Source branch at capture time: `main`
 - `nlohmann_json/CMakeLists.txt`
-  Source: `https://github.com/nlohmann/json/blob/develop/CMakeLists.txt`
+  Source branch at capture time: `develop`
 - `opencv_flann/CMakeLists.txt`
-  Source: `https://github.com/opencv/opencv/blob/4.x/modules/flann/CMakeLists.txt`
+  Source branch at capture time: `4.x`
 - `protobuf/CMakeLists.txt`
-  Source: `https://github.com/protocolbuffers/protobuf/blob/main/CMakeLists.txt`
+  Source branch at capture time: `main`
 - `qtbase_network/CMakeLists.txt`
-  Source: `https://github.com/qt/qtbase/blob/dev/src/network/CMakeLists.txt`
+  Source branch at capture time: `dev`
 
 `monorepo_root.cmake` is a local synthetic fixture and is intentionally not
 part of the real-world corpus count.
