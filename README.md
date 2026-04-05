@@ -98,7 +98,7 @@ cmakefmt --version
 
 Package-manager distribution (Homebrew, crates.io, pre-built binaries) is coming in the alpha-release phase.
 
-Planned release channels and support levels are documented in [site/src/release.md](site/src/release.md).
+Planned release channels and support levels are documented at [cmakefmt.dev/release.html](https://cmakefmt.dev/release.html).
 
 ## Quick Start
 
@@ -180,7 +180,7 @@ Migrate from an existing `cmake-format` config:
 cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.yaml
 ```
 
-Full config reference: [site/src/config.md](site/src/config.md).
+Full config reference: [cmakefmt.dev/config.html](https://cmakefmt.dev/config.html).
 
 ## Formatter Disable Regions
 
@@ -234,23 +234,23 @@ fn main() -> Result<(), cmakefmt::Error> {
 }
 ```
 
-Full API docs: [site/src/api.md](site/src/api.md).
+Full API docs: [cmakefmt.dev/api.html](https://cmakefmt.dev/api.html).
 
 ## Documentation
 
-Start here: [Docs Landing Page](site/src/README.md).
+Start here: [cmakefmt.dev](https://cmakefmt.dev).
 
 | Doc | Description |
 |-----|-------------|
-| [Install](site/src/install.md) | Install options, first-project setup, CI wiring |
-| [Coverage](site/src/coverage.md) | How coverage is measured, published, and interpreted |
-| [Release Channels](site/src/release.md) | Alpha contract, support levels, release artifacts, and shell completions |
-| [CLI Reference](site/src/cli.md) | Every flag, exit code, and discovery rule |
-| [Config Reference](site/src/config.md) | Full config schema with examples |
-| [Formatter Behavior](site/src/behavior.md) | How the formatter makes layout decisions |
-| [Migration from `cmake-format`](site/src/migration.md) | Incremental rollout guide and CLI mapping |
-| [Library API](site/src/api.md) | Embedding `cmakefmt` in your own Rust tools |
-| [Troubleshooting](site/src/troubleshooting.md) | Common issues and debug workflow |
+| [Install](https://cmakefmt.dev/install.html) | Install options, first-project setup, CI wiring |
+| [Coverage](https://cmakefmt.dev/coverage.html) | How coverage is measured, published, and interpreted |
+| [Release Channels](https://cmakefmt.dev/release.html) | Alpha contract, support levels, release artifacts, and shell completions |
+| [CLI Reference](https://cmakefmt.dev/cli.html) | Every flag, exit code, and discovery rule |
+| [Config Reference](https://cmakefmt.dev/config.html) | Full config schema with examples |
+| [Formatter Behavior](https://cmakefmt.dev/behavior.html) | How the formatter makes layout decisions |
+| [Migration from `cmake-format`](https://cmakefmt.dev/migration.html) | Incremental rollout guide and CLI mapping |
+| [Library API](https://cmakefmt.dev/api.html) | Embedding `cmakefmt` in your own Rust tools |
+| [Troubleshooting](https://cmakefmt.dev/troubleshooting.html) | Common issues and debug workflow |
 | [Performance](docs/PERFORMANCE.md) | Benchmark methodology and profiler notes |
 | [Contributing](CONTRIBUTING.md) | How to contribute, run tests, and open PRs |
 | [Changelog](CHANGELOG.md) | What's changed in each release |
@@ -284,7 +284,7 @@ pre-commit install --hook-type pre-push
 The formatter is actively developed; large-codebase parallel surveying, release packaging,
 and package-manager distribution are still in progress.
 
-Hit something unexpected? See [Troubleshooting](site/src/troubleshooting.md) or run:
+Hit something unexpected? See [Troubleshooting](https://cmakefmt.dev/troubleshooting.html) or run:
 
 ```bash
 cmakefmt --debug --check path/to/CMakeLists.txt
