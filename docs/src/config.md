@@ -17,12 +17,14 @@ The short version:
 
 ## Config Discovery Order
 
-For a given target file, `cmakefmt` resolves config in this order:
+For a given target file, `cmakefmt` resolves config by layering sources in this
+order — higher layers win over lower ones:
 
-1. repeated `--config-file <PATH>` files, if provided
-2. the nearest `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` found by walking upward from the target
-3. `~/.cmakefmt.yaml`, `~/.cmakefmt.yml`, or `~/.cmakefmt.toml`
-4. built-in defaults
+1. **CLI flag overrides** (`--line-width`, `--tab-size`, `--command-case`, etc.) — always win, regardless of what any config file says
+2. **Explicit `--config-file <PATH>` files**, if provided — later files override earlier ones
+3. **The nearest `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`** found by walking upward from the target file
+4. **`~/.cmakefmt.yaml`, `~/.cmakefmt.yml`, or `~/.cmakefmt.toml`** — home-directory fallback
+5. **Built-in defaults**
 
 If multiple supported config filenames exist in the same directory, YAML is
 preferred over TOML.
@@ -461,6 +463,17 @@ markup:
 If your project uses decorative comment rulers and wants them normalized
 consistently, keep this enabled.
 
+## `commands:` vs `per_command_overrides:` — Which One Do I Need?
+
+These two config sections are easy to confuse. The short rule:
+
+| Question | Answer |
+|---|---|
+| "The formatter doesn't know what `SOURCES` or `QUIET` mean in my command." | Use `commands:` — teach it the argument structure. |
+| "The formatter knows the command fine, but I want it wider / different casing." | Use `per_command_overrides:` — change the layout knobs only. |
+
+In other words: `commands:` is about *what* the arguments mean; `per_command_overrides:` is about *how* they get laid out on the page.
+
 ## Per-command Overrides
 
 Use `per_command_overrides:` to change formatting knobs for one command name
@@ -531,16 +544,18 @@ why the default starter config is YAML.
 ## Old Draft Key Names
 
 The current `cmakefmt` config schema only accepts the clearer names on this
-page. If you have an older local config using names such as:
+page. If you have an older local config, rename any of the following before use:
 
-- `use_tabchars`
-- `max_pargs_hwrap`
-- `max_subgroups_hwrap`
-- `separate_ctrl_name_with_space`
-- `separate_fn_name_with_space`
+| Old key | New key |
+|---|---|
+| `use_tabchars` | `use_tabs` |
+| `max_pargs_hwrap` | `max_hanging_wrap_positional_args` |
+| `max_subgroups_hwrap` | `max_hanging_wrap_groups` |
+| `separate_ctrl_name_with_space` | `space_before_control_paren` |
+| `separate_fn_name_with_space` | `space_before_definition_paren` |
 
-update them before use. `cmakefmt` fails fast on unknown config keys rather
-than silently ignoring them — so you will know immediately.
+`cmakefmt` fails fast on unknown config keys rather than silently ignoring them
+— so you will know immediately if any remain.
 
 ## Related Reading
 

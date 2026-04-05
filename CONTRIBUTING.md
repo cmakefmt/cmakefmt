@@ -75,8 +75,7 @@ Then update:
 - `README.md` if user-visible behavior changed
 
 If formatting semantics changed in a meaningful way, review whether
-`docs/ROADMAP.md`
-or `docs/ARCHITECTURE.md`
+`docs/src/architecture.md`
 should also be updated.
 
 If the change affects real-world behavior, also update:
@@ -131,23 +130,22 @@ Keep these aligned:
 Keep these aligned:
 
 - `README.md`
-- `site/`
+- `docs/`
 - `CHANGELOG.md`
 - `docs/README.md`
-- any relevant long-form docs under `docs/`
+- any relevant long-form docs under `docs/src/`
 
 If the change affects contributor workflow or repo structure, also update:
 
 - `src/README.md`
 - `tests/README.md`
 - `tests/fixtures/README.md`
-- `tests/snapshots/README.md`
 - `benches/README.md`
 
 If you add a new primary docs page, add it to:
 
-- `site/src/SUMMARY.md`
-- `site/src/README.md` or another appropriate chapter
+- `docs/src/SUMMARY.md`
+- `docs/src/README.md` or another appropriate chapter
 - `scripts/check-docs.sh`
 
 The docs site is an `mdBook`. Before you finish a docs-heavy change, run:

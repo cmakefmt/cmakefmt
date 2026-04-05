@@ -231,9 +231,32 @@ for. It surfaces everything the formatter normally keeps to itself:
 clone. That means:
 
 - some outputs differ while still being valid and stable
-- the config surface has been cleaned up in places
+- the config surface has been cleaned up in places (see [Config Reference](config.md)
+  for the old-to-new key name mapping)
 - workflow features are intentionally broader
 - diagnostics are intentionally much more explicit
+
+### Output differences you may notice
+
+**Wrapping thresholds.** `cmakefmt` uses a Wadler-Lindig document model to
+decide layouts. The exact line at which a call wraps can differ from
+`cmake-format`'s heuristics, even when using identical config values. The
+result is still correct and idempotent — just not always byte-identical.
+
+**Keyword grouping.** When `cmakefmt` knows a command's structure (via the
+built-in registry or a `commands:` entry), it groups keyword sections
+deliberately. `cmake-format` without a matching spec entry would often treat
+the same tokens as undifferentiated positional arguments and produce a flatter
+layout.
+
+**Comment reflow.** `cmakefmt` defaults to `reflow_comments: false`. If your
+old `cmake-format` config had `line_width` enforcement on comments, you may
+see comments left wider than the configured limit until you explicitly enable
+`markup.reflow_comments: true`.
+
+**Config key names.** Several config keys were renamed for clarity. Any key
+`cmakefmt` does not recognise will produce a fast-fail error, not a silent
+no-op. The full renaming table is in [Config Reference](config.md#old-draft-key-names).
 
 When comparing outputs during migration, judge by readability, stability,
 semantic preservation, and ease of automation — not solely by whether every

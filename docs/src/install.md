@@ -11,14 +11,18 @@ formatting again.
 
 ## Current Installation Options
 
-This repository is stable and actively maintained. Today, the supported install
-paths are repository-based:
+The reference install path is `cargo install cmakefmt-rust`. It is
+officially maintained and works today:
 
-- build from source with `cargo build --release`
-- install from this checkout with `cargo install --path .`
+```bash
+cargo install cmakefmt-rust
+```
 
-First-party package-manager distribution is still being rolled out. Until then,
-Cargo is the fastest path to a working binary.
+If you prefer to build from a local checkout — for development, benchmarking,
+or reviewing changes — see [Build From This Repository](#build-from-this-repository) below.
+
+First-party Homebrew and pre-built binary releases are being rolled out. Until
+they land, Cargo is the fastest path to a working binary.
 
 ## Support Levels
 
@@ -39,8 +43,8 @@ fully supported path.
 ## Build From This Repository
 
 ```bash
-git clone <this-repo>
-cd cmake-format-rust
+git clone https://github.com/cmakefmt/cmakefmt
+cd cmakefmt
 cargo build --release
 ./target/release/cmakefmt --help
 ```
@@ -50,8 +54,10 @@ changes, or benchmarking local modifications.
 
 ## Install With Cargo
 
+### From crates.io (recommended)
+
 ```bash
-cargo install --path .
+cargo install cmakefmt-rust
 ```
 
 Verify the binary is on your path:
@@ -60,6 +66,16 @@ Verify the binary is on your path:
 cmakefmt --version
 cmakefmt --help
 ```
+
+### From a local checkout
+
+```bash
+cargo install --path .
+```
+
+This is the right path when you have cloned the repository and want to run the
+exact version you have checked out — for development, reviewing changes, or
+benchmarking local modifications. The verify step above applies here too.
 
 You can also inspect release-oriented helper outputs directly from the built
 binary:
@@ -83,7 +99,7 @@ Release archives include shell completion scripts for the supported shells:
 The Zsh file intentionally uses the conventional completion-function name
 `_cmakefmt` rather than a `.zsh` suffix.
 
-You can also regenerate the same files locally:
+You can also generate the completion files yourself from any installed binary:
 
 ```bash
 cmakefmt --generate-completion bash > cmakefmt.bash
@@ -91,14 +107,44 @@ cmakefmt --generate-completion zsh > _cmakefmt
 cmakefmt --generate-completion fish > cmakefmt.fish
 ```
 
-Typical install locations:
+### Bash
 
-- Bash: a directory sourced by your shell startup, or your distro's bash-completion directory
-- Zsh: a directory on your `fpath`, then run `autoload -Uz compinit && compinit`
-- Fish: `~/.config/fish/completions/`
+Source the file from your `.bashrc` or `.bash_profile`:
 
-If you only need a temporary local setup, keeping the files in your repository
-or dotfiles tree and sourcing them from your shell startup files is fine too.
+```bash
+cmakefmt --generate-completion bash > ~/.local/share/bash-completion/completions/cmakefmt
+```
+
+Or for a system-wide install (requires write access):
+
+```bash
+cmakefmt --generate-completion bash | sudo tee /etc/bash_completion.d/cmakefmt > /dev/null
+```
+
+### Zsh
+
+Place the file somewhere on your `fpath` and reload completions:
+
+```bash
+cmakefmt --generate-completion zsh > ~/.zfunc/_cmakefmt
+```
+
+Then add the following to your `.zshrc` if `~/.zfunc` is not already on `fpath`:
+
+```zsh
+fpath=(~/.zfunc $fpath)
+autoload -Uz compinit && compinit
+```
+
+### Fish
+
+Fish looks for completions in a fixed directory — just drop the file there:
+
+```bash
+cmakefmt --generate-completion fish > ~/.config/fish/completions/cmakefmt.fish
+```
+
+Fish picks up the new file automatically without a shell restart.
 
 ## First Project Setup
 
@@ -128,7 +174,7 @@ cmakefmt --in-place .
 
 ## Typical Local Workflow
 
-The four commands you will reach for every day:
+The commands you will reach for every day:
 
 ```bash
 cmakefmt --check .

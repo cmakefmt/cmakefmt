@@ -67,10 +67,16 @@ Read [Performance](performance.md) and [Migration From `cmake-format`](migration
 
 ## Quick Start
 
-Install from this repository:
+Install via Cargo:
 
 ```bash
-cargo install --path .
+cargo install cmakefmt-rust
+```
+
+Verify:
+
+```bash
+cmakefmt --version
 ```
 
 Dump a starter config:

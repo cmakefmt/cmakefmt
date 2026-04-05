@@ -83,13 +83,10 @@ scripts/review-real-world-corpus.sh
 
 ## Installation
 
-This repository is stable and actively maintained. For now, install `cmakefmt`
-directly from this checkout:
+Install via Cargo (the reference install path):
 
 ```bash
-git clone <this-repo>
-cd cmake-format-rust
-cargo install --path .
+cargo install cmakefmt-rust
 ```
 
 Verify:
@@ -98,9 +95,15 @@ Verify:
 cmakefmt --version
 ```
 
-Package-manager distribution (Homebrew, crates.io, pre-built binaries) is still
-being rolled out.
+Or build from source:
 
+```bash
+git clone https://github.com/cmakefmt/cmakefmt
+cd cmakefmt
+cargo install --path .
+```
+
+First-party Homebrew and pre-built binary releases are being rolled out.
 Planned release channels and support levels are documented at [cmakefmt.dev/release.html](https://cmakefmt.dev/release.html).
 Shell completion installation guidance lives in [cmakefmt.dev/install.html](https://cmakefmt.dev/install.html).
 
@@ -308,7 +311,8 @@ pre-commit install --hook-type pre-push
 
 The repository is stable and actively maintained. `cmakefmt` is still
 pre-`1.0`, so release packaging, package-manager distribution, and some output
-or API details may continue to evolve.
+or API details may continue to evolve. The built-in command registry is audited
+through CMake 4.3.1.
 
 Hit something unexpected? See [Troubleshooting](https://cmakefmt.dev/troubleshooting.html) or run:
 

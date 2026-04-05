@@ -12,11 +12,48 @@ at each step, and flip the switch once you are satisfied.
 
 ## Recommended Rollout
 
-1. start with `--check` in CI on a small target directory
-2. generate a starter config with `--dump-config` (YAML by default, `toml` available explicitly if needed)
-3. if you already have a `cmake-format` config file, convert it automatically with `--convert-legacy-config`
-4. compare output on a representative corpus
-5. switch pre-commit and CI once the output looks good
+1. Start with `--check` on a small, low-risk directory to get a feel for the
+   output before touching anything:
+
+   ```bash
+   cmakefmt --check cmake/
+   ```
+
+2. Generate a starter config. YAML is the recommended default:
+
+   ```bash
+   cmakefmt --dump-config > .cmakefmt.yaml
+   ```
+
+3. If you already have a `cmake-format` config file, convert it automatically:
+
+   ```bash
+   cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
+   ```
+
+   Note: `--convert-legacy-config` always produces TOML output. If you prefer
+   YAML (recommended for larger configs), convert the result using any TOML-to-YAML
+   tool, or manually translate the key names to a new `.cmakefmt.yaml` file.
+
+4. Compare output on a representative sample. Use `--diff` to see exactly what
+   would change without touching any files:
+
+   ```bash
+   cmakefmt --diff path/to/CMakeLists.txt
+   ```
+
+5. When the output looks good across your sample, expand to `--check .` on the
+   full repository:
+
+   ```bash
+   cmakefmt --check .
+   ```
+
+6. Switch pre-commit and CI once you are happy with the full-repository output.
+
+If you want to roll out formatting gradually — file by file — use
+`--require-pragma` to opt individual files in before going repository-wide.
+See [Formatter Behavior](behavior.md) for the pragma syntax.
 
 ## CLI Mapping
 
@@ -39,6 +76,24 @@ at each step, and flip the switch once you are satisfied.
 
 ## Operational Advice
 
-Roll out with snapshots or branch-local diffs first. Formatter migrations
-become painful when the first exposure is a large repository-wide rewrite
-without comparison data. Start small, build confidence, then go wide.
+**Start small, build confidence, then go wide.** Formatter migrations become
+painful when the first exposure is a large repository-wide rewrite with no
+comparison data. The recommended pattern:
+
+1. Run `--diff` or `--check` on a representative subset before committing to
+   anything.
+2. Capture a before/after snapshot on a branch so you can review the delta as
+   a normal diff.
+3. Use `--require-pragma` if you want to phase the rollout file-by-file rather
+   than all at once.
+4. Pin an explicit version in CI once you are happy:
+
+   ```bash
+   cmakefmt --required-version 0.0.1 --check .
+   ```
+
+**Output will not be identical to `cmake-format`.** The goal is a clean,
+correct, stable result — not byte-for-byte reproduction. Judge the migration by
+readability, idempotency, and ease of automation rather than by whether every
+wrapped line matches historical output exactly. See [Formatter Behavior](behavior.md)
+for a concrete summary of what `cmakefmt` preserves and what it intentionally changes.

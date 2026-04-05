@@ -77,8 +77,8 @@ for more.
 
 ## Large Repository Parallelism Survey
 
-Phase 12 validation was also run against `oomph-lib` (local checkout with `612`
-discovered CMake files):
+Parallelism scaling was also measured on a larger real-world repository
+containing `612` discovered CMake files:
 
 | Mode | Time |
 | --- | --- |
@@ -90,10 +90,10 @@ discovered CMake files):
 That corresponds to a `2.71x` speedup at `--parallel 8` versus serial, with
 peak RSS moving from `11.3 MB` to `17.0 MB`.
 
-For a direct tool baseline on the same full `oomph-lib` tree (`612` discovered
-files), `/usr/bin/time -l` measured:
+A direct head-to-head comparison against `cmake-format` on the same `612`-file
+tree (`/usr/bin/time -l`) showed:
 
-- `cmake-format` (sequential over discovered files): `45.69 s` real
+- `cmake-format` (sequential): `45.69 s` real
 - `cmakefmt` serial: `0.47 s` real (`~97x` faster)
 - `cmakefmt --parallel 8`: `0.19 s` real (`~240x` faster)
 
