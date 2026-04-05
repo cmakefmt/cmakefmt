@@ -153,15 +153,40 @@ Full config reference: [site/src/config.md](site/src/config.md).
 
 ## Formatter Disable Regions
 
-Selectively opt out of formatting with barrier comments:
+Selectively opt out of formatting with barrier comments.
 
-```cmake
-# cmakefmt: off
-set(MESSY_THING  a   b   c)   # kept verbatim
-# cmakefmt: on
-```
+There are three barrier styles:
 
-`cmakefmt:`, `cmake-format:`, and `fmt:` spellings are supported, as are `# ~~~` fence regions.
+1. Legacy `cmake-format` directives:
+
+    ```cmake
+    # cmake-format: off
+    set(MESSY_THING  a   b   c)   # kept verbatim
+    # cmake-format: on
+    ```
+
+1. Native directive barriers, using either `cmakefmt` or the shorter `fmt` spelling:
+
+    ```cmake
+    # cmakefmt: off
+    set(MESSY_THING  a   b   c)   # kept verbatim
+    # cmakefmt: on
+
+    # fmt: off
+    set(MESSY_THING  a   b   c)   # kept verbatim
+    # fmt: on
+    ```
+
+1. Fence barriers, which toggle formatting on and off each time `# ~~~` appears:
+
+    ```cmake
+    # ~~~
+    set(MESSY_THING  a   b   c)   # kept verbatim
+    # ~~~
+    ```
+
+Use directive barriers when you want an explicit start/end marker, and fence
+barriers when you want a shorter toggle-style block.
 
 ## Library Usage
 
