@@ -161,7 +161,7 @@ set(MESSY_THING  a   b   c)   # kept verbatim
 # cmakefmt: on
 ```
 
-Both `cmakefmt:` and `cmake-format:` spellings are supported, as are `# ~~~` fence regions.
+`cmakefmt:`, `cmake-format:`, and `fmt:` spellings are supported, as are `# ~~~` fence regions.
 
 ## Library Usage
 

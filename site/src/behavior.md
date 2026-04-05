@@ -169,6 +169,7 @@ All of the following markers work:
 
 - `# cmakefmt: off` / `# cmakefmt: on`
 - `# cmake-format: off` / `# cmake-format: on`
+- `# fmt: off` / `# fmt: on`
 - `# ~~~`
 
 This is the escape hatch for generated blocks, unusual macro DSLs, or legacy

@@ -150,6 +150,19 @@ fn cmake_format_off_on_alias_preserves_disabled_region() {
 }
 
 #[test]
+fn fmt_off_on_alias_preserves_disabled_region() {
+    let src = "set(  BEFORE  value )\n# fmt: off\nset(   BROKEN    value )\n# fmt: on\nset(  AFTER  value )\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set(BEFORE value)
+    # fmt: off
+    set(   BROKEN    value )
+    # fmt: on
+    set(AFTER value)
+    "#);
+}
+
+#[test]
 fn cmakefmt_off_without_on_preserves_rest_of_file() {
     let src = "set(  BEFORE  value )\n# cmakefmt: off\nset(   BROKEN    value )\nthis is not valid cmake\n";
     let formatted = format_source(src, &Config::default()).unwrap();
@@ -168,6 +181,19 @@ fn cmake_format_off_without_on_preserves_rest_of_file() {
     insta::assert_snapshot!(formatted, @r#"
     set(BEFORE value)
     # cmake-format: off
+    set(   BROKEN    value )
+    this is not valid cmake
+    "#);
+}
+
+#[test]
+fn fmt_off_without_on_preserves_rest_of_file() {
+    let src =
+        "set(  BEFORE  value )\n# fmt: off\nset(   BROKEN    value )\nthis is not valid cmake\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set(BEFORE value)
+    # fmt: off
     set(   BROKEN    value )
     this is not valid cmake
     "#);

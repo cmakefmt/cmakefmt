@@ -307,6 +307,12 @@ fn detect_barrier(line: &str) -> Option<BarrierEvent<'_>> {
     if body == "cmakefmt: on" {
         return Some(BarrierEvent::EnableByDirective("cmakefmt"));
     }
+    if body == "fmt: off" {
+        return Some(BarrierEvent::DisableByDirective("fmt"));
+    }
+    if body == "fmt: on" {
+        return Some(BarrierEvent::EnableByDirective("fmt"));
+    }
 
     None
 }
