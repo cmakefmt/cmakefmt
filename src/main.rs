@@ -3002,6 +3002,7 @@ mod tests {
             "check",
             "config-file",
             "convert-legacy-config",
+            "convert-legacy-config-format",
             "colour",
             "changed",
             "debug",
