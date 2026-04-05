@@ -648,7 +648,7 @@ not just faster.
 **Goal**: Publish the first public alpha, automate repeatable releases, and make
 `cmakefmt` easy to install and adopt across CLI, CI, and editor workflows.
 
-### Tasks
+### Pre-release Hardening
 
 - [ ] Define the alpha release contract
   - version `1.0.0-alpha.1`
@@ -662,6 +662,51 @@ not just faster.
   - version bump process
   - verification steps before publish
   - rollback/yank procedure if a bad alpha ships
+- [ ] Finalize the project license before the first public alpha
+  - choose the final SPDX expression
+  - add or update the canonical `LICENSE*` files in the repo root
+  - make Cargo metadata, README/docs, and release packaging agree on the license
+  - document any third-party notice requirements that need to ship with release artifacts
+- [ ] Use `reuse` to make copyright and license metadata explicit across the repo
+  - decide which file types should carry SPDX/copyright headers directly
+  - add `reuse` metadata/exceptions for generated files, snapshots, fixtures, and other non-header cases
+  - run `reuse lint` and keep it in the release checklist
+- [ ] Reduce the checked-in third-party fixture/license surface before alpha
+  - stop shipping copied upstream real-world fixtures directly in the main repository if we can avoid it
+  - replace them with fetch-at-test-time tooling and/or a separately versioned fixture archive
+  - pin upstream sources/commits so real-world validation remains deterministic and reviewable
+  - keep CI/local test runs practical, including a clear cache/offline story for contributors
+  - ensure the repo root only needs license texts for project-owned files and intentionally bundled assets
+- [ ] Reduce the packaged crate surface before alpha
+  - decide exactly which files should be uploaded to crates.io
+  - exclude tests, benches, snapshots, fixture corpora, GitHub workflows, and site sources unless there is a strong reason to ship them
+  - verify that `cargo package --list` contains only the material needed to build, document, and license `cmakefmt`
+  - ensure the crates.io package has a clean license story centered on `MIT OR Apache-2.0`
+- [ ] Finish crates.io packaging metadata before alpha
+  - complete `Cargo.toml` metadata: repository, homepage/docs URL, keywords, categories, and README linkage
+  - verify the packaged README renders well on crates.io
+  - verify `cargo install cmakefmt` works from a packaged tarball before the real publish
+- [ ] Write installation and upgrade documentation
+  - installation matrix by OS/package manager
+  - copy-paste install commands
+  - upgrade/uninstall commands
+  - how to pin an alpha version in CI
+  - how to verify checksums for downloaded binaries
+- [ ] Document channel ownership and support level
+  - "officially maintained by this repo"
+  - "automated but best-effort"
+  - "community-maintained but linked from docs"
+  - define which channels are blockers for alpha vs stretch goals during the alpha window
+- [ ] Ensure release-quality polish around distribution
+  - `--version` reports the expected semver and commit/tag metadata where appropriate
+  - shell completions are generated and shipped in release artifacts
+  - man page / CLI reference is generated if we decide to maintain one
+  - licenses for bundled artifacts/extensions/actions are correct
+  - release docs explain how user config discovery works in packaged installs
+  - release docs explain formatter stability expectations across alpha versions
+
+### Release Execution
+
 - [ ] Make GitHub Releases the binary distribution source of truth
   - build release binaries for:
     - Linux `x86_64`
@@ -680,24 +725,8 @@ not just faster.
   - create/update the GitHub Release
   - fan out follow-up publishing jobs for package managers where credentials/automation allow
 - [ ] Publish `cmakefmt` on crates.io
-  - ensure `Cargo.toml` metadata is complete
-  - include README, license, repository, keywords, categories, homepage/docs links
+  - upload the final curated source package
   - verify `cargo install cmakefmt` works from crates.io
-- [ ] Finalize the project license before the first public alpha
-  - choose the final SPDX expression
-  - add or update the canonical `LICENSE*` files in the repo root
-  - make Cargo metadata, README/docs, and release packaging agree on the license
-  - document any third-party notice requirements that need to ship with release artifacts
-- [ ] Use `reuse` to make copyright and license metadata explicit across the repo
-  - decide which file types should carry SPDX/copyright headers directly
-  - add `reuse` metadata/exceptions for generated files, snapshots, fixtures, and other non-header cases
-  - run `reuse lint` and keep it in the release checklist
-- [ ] Reduce the checked-in third-party fixture/license surface before alpha
-  - stop shipping copied upstream real-world fixtures directly in the main repository if we can avoid it
-  - replace them with fetch-at-test-time tooling and/or a separately versioned fixture archive
-  - pin upstream sources/commits so real-world validation remains deterministic and reviewable
-  - keep CI/local test runs practical, including a clear cache/offline story for contributors
-  - ensure the repo root only needs license texts for project-owned files and intentionally bundled assets
 - [ ] Publish first-party installation channels that we should maintain directly
   - GitHub Releases downloadable binaries
   - crates.io (`cargo install`)
@@ -715,17 +744,6 @@ not just faster.
   - Alpine `apk` package if maintenance cost is acceptable
   - MacPorts port
   - `asdf` / `mise` plugin for version-manager installs
-- [ ] Document channel ownership and support level
-  - "officially maintained by this repo"
-  - "automated but best-effort"
-  - "community-maintained but linked from docs"
-  - define which channels are blockers for alpha vs stretch goals during the alpha window
-- [ ] Write installation and upgrade documentation
-  - installation matrix by OS/package manager
-  - copy-paste install commands
-  - upgrade/uninstall commands
-  - how to pin an alpha version in CI
-  - how to verify checksums for downloaded binaries
 - [ ] Provide copy-paste CI integration examples
   - GitHub Actions
   - GitLab CI
@@ -797,13 +815,6 @@ not just faster.
     - define what level of formatting churn is acceptable across alpha releases
     - document when a change is "style bug fix" vs "style break"
     - publish rollout advice for teams pinning formatter versions
-- [ ] Ensure release-quality polish around distribution
-  - `--version` reports the expected semver and commit/tag metadata where appropriate
-  - shell completions are generated and shipped in release artifacts
-  - man page / CLI reference is generated if we decide to maintain one
-  - licenses for bundled artifacts/extensions/actions are correct
-  - release docs explain how user config discovery works in packaged installs
-  - release docs explain formatter stability expectations across alpha versions
 
 ### Acceptance criteria
 
