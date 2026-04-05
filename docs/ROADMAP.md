@@ -650,66 +650,67 @@ not just faster.
 
 ### Pre-release Hardening
 
-- [ ] Define the alpha release contract
+- [x] Define the alpha release contract
   - version `1.0.0-alpha.1`
   - supported platforms: Linux, macOS, Windows
   - supported CPU targets at minimum: `x86_64`; add `aarch64` where practical
   - clear statement of what "alpha" means: feature-complete enough for early adopters,
     but still open to formatting changes before `1.0`
-- [ ] Create a repeatable release checklist
+- [x] Create a repeatable release checklist
   - changelog/release notes process
   - tag naming convention
   - version bump process
   - verification steps before publish
   - rollback/yank procedure if a bad alpha ships
-- [ ] Finalize the project license before the first public alpha
+- [x] Finalize the project license before the first public alpha
   - choose the final SPDX expression
   - add or update the canonical `LICENSE*` files in the repo root
   - make Cargo metadata, README/docs, and release packaging agree on the license
   - document any third-party notice requirements that need to ship with release artifacts
-- [ ] Use `reuse` to make copyright and license metadata explicit across the repo
+- [x] Use `reuse` to make copyright and license metadata explicit across the repo
   - decide which file types should carry SPDX/copyright headers directly
   - add `reuse` metadata/exceptions for generated files, snapshots, fixtures, and other non-header cases
   - run `reuse lint` and keep it in the release checklist
-- [ ] Reduce the checked-in third-party fixture/license surface before alpha
+- [x] Reduce the checked-in third-party fixture/license surface before alpha
   - stop shipping copied upstream real-world fixtures directly in the main repository if we can avoid it
   - replace them with a pinned fetch script plus a local review command, and/or a separately versioned fixture archive later
   - pin upstream sources/commits and/or verified content hashes so real-world validation remains deterministic and reviewable
   - keep CI/local test runs practical, including a clear cache/offline story for contributors
   - ensure the repo root only needs license texts for project-owned files and intentionally bundled assets
-- [ ] Reduce the packaged crate surface before alpha
+- [x] Reduce the packaged crate surface before alpha
   - decide exactly which files should be uploaded to crates.io
   - exclude tests, benches, snapshots, fixture corpora, GitHub workflows, and site sources unless there is a strong reason to ship them
   - verify that `cargo package --list` contains only the material needed to build, document, and license `cmakefmt`
   - ensure the crates.io package has a clean license story centered on `MIT OR Apache-2.0`
-- [ ] Add release-quality README badges before alpha
+- [x] Add release-quality README badges before alpha
   - CI/build status badge
   - coverage badge once coverage reporting exists
   - docs/site badge
   - crates.io version badge once published
   - keep badge count disciplined so the README stays readable
-- [ ] Add test coverage reporting before alpha
+- [x] Add test coverage reporting before alpha
   - choose the coverage toolchain (`cargo llvm-cov` or equivalent)
   - run coverage in CI on the default test suite
   - publish human-readable coverage results for contributors
   - publish a badge or summary that can be linked from the README
   - document what is intentionally excluded from coverage reporting
-- [ ] Finish crates.io packaging metadata before alpha
+- [x] Finish crates.io packaging metadata before alpha
   - complete `Cargo.toml` metadata: repository, homepage/docs URL, keywords, categories, and README linkage
+- [ ] Verify crates.io packaging before alpha
   - verify the packaged README renders well on crates.io
   - verify `cargo install cmakefmt` works from a packaged tarball before the real publish
-- [ ] Write installation and upgrade documentation
+- [x] Write installation and upgrade documentation
   - installation matrix by OS/package manager
   - copy-paste install commands
   - upgrade/uninstall commands
   - how to pin an alpha version in CI
   - how to verify checksums for downloaded binaries
-- [ ] Document channel ownership and support level
+- [x] Document channel ownership and support level
   - "officially maintained by this repo"
   - "automated but best-effort"
   - "community-maintained but linked from docs"
   - define which channels are blockers for alpha vs stretch goals during the alpha window
-- [ ] Ensure release-quality polish around distribution
+- [x] Ensure release-quality polish around distribution
   - `--version` reports the expected semver and commit/tag metadata where appropriate
   - shell completions are generated and shipped in release artifacts
   - man page / CLI reference is generated if we decide to maintain one
@@ -773,57 +774,54 @@ not just faster.
   - expose basic settings such as binary path, args, and config file
   - work on macOS, Linux, and Windows
   - publish to the VS Code Marketplace and Open VSX if practical
-- [ ] Evaluate additional workflow features that would make `cmakefmt`
+- [ ] Finish the remaining workflow features that make `cmakefmt`
       meaningfully stronger than `cmake-format` before alpha
-  - lower-noise automation modes:
+  - [x] lower-noise automation modes:
     - `--quiet`
-    - optional summary-only output for CI and pre-commit use
-  - multi-file failure handling:
-    - `--keep-going` / continue-on-error batch mode
-    - end-of-run aggregated error summaries instead of fail-fast only
-  - config introspection and explanation:
+    - summary-oriented CI / pre-commit output
+  - [x] multi-file failure handling:
+    - `--keep-going`
+    - end-of-run aggregated error summaries
+  - [x] config introspection and explanation:
     - `--show-config`
     - `--show-config-path`
     - `--explain-config`
-  - config-discovery shortcuts for tooling:
+  - [x] config-discovery shortcuts for tooling:
     - `--find-config-path`
     - `--no-config`
-    - possibly a `--config-precedence` mode for editor integrations
-  - incremental cache support for repeated large-repo runs:
+  - [x] incremental cache support for repeated large-repo runs:
     - `--cache`
     - `--cache-location`
     - `--cache-strategy` (`metadata` vs `content`)
-  - formatter safety / confidence modes:
-    - `--verify` or `--safe` to reject output if the parse tree changes
-    - `--fast` to skip that verification when users explicitly want speed
-  - version pinning support:
+  - [x] formatter safety / confidence modes:
+    - `--verify`
+    - `--fast`
+  - [x] version pinning support:
     - `--required-version`
-    - optional config-file equivalent so teams can lock formatter behavior
-  - editor-grade machine output:
+  - [ ] editor-grade machine output:
     - output replacements instead of full-file text
     - cursor-position translation for editor integrations
     - explicit byte-range formatting in addition to line ranges if it proves simpler for editors
-  - richer CI/reporting formats:
-    - `--reporter github`
-    - `--reporter checkstyle`
-    - `--reporter junit`
-    - `--reporter sarif`
-  - human-oriented batch summaries:
-    - scanned / selected / changed / unchanged / skipped / failed counts
+  - [x] richer CI/reporting formats:
+    - GitHub Actions annotations
+    - Checkstyle XML
+    - JUnit XML
+    - SARIF JSON
+  - [x] human-oriented batch summaries:
+    - selected / changed / unchanged / skipped / failed counts
     - final summary output tailored for check-mode and in-place runs
-  - gradual-adoption controls for large legacy repos:
-    - opt-in format pragma support (`--require-pragma` style behavior)
-    - possibly pragma insertion for migration tooling
-  - skip visibility and discovery explanation:
+  - [x] gradual-adoption controls for large legacy repos:
+    - opt-in format pragma support (`--require-pragma`)
+  - [ ] skip visibility and discovery explanation:
     - explain why files were skipped by `.cmakefmtignore`
     - explain why files were skipped by `.gitignore`
     - explain why files were skipped by `--path-regex`, `--changed`, or `--staged`
     - make these reasons visible in `--debug` and/or dedicated explain modes
-  - benchmark governance and regression tracking:
+  - [ ] benchmark governance and regression tracking:
     - define how benchmark baselines are stored and compared from release to release
     - add benchmark CI or scheduled benchmark runs with artifact retention
     - define a regression review policy before alpha
-  - formatting stability policy:
+  - [x] formatting stability policy:
     - define what level of formatting churn is acceptable across alpha releases
     - document when a change is "style bug fix" vs "style break"
     - publish rollout advice for teams pinning formatter versions
@@ -831,8 +829,8 @@ not just faster.
 ### Acceptance criteria
 
 - [ ] `cargo publish --dry-run` succeeds
-- [ ] `reuse lint` succeeds and the repo has a consistent final license story
-- [ ] Real-world validation no longer requires checked-in copied upstream fixture trees in the main repo
+- [x] `reuse lint` succeeds and the repo has a consistent final license story
+- [x] Real-world validation no longer requires checked-in copied upstream fixture trees in the main repo
 - [ ] Tagging `v1.0.0-alpha.1` from a clean commit can produce a complete release candidate without manual file editing
 - [ ] GitHub Releases contains working binaries for Linux, macOS, and Windows, plus checksums
 - [ ] `cargo install cmakefmt --version 1.0.0-alpha.1` works
