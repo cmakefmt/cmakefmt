@@ -50,6 +50,24 @@ raw_url = "https://raw.githubusercontent.com/google/googletest/d72f9c8aea6817cdf
 sha256 = "62e3c7a967a01c0b1a37b1193538caae1d40d7553e7249a43a75d7afedfcf0c4"
 
 [[fixture]]
+name = "ggml"
+relative_path = "ggml/CMakeLists.txt"
+branch = "master"
+commit = "49f84a924f6ea4fc2ef73dbbd8cc4d734b54bd6d"
+source_url = "https://github.com/ggml-org/ggml/blob/49f84a924f6ea4fc2ef73dbbd8cc4d734b54bd6d/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/ggml-org/ggml/49f84a924f6ea4fc2ef73dbbd8cc4d734b54bd6d/CMakeLists.txt"
+sha256 = "77f23adf2aa1106c4cfe848ad9acbc9b435609f7619404af29ed30cf9748f19b"
+
+[[fixture]]
+name = "llama_cpp"
+relative_path = "llama_cpp/CMakeLists.txt"
+branch = "master"
+commit = "c08d28d08871715fd68accffaeeb76ddcaede658"
+source_url = "https://github.com/ggml-org/llama.cpp/blob/c08d28d08871715fd68accffaeeb76ddcaede658/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/ggml-org/llama.cpp/c08d28d08871715fd68accffaeeb76ddcaede658/CMakeLists.txt"
+sha256 = "fc4a9d9e5cc32ddd43cbc6a09061719d880fed71e8fb8a45234dd06f0ff2c580"
+
+[[fixture]]
 name = "llvm_tablegen"
 relative_path = "llvm_tablegen/CMakeLists.txt"
 branch = "main"
@@ -68,6 +86,15 @@ raw_url = "https://raw.githubusercontent.com/nlohmann/json/9a737481aed085fd289f8
 sha256 = "2fe5d9852d1849577370087c3cb1f869e10cf1954cf55934760a66a5792d3c1c"
 
 [[fixture]]
+name = "mariadb_server"
+relative_path = "mariadb_server/CMakeLists.txt"
+branch = "main"
+commit = "9fc925d77163f1d63e21a65654b0f59678abf08d"
+source_url = "https://github.com/MariaDB/server/blob/9fc925d77163f1d63e21a65654b0f59678abf08d/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/MariaDB/server/9fc925d77163f1d63e21a65654b0f59678abf08d/CMakeLists.txt"
+sha256 = "7b390c37d19721cb2cd13975bc3f83c5608d24635d6d527bd318e1edb2c6e677"
+
+[[fixture]]
 name = "opencv_flann"
 relative_path = "opencv_flann/CMakeLists.txt"
 branch = "4.x"
@@ -84,6 +111,15 @@ commit = "109fde41db66fdf24763a7a429d1e0dc80459f1d"
 source_url = "https://github.com/protocolbuffers/protobuf/blob/109fde41db66fdf24763a7a429d1e0dc80459f1d/CMakeLists.txt"
 raw_url = "https://raw.githubusercontent.com/protocolbuffers/protobuf/109fde41db66fdf24763a7a429d1e0dc80459f1d/CMakeLists.txt"
 sha256 = "2e02cd4de9c1ddb0d8c7aa59144dfb9538df5e04e9db08d89c09eff48b412468"
+
+[[fixture]]
+name = "spdlog"
+relative_path = "spdlog/CMakeLists.txt"
+branch = "v1.x"
+commit = "3c61b051d2144d9c54c1eab7ab41788fa0c0a0cf"
+source_url = "https://github.com/gabime/spdlog/blob/3c61b051d2144d9c54c1eab7ab41788fa0c0a0cf/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/gabime/spdlog/3c61b051d2144d9c54c1eab7ab41788fa0c0a0cf/CMakeLists.txt"
+sha256 = "1e69697148340a9875e2d9f410bdd978eb8dd4f725cd00ea8108397e5990059b"
 
 [[fixture]]
 name = "qtbase_network"

@@ -34,14 +34,22 @@ That way branch movement upstream does not silently change the corpus.
   Source branch at capture time: `master`
 - `googletest/CMakeLists.txt`
   Source branch at capture time: `main`
+- `ggml/CMakeLists.txt`
+  Source branch at capture time: `master`
+- `llama_cpp/CMakeLists.txt`
+  Source branch at capture time: `master`
 - `llvm_tablegen/CMakeLists.txt`
   Source branch at capture time: `main`
 - `nlohmann_json/CMakeLists.txt`
   Source branch at capture time: `develop`
+- `mariadb_server/CMakeLists.txt`
+  Source branch at capture time: `main`
 - `opencv_flann/CMakeLists.txt`
   Source branch at capture time: `4.x`
 - `protobuf/CMakeLists.txt`
   Source branch at capture time: `main`
+- `spdlog/CMakeLists.txt`
+  Source branch at capture time: `v1.x`
 - `qtbase_network/CMakeLists.txt`
   Source branch at capture time: `dev`
 
