@@ -5,7 +5,7 @@
 <h1><code>cmakefmt</code></h1>
 
 [![CI](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml)
-[![Docs](https://github.com/puneetmatharu/cmakefmt/actions/workflows/docs.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/docs.yml)
+[![Pages](https://github.com/puneetmatharu/cmakefmt/actions/workflows/pages.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/pages.yml)
 [![Coverage](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml)
 
 **A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
