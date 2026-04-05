@@ -183,6 +183,11 @@ jobs:
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     environment: publish-crate
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.ref }}
+
       - name: Download packaged artifacts
         uses: actions/download-artifact@v8
         with:
@@ -195,6 +200,16 @@ jobs:
         run: |
           cd dist
           sha256sum * > SHA256SUMS
+
+      - name: Generate Homebrew formula
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          SOURCE_URL="https://github.com/cmakefmt/cmakefmt/archive/refs/tags/v${VERSION}.tar.gz"
+          curl -L --fail --silent --show-error "${SOURCE_URL}" -o /tmp/cmakefmt-source.tar.gz
+          SOURCE_SHA256="$(sha256sum /tmp/cmakefmt-source.tar.gz | awk '{print $1}')"
+          bash scripts/render-homebrew-formula.sh "${VERSION}" "${SOURCE_SHA256}" > dist/cmakefmt.rb
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2.6.1
@@ -214,6 +229,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.ref }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

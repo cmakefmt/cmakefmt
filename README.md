@@ -246,7 +246,7 @@ Start here: [https://cmakefmt.dev](https://cmakefmt.dev).
 |----------------------------------------------------------------------|--------------------------------------------------------------------------|
 | [Install](https://cmakefmt.dev/install.html)                         | Install options, first-project setup, CI wiring                          |
 | [Coverage](https://cmakefmt.dev/coverage.html)                       | How coverage is measured, published, and interpreted                     |
-| [Release Channels](https://cmakefmt.dev/release.html)                | Alpha contract, support levels, release artifacts, and shell completions |
+| [Release Channels](https://cmakefmt.dev/release.html)                | Release contract, support levels, release artifacts, and shell completions |
 | [CLI Reference](https://cmakefmt.dev/cli.html)                       | Every flag, exit code, and discovery rule                                |
 | [Config Reference](https://cmakefmt.dev/config.html)                 | Full config schema with examples                                         |
 | [Formatter Behavior](https://cmakefmt.dev/behavior.html)             | How the formatter makes layout decisions                                 |

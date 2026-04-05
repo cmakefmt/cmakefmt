@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+class Cmakefmt < Formula
+  desc "Fast, correct CMake formatter"
+  homepage "https://cmakefmt.dev"
+  url "https://github.com/cmakefmt/cmakefmt/archive/refs/tags/v@VERSION@.tar.gz"
+  sha256 "@SHA256@"
+  license any_of: ["MIT", "Apache-2.0"]
+
+  depends_on "rust" => :build
+
+  def install
+    system "cargo", "install", *std_cargo_args(path: ".")
+
+    bash_completion.install Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "bash")
+    zsh_completion.install "_cmakefmt" => Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "zsh")
+    fish_completion.install "cmakefmt.fish" => Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "fish")
+    man1.write Utils.safe_popen_read(bin/"cmakefmt", "--generate-man-page")
+  end
+
+  test do
+    (testpath/"CMakeLists.txt").write("project(foo)\n")
+    assert_match "project(foo)", shell_output("#{bin}/cmakefmt CMakeLists.txt")
+  end
+end
