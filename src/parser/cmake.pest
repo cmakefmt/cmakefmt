@@ -107,7 +107,7 @@ unquoted_element = {
 legacy_quoted = @{ "\"" ~ (( "\\" ~ !newline ~ ANY ) | (!("\"" | newline) ~ ANY))* ~ "\"" }
 legacy_make_var = @{ "$(" ~ (!(")" | newline) ~ ANY)* ~ ")" }
 nested_parens = @{ "(" ~ nested_parens_inner* ~ ")" }
-nested_parens_inner = { nested_parens | legacy_quoted | legacy_make_var | escape_sequence | variable_ref | genex | nested_parens_text | space }
+nested_parens_inner = { nested_parens | legacy_quoted | legacy_make_var | escape_sequence | variable_ref | genex | nested_parens_text | space | line_ending }
 nested_parens_text = @{
     (!(" " | "\t" | "\r" | "\n" | "(" | ")" | "#" | "\"" | "\\" | "$") ~ ANY)+
   | "$" ~ !("{" | "ENV{" | "CACHE{" | "<" | "(")

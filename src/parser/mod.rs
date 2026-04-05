@@ -534,6 +534,25 @@ mod tests {
     }
 
     #[test]
+    fn multiline_nested_parentheses_in_arguments_are_preserved_as_unquoted_tokens() {
+        let f = parse_ok(concat!(
+            "IF(NOT (have_C__fsanitize_memory__fsanitize_memory_track_origins__U_FORTIFY_SOURCE\n",
+            "          AND have_CXX__fsanitize_memory__fsanitize_memory_track_origins__U_FORTIFY_SOURCE))\n",
+        ));
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        let args: Vec<&str> = cmd.arguments.iter().map(Argument::as_str).collect();
+        assert_eq!(
+            args,
+            vec![
+                "NOT",
+                "(have_C__fsanitize_memory__fsanitize_memory_track_origins__U_FORTIFY_SOURCE\n          AND have_CXX__fsanitize_memory__fsanitize_memory_track_origins__U_FORTIFY_SOURCE)"
+            ]
+        );
+    }
+
+    #[test]
     fn source_file_with_utf8_bom_parses() {
         let f = parse_ok("\u{FEFF}project(MyProject)\n");
         assert_eq!(f.statements.len(), 1);
