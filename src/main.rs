@@ -484,6 +484,10 @@ struct Cli {
     /// Skip semantic verification, even for in-place rewrites.
     #[arg(long, help_heading = "Execution", conflicts_with = "verify")]
     fast: bool,
+
+    /// Format only files that opt in with a `# cmakefmt: enable` style pragma.
+    #[arg(long, help_heading = "Execution")]
+    require_pragma: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -658,7 +662,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     for target_result in target_results {
         match target_result {
             Ok(result) => {
-                if result.would_change {
+                if result.skipped {
+                    summary.skipped += 1;
+                } else if result.would_change {
                     summary.changed += 1;
                 } else {
                     summary.unchanged += 1;
@@ -705,6 +711,21 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
             for line in &result.debug_lines {
                 log_debug(line);
             }
+        }
+
+        if result.skipped {
+            if stdout_mode && !cli.quiet {
+                if multi_target_stdout && index > 0 {
+                    io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
+                }
+                if multi_target_stdout {
+                    write_stdout_header(&result.display_name, colorize_stdout)?;
+                }
+                io::stdout()
+                    .write_all(result.formatted.as_bytes())
+                    .map_err(cmakefmt::Error::Io)?;
+            }
+            continue;
         }
 
         if cli.list_changed_files {
@@ -1250,6 +1271,8 @@ struct ProcessedTarget {
     unified_diff: Option<String>,
     changed_lines: Vec<usize>,
     would_change: bool,
+    skipped: bool,
+    skip_reason: Option<String>,
     debug_lines: Vec<String>,
 }
 
@@ -1299,6 +1322,8 @@ struct JsonFileReport {
     display_name: String,
     path: Option<String>,
     would_change: bool,
+    skipped: bool,
+    skip_reason: Option<String>,
     changed_lines: Vec<usize>,
     formatted: Option<String>,
     diff: Option<String>,
@@ -1310,6 +1335,7 @@ struct RunSummary {
     selected: usize,
     changed: usize,
     unchanged: usize,
+    skipped: usize,
     failed: usize,
 }
 
@@ -1366,10 +1392,19 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         .map_err(cmakefmt::Error::Io)?;
 
     let stdin_path = cli.stdin_path.as_deref();
-    let (config, registry, config_context) = build_context(cli, stdin_path)?;
     let display_name = stdin_path
         .map(|path| path.display().to_string())
         .unwrap_or_else(|| "<stdin>".to_owned());
+    if cli.require_pragma && !has_enable_pragma(&source) {
+        return Ok(skipped_target(
+            stdin_path.map(Path::to_path_buf),
+            display_name,
+            source,
+            "missing format opt-in pragma".to_owned(),
+            cli.debug,
+        ));
+    }
+    let (config, registry, config_context) = build_context(cli, stdin_path)?;
     let mut debug_lines = if cli.debug {
         vec![
             format!("processing {display_name}"),
@@ -1435,6 +1470,8 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         unified_diff,
         changed_lines,
         would_change,
+        skipped: false,
+        skip_reason: None,
         debug_lines,
     })
 }
@@ -1446,6 +1483,15 @@ fn process_path(
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     let source = std::fs::read_to_string(path)
         .map_err(|err| cmakefmt::Error::Formatter(format!("{}: {err}", path.display())))?;
+    if cli.require_pragma && !has_enable_pragma(&source) {
+        return Ok(skipped_target(
+            Some(path.to_path_buf()),
+            path.display().to_string(),
+            source,
+            "missing format opt-in pragma".to_owned(),
+            cli.debug,
+        ));
+    }
     let (config, registry, config_context) = build_context(cli, Some(path))?;
     let mut debug_lines = if cli.debug {
         vec![
@@ -1580,6 +1626,8 @@ fn process_path(
         unified_diff,
         changed_lines,
         would_change,
+        skipped: false,
+        skip_reason: None,
         debug_lines,
     })
 }
@@ -1596,6 +1644,42 @@ fn verification_mode(cli: &Cli) -> VerificationMode {
         VerificationMode::Enabled
     } else {
         VerificationMode::Disabled
+    }
+}
+
+fn has_enable_pragma(source: &str) -> bool {
+    source.lines().any(|line| {
+        let trimmed = line.trim();
+        trimmed.contains("cmakefmt: enable")
+            || trimmed.contains("fmt: enable")
+            || trimmed.contains("cmake-format: enable")
+    })
+}
+
+fn skipped_target(
+    path: Option<PathBuf>,
+    display_name: String,
+    source: String,
+    reason: String,
+    debug: bool,
+) -> ProcessedTarget {
+    let mut debug_lines = Vec::new();
+    if debug {
+        debug_lines.push(format!("processing {display_name}"));
+        debug_lines.push(format!("skipped {display_name}: {reason}"));
+    }
+
+    ProcessedTarget {
+        path,
+        display_name,
+        formatted: source,
+        highlighted_output: None,
+        unified_diff: None,
+        changed_lines: Vec::new(),
+        would_change: false,
+        skipped: true,
+        skip_reason: Some(reason),
+        debug_lines,
     }
 }
 
@@ -2000,6 +2084,7 @@ fn build_json_report(
             selected: summary.selected,
             changed: summary.changed,
             unchanged: summary.unchanged,
+            skipped: summary.skipped,
             failed: summary.failed,
         },
         files: results
@@ -2008,6 +2093,8 @@ fn build_json_report(
                 display_name: result.display_name.clone(),
                 path: result.path.as_ref().map(|path| path.display().to_string()),
                 would_change: result.would_change,
+                skipped: result.skipped,
+                skip_reason: result.skip_reason.clone(),
                 changed_lines: result.changed_lines.clone(),
                 formatted: (!cli.in_place
                     && !cli.check
@@ -2336,10 +2423,15 @@ fn should_print_human_summary(
 }
 
 fn render_human_summary(summary: &RunSummary) -> String {
-    format!(
-        "summary: selected={}, changed={}, unchanged={}, failed={}",
-        summary.selected, summary.changed, summary.unchanged, summary.failed
-    )
+    let mut rendered = format!(
+        "summary: selected={}, changed={}, unchanged={}",
+        summary.selected, summary.changed, summary.unchanged
+    );
+    if summary.skipped > 0 {
+        let _ = write!(rendered, ", skipped={}", summary.skipped);
+    }
+    let _ = write!(rendered, ", failed={}", summary.failed);
+    rendered
 }
 
 fn describe_config_context(config_context: &ConfigContext) -> String {

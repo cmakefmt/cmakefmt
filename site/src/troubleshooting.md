@@ -187,6 +187,26 @@ cmakefmt --cache-location .cache/cmakefmt --cache-strategy content --check .
 
 Use `--debug` if you want to see cache hits and misses explicitly.
 
+## I Want A Gradual Rollout Instead Of Formatting Everything
+
+```bash
+cmakefmt --require-pragma --check .
+```
+
+Then opt files in explicitly with a top-level marker:
+
+```cmake
+# cmakefmt: enable
+```
+
+Equivalent markers:
+
+- `# fmt: enable`
+- `# cmake-format: enable`
+
+Files without one of those markers are skipped and show up as `skipped=N` in
+the human summary.
+
 ## Still Stuck?
 
 When reporting an issue, include:

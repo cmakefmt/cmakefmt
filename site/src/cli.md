@@ -74,6 +74,7 @@ Ignore rules only affect:
 | `--cache` | Cache formatted file results for repeated runs on the same files. |
 | `--cache-location <PATH>` | Override the cache directory. Supplying it also enables caching. |
 | `--cache-strategy <metadata\|content>` | Choose whether cache invalidation tracks file metadata or file contents. |
+| `--require-pragma` | Format only files that opt in with a `# cmakefmt: enable` style pragma. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
@@ -251,6 +252,21 @@ cmakefmt --cache-location .cache/cmakefmt --cache-strategy content --check .
 
 Use metadata-based invalidation for speed or content-based invalidation when
 you want the cache to ignore timestamp-only churn.
+
+### Roll Out Formatting Gradually
+
+```bash
+cmakefmt --require-pragma --check .
+```
+
+Then opt individual files in with a short marker:
+
+```cmake
+# cmakefmt: enable
+```
+
+`cmakefmt` also accepts `# fmt: enable` and `# cmake-format: enable` as
+equivalent opt-in pragmas.
 
 ### Continue Past Bad Files
 

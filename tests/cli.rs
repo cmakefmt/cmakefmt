@@ -489,6 +489,45 @@ fn cache_location_creates_cache_files() {
     assert!(!entries.is_empty());
 }
 
+#[test]
+fn require_pragma_skips_unmarked_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--require-pragma",
+            "--check",
+            "--quiet",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(0));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("skipped=1"));
+}
+
+#[test]
+fn require_pragma_formats_marked_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "# cmakefmt: enable\nset(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--require-pragma", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "# cmakefmt: enable\nset(FOO bar)\n"
+    );
+}
+
 // ── Error handling ──────────────────────────────────────────────────────────
 
 #[test]
@@ -1844,6 +1883,7 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--required-version <VERSION>"));
     assert!(stdout.contains("--verify"));
     assert!(stdout.contains("--fast"));
+    assert!(stdout.contains("--require-pragma"));
     assert!(stdout.contains("--show-config[=<FORMAT>]"));
     assert!(stdout.contains("--show-config-path"));
     assert!(stdout.contains("--find-config-path"));

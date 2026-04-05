@@ -101,6 +101,7 @@ cmakefmt --check .
 cmakefmt --in-place .
 cmakefmt --verify CMakeLists.txt
 cmakefmt --cache --check .
+cmakefmt --require-pragma --check .
 cmakefmt --staged --check
 cmakefmt --changed --since origin/main --check
 ```
@@ -111,6 +112,7 @@ What each one does:
 - `--in-place .`: rewrite all discovered CMake files, with semantic verification by default
 - `--verify CMakeLists.txt`: do a safe stdout-format run when you want the extra parse-tree check
 - `--cache --check .`: speed up repeated whole-repo checks when your config is stable
+- `--require-pragma --check .`: roll formatting out gradually, only touching opted-in files
 - `--staged --check`: pre-commit guard — only touches staged files
 - `--changed --since origin/main --check`: PR-scoped check for branch-only changes
 
