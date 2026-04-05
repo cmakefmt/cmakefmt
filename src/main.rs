@@ -16,8 +16,8 @@ use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
     convert_legacy_config_files, default_config_template_for,
     files::{discover_cmake_files_with_options, is_cmake_file, matches_filter, DiscoveryOptions},
-    format_source_with_registry, format_source_with_registry_debug, render_effective_config,
-    CaseStyle, Config, DumpConfigFormat,
+    format_source_with_registry, format_source_with_registry_debug, parser,
+    render_effective_config, CaseStyle, Config, DumpConfigFormat,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use pest::error::{ErrorVariant, LineColLocation};
@@ -445,6 +445,21 @@ struct Cli {
     /// Place closing paren on its own line when wrapping.
     #[arg(long, help_heading = "Config Overrides")]
     dangle_parens: Option<bool>,
+
+    /// Refuse to run unless the current cmakefmt version matches exactly.
+    #[arg(long, value_name = "VERSION", help_heading = "Execution")]
+    required_version: Option<String>,
+
+    /// Verify that formatting preserves the parsed CMake semantics.
+    ///
+    /// In-place rewrites verify semantics by default; use this flag to enable
+    /// the same safety check in stdout, diff, and check modes.
+    #[arg(long, help_heading = "Execution", conflicts_with = "fast")]
+    verify: bool,
+
+    /// Skip semantic verification, even for in-place rewrites.
+    #[arg(long, help_heading = "Execution", conflicts_with = "verify")]
+    fast: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -518,6 +533,8 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
+    check_required_version(cli)?;
+
     if let Some(format) = cli.dump_config {
         print!("{}", default_config_template_for(format));
         return Ok(EXIT_OK);
@@ -746,6 +763,12 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
     if cli.no_config && !cli.config_paths.is_empty() {
         return Err(cmakefmt::Error::Formatter(
             "--no-config cannot be combined with --config-file".to_owned(),
+        ));
+    }
+
+    if cli.verify && cli.fast {
+        return Err(cmakefmt::Error::Formatter(
+            "--verify cannot be combined with --fast".to_owned(),
         ));
     }
 
@@ -1208,6 +1231,12 @@ struct ProcessedTarget {
     debug_lines: Vec<String>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum VerificationMode {
+    Disabled,
+    Enabled,
+}
+
 struct FailedTarget {
     display_name: String,
     rendered_error: String,
@@ -1326,6 +1355,15 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         debug_lines.append(&mut formatter_debug);
     }
 
+    if verification_mode(cli) == VerificationMode::Enabled {
+        verify_semantics(&source, &formatted, &registry, &display_name)?;
+        if cli.debug {
+            debug_lines.push(format!(
+                "result {display_name}: semantic verification passed"
+            ));
+        }
+    }
+
     let formatted = apply_line_ranges(&source, &formatted, &cli.line_ranges, &display_name)?;
 
     let would_change = formatted != source;
@@ -1396,6 +1434,16 @@ fn process_path(
         debug_lines.append(&mut formatter_debug);
     }
 
+    if verification_mode(cli) == VerificationMode::Enabled {
+        verify_semantics(&source, &formatted, &registry, &path.display().to_string())?;
+        if cli.debug {
+            debug_lines.push(format!(
+                "result {}: semantic verification passed",
+                path.display()
+            ));
+        }
+    }
+
     let formatted = apply_line_ranges(
         &source,
         &formatted,
@@ -1445,6 +1493,50 @@ fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
         || !cli.line_ranges.is_empty()
         || cli.debug
         || cli.report_format == ReportFormat::Json
+}
+
+fn verification_mode(cli: &Cli) -> VerificationMode {
+    if cli.verify || (cli.in_place && !cli.fast) {
+        VerificationMode::Enabled
+    } else {
+        VerificationMode::Disabled
+    }
+}
+
+fn check_required_version(cli: &Cli) -> Result<(), cmakefmt::Error> {
+    let Some(required) = &cli.required_version else {
+        return Ok(());
+    };
+
+    let required = required.trim().trim_start_matches('v');
+    let current = env!("CARGO_PKG_VERSION");
+    if required == current {
+        Ok(())
+    } else {
+        Err(cmakefmt::Error::Formatter(format!(
+            "required cmakefmt version {required} does not match current version {current}"
+        )))
+    }
+}
+
+fn verify_semantics(
+    original: &str,
+    formatted: &str,
+    registry: &CommandRegistry,
+    display_name: &str,
+) -> Result<(), cmakefmt::Error> {
+    let original_ast =
+        parser::parse(original).map_err(|err| err.with_display_name(display_name.to_owned()))?;
+    let formatted_ast =
+        parser::parse(formatted).map_err(|err| err.with_display_name(display_name.to_owned()))?;
+
+    if normalize_semantics(original_ast, registry) == normalize_semantics(formatted_ast, registry) {
+        Ok(())
+    } else {
+        Err(cmakefmt::Error::Formatter(format!(
+            "{display_name}: semantic verification failed; formatted output changes the parsed CMake structure"
+        )))
+    }
 }
 
 fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, cmakefmt::Error> {
@@ -2171,6 +2263,109 @@ fn extract_invalid_regex_pattern(message: &str) -> Option<&str> {
     let start = tail.find('"')?;
     let end = tail[start + 1..].find('"')?;
     Some(&tail[start..=start + end + 1])
+}
+
+fn normalize_semantics(
+    mut file: parser::ast::File,
+    registry: &CommandRegistry,
+) -> parser::ast::File {
+    for statement in &mut file.statements {
+        match statement {
+            parser::ast::Statement::Command(command) => {
+                command.span = (0, 0);
+                command.name.make_ascii_lowercase();
+                normalize_command_literals(command);
+                normalize_keyword_args(command, registry);
+            }
+            parser::ast::Statement::TemplatePlaceholder(value) => normalize_line_endings(value),
+            parser::ast::Statement::Comment(comment) => normalize_comment(comment),
+            parser::ast::Statement::BlankLines(_) => {}
+        }
+    }
+
+    file
+}
+
+fn normalize_command_literals(command: &mut parser::ast::CommandInvocation) {
+    if let Some(comment) = &mut command.trailing_comment {
+        normalize_comment(comment);
+    }
+
+    for argument in &mut command.arguments {
+        match argument {
+            parser::ast::Argument::Bracket(bracket) => normalize_line_endings(&mut bracket.raw),
+            parser::ast::Argument::Quoted(value) | parser::ast::Argument::Unquoted(value) => {
+                normalize_line_endings(value)
+            }
+            parser::ast::Argument::InlineComment(comment) => normalize_comment(comment),
+        }
+    }
+}
+
+fn normalize_comment(comment: &mut parser::ast::Comment) {
+    match comment {
+        parser::ast::Comment::Line(value) | parser::ast::Comment::Bracket(value) => {
+            normalize_line_endings(value)
+        }
+    }
+}
+
+fn normalize_line_endings(value: &mut String) {
+    if value.contains('\r') {
+        *value = value.replace("\r\n", "\n");
+    }
+}
+
+fn normalize_keyword_args(
+    command: &mut parser::ast::CommandInvocation,
+    registry: &CommandRegistry,
+) {
+    let spec = registry.get(&command.name);
+    let first_arg = command.arguments.iter().find_map(first_arg_text);
+    let form = spec.form_for(first_arg);
+    let keyword_set = collect_keywords(form);
+
+    for arg in &mut command.arguments {
+        if let parser::ast::Argument::Unquoted(value) = arg {
+            let upper = value.to_ascii_uppercase();
+            if keyword_set.contains(upper.as_str()) {
+                *value = upper;
+            }
+        }
+    }
+}
+
+fn first_arg_text(argument: &parser::ast::Argument) -> Option<&str> {
+    match argument {
+        parser::ast::Argument::Quoted(_)
+        | parser::ast::Argument::Bracket(_)
+        | parser::ast::Argument::InlineComment(_) => None,
+        parser::ast::Argument::Unquoted(value) => Some(value.as_str()),
+    }
+}
+
+fn collect_keywords(form: &cmakefmt::spec::CommandForm) -> BTreeSet<String> {
+    let mut keywords = BTreeSet::new();
+    collect_form_keywords(form, &mut keywords);
+    keywords
+}
+
+fn collect_form_keywords(form: &cmakefmt::spec::CommandForm, keywords: &mut BTreeSet<String>) {
+    keywords.extend(form.flags.iter().cloned());
+
+    for (name, spec) in &form.kwargs {
+        keywords.insert(name.clone());
+        collect_kwarg_keywords(spec, keywords);
+    }
+}
+
+fn collect_kwarg_keywords(spec: &cmakefmt::spec::KwargSpec, keywords: &mut BTreeSet<String>) {
+    keywords.extend(spec.flags.iter().cloned());
+
+    for (name, child) in &spec.kwargs {
+        keywords.insert(name.clone());
+        collect_kwarg_keywords(child, keywords);
+    }
 }
 
 #[cfg(test)]

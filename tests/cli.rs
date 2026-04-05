@@ -1596,6 +1596,60 @@ fn version_flag() {
 }
 
 #[test]
+fn required_version_accepts_exact_current_version() {
+    let output = cmakefmt()
+        .args(["--required-version", env!("CARGO_PKG_VERSION"), "--version"])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+}
+
+#[test]
+fn required_version_rejects_mismatch() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--required-version", "9.9.9", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("required cmakefmt version 9.9.9"));
+}
+
+#[test]
+fn verify_succeeds_for_stdout_formatting() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--verify", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "set(FOO bar)\n");
+}
+
+#[test]
+fn fast_and_verify_conflict() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--fast", "--verify", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
 fn generate_completion_outputs_bash_script() {
     let output = cmakefmt()
         .args(["--generate-completion", "bash"])
@@ -1631,6 +1685,9 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--dump-config [<FORMAT>]"));
     assert!(stdout.contains("--generate-completion <SHELL>"));
     assert!(stdout.contains("--generate-man-page"));
+    assert!(stdout.contains("--required-version <VERSION>"));
+    assert!(stdout.contains("--verify"));
+    assert!(stdout.contains("--fast"));
     assert!(stdout.contains("--show-config[=<FORMAT>]"));
     assert!(stdout.contains("--show-config-path"));
     assert!(stdout.contains("--find-config-path"));

@@ -153,6 +153,20 @@ cmakefmt --keep-going --check .
 aggregated summary instead of aborting at the first file-level error. Useful
 for triage on large repositories.
 
+## I Want Safer Rewrites Or Stricter Version Pins
+
+```bash
+cmakefmt --verify CMakeLists.txt
+cmakefmt --required-version 0.1.0 --check .
+```
+
+- `--verify` reparses the original and formatted output and rejects the run if
+  the parsed CMake semantics change.
+- `--required-version` makes scripts fail fast when the installed binary is not
+  the exact version they expect.
+- `--in-place` already performs semantic verification by default; add `--fast`
+  only when you explicitly want to skip that extra check.
+
 ## I Suspect A Performance Regression
 
 Run the benchmark suite:

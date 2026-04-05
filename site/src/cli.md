@@ -68,6 +68,9 @@ Ignore rules only affect:
 | `--debug` | Emit discovery, config, barrier, and formatter diagnostics to stderr. |
 | `--quiet` | Suppress per-file human output and keep only summaries plus actual errors. |
 | `--keep-going` | Continue processing later files after a file-level parse/format error. |
+| `--required-version <VERSION>` | Refuse to run unless the current `cmakefmt` version matches exactly. Useful for pinned CI and editor wrappers. |
+| `--verify` | Parse the original and formatted output and reject the result if the CMake semantics change. |
+| `--fast` | Skip semantic verification, including the default rewrite-time verification used by `--in-place`. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
@@ -118,6 +121,17 @@ cmakefmt --in-place .
 ```
 
 The "apply formatting now" mode. Every discovered CMake file gets rewritten.
+In-place rewrites also verify parse-tree stability by default; use `--fast`
+only when you are intentionally trading that extra safety check for throughput.
+
+### Verify A Dry Run Semantically
+
+```bash
+cmakefmt --verify CMakeLists.txt
+```
+
+This keeps stdout output, but also reparses both the original and formatted
+source and rejects the result if the parsed CMake structure changes.
 
 ### Use `--check` In CI
 
@@ -136,6 +150,15 @@ summary: selected=12 changed=2 unchanged=10 failed=0
 
 Exit code `0` means nothing would change. Exit code `1` means at least one
 file is out of format — exactly what CI needs.
+
+### Pin The Formatter Version In Automation
+
+```bash
+cmakefmt --required-version 0.1.0 --check .
+```
+
+This makes shell scripts and editor wrappers fail fast when the installed
+binary is not the exact version the workflow expects.
 
 ### List Only The Files That Would Change
 

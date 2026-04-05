@@ -31,7 +31,8 @@ single native binary. Same spirit. No Python. No compromises.
 - **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
   Drop it in CI and forget about it.
 - **Built for actual workflows.** `--check`, `--diff`, `--staged`, `--changed`, `--files-from`,
-  `--show-config`, `--explain-config`, JSON reporting — all first-class, not scripted workarounds.
+  `--show-config`, `--explain-config`, semantic verification, JSON reporting — all first-class,
+  not scripted workarounds.
 - **Knows your commands.** Teach `cmakefmt` the shape of your project's custom CMake functions and macros.
   No more generic token-wrapping for code *you* wrote.
 - **Errors that actually help.** Parse and config failures come with file/line context, source snippets,
@@ -116,9 +117,11 @@ cmakefmt --staged --check
 | CI check | `cmakefmt --check .` |
 | Preview which files would change | `cmakefmt --list-changed-files .` |
 | See the exact patch | `cmakefmt --diff CMakeLists.txt` |
+| Verify semantics while formatting to stdout | `cmakefmt --verify CMakeLists.txt` |
 | Pre-commit guard (staged files only) | `cmakefmt --staged --check` |
 | PR-scoped check | `cmakefmt --changed --since origin/main --check` |
 | Machine-readable CI output | `cmakefmt --check --report-format json .` |
+| Pin the required binary version in CI | `cmakefmt --required-version 0.1.0 --check .` |
 | Read from stdin | `cat CMakeLists.txt \| cmakefmt -` |
 
 ## Configuration
