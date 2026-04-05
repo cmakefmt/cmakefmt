@@ -24,11 +24,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
 
-      # - name: Configure GitHub Pages
-      #   if: ${{ github.event_name != 'pull_request' }}
-      #   uses: actions/configure-pages@v6.0.0
-      #   with:
-      #     enablement: true
+      - name: Configure GitHub Pages
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/configure-pages@v6.0.0
+        with:
+          enablement: true
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -53,10 +53,7 @@ jobs:
         with:
           path: site/book
 
-    # Uncomment to deploy from this same job.
-    # Note: usually restricted to push/main only.
-    #
-    # - name: Deploy to GitHub Pages
-    #   if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    #   id: deployment
-    #   uses: actions/deploy-pages@v5.0.0
+      - name: Deploy to GitHub Pages
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        id: deployment
+        uses: actions/deploy-pages@v5.0.0
