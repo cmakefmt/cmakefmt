@@ -34,7 +34,7 @@ jobs:
         run: |
           cargo llvm-cov clean --workspace
           cargo llvm-cov --workspace --all-targets --summary-only | tee coverage-summary.txt
-          cargo llvm-cov report --workspace --all-targets --html --output-dir target/llvm-cov/html
+          cargo llvm-cov report --html --output-dir target/llvm-cov/html
 
       - name: Publish job summary
         run: |
