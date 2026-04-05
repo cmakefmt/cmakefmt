@@ -29,6 +29,7 @@ This project is independent from other Rust implementations, including:
 - [Formatter Disable Regions](#formatter-disable-regions)
 - [Library Usage](#library-usage)
 - [Documentation](#documentation)
+- [Project Layout](#project-layout)
 - [Development](#development)
 - [Status](#status)
 - [License](#license)
@@ -143,7 +144,7 @@ cmakefmt --staged --check
 | Machine-readable CI output                  | `cmakefmt --check --report-format json .`        |
 | GitHub Actions annotations                  | `cmakefmt --check --report-format github .`      |
 | Checkstyle / JUnit / SARIF output           | `cmakefmt --check --report-format checkstyle .`  |
-| Pin the required binary version in CI       | `cmakefmt --required-version 0.1.0 --check .`    |
+| Pin the required binary version in CI       | `cmakefmt --required-version 0.0.1 --check .`    |
 | Speed up repeated large-repo checks         | `cmakefmt --cache --check .`                     |
 | Roll out formatting file-by-file            | `cmakefmt --require-pragma --check .`            |
 | Read from stdin                             | `cat CMakeLists.txt \| cmakefmt -`               |
