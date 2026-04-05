@@ -1860,7 +1860,7 @@ impl ProgressReporter {
             progress.set_draw_target(ProgressDrawTarget::stderr());
             progress.set_style(
                 ProgressStyle::with_template(
-                    "{spinner:.cyan} [{elapsed_precise}] [{bar:50.cyan/blue}] {pos}/{len} files",
+                    "{spinner:.green} [Elapsed: {elapsed_precise}] |{bar:50.green/green}| ({eta_precise}) {pos}/{len} ({percent}%) files",
                 )
                 .expect("progress template should be valid")
                 .progress_chars("=> "),
