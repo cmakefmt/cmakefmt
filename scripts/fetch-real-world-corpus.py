@@ -14,20 +14,11 @@ import urllib.request
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Fetch the pinned real-world CMake corpus used for local review."
-    )
-    parser.add_argument(
-        "--dest",
-        type=pathlib.Path,
-        default=pathlib.Path("target/real-world-corpus"),
-        help="Directory to populate with fetched fixture files.",
-    )
-    parser.add_argument(
-        "--refresh",
-        action="store_true",
-        help="Re-download files even if a cached copy already matches the expected hash.",
-    )
+    # fmt: off
+    parser = argparse.ArgumentParser(description="Fetch the pinned real-world CMake corpus used for local review.")
+    parser.add_argument("--dest", type=pathlib.Path, default=pathlib.Path("target/real-world-corpus"), help="Directory to populate with fetched fixture files.")
+    parser.add_argument("--refresh", action="store_true", help="Re-download files even if a cached copy already matches the expected hash.")
+    # fmt: on
     return parser.parse_args()
 
 
