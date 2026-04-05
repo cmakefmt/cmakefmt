@@ -71,6 +71,9 @@ Ignore rules only affect:
 | `--required-version <VERSION>` | Refuse to run unless the current `cmakefmt` version matches exactly. Useful for pinned CI and editor wrappers. |
 | `--verify` | Parse the original and formatted output and reject the result if the CMake semantics change. |
 | `--fast` | Skip semantic verification, including the default rewrite-time verification used by `--in-place`. |
+| `--cache` | Cache formatted file results for repeated runs on the same files. |
+| `--cache-location <PATH>` | Override the cache directory. Supplying it also enables caching. |
+| `--cache-strategy <metadata\|content>` | Choose whether cache invalidation tracks file metadata or file contents. |
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
@@ -238,6 +241,16 @@ summary: selected=48 changed=3 unchanged=45 failed=0
 ```
 
 A clean log with a reliable exit code — ideal for high-volume CI pipelines.
+
+### Cache Repeated Runs
+
+```bash
+cmakefmt --cache --check .
+cmakefmt --cache-location .cache/cmakefmt --cache-strategy content --check .
+```
+
+Use metadata-based invalidation for speed or content-based invalidation when
+you want the cache to ignore timestamp-only churn.
 
 ### Continue Past Bad Files
 

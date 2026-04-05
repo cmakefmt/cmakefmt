@@ -4,6 +4,7 @@
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
+use std::hash::{Hash, Hasher};
 use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -23,7 +24,7 @@ use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use pest::error::{ErrorVariant, LineColLocation};
 use rayon::prelude::*;
 use regex::Regex;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use similar::TextDiff;
 
 const LONG_ABOUT: &str = "
@@ -310,6 +311,29 @@ struct Cli {
     )]
     diff: bool,
 
+    /// Cache formatted results for repeated runs on the same files.
+    #[arg(long, help_heading = "Execution")]
+    cache: bool,
+
+    /// Override the cache directory used by `--cache`.
+    ///
+    /// Supplying a cache location also enables caching.
+    #[arg(
+        long = "cache-location",
+        value_name = "PATH",
+        help_heading = "Execution"
+    )]
+    cache_location: Option<PathBuf>,
+
+    /// Choose whether cache invalidation tracks file metadata or file contents.
+    #[arg(
+        long = "cache-strategy",
+        value_enum,
+        default_value_t = CacheStrategy::Metadata,
+        help_heading = "Execution"
+    )]
+    cache_strategy: CacheStrategy,
+
     /// Select modified Git-tracked files instead of explicit input paths.
     ///
     /// Use `--since` to compare against a specific base ref; otherwise
@@ -486,6 +510,14 @@ enum ReportFormat {
     Junit,
     /// SARIF JSON.
     Sarif,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum CacheStrategy {
+    /// Use file size and modification time to detect cache invalidation.
+    Metadata,
+    /// Hash file contents to detect cache invalidation.
+    Content,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1232,6 +1264,22 @@ struct FailedTarget {
     rendered_error: String,
 }
 
+#[derive(Clone, Debug)]
+struct CacheContext {
+    cache_file: PathBuf,
+    tool_signature: String,
+    config_signature: String,
+    source_signature: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CacheEntry {
+    tool_signature: String,
+    config_signature: String,
+    source_signature: String,
+    formatted: String,
+}
+
 #[derive(Debug, Serialize)]
 struct JsonReport {
     mode: &'static str,
@@ -1408,8 +1456,52 @@ fn process_path(
     } else {
         Vec::new()
     };
+    let cache_context = if cli.cache || cli.cache_location.is_some() {
+        Some(cache_context(
+            path,
+            &source,
+            &config,
+            &config_context,
+            cli.cache_location.as_deref(),
+            cli.cache_strategy,
+        )?)
+    } else {
+        None
+    };
 
-    let (formatted, mut formatter_debug) = if cli.debug {
+    let mut cache_hit = false;
+    let (formatted, mut formatter_debug) = if let Some(cache) = &cache_context {
+        if let Some(cached) = read_cache_entry(cache)? {
+            cache_hit = true;
+            if cli.debug {
+                debug_lines.push(format!(
+                    "cache hit {} ({})",
+                    path.display(),
+                    cache.cache_file.display()
+                ));
+            }
+            (cached.formatted, Vec::new())
+        } else {
+            if cli.debug {
+                debug_lines.push(format!(
+                    "cache miss {} ({})",
+                    path.display(),
+                    cache.cache_file.display()
+                ));
+            }
+            if cli.debug {
+                match format_source_with_registry_debug(&source, &config, &registry) {
+                    Ok(result) => result,
+                    Err(err) => return Err(err.with_display_name(path.display().to_string())),
+                }
+            } else {
+                match format_source_with_registry(&source, &config, &registry) {
+                    Ok(formatted) => (formatted, Vec::new()),
+                    Err(err) => return Err(err.with_display_name(path.display().to_string())),
+                }
+            }
+        }
+    } else if cli.debug {
         match format_source_with_registry_debug(&source, &config, &registry) {
             Ok(result) => result,
             Err(err) => return Err(err.with_display_name(path.display().to_string())),
@@ -1466,6 +1558,20 @@ fn process_path(
     let unified_diff =
         would_change.then(|| build_unified_diff(&path.display().to_string(), &source, &formatted));
 
+    if let Some(cache) = &cache_context {
+        if !cache_hit {
+            write_cache_entry(
+                cache,
+                CacheEntry {
+                    tool_signature: cache.tool_signature.clone(),
+                    config_signature: cache.config_signature.clone(),
+                    source_signature: cache.source_signature.clone(),
+                    formatted: formatted.clone(),
+                },
+            )?;
+        }
+    }
+
     Ok(ProcessedTarget {
         path: Some(path.to_path_buf()),
         display_name: path.display().to_string(),
@@ -1491,6 +1597,124 @@ fn verification_mode(cli: &Cli) -> VerificationMode {
     } else {
         VerificationMode::Disabled
     }
+}
+
+fn cache_context(
+    path: &Path,
+    source: &str,
+    config: &Config,
+    config_context: &ConfigContext,
+    cache_location: Option<&Path>,
+    cache_strategy: CacheStrategy,
+) -> Result<CacheContext, cmakefmt::Error> {
+    let cache_root = cache_location
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| default_cache_dir(path));
+    let cache_key = stable_hash(&path.display().to_string());
+    let cache_file = cache_root.join(format!("{cache_key}.json"));
+    let rendered_config = render_effective_config(config, DumpConfigFormat::Toml)?;
+    let mut config_fingerprint = format!(
+        "{}\n{}",
+        env!("CMAKEFMT_CLI_LONG_VERSION"),
+        rendered_config.trim_end()
+    );
+    for source_path in &config_context.sources {
+        config_fingerprint.push('\n');
+        config_fingerprint.push_str(
+            &std::fs::read_to_string(source_path)
+                .unwrap_or_else(|_| format!("<unreadable:{}>", source_path.display())),
+        );
+    }
+
+    Ok(CacheContext {
+        cache_file,
+        tool_signature: env!("CMAKEFMT_CLI_LONG_VERSION").to_owned(),
+        config_signature: stable_hash(&config_fingerprint),
+        source_signature: source_signature(path, source, cache_strategy)?,
+    })
+}
+
+fn default_cache_dir(path: &Path) -> PathBuf {
+    find_git_root(path)
+        .unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| {
+                path.parent()
+                    .map(Path::to_path_buf)
+                    .unwrap_or_else(|| PathBuf::from("."))
+            })
+        })
+        .join(".cmakefmt-cache")
+}
+
+fn find_git_root(path: &Path) -> Option<PathBuf> {
+    let mut current = if path.is_dir() {
+        path.to_path_buf()
+    } else {
+        path.parent()?.to_path_buf()
+    };
+
+    loop {
+        if current.join(".git").exists() {
+            return Some(current);
+        }
+        if !current.pop() {
+            return None;
+        }
+    }
+}
+
+fn source_signature(
+    path: &Path,
+    source: &str,
+    cache_strategy: CacheStrategy,
+) -> Result<String, cmakefmt::Error> {
+    match cache_strategy {
+        CacheStrategy::Metadata => {
+            let metadata = std::fs::metadata(path).map_err(cmakefmt::Error::Io)?;
+            let modified = metadata
+                .modified()
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_nanos())
+                .unwrap_or_default();
+            Ok(format!("metadata:{}:{}", metadata.len(), modified))
+        }
+        CacheStrategy::Content => Ok(format!("content:{}", stable_hash(source))),
+    }
+}
+
+fn read_cache_entry(cache: &CacheContext) -> Result<Option<CacheEntry>, cmakefmt::Error> {
+    let contents = match std::fs::read_to_string(&cache.cache_file) {
+        Ok(contents) => contents,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(cmakefmt::Error::Io(err)),
+    };
+
+    let entry: CacheEntry = match serde_json::from_str(&contents) {
+        Ok(entry) => entry,
+        Err(_) => return Ok(None),
+    };
+
+    Ok((entry.tool_signature == cache.tool_signature
+        && entry.config_signature == cache.config_signature
+        && entry.source_signature == cache.source_signature)
+        .then_some(entry))
+}
+
+fn write_cache_entry(cache: &CacheContext, entry: CacheEntry) -> Result<(), cmakefmt::Error> {
+    if let Some(parent) = cache.cache_file.parent() {
+        std::fs::create_dir_all(parent).map_err(cmakefmt::Error::Io)?;
+    }
+    let json = serde_json::to_string(&entry).map_err(|err| {
+        cmakefmt::Error::Formatter(format!("failed to serialize cache entry: {err}"))
+    })?;
+    std::fs::write(&cache.cache_file, json).map_err(cmakefmt::Error::Io)
+}
+
+fn stable_hash<T: Hash + ?Sized>(value: &T) -> String {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    value.hash(&mut hasher);
+    format!("{:016x}", hasher.finish())
 }
 
 fn check_required_version(cli: &Cli) -> Result<(), cmakefmt::Error> {

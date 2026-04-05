@@ -124,6 +124,7 @@ cmakefmt --staged --check
 | GitHub Actions annotations | `cmakefmt --check --report-format github .` |
 | Checkstyle / JUnit / SARIF output | `cmakefmt --check --report-format checkstyle .` |
 | Pin the required binary version in CI | `cmakefmt --required-version 0.1.0 --check .` |
+| Speed up repeated large-repo checks | `cmakefmt --cache --check .` |
 | Read from stdin | `cat CMakeLists.txt \| cmakefmt -` |
 
 ## Configuration

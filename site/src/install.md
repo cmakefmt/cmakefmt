@@ -100,6 +100,7 @@ The four commands you will reach for every day:
 cmakefmt --check .
 cmakefmt --in-place .
 cmakefmt --verify CMakeLists.txt
+cmakefmt --cache --check .
 cmakefmt --staged --check
 cmakefmt --changed --since origin/main --check
 ```
@@ -109,6 +110,7 @@ What each one does:
 - `--check .`: CI-safe validation for a repository or directory
 - `--in-place .`: rewrite all discovered CMake files, with semantic verification by default
 - `--verify CMakeLists.txt`: do a safe stdout-format run when you want the extra parse-tree check
+- `--cache --check .`: speed up repeated whole-repo checks when your config is stable
 - `--staged --check`: pre-commit guard — only touches staged files
 - `--changed --since origin/main --check`: PR-scoped check for branch-only changes
 

@@ -178,6 +178,15 @@ cargo bench --bench formatter
 For one-off workflow timing, compare representative commands with `hyperfine`.
 The repository's full benchmark process is documented in the performance notes.
 
+If the workload is a repeated whole-repo check, also try the built-in cache:
+
+```bash
+cmakefmt --cache --check .
+cmakefmt --cache-location .cache/cmakefmt --cache-strategy content --check .
+```
+
+Use `--debug` if you want to see cache hits and misses explicitly.
+
 ## Still Stuck?
 
 When reporting an issue, include:

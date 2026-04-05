@@ -427,6 +427,68 @@ fn quiet_check_emits_summary_without_per_file_lines() {
     assert!(!stderr.contains("would be reformatted"));
 }
 
+#[test]
+fn cache_reports_hit_on_second_run() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache_dir = dir.path().join("cache");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let first = cmakefmt()
+        .args([
+            "--cache",
+            "--cache-location",
+            cache_dir.to_str().unwrap(),
+            "--debug",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(first.status.success());
+    let first_stderr = String::from_utf8_lossy(&first.stderr);
+    assert!(first_stderr.contains("cache miss"));
+
+    let second = cmakefmt()
+        .args([
+            "--cache",
+            "--cache-location",
+            cache_dir.to_str().unwrap(),
+            "--debug",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(second.status.success());
+    let second_stderr = String::from_utf8_lossy(&second.stderr);
+    assert!(second_stderr.contains("cache hit"));
+}
+
+#[test]
+fn cache_location_creates_cache_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache_dir = dir.path().join("cache");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--cache-location",
+            cache_dir.to_str().unwrap(),
+            "--cache-strategy",
+            "content",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let entries: Vec<_> = std::fs::read_dir(&cache_dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    assert!(!entries.is_empty());
+}
+
 // ── Error handling ──────────────────────────────────────────────────────────
 
 #[test]
@@ -1801,6 +1863,9 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--diff"));
     assert!(stdout.contains("--quiet"));
     assert!(stdout.contains("--keep-going"));
+    assert!(stdout.contains("--cache"));
+    assert!(stdout.contains("--cache-location <PATH>"));
+    assert!(stdout.contains("--cache-strategy <CACHE_STRATEGY>"));
     assert!(stdout.contains("--staged"));
     assert!(stdout.contains("--changed"));
     assert!(stdout.contains("--since <REF>"));
