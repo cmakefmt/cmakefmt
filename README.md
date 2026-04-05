@@ -121,6 +121,8 @@ cmakefmt --staged --check
 | Pre-commit guard (staged files only) | `cmakefmt --staged --check` |
 | PR-scoped check | `cmakefmt --changed --since origin/main --check` |
 | Machine-readable CI output | `cmakefmt --check --report-format json .` |
+| GitHub Actions annotations | `cmakefmt --check --report-format github .` |
+| Checkstyle / JUnit / SARIF output | `cmakefmt --check --report-format checkstyle .` |
 | Pin the required binary version in CI | `cmakefmt --required-version 0.1.0 --check .` |
 | Read from stdin | `cat CMakeLists.txt \| cmakefmt -` |
 

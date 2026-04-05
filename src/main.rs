@@ -478,6 +478,14 @@ enum ReportFormat {
     Human,
     /// Machine-readable JSON output.
     Json,
+    /// GitHub Actions workflow commands.
+    Github,
+    /// Checkstyle XML.
+    Checkstyle,
+    /// JUnit XML.
+    Junit,
+    /// SARIF JSON.
+    Sarif,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -652,30 +660,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
     let multi_target_stdout = stdout_mode && results.len() > 1;
 
-    if cli.report_format == ReportFormat::Json {
+    if cli.report_format != ReportFormat::Human {
         if cli.in_place {
-            for result in &results {
-                if let Some(path) = &result.path {
-                    if result.would_change {
-                        std::fs::write(path, &result.formatted).map_err(cmakefmt::Error::Io)?;
-                    }
-                }
-            }
+            write_in_place_updates(&results)?;
         }
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&build_json_report(&results, &failures, &summary, cli))
-                .map_err(|err| {
-                    cmakefmt::Error::Formatter(format!("failed to build JSON report: {err}"))
-                })?
-        );
-        return if !failures.is_empty() {
-            Ok(EXIT_ERROR)
-        } else if (cli.check || cli.list_changed_files) && results.iter().any(|r| r.would_change) {
-            Ok(EXIT_CHECK_FAILED)
-        } else {
-            Ok(EXIT_OK)
-        };
+        print_non_human_report(cli, &results, &failures, &summary)?;
+        return machine_mode_exit_code(&results, &failures, &summary, cli);
     }
 
     for (index, result) in results.iter().enumerate() {
@@ -1492,7 +1482,7 @@ fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
     colorize_stdout
         || !cli.line_ranges.is_empty()
         || cli.debug
-        || cli.report_format == ReportFormat::Json
+        || cli.report_format != ReportFormat::Human
 }
 
 fn verification_mode(cli: &Cli) -> VerificationMode {
@@ -1818,6 +1808,279 @@ fn build_json_report(
                 error: failure.rendered_error.clone(),
             })
             .collect(),
+    }
+}
+
+fn build_github_report(
+    results: &[ProcessedTarget],
+    failures: &[FailedTarget],
+    summary: &RunSummary,
+) -> String {
+    let mut out = String::new();
+
+    for result in results {
+        if !result.would_change {
+            continue;
+        }
+
+        let line = result.changed_lines.first().copied().unwrap_or(1);
+        let file = github_escape_property(
+            result
+                .path
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|| result.display_name.clone())
+                .as_str(),
+        );
+        let message = github_escape_message("file would be reformatted by cmakefmt");
+        let _ = writeln!(out, "::warning file={file},line={line}::{message}");
+    }
+
+    for failure in failures {
+        let file = github_escape_property(&failure.display_name);
+        let message = github_escape_message(&failure.rendered_error);
+        let _ = writeln!(out, "::error file={file}::{message}");
+    }
+
+    let summary_line = github_escape_message(&render_human_summary(summary));
+    let _ = writeln!(out, "::notice::{summary_line}");
+    out
+}
+
+fn build_checkstyle_report(results: &[ProcessedTarget], failures: &[FailedTarget]) -> String {
+    let mut out = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+    out.push_str("<checkstyle version=\"4.3\">\n");
+
+    for result in results {
+        if !result.would_change {
+            continue;
+        }
+        let path = xml_escape(
+            result
+                .path
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|| result.display_name.clone())
+                .as_str(),
+        );
+        let line = result.changed_lines.first().copied().unwrap_or(1);
+        out.push_str(&format!("  <file name=\"{path}\">\n"));
+        out.push_str(&format!(
+            "    <error line=\"{line}\" severity=\"warning\" source=\"cmakefmt.format\" message=\"{}\"/>\n",
+            xml_escape("file would be reformatted by cmakefmt")
+        ));
+        out.push_str("  </file>\n");
+    }
+
+    for failure in failures {
+        let path = xml_escape(&failure.display_name);
+        out.push_str(&format!("  <file name=\"{path}\">\n"));
+        out.push_str(&format!(
+            "    <error severity=\"error\" source=\"cmakefmt.error\" message=\"{}\"/>\n",
+            xml_escape(&failure.rendered_error)
+        ));
+        out.push_str("  </file>\n");
+    }
+
+    out.push_str("</checkstyle>\n");
+    out
+}
+
+fn build_junit_report(
+    results: &[ProcessedTarget],
+    failures: &[FailedTarget],
+    summary: &RunSummary,
+) -> String {
+    let mut out = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+    out.push_str(&format!(
+        "<testsuite name=\"cmakefmt\" tests=\"{}\" failures=\"{}\" errors=\"{}\">\n",
+        summary.selected, summary.changed, summary.failed
+    ));
+
+    for result in results {
+        out.push_str(&format!(
+            "  <testcase classname=\"cmakefmt\" name=\"{}\">",
+            xml_escape(&result.display_name)
+        ));
+        if result.would_change {
+            out.push_str(&format!(
+                "<failure message=\"{}\">{}</failure>",
+                xml_escape("file would be reformatted by cmakefmt"),
+                xml_escape(
+                    result
+                        .unified_diff
+                        .as_deref()
+                        .unwrap_or("file would be reformatted by cmakefmt")
+                )
+            ));
+        }
+        out.push_str("</testcase>\n");
+    }
+
+    for failure in failures {
+        out.push_str(&format!(
+            "  <testcase classname=\"cmakefmt\" name=\"{}\"><error message=\"{}\">{}</error></testcase>\n",
+            xml_escape(&failure.display_name),
+            xml_escape("cmakefmt failed to process the file"),
+            xml_escape(&failure.rendered_error)
+        ));
+    }
+
+    out.push_str("</testsuite>\n");
+    out
+}
+
+fn build_sarif_report(results: &[ProcessedTarget], failures: &[FailedTarget]) -> serde_json::Value {
+    let mut sarif_results = Vec::new();
+
+    for result in results {
+        if !result.would_change {
+            continue;
+        }
+
+        let uri = result
+            .path
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| result.display_name.clone());
+        sarif_results.push(serde_json::json!({
+            "ruleId": "cmakefmt/would-reformat",
+            "level": "warning",
+            "message": { "text": "file would be reformatted by cmakefmt" },
+            "locations": [{
+                "physicalLocation": {
+                    "artifactLocation": { "uri": uri },
+                    "region": { "startLine": result.changed_lines.first().copied().unwrap_or(1) }
+                }
+            }]
+        }));
+    }
+
+    for failure in failures {
+        sarif_results.push(serde_json::json!({
+            "ruleId": "cmakefmt/error",
+            "level": "error",
+            "message": { "text": failure.rendered_error },
+            "locations": [{
+                "physicalLocation": {
+                    "artifactLocation": { "uri": failure.display_name }
+                }
+            }]
+        }));
+    }
+
+    serde_json::json!({
+        "version": "2.1.0",
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "cmakefmt",
+                    "informationUri": "https://github.com/puneetmatharu/cmakefmt",
+                    "rules": [
+                        {
+                            "id": "cmakefmt/would-reformat",
+                            "shortDescription": { "text": "file would be reformatted" }
+                        },
+                        {
+                            "id": "cmakefmt/error",
+                            "shortDescription": { "text": "cmakefmt failed to process the file" }
+                        }
+                    ]
+                }
+            },
+            "results": sarif_results
+        }]
+    })
+}
+
+fn github_escape_property(value: &str) -> String {
+    value
+        .replace('%', "%25")
+        .replace('\r', "%0D")
+        .replace('\n', "%0A")
+}
+
+fn github_escape_message(value: &str) -> String {
+    github_escape_property(value)
+}
+
+fn xml_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('"', "&quot;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('\'', "&apos;")
+}
+
+fn machine_mode_exit_code(
+    results: &[ProcessedTarget],
+    failures: &[FailedTarget],
+    _summary: &RunSummary,
+    cli: &Cli,
+) -> Result<u8, cmakefmt::Error> {
+    if !failures.is_empty() {
+        Ok(EXIT_ERROR)
+    } else if (cli.check || cli.list_changed_files) && results.iter().any(|r| r.would_change) {
+        Ok(EXIT_CHECK_FAILED)
+    } else {
+        Ok(EXIT_OK)
+    }
+}
+
+fn write_in_place_updates(results: &[ProcessedTarget]) -> Result<(), cmakefmt::Error> {
+    for result in results {
+        if let Some(path) = &result.path {
+            if result.would_change {
+                std::fs::write(path, &result.formatted).map_err(cmakefmt::Error::Io)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn print_non_human_report(
+    cli: &Cli,
+    results: &[ProcessedTarget],
+    failures: &[FailedTarget],
+    summary: &RunSummary,
+) -> Result<(), cmakefmt::Error> {
+    match cli.report_format {
+        ReportFormat::Human => Ok(()),
+        ReportFormat::Json => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&build_json_report(results, failures, summary, cli))
+                    .map_err(|err| {
+                    cmakefmt::Error::Formatter(format!("failed to build JSON report: {err}"))
+                })?
+            );
+            Ok(())
+        }
+        ReportFormat::Github => {
+            print!("{}", build_github_report(results, failures, summary));
+            Ok(())
+        }
+        ReportFormat::Checkstyle => {
+            print!("{}", build_checkstyle_report(results, failures));
+            Ok(())
+        }
+        ReportFormat::Junit => {
+            print!("{}", build_junit_report(results, failures, summary));
+            Ok(())
+        }
+        ReportFormat::Sarif => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&build_sarif_report(results, failures)).map_err(
+                    |err| cmakefmt::Error::Formatter(format!(
+                        "failed to build SARIF report: {err}"
+                    ))
+                )?
+            );
+            Ok(())
+        }
     }
 }
 

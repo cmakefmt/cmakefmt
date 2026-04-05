@@ -58,7 +58,7 @@ Ignore rules only affect:
 | `--list-changed-files` | Print only the files that would change after formatting. |
 | `--list-input-files` | Print the selected input files after discovery and filtering, without formatting them. |
 | `--diff` | Print a unified diff instead of the full formatted output. |
-| `--report-format <human\|json>` | Switch between human terminal output and machine-readable JSON. |
+| `--report-format <human\|json\|github\|checkstyle\|junit\|sarif>` | Switch between human output and CI/editor-friendly machine reporters. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 
 ## Execution Flags
@@ -150,6 +150,17 @@ summary: selected=12 changed=2 unchanged=10 failed=0
 
 Exit code `0` means nothing would change. Exit code `1` means at least one
 file is out of format — exactly what CI needs.
+
+If your CI system prefers structured annotations or standard interchange
+formats, switch reporters:
+
+```bash
+cmakefmt --check --report-format json .
+cmakefmt --check --report-format github .
+cmakefmt --check --report-format checkstyle .
+cmakefmt --check --report-format junit .
+cmakefmt --check --report-format sarif .
+```
 
 ### Pin The Formatter Version In Automation
 

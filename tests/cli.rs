@@ -226,6 +226,100 @@ fn json_report_in_diff_mode_includes_diff() {
         .contains("--- a/"));
 }
 
+#[test]
+fn github_report_emits_annotations() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--report-format",
+            "github",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("::warning file="));
+    assert!(stdout.contains("file would be reformatted by cmakefmt"));
+    assert!(stdout.contains("::notice::summary:"));
+}
+
+#[test]
+fn checkstyle_report_emits_xml() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--report-format",
+            "checkstyle",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with("<?xml version=\"1.0\" encoding=\"utf-8\"?>"));
+    assert!(stdout.contains("<checkstyle version=\"4.3\">"));
+    assert!(stdout.contains("source=\"cmakefmt.format\""));
+}
+
+#[test]
+fn junit_report_emits_xml() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--report-format",
+            "junit",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.starts_with("<?xml version=\"1.0\" encoding=\"utf-8\"?>"));
+    assert!(stdout.contains("<testsuite name=\"cmakefmt\""));
+    assert!(stdout.contains("<failure message=\"file would be reformatted by cmakefmt\">"));
+}
+
+#[test]
+fn sarif_report_emits_results() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--report-format",
+            "sarif",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["version"], "2.1.0");
+    assert_eq!(
+        report["runs"][0]["results"][0]["ruleId"],
+        "cmakefmt/would-reformat"
+    );
+}
+
 // ── In-place formatting ─────────────────────────────────────────────────────
 
 #[test]
