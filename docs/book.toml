@@ -15,5 +15,5 @@ create-missing = false
 
 [output.html]
 default-theme = "light"
-preferred-dark-theme = "light"
-site-url = "/"
+preferred-dark-theme = "coal"
+site-url = "https://cmakefmt.dev/"

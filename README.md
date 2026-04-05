@@ -7,6 +7,7 @@
 [![CI](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml)
 [![Pages](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml)
 [![Coverage](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml)
+[![Crates.io](https://img.shields.io/crates/v/cmakefmt-rust.svg)](https://crates.io/crates/cmakefmt-rust)
 
 **A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
 

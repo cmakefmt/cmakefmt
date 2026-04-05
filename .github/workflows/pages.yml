@@ -47,6 +47,9 @@ jobs:
       - name: Build mdBook
         run: mdbook build docs
 
+      - name: Generate sitemap and robots metadata
+        run: python3 scripts/generate-site-metadata.py docs/book --base-url https://cmakefmt.dev/
+
       - name: Upload site artifact
         if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-pages-artifact@v4.0.0
