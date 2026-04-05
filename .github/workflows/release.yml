@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (for example: v1.0.0-alpha.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive_ext: tar.gz
+          - name: linux-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            archive_ext: tar.gz
+          - name: linux-musl-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            archive_ext: tar.gz
+          - name: macos-x86_64
+            os: macos-13
+            target: x86_64-apple-darwin
+            archive_ext: tar.gz
+          - name: macos-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+            archive_ext: tar.gz
+          - name: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive_ext: zip
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo registry and build artifacts
+        uses: Swatinem/rust-cache@v2.9.1
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install musl toolchain
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        shell: bash
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Build release binary
+        shell: bash
+        run: cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Compute release version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')"
+          fi
+          echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Package release archive (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.value }}"
+          STAGE="cmakefmt-${VERSION}-${{ matrix.target }}"
+          mkdir -p "${STAGE}"
+          cp "target/${{ matrix.target }}/release/cmakefmt" "${STAGE}/"
+          cp README.md "${STAGE}/"
+          cp LICENSE "${STAGE}/"
+          cp -r LICENSES "${STAGE}/"
+          "target/${{ matrix.target }}/release/cmakefmt" --generate-completion bash > "${STAGE}/cmakefmt.bash"
+          "target/${{ matrix.target }}/release/cmakefmt" --generate-completion zsh > "${STAGE}/_cmakefmt"
+          "target/${{ matrix.target }}/release/cmakefmt" --generate-completion fish > "${STAGE}/cmakefmt.fish"
+          "target/${{ matrix.target }}/release/cmakefmt" --generate-man-page > "${STAGE}/cmakefmt.1"
+          tar -czf "${STAGE}.tar.gz" "${STAGE}"
+
+      - name: Package release archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Version = "${{ steps.version.outputs.value }}"
+          $Stage = "cmakefmt-$Version-${{ matrix.target }}"
+          New-Item -ItemType Directory -Path $Stage | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/cmakefmt.exe" "$Stage/cmakefmt.exe"
+          Copy-Item "README.md" "$Stage/README.md"
+          Copy-Item "LICENSE" "$Stage/LICENSE"
+          Copy-Item "LICENSES" "$Stage/LICENSES" -Recurse
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-completion bash | Out-File -Encoding utf8 "$Stage/cmakefmt.bash"
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-completion zsh | Out-File -Encoding utf8 "$Stage/_cmakefmt"
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-completion fish | Out-File -Encoding utf8 "$Stage/cmakefmt.fish"
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-man-page | Out-File -Encoding utf8 "$Stage/cmakefmt.1"
+          Compress-Archive -Path $Stage -DestinationPath "$Stage.zip"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.target }}
+          path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}
+
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2.6.1
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+          prerelease: ${{ contains(github.ref_name, '-') || contains(inputs.tag, '-') }}
+          generate_release_notes: true
+          files: |
+            dist/*
