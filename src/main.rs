@@ -745,14 +745,14 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         } else {
             if cli.diff {
                 if result.would_change {
+                    let diff_output = result.unified_diff.as_deref().unwrap_or_default();
+                    let display_output = if colorize_stdout {
+                        colorize_unified_diff(diff_output)
+                    } else {
+                        diff_output.to_owned()
+                    };
                     io::stdout()
-                        .write_all(
-                            result
-                                .unified_diff
-                                .as_deref()
-                                .unwrap_or_default()
-                                .as_bytes(),
-                        )
+                        .write_all(display_output.as_bytes())
                         .map_err(cmakefmt::Error::Io)?;
                 }
             } else {
@@ -2000,19 +2000,44 @@ fn diff_middle_mask<'a>(original: &[&'a str], formatted: &[&'a str]) -> Vec<bool
 }
 
 fn push_cyan_line(output: &mut String, line: &str) {
-    const CYAN: &str = "\u{1b}[36m";
+    push_ansi_line(output, line, "\u{1b}[36m");
+}
+
+fn push_red_line(output: &mut String, line: &str) {
+    push_ansi_line(output, line, "\u{1b}[31m");
+}
+
+fn push_green_line(output: &mut String, line: &str) {
+    push_ansi_line(output, line, "\u{1b}[32m");
+}
+
+fn push_ansi_line(output: &mut String, line: &str, colour: &str) {
     const RESET: &str = "\u{1b}[0m";
 
     if let Some(stripped) = line.strip_suffix('\n') {
-        output.push_str(CYAN);
+        output.push_str(colour);
         output.push_str(stripped);
         output.push_str(RESET);
         output.push('\n');
     } else {
-        output.push_str(CYAN);
+        output.push_str(colour);
         output.push_str(line);
         output.push_str(RESET);
     }
+}
+
+fn colorize_unified_diff(diff: &str) -> String {
+    let mut output = String::with_capacity(diff.len() + 256);
+    for line in split_lines_with_endings(diff) {
+        if line.starts_with('+') && !line.starts_with("+++") {
+            push_green_line(&mut output, line);
+        } else if line.starts_with('-') && !line.starts_with("---") {
+            push_red_line(&mut output, line);
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
 }
 
 fn build_unified_diff(display_name: &str, source: &str, formatted: &str) -> String {

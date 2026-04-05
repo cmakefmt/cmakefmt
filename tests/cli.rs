@@ -189,6 +189,42 @@ fn diff_outputs_unified_diff() {
 }
 
 #[test]
+fn diff_outputs_colored_hunks_when_colour_always() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--colour", "always", "--diff", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("\u{1b}[31m-set(  FOO  bar )\u{1b}[0m"));
+    assert!(stdout.contains("\u{1b}[32m+set(FOO bar)\u{1b}[0m"));
+    assert!(stdout.contains("--- a/"));
+    assert!(stdout.contains("+++ b/"));
+}
+
+#[test]
+fn diff_does_not_color_when_colour_never() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--colour", "never", "--diff", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(!stdout.contains("\u{1b}[31m"));
+    assert!(!stdout.contains("\u{1b}[32m"));
+}
+
+#[test]
 fn json_report_in_check_mode() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");
