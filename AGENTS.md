@@ -1,4 +1,4 @@
-# cmakefmt — Codex Project Guide
+# cmakefmt — Project Guide
 
 `cmakefmt` — a Rust reimplementation of `cmake-format` (from the dead `cmakelang` Python project).
 Goal: fast, correct, configurable CMake formatter distributed as a single binary.
@@ -28,6 +28,8 @@ cargo test                         # all tests
 cargo test parser                  # parser unit tests
 cargo test formatter               # formatter unit tests
 cargo test --test snapshots        # snapshot tests only
+cargo test --test cli              # CLI integration tests
+cargo test --test real_world       # real-world corpus tests
 cargo insta review                 # review snapshot changes interactively
 ```
 
@@ -50,14 +52,17 @@ cmakefmt/
 ├── Cargo.toml
 ├── docs/
 │   ├── ARCHITECTURE.md        ← design decisions + data structures
+│   ├── PERFORMANCE.md         ← benchmarking guide + how to compare runs
 │   ├── ROADMAP.md             ← phased milestones + acceptance criteria
 │   └── cmake-grammar.md       ← full CMake language grammar reference
 ├── src/
 │   ├── main.rs                ← CLI entry point (clap)
 │   ├── lib.rs                 ← public API (format_source, format_file)
+│   ├── files.rs               ← CMake file discovery, .cmakefmtignore support
 │   ├── config/
 │   │   ├── mod.rs             ← Config struct, defaults, resolution logic
-│   │   └── file.rs            ← TOML config file loading + merging
+│   │   ├── file.rs            ← TOML config file loading + merging
+│   │   └── legacy.rs          ← conversion from legacy cmake-format config files
 │   ├── parser/
 │   │   ├── mod.rs             ← public parse() fn, error types
 │   │   ├── cmake.pest         ← pest grammar (THE source of truth)
@@ -73,8 +78,11 @@ cmakefmt/
 │   └── error.rs               ← unified error type (thiserror)
 ├── tests/
 │   ├── snapshots/             ← insta snapshot files (committed to repo)
+│   ├── cli.rs                 ← CLI integration tests (stdout, stdin, color, --check)
 │   ├── idempotency.rs         ← format(format(x)) == format(x)
-│   ├── parser_tests.rs        ← parser unit tests
+│   ├── parser_fixtures.rs     ← parser unit tests driven by fixture files
+│   ├── real_world.rs          ← formatting tests against real-world corpus
+│   ├── snapshots.rs           ← snapshot-based formatting tests
 │   └── fixtures/              ← .cmake input files for tests
 │       ├── basic/
 │       ├── comments/
