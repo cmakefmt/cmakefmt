@@ -47,7 +47,7 @@ grep -q "## Unreleased" CHANGELOG.md || {
   exit 1
 }
 
-grep -q "site/src/README.md" README.md || {
+grep -q "https://cmakefmt.dev" README.md || {
   echo "README.md does not link to the docs landing page" >&2
   exit 1
 }
