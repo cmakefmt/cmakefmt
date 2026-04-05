@@ -24,8 +24,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6.0.0
+      # - name: Configure GitHub Pages
+      #   if: ${{ github.event_name != 'pull_request' }}
+      #   uses: actions/configure-pages@v6.0.0
+      #   with:
+      #     enablement: true
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -45,6 +48,7 @@ jobs:
         run: mdbook build site
 
       - name: Upload site artifact
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-pages-artifact@v4.0.0
         with:
           path: site/book
