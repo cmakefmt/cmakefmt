@@ -1318,6 +1318,40 @@ fn convert_legacy_json_config_to_stdout() {
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("# Converted from legacy cmake-format configuration."));
+    assert!(stdout.contains("format:"));
+    assert!(stdout.contains("line_width: 100"));
+    assert!(stdout.contains("style:"));
+    assert!(stdout.contains("command_case: lower"));
+}
+
+#[test]
+fn convert_config_toml_prints_toml_when_requested() {
+    let dir = tempfile::tempdir().unwrap();
+    let legacy = dir.path().join("cmake-format.json");
+    std::fs::write(
+        &legacy,
+        r#"{
+  "format": {
+    "line_width": 100,
+    "command_case": "lower"
+  }
+}"#,
+    )
+    .unwrap();
+
+    let output = cmakefmt()
+        .args([
+            "--convert-legacy-config",
+            legacy.to_str().unwrap(),
+            "--convert-legacy-config-format",
+            "toml",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("# Converted from legacy cmake-format configuration."));
     assert!(stdout.contains("[format]"));
     assert!(stdout.contains("line_width = 100"));
     assert!(stdout.contains("[style]"));

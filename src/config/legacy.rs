@@ -5,26 +5,28 @@
 //! Conversion support for legacy `cmake-format` configuration files.
 //!
 //! `cmake-format` historically supported Python, JSON, and YAML config files.
-//! `cmakefmt` now accepts YAML or TOML user config, but still provides a
-//! converter that renders TOML so users can start from a strict, commented
-//! baseline and then adapt it as needed.
+//! `cmakefmt` now accepts YAML or TOML user config, and provides a converter
+//! that can render either format so users can start from a structured baseline
+//! and then adapt it as needed.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::config::{CaseStyle, DangleAlign, PerCommandConfig};
+use crate::config::{file::DumpConfigFormat, CaseStyle, DangleAlign, PerCommandConfig};
 use crate::error::{Error, Result};
 use crate::spec::{
     CommandFormOverride, CommandSpecOverride, KwargSpecOverride, LayoutOverridesOverride, NArgs,
 };
 
-/// Convert one or more legacy `cmake-format` config files into `.cmakefmt.toml`.
+/// Convert one or more legacy `cmake-format` config files into `cmakefmt`
+/// config text in the requested output format.
 ///
 /// Files are merged in the order provided, with later files overriding earlier
-/// ones. The returned string is valid TOML prefixed by explanatory comments.
-pub fn convert_legacy_config_files(paths: &[PathBuf]) -> Result<String> {
+/// ones. The returned string is valid YAML or TOML prefixed by explanatory
+/// comments.
+pub fn convert_legacy_config_files(paths: &[PathBuf], format: DumpConfigFormat) -> Result<String> {
     if paths.is_empty() {
         return Err(Error::Formatter(
             "--convert-legacy-config requires at least one input path".to_owned(),
@@ -38,9 +40,18 @@ pub fn convert_legacy_config_files(paths: &[PathBuf]) -> Result<String> {
         merge_legacy_root(&mut converted, &root, path);
     }
 
-    let rendered = toml::to_string_pretty(&converted.as_toml()).map_err(|err| {
-        Error::Formatter(format!("failed to render converted config as TOML: {err}"))
-    })?;
+    let rendered = match format {
+        DumpConfigFormat::Toml => {
+            toml::to_string_pretty(&converted.as_config_file()).map_err(|err| {
+                Error::Formatter(format!("failed to render converted config as TOML: {err}"))
+            })?
+        }
+        DumpConfigFormat::Yaml => {
+            serde_yaml::to_string(&converted.as_config_file()).map_err(|err| {
+                Error::Formatter(format!("failed to render converted config as YAML: {err}"))
+            })?
+        }
+    };
 
     let mut output = String::new();
     output.push_str("# Converted from legacy cmake-format configuration.\n");
@@ -595,7 +606,7 @@ struct ConvertedConfig {
 }
 
 impl ConvertedConfig {
-    fn as_toml(&self) -> OutputConfigFile {
+    fn as_config_file(&self) -> OutputConfigFile {
         OutputConfigFile {
             format: self.format.has_any().then_some(self.format.clone()),
             style: self.style.has_any().then_some(self.style.clone()),
@@ -1160,7 +1171,7 @@ mod tests {
 
     #[test]
     fn convert_legacy_requires_input_paths() {
-        let err = convert_legacy_config_files(&[]).unwrap_err();
+        let err = convert_legacy_config_files(&[], DumpConfigFormat::Yaml).unwrap_err();
         assert!(err
             .to_string()
             .contains("--convert-legacy-config requires at least one input path"));
@@ -1235,7 +1246,7 @@ format:
         )
         .unwrap();
 
-        let converted = convert_legacy_config_files(&[path]).unwrap();
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("command_case = \"lower\""));
         assert!(converted.contains("mapped to \"lower\""));
     }
@@ -1253,7 +1264,7 @@ format:
         )
         .unwrap();
 
-        let converted = convert_legacy_config_files(&[path]).unwrap();
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("unsupported legacy option [format].unknown_key"));
         assert!(converted.contains("unsupported legacy option [misc].nope"));
     }
@@ -1282,7 +1293,7 @@ format:
         )
         .unwrap();
 
-        let converted = convert_legacy_config_files(&[path]).unwrap();
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("[format]"));
         assert!(converted.contains("line_width = 100"));
         assert!(converted.contains("[style]"));
@@ -1312,7 +1323,7 @@ with section("parse"):
         )
         .unwrap();
 
-        let converted = convert_legacy_config_files(&[path]).unwrap();
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("[commands.my_command]"));
         assert!(converted.contains("pargs = 1"));
         assert!(converted.contains("flags = [\"QUIET\"]"));
@@ -1332,7 +1343,7 @@ markup:
         )
         .unwrap();
 
-        let converted = convert_legacy_config_files(&[path]).unwrap();
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("[markup]"));
         assert!(converted.contains("reflow_comments = true"));
     }

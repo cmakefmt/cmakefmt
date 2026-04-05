@@ -46,9 +46,10 @@ cmakefmt can print a commented starter configuration for you as a customization
 starting point with --dump-config. By default this emits YAML; pass
 --dump-config toml for TOML output.
 
-Legacy cmake-format JSON, YAML, and Python config files can be converted to
-.cmakefmt.toml with --convert-legacy-config. YAML is the recommended user
-config format for larger custom-command specs.
+Legacy cmake-format JSON, YAML, and Python config files can be converted with
+--convert-legacy-config. By default this emits YAML; use
+--convert-legacy-config-format toml to print TOML instead. YAML is the
+recommended user config format for larger custom-command specs.
 
 Use --show-config-path to inspect which config file was selected, --show-config
 to inspect the effective config after CLI overrides, and --explain-config for
@@ -248,7 +249,8 @@ struct Cli {
 
     /// Convert legacy cmake-format JSON, YAML, or Python config files.
     ///
-    /// The converted config is printed to stdout as `.cmakefmt.toml`.
+    /// By default this emits YAML. Use `--convert-legacy-config-format toml`
+    /// to print TOML instead.
     #[arg(
         long = "convert-legacy-config",
         value_name = "PATH",
@@ -268,6 +270,20 @@ struct Cli {
         conflicts_with = "dangle_parens"
     )]
     convert_config_paths: Vec<PathBuf>,
+
+    /// Choose the output format used by `--convert-legacy-config`.
+    #[arg(
+        long = "convert-legacy-config-format",
+        value_name = "FORMAT",
+        default_value = "yaml",
+        help_heading = "Config And Conversion",
+        requires = "convert_config_paths",
+        conflicts_with = "dump_config",
+        conflicts_with = "show_config",
+        conflicts_with = "show_config_path",
+        conflicts_with = "explain_config"
+    )]
+    convert_config_format: DumpConfigFormat,
 
     /// Print detailed discovery, config, and formatter diagnostics to stderr.
     #[arg(
@@ -606,7 +622,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         print!(
             "{}",
-            convert_legacy_config_files(&cli.convert_config_paths)?
+            convert_legacy_config_files(&cli.convert_config_paths, cli.convert_config_format)?
         );
         return Ok(EXIT_OK);
     }

@@ -230,14 +230,19 @@ pub struct SpecFile {
 #[serde(deny_unknown_fields)]
 pub struct LayoutOverridesOverride {
     /// Override line width for this command form.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub line_width: Option<usize>,
     /// Override indentation width for this command form.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tab_size: Option<usize>,
     /// Override dangling-paren behavior for this command form.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dangle_parens: Option<bool>,
     /// Force this command form into a wrapped layout.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub always_wrap: Option<bool>,
     /// Override the positional-argument hanging-wrap threshold for this form.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_pargs_hwrap: Option<usize>,
 }
 
@@ -246,12 +251,15 @@ pub struct LayoutOverridesOverride {
 #[serde(deny_unknown_fields)]
 pub struct KwargSpecOverride {
     /// Override the number of positional arguments accepted after the keyword.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nargs: Option<NArgs>,
     /// Nested keyword overrides.
     #[serde(default)]
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub kwargs: IndexMap<String, KwargSpecOverride>,
     /// Additional supported flags.
     #[serde(default)]
+    #[serde(skip_serializing_if = "IndexSet::is_empty")]
     pub flags: IndexSet<String>,
 }
 
@@ -260,14 +268,18 @@ pub struct KwargSpecOverride {
 #[serde(deny_unknown_fields)]
 pub struct CommandFormOverride {
     /// Override the positional argument count for the form.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pargs: Option<NArgs>,
     /// Keyword overrides to merge into the form.
     #[serde(default)]
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub kwargs: IndexMap<String, KwargSpecOverride>,
     /// Additional supported flags.
     #[serde(default)]
+    #[serde(skip_serializing_if = "IndexSet::is_empty")]
     pub flags: IndexSet<String>,
     /// Optional layout overrides for the form.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub layout: Option<LayoutOverridesOverride>,
 }
 
@@ -281,9 +293,11 @@ pub enum CommandSpecOverride {
     Discriminated {
         /// Per-discriminator form overrides.
         #[serde(default)]
+        #[serde(skip_serializing_if = "IndexMap::is_empty")]
         forms: IndexMap<String, CommandFormOverride>,
         /// Optional fallback form override.
         #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
         fallback: Option<CommandFormOverride>,
     },
 }
