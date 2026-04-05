@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2026 Puneet Matharu
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
