@@ -1,0 +1,61 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: coverage-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Cache Cargo registry and build artifacts
+        uses: Swatinem/rust-cache@v2.9.1
+
+      - name: Run coverage
+        run: |
+          cargo llvm-cov clean --workspace
+          cargo llvm-cov --workspace --all-targets --summary-only | tee coverage-summary.txt
+          cargo llvm-cov report --workspace --all-targets --html --output-dir target/llvm-cov/html
+
+      - name: Publish job summary
+        run: |
+          {
+            echo '## Coverage'
+            echo
+            echo '```text'
+            cat coverage-summary.txt
+            echo '```'
+            echo
+            echo 'HTML coverage report is attached as a workflow artifact.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage-summary.txt
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: target/llvm-cov/html

@@ -1,5 +1,9 @@
 <h1><code>cmakefmt</code></h1>
 
+[![CI](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml)
+[![Docs](https://github.com/puneetmatharu/cmakefmt/actions/workflows/docs.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/docs.yml)
+[![Coverage](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml)
+
 **A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
 `cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format) tool with a
@@ -214,6 +218,7 @@ Start here: [Docs Landing Page](site/src/README.md).
 | Doc | Description |
 |-----|-------------|
 | [Install](site/src/install.md) | Install options, first-project setup, CI wiring |
+| [Coverage](site/src/coverage.md) | How coverage is measured, published, and interpreted |
 | [Release Channels](site/src/release.md) | Alpha contract, support levels, release artifacts, and shell completions |
 | [CLI Reference](site/src/cli.md) | Every flag, exit code, and discovery rule |
 | [Config Reference](site/src/config.md) | Full config schema with examples |
@@ -237,6 +242,7 @@ mdbook serve site
 cargo fmt --check                          # formatting
 cargo clippy --all-targets -- -D warnings  # lints
 cargo test                                 # all tests
+cargo llvm-cov --workspace --all-targets   # coverage
 cargo bench                                # benchmarks
 ```
 

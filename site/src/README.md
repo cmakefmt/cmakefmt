@@ -1,5 +1,9 @@
 # `cmakefmt`
 
+[![CI](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/ci.yml)
+[![Docs](https://github.com/puneetmatharu/cmakefmt/actions/workflows/docs.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/docs.yml)
+[![Coverage](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/puneetmatharu/cmakefmt/actions/workflows/coverage.yml)
+
 **A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
 `cmakefmt` was born from frustration with `cmake-format`, the beloved-but-aging
@@ -98,15 +102,17 @@ cmakefmt --staged --check
 New here?
 
 1. [Install](install.md)
-2. [CLI Reference](cli.md)
-3. [Config Reference](config.md)
-4. [Formatter Behavior](behavior.md)
+2. [Coverage](coverage.md)
+3. [CLI Reference](cli.md)
+4. [Config Reference](config.md)
+5. [Formatter Behavior](behavior.md)
 
 Migrating from `cmake-format`?
 
 1. [Migration From `cmake-format`](migration.md)
-2. [Config Reference](config.md)
-3. [Troubleshooting](troubleshooting.md)
+2. [Coverage](coverage.md)
+3. [Config Reference](config.md)
+4. [Troubleshooting](troubleshooting.md)
 
 Embedding `cmakefmt` as a library?
 

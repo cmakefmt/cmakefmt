@@ -11,28 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  docs:
-    name: docs
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6.0.2
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2.9.1
-
-      - name: Install mdBook
-        run: cargo install mdbook --locked
-
-      - name: Validate docs structure
-        run: bash scripts/check-docs.sh
-
   rust:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
