@@ -1,4 +1,4 @@
-<h1>`cmakefmt`</h1>
+<h1><code>cmakefmt</code></h1>
 
 **A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
 

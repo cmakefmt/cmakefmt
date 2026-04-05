@@ -673,8 +673,8 @@ not just faster.
   - run `reuse lint` and keep it in the release checklist
 - [ ] Reduce the checked-in third-party fixture/license surface before alpha
   - stop shipping copied upstream real-world fixtures directly in the main repository if we can avoid it
-  - replace them with fetch-at-test-time tooling and/or a separately versioned fixture archive
-  - pin upstream sources/commits so real-world validation remains deterministic and reviewable
+  - replace them with a pinned fetch script plus a local review command, and/or a separately versioned fixture archive later
+  - pin upstream sources/commits and/or verified content hashes so real-world validation remains deterministic and reviewable
   - keep CI/local test runs practical, including a clear cache/offline story for contributors
   - ensure the repo root only needs license texts for project-owned files and intentionally bundled assets
 - [ ] Reduce the packaged crate surface before alpha
@@ -682,6 +682,18 @@ not just faster.
   - exclude tests, benches, snapshots, fixture corpora, GitHub workflows, and site sources unless there is a strong reason to ship them
   - verify that `cargo package --list` contains only the material needed to build, document, and license `cmakefmt`
   - ensure the crates.io package has a clean license story centered on `MIT OR Apache-2.0`
+- [ ] Add release-quality README badges before alpha
+  - CI/build status badge
+  - coverage badge once coverage reporting exists
+  - docs/site badge
+  - crates.io version badge once published
+  - keep badge count disciplined so the README stays readable
+- [ ] Add test coverage reporting before alpha
+  - choose the coverage toolchain (`cargo llvm-cov` or equivalent)
+  - run coverage in CI on the default test suite
+  - publish human-readable coverage results for contributors
+  - publish a badge or summary that can be linked from the README
+  - document what is intentionally excluded from coverage reporting
 - [ ] Finish crates.io packaging metadata before alpha
   - complete `Cargo.toml` metadata: repository, homepage/docs URL, keywords, categories, and README linkage
   - verify the packaged README renders well on crates.io
