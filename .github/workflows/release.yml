@@ -66,11 +66,11 @@ jobs:
             target: x86_64-unknown-linux-musl
             archive_ext: tar.gz
           - name: macos-x86_64
-            os: macos-13
+            os: macos-15-intel
             target: x86_64-apple-darwin
             archive_ext: tar.gz
           - name: macos-aarch64
-            os: macos-14
+            os: macos-latest
             target: aarch64-apple-darwin
             archive_ext: tar.gz
           - name: windows-x86_64
@@ -102,6 +102,37 @@ jobs:
       - name: Build release binary
         shell: bash
         run: cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Smoke test release binary (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="target/${{ matrix.target }}/release/cmakefmt"
+          "${BIN}" --version
+          "${BIN}" --help >/dev/null
+          "${BIN}" --generate-completion bash >/dev/null
+          "${BIN}" --generate-man-page >/dev/null
+          printf '%s\n' 'project(foo  )' > /tmp/CMakeLists.txt
+          "${BIN}" /tmp/CMakeLists.txt >/tmp/CMakeLists.formatted
+          grep -Fxq 'project(foo)' /tmp/CMakeLists.formatted
+
+      - name: Smoke test release binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Bin = "target/${{ matrix.target }}/release/cmakefmt.exe"
+          & $Bin --version
+          & $Bin --help | Out-Null
+          & $Bin --generate-completion bash | Out-Null
+          & $Bin --generate-man-page | Out-Null
+          Set-Content -Path CMakeLists.txt -Value "project(foo  )`n"
+          & $Bin CMakeLists.txt | Out-File -Encoding utf8 CMakeLists.formatted
+          $Formatted = Get-Content -Raw CMakeLists.formatted
+          if ($Formatted.TrimEnd("`r", "`n") -ne "project(foo)") {
+            Write-Error "Unexpected formatted output: $Formatted"
+            exit 1
+          }
 
       - name: Compute release version
         id: version
