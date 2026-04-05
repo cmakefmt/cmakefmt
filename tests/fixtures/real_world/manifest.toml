@@ -11,7 +11,7 @@ branch = "master"
 commit = "ed2114e8ff2ed30c9d09ff304385410d960ec570"
 source_url = "https://github.com/abseil/abseil-cpp/blob/ed2114e8ff2ed30c9d09ff304385410d960ec570/CMakeLists.txt"
 raw_url = "https://raw.githubusercontent.com/abseil/abseil-cpp/ed2114e8ff2ed30c9d09ff304385410d960ec570/CMakeLists.txt"
-sha256 = "d22c5de2ae29aa2935dd95e7671f4e46b054214717d325cf7a4d3622c03a61dd"
+sha256 = "134cad0f7a171c705c3c05175397ed9032608aa6e069718ba3a26b600fc5fa6f"
 
 [[fixture]]
 name = "catch2"
@@ -20,7 +20,7 @@ branch = "devel"
 commit = "34f4f819470dc64c8090859a6bbf9f57760d7b0a"
 source_url = "https://github.com/catchorg/Catch2/blob/34f4f819470dc64c8090859a6bbf9f57760d7b0a/CMakeLists.txt"
 raw_url = "https://raw.githubusercontent.com/catchorg/Catch2/34f4f819470dc64c8090859a6bbf9f57760d7b0a/CMakeLists.txt"
-sha256 = "a8ed23482070a736ddece9b499cb423e251dddc8c9daf57ede53232a05cab5b0"
+sha256 = "198d89358199a12f45ee68abcd496b7def445768d8f4d9e19219cf5cdd091948"
 
 [[fixture]]
 name = "cli11"
@@ -29,7 +29,7 @@ branch = "main"
 commit = "30d783eb61a2bf83ae29fcde70691eac852a7b7d"
 source_url = "https://github.com/CLIUtils/CLI11/blob/30d783eb61a2bf83ae29fcde70691eac852a7b7d/CMakeLists.txt"
 raw_url = "https://raw.githubusercontent.com/CLIUtils/CLI11/30d783eb61a2bf83ae29fcde70691eac852a7b7d/CMakeLists.txt"
-sha256 = "3689ee4283c0fbdb00f69b896f96993ac8279cabcd975a83aa1ce48976091dad"
+sha256 = "ba6de200c73a9bed3ea032381f3dd024813ffe0c065e25e53a1b311ec92309c8"
 
 [[fixture]]
 name = "cmake_cmbzip2"
@@ -110,7 +110,7 @@ branch = "main"
 commit = "109fde41db66fdf24763a7a429d1e0dc80459f1d"
 source_url = "https://github.com/protocolbuffers/protobuf/blob/109fde41db66fdf24763a7a429d1e0dc80459f1d/CMakeLists.txt"
 raw_url = "https://raw.githubusercontent.com/protocolbuffers/protobuf/109fde41db66fdf24763a7a429d1e0dc80459f1d/CMakeLists.txt"
-sha256 = "2e02cd4de9c1ddb0d8c7aa59144dfb9538df5e04e9db08d89c09eff48b412468"
+sha256 = "4fd67462e14226a4bf59dd11ff1823d416666d7093b5c2eaac28707fe7e5d0a5"
 
 [[fixture]]
 name = "spdlog"
