@@ -16,7 +16,11 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
-_No user-visible changes yet._
+### Added
+
+- interactive browser playground at [cmakefmt.dev/playground](https://cmakefmt.dev/playground/) —
+  format CMake code, edit config, and define custom command specs entirely in
+  the browser via WebAssembly
 
 ## 0.1.1
 
