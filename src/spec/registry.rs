@@ -4,12 +4,16 @@
 
 //! Built-in and override-backed command registry.
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 use std::fs;
-use std::path::{Path, PathBuf};
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use indexmap::{IndexMap, IndexSet};
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 use crate::config::file::{detect_config_format, ConfigFileFormat};
 use crate::error::{Error, Result};
 
@@ -55,7 +59,7 @@ impl CommandRegistry {
     /// [`CommandRegistry::builtins`] when you only need a read-only reference —
     /// it initialises once and amortises the parse cost across all callers.
     pub fn load() -> Result<Self> {
-        Self::from_builtins_and_overrides(None::<&Path>)
+        Self::load_builtins_impl()
     }
 
     /// Return the lazily initialised built-in registry singleton.
@@ -66,12 +70,23 @@ impl CommandRegistry {
     pub fn builtins() -> &'static Self {
         static BUILTINS: OnceLock<CommandRegistry> = OnceLock::new();
         BUILTINS.get_or_init(|| {
-            CommandRegistry::from_builtins_and_overrides(None::<&Path>)
+            Self::load_builtins_impl()
                 .expect("embedded built-in command registry should deserialize")
         })
     }
 
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+    fn load_builtins_impl() -> Result<Self> {
+        Self::from_builtins_and_overrides(None::<&Path>)
+    }
+
+    #[cfg(any(target_arch = "wasm32", not(feature = "cli")))]
+    fn load_builtins_impl() -> Result<Self> {
+        Ok(Self::from_spec_file(parse_builtins()?))
+    }
+
     /// Load the embedded built-ins and optionally merge a user override file.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
     pub fn from_builtins_and_overrides(path: Option<impl AsRef<Path>>) -> Result<Self> {
         let mut registry = Self::from_spec_file(parse_builtins()?);
 
@@ -93,16 +108,19 @@ impl CommandRegistry {
     }
 
     /// Merge a supported user override file from disk into the registry.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
     pub fn merge_override_file(&mut self, path: &Path) -> Result<()> {
         let source = fs::read_to_string(path)?;
         self.merge_override_source(&source, path.to_path_buf(), detect_config_format(path)?)
     }
 
     /// Merge TOML override contents into the registry.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
     pub fn merge_override_str(&mut self, source: &str, path: impl Into<PathBuf>) -> Result<()> {
         self.merge_override_source(source, path.into(), ConfigFileFormat::Toml)
     }
 
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
     fn merge_override_source(
         &mut self,
         source: &str,

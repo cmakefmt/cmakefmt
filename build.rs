@@ -6,6 +6,11 @@ use std::env;
 use std::process::Command;
 
 fn main() {
+    // Skip git version embedding when cross-compiling for WASM.
+    if env::var("TARGET").map_or(false, |t| t.contains("wasm32")) {
+        return;
+    }
+
     println!("cargo:rerun-if-env-changed=CMAKEFMT_BUILD_GIT_SHA");
     println!("cargo:rerun-if-changed=.git/HEAD");
     println!("cargo:rerun-if-changed=.git/refs");

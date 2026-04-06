@@ -9,12 +9,16 @@
 //! (`.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`), and CLI
 //! overrides.
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub mod file;
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 mod legacy;
 /// Render a commented starter config template.
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use file::{
     default_config_template, default_config_template_for, render_effective_config, DumpConfigFormat,
 };
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use legacy::convert_legacy_config_files;
 
 use std::collections::HashMap;
@@ -22,7 +26,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 /// How to normalise command/keyword casing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, clap::ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 #[serde(rename_all = "lowercase")]
 pub enum CaseStyle {
     /// Force lowercase output.
@@ -94,7 +99,8 @@ pub enum DangleAlign {
 /// | `enable_markup` | `true` |
 /// | `reflow_comments` | `false` |
 /// | `first_comment_is_literal` | `true` |
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Config {
     // ── Layout ──────────────────────────────────────────────────────────
     /// Maximum rendered line width before wrapping is attempted.

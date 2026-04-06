@@ -53,15 +53,22 @@ pub mod spec;
 
 // Recursive CMake file-discovery helpers used by the CLI.  Not part of the
 // library embedding API; hidden from generated documentation.
+#[cfg(feature = "cli")]
 #[doc(hidden)]
 pub mod files;
 
+// WASM entry point — only compiled for wasm32 targets.
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 // ── Configuration ────────────────────────────────────────────────────────────
 
+pub use config::{CaseStyle, CommandConfig, Config, DangleAlign, PerCommandConfig};
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use config::{
     convert_legacy_config_files, default_config_template, default_config_template_for,
-    render_effective_config, CaseStyle, CommandConfig, Config, DangleAlign, DumpConfigFormat,
-    PerCommandConfig,
+    render_effective_config, DumpConfigFormat,
 };
 
 // ── Errors ───────────────────────────────────────────────────────────────────

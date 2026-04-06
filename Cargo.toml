@@ -24,30 +24,48 @@ include = [
 [[bin]]
 name = "cmakefmt"
 path = "src/main.rs"
+required-features = ["cli"]
 
 [lib]
 name = "cmakefmt"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["cli"]
+cli = [
+  "clap",
+  "clap_complete",
+  "clap_mangen",
+  "walkdir",
+  "ignore",
+  "rayon",
+  "indicatif",
+  "similar",
+]
 
 [dependencies]
 pest = "2"
 pest_derive = "2"
 pretty = "0.12"
-clap = { version = "4", features = ["derive"] }
-clap_complete = "4"
-clap_mangen = "0.3.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 toml = "1.1.2"
 thiserror = "2.0.18"
 indexmap = { version = "2.13", features = ["serde"] }
-walkdir = "2"
 regex = "1"
-rayon = "1"
-indicatif = "0.18"
-ignore = "0.4"
-similar = "3.0"
+clap = { version = "4", features = ["derive"], optional = true }
+clap_complete = { version = "4", optional = true }
+clap_mangen = { version = "0.3.0", optional = true }
+walkdir = { version = "2", optional = true }
+ignore = { version = "0.4", optional = true }
+rayon = { version = "1", optional = true }
+indicatif = { version = "0.18", optional = true }
+similar = { version = "3.0", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
 
 [dev-dependencies]
 insta = "1"
@@ -60,3 +78,6 @@ harness = false
 
 [profile.release]
 strip = "symbols"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

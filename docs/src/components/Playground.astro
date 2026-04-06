@@ -1,0 +1,594 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Interactive cmakefmt playground — formats CMake code in the browser via WASM.
+---
+
+<div class="playground" id="playground">
+  <div class="playground-toolbar">
+    <div class="playground-toolbar-left">
+      <button id="btn-format" class="playground-btn playground-btn-primary" disabled>
+        Format
+      </button>
+      <button id="btn-reset" class="playground-btn">Reset</button>
+      <button id="btn-share" class="playground-btn">Share</button>
+      <button id="btn-copy" class="playground-btn">Copy</button>
+    </div>
+    <span id="playground-status" class="playground-status">Loading WASM&hellip;</span>
+  </div>
+
+  <div class="playground-body">
+    <div class="playground-pane">
+      <div class="playground-pane-tabs">
+        <button class="playground-tab active" data-tab="source">Source</button>
+        <button class="playground-tab" data-tab="config">Config</button>
+      </div>
+      <div id="editor-source" class="playground-editor" data-tab-panel="source"></div>
+      <div id="editor-config" class="playground-editor" data-tab-panel="config" hidden></div>
+    </div>
+
+    <div class="playground-pane">
+      <div class="playground-pane-header">Formatted Output</div>
+      <div id="editor-output" class="playground-editor"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
+  import { EditorState } from '@codemirror/state';
+  import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+  import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@codemirror/language';
+  import { yaml } from '@codemirror/lang-yaml';
+  import { oneDark } from '@codemirror/theme-one-dark';
+
+  const DEFAULT_SOURCE = `\
+CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
+PROJECT(MyProject LANGUAGES CXX)
+
+find_package(Boost REQUIRED COMPONENTS filesystem system)
+
+add_library(mylib STATIC
+  src/main.cpp
+  src/utils.cpp
+  src/helper.cpp
+)
+
+target_link_libraries(mylib PUBLIC Boost::filesystem Boost::system)
+target_include_directories(mylib PUBLIC \${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Custom function defined by the project
+my_add_test(
+  NAME mylib_test
+  SOURCES tests/test_main.cpp tests/test_utils.cpp
+  LIBRARIES mylib
+  TIMEOUT 30
+)
+
+if(BUILD_TESTING)
+  enable_testing()
+  add_test(NAME integration COMMAND mylib_test --verbose)
+endif()
+`;
+
+  const DEFAULT_CONFIG = `\
+{
+  "line_width": 80,
+  "tab_size": 2,
+  "use_tabchars": false,
+  "max_empty_lines": 1,
+  "max_lines_hwrap": 2,
+  "max_pargs_hwrap": 6,
+  "max_subgroups_hwrap": 2,
+  "dangle_parens": false,
+  "dangle_align": "prefix",
+  "min_prefix_chars": 4,
+  "max_prefix_chars": 10,
+  "separate_ctrl_name_with_space": false,
+  "separate_fn_name_with_space": false,
+  "command_case": "lower",
+  "keyword_case": "upper",
+  "enable_markup": true,
+  "reflow_comments": false,
+  "first_comment_is_literal": true,
+  "literal_comment_pattern": "",
+  "bullet_char": "*",
+  "enum_char": ".",
+  "fence_pattern": "^\\\\s*[\`~]{3}[^\`\\\\n]*$",
+  "ruler_pattern": "^[^\\\\w\\\\s]{3}.*[^\\\\w\\\\s]{3}$",
+  "hashruler_min_length": 10,
+  "canonicalize_hashrulers": true,
+  "per_command_overrides": {
+    "my_add_test": {
+      "command_case": "lower",
+      "keyword_case": "upper"
+    }
+  }
+}
+`;
+
+  // ── Theme ──────────────────────────────────────────────────────────
+
+  const lightTheme = EditorView.theme({
+    '&': {
+      backgroundColor: '#f8fafb',
+      color: '#1a1a1a',
+    },
+    '.cm-gutters': {
+      backgroundColor: '#f0f2f4',
+      color: '#6b7280',
+      border: 'none',
+    },
+    '.cm-activeLineGutter': {
+      backgroundColor: '#e8eaed',
+    },
+    '.cm-activeLine': {
+      backgroundColor: '#f0f2f480',
+    },
+  });
+
+  function isDarkMode(): boolean {
+    return document.documentElement.dataset.theme === 'dark';
+  }
+
+  function getThemeExtensions() {
+    if (isDarkMode()) {
+      return [oneDark];
+    }
+    return [lightTheme, syntaxHighlighting(defaultHighlightStyle)];
+  }
+
+  // ── Editors ────────────────────────────────────────────────────────
+
+  const sharedExtensions = [
+    lineNumbers(),
+    highlightActiveLine(),
+    highlightActiveLineGutter(),
+    bracketMatching(),
+    history(),
+    keymap.of([...defaultKeymap, ...historyKeymap]),
+    EditorView.lineWrapping,
+  ];
+
+  const sourceEditor = new EditorView({
+    state: EditorState.create({
+      doc: DEFAULT_SOURCE,
+      extensions: [
+        ...sharedExtensions,
+        ...getThemeExtensions(),
+      ],
+    }),
+    parent: document.getElementById('editor-source')!,
+  });
+
+  const configEditor = new EditorView({
+    state: EditorState.create({
+      doc: DEFAULT_CONFIG,
+      extensions: [
+        ...sharedExtensions,
+        ...getThemeExtensions(),
+      ],
+    }),
+    parent: document.getElementById('editor-config')!,
+  });
+
+  const outputEditor = new EditorView({
+    state: EditorState.create({
+      doc: '',
+      extensions: [
+        lineNumbers(),
+        EditorState.readOnly.of(true),
+        EditorView.lineWrapping,
+        ...getThemeExtensions(),
+      ],
+    }),
+    parent: document.getElementById('editor-output')!,
+  });
+
+  // ── Theme sync ─────────────────────────────────────────────────────
+
+  const observer = new MutationObserver(() => {
+    // Reconfigure all editors when theme changes
+    const themeExts = getThemeExtensions();
+    for (const editor of [sourceEditor, configEditor]) {
+      editor.dispatch({
+        effects: EditorView.reconfigure.of([
+          ...sharedExtensions,
+          ...themeExts,
+        ]),
+      });
+    }
+    outputEditor.dispatch({
+      effects: EditorView.reconfigure.of([
+        lineNumbers(),
+        EditorState.readOnly.of(true),
+        EditorView.lineWrapping,
+        ...themeExts,
+      ]),
+    });
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+
+  // ── Tab switching ──────────────────────────────────────────────────
+
+  const tabs = document.querySelectorAll<HTMLButtonElement>('.playground-tab');
+  const sourcePanel = document.getElementById('editor-source')!;
+  const configPanel = document.getElementById('editor-config')!;
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      const target = tab.dataset.tab;
+      if (target === 'source') {
+        sourcePanel.hidden = false;
+        configPanel.hidden = true;
+      } else {
+        sourcePanel.hidden = true;
+        configPanel.hidden = false;
+      }
+    });
+  });
+
+  // ── WASM loading ───────────────────────────────────────────────────
+
+  const statusEl = document.getElementById('playground-status')!;
+  const formatBtn = document.getElementById('btn-format') as HTMLButtonElement;
+  const resetBtn = document.getElementById('btn-reset') as HTMLButtonElement;
+  const shareBtn = document.getElementById('btn-share') as HTMLButtonElement;
+  const copyBtn = document.getElementById('btn-copy') as HTMLButtonElement;
+
+  let wasmFormat: ((source: string, config: string) => string) | null = null;
+
+  async function loadWasmModule(): Promise<any> {
+    // Vite blocks import() of /public files during dev. Work around this by
+    // creating a module script that re-exports the WASM glue at runtime.
+    const blob = new Blob(
+      [`export * from "${new URL('/wasm/cmakefmt.js', window.location.origin).href}";
+        export { default } from "${new URL('/wasm/cmakefmt.js', window.location.origin).href}";`],
+      { type: 'text/javascript' },
+    );
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      const mod = await import(/* @vite-ignore */ blobUrl);
+      await mod.default();
+      return mod;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
+  async function initWasm() {
+    try {
+      const wasm = await loadWasmModule();
+      wasmFormat = wasm.format;
+      statusEl.textContent = 'Ready';
+      statusEl.classList.add('ready');
+      formatBtn.disabled = false;
+
+      // Try restoring from URL hash
+      restoreFromHash();
+
+      // Auto-format on load
+      doFormat();
+    } catch (e) {
+      statusEl.textContent = `Failed to load WASM: ${e}`;
+      statusEl.classList.add('error');
+    }
+  }
+
+  // ── Format ─────────────────────────────────────────────────────────
+
+  function doFormat() {
+    if (!wasmFormat) return;
+
+    const source = sourceEditor.state.doc.toString();
+    const configStr = configEditor.state.doc.toString();
+
+    try {
+      const result = wasmFormat(source, configStr);
+      outputEditor.dispatch({
+        changes: {
+          from: 0,
+          to: outputEditor.state.doc.length,
+          insert: result,
+        },
+      });
+      statusEl.textContent = 'Formatted';
+      statusEl.classList.remove('error');
+      statusEl.classList.add('ready');
+    } catch (e) {
+      outputEditor.dispatch({
+        changes: {
+          from: 0,
+          to: outputEditor.state.doc.length,
+          insert: `Error: ${e}`,
+        },
+      });
+      statusEl.textContent = `Error`;
+      statusEl.classList.remove('ready');
+      statusEl.classList.add('error');
+    }
+  }
+
+  formatBtn.addEventListener('click', doFormat);
+
+  // ── Reset ──────────────────────────────────────────────────────────
+
+  resetBtn.addEventListener('click', () => {
+    sourceEditor.dispatch({
+      changes: { from: 0, to: sourceEditor.state.doc.length, insert: DEFAULT_SOURCE },
+    });
+    configEditor.dispatch({
+      changes: { from: 0, to: configEditor.state.doc.length, insert: DEFAULT_CONFIG },
+    });
+    outputEditor.dispatch({
+      changes: { from: 0, to: outputEditor.state.doc.length, insert: '' },
+    });
+    statusEl.textContent = 'Reset';
+    // Clear URL hash
+    history.replaceState(null, '', window.location.pathname);
+  });
+
+  // ── Share ──────────────────────────────────────────────────────────
+
+  shareBtn.addEventListener('click', async () => {
+    const state = JSON.stringify({
+      source: sourceEditor.state.doc.toString(),
+      config: configEditor.state.doc.toString(),
+    });
+    const encoded = btoa(unescape(encodeURIComponent(state)));
+    const url = `${window.location.pathname}#${encoded}`;
+    window.history.replaceState(null, '', url);
+
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => { shareBtn.textContent = 'Share'; }, 1500);
+    } catch {
+      shareBtn.textContent = 'URL updated';
+      setTimeout(() => { shareBtn.textContent = 'Share'; }, 1500);
+    }
+  });
+
+  function restoreFromHash() {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    try {
+      const json = decodeURIComponent(escape(atob(hash)));
+      const state = JSON.parse(json);
+      if (state.source) {
+        sourceEditor.dispatch({
+          changes: { from: 0, to: sourceEditor.state.doc.length, insert: state.source },
+        });
+      }
+      if (state.config) {
+        configEditor.dispatch({
+          changes: { from: 0, to: configEditor.state.doc.length, insert: state.config },
+        });
+      }
+    } catch {
+      // Invalid hash, ignore
+    }
+  }
+
+  // ── Copy ───────────────────────────────────────────────────────────
+
+  copyBtn.addEventListener('click', async () => {
+    const text = outputEditor.state.doc.toString();
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    } catch {
+      // Fallback
+      copyBtn.textContent = 'Failed';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────
+
+  initWasm();
+</script>
+
+<style>
+  .playground {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--sl-nav-height, 4rem) - 2rem);
+    min-height: 400px;
+    gap: 0;
+  }
+
+  .playground-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .playground-toolbar-left {
+    display: flex;
+    gap: 0.375rem;
+  }
+
+  .playground-btn {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid var(--sl-color-gray-5);
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    font-family: inherit;
+  }
+
+  .playground-btn:hover {
+    color: var(--sl-color-white);
+    border-color: var(--sl-color-gray-4);
+  }
+
+  .playground-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .playground-btn-primary {
+    background: var(--sl-color-accent);
+    color: white;
+    border-color: var(--sl-color-accent);
+  }
+
+  .playground-btn-primary:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .playground-status {
+    font-size: 0.75rem;
+    color: var(--sl-color-gray-3);
+  }
+
+  .playground-status.ready {
+    color: var(--sl-color-accent);
+  }
+
+  .playground-status.error {
+    color: hsl(0, 70%, 55%);
+  }
+
+  .playground-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    flex: 1;
+    min-height: 0;
+  }
+
+  @media (max-width: 50rem) {
+    .playground-body {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+  }
+
+  .playground-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+    background: hsl(240, 6%, 10%);
+  }
+
+  .playground-pane-tabs {
+    display: flex;
+    gap: 0;
+    background: hsl(240, 5%, 13%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .playground-tab {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    font-family: inherit;
+    position: relative;
+  }
+
+  .playground-tab:hover {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .playground-tab.active {
+    color: white;
+  }
+
+  .playground-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0.5rem;
+    right: 0.5rem;
+    height: 2px;
+    background: var(--sl-color-accent);
+    border-radius: 1px;
+  }
+
+  .playground-pane-header {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    color: rgba(255, 255, 255, 0.5);
+    background: hsl(240, 5%, 13%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .playground-editor {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  /* Make CodeMirror fill the pane */
+  .playground-editor :global(.cm-editor) {
+    height: 100%;
+  }
+
+  .playground-editor :global(.cm-scroller) {
+    overflow: auto;
+  }
+
+  /* Dark background for all editors by default */
+  .playground-editor :global(.cm-editor) {
+    background: hsl(240, 6%, 10%);
+  }
+
+  /* Light mode overrides for editor backgrounds */
+  :global([data-theme='light']) .playground-pane {
+    background: #f8fafb;
+    box-shadow: 0 0 0 1px var(--sl-color-hairline-light);
+  }
+
+  :global([data-theme='light']) .playground-pane-tabs {
+    background: #f0f2f4;
+    border-bottom-color: var(--sl-color-hairline-light);
+  }
+
+  :global([data-theme='light']) .playground-tab {
+    color: var(--sl-color-gray-3);
+  }
+
+  :global([data-theme='light']) .playground-tab:hover {
+    color: var(--sl-color-gray-2);
+  }
+
+  :global([data-theme='light']) .playground-tab.active {
+    color: var(--sl-color-white);
+  }
+
+  :global([data-theme='light']) .playground-pane-header {
+    background: #f0f2f4;
+    color: var(--sl-color-gray-3);
+    border-bottom-color: var(--sl-color-hairline-light);
+  }
+
+  :global([data-theme='light']) .playground-editor :global(.cm-editor) {
+    background: #f8fafb;
+  }
+</style>
