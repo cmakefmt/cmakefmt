@@ -152,57 +152,39 @@ body {
   text-decoration-color: currentColor;
 }
 
-/* ─── Code blocks — Protocol style: rounded-2xl, dark bg, inset ring ────── */
+/* ─── Code blocks — rounded, always dark, GitHub Dark Default theme ─────── */
 
-/* Override Expressive Code variables for rounded corners and styling */
-:root,
-:root:not([data-theme="dark"]) .expressive-code[data-theme="dark"] {
+:root {
   --ec-brdRad: 1rem;
   --ec-brdWd: 0px;
   --ec-brdCol: transparent;
-  --ec-codeBg: hsl(240, 6%, 10%);
   --ec-codeFontSize: 0.8125rem;
   --ec-codePadBlk: 1rem;
   --ec-codePadInl: 1.25rem;
   --ec-frm-frameBoxShdCssVal: 0 0 0 1px rgba(255, 255, 255, 0.15);
-  --ec-frm-edBg: hsl(240, 6%, 10%);
-  --ec-frm-edTabBarBg: hsl(240, 5%, 13%);
-  --ec-frm-edTabBarBrdCol: transparent;
-  --ec-frm-edTabBarBrdBtmCol: rgba(255, 255, 255, 0.1);
-  --ec-frm-edActTabBg: hsl(240, 6%, 10%);
-  --ec-frm-edActTabBrdCol: transparent;
   --ec-frm-edActTabIndTopCol: var(--sl-color-accent);
-  --ec-frm-edActTabIndBtmCol: transparent;
-  --ec-frm-trmTtbBg: hsl(240, 5%, 13%);
-  --ec-frm-trmTtbBrdBtmCol: rgba(255, 255, 255, 0.1);
-  --ec-frm-trmBg: hsl(240, 6%, 10%);
 }
 
-/* Light mode — keep code blocks dark (like Protocol) */
+/* Force dark code blocks in light mode — use the GitHub Dark theme colors */
 :root[data-theme="light"] .expressive-code:not([data-theme="dark"]),
 .expressive-code[data-theme="light"] {
-  --ec-brdRad: 1rem;
-  --ec-brdWd: 0px;
-  --ec-brdCol: transparent;
-  --ec-codeBg: hsl(240, 6%, 10%);
-  --ec-codeFg: #d6deeb;
-  --ec-codeFontSize: 0.8125rem;
-  --ec-codePadBlk: 1rem;
-  --ec-codePadInl: 1.25rem;
-  --ec-frm-frameBoxShdCssVal: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  --ec-frm-edBg: hsl(240, 6%, 10%);
-  --ec-frm-edTabBarBg: hsl(240, 5%, 13%);
+  --ec-codeBg: #0d1117;
+  --ec-codeFg: #e6edf3;
+  --ec-frm-edBg: #0d1117;
+  --ec-frm-edTabBarBg: #161b22;
   --ec-frm-edTabBarBrdCol: transparent;
-  --ec-frm-edTabBarBrdBtmCol: rgba(255, 255, 255, 0.1);
-  --ec-frm-edActTabBg: hsl(240, 6%, 10%);
+  --ec-frm-edTabBarBrdBtmCol: #30363d;
+  --ec-frm-edActTabBg: #0d1117;
   --ec-frm-edActTabBrdCol: transparent;
-  --ec-frm-edActTabIndTopCol: var(--sl-color-accent);
-  --ec-frm-trmTtbBg: hsl(240, 5%, 13%);
-  --ec-frm-trmTtbBrdBtmCol: rgba(255, 255, 255, 0.1);
-  --ec-frm-trmBg: hsl(240, 6%, 10%);
+  --ec-frm-trmTtbBg: #161b22;
+  --ec-frm-trmTtbBrdBtmCol: #30363d;
+  --ec-frm-trmBg: #0d1117;
+  --ec-gtrFg: #6e7681;
+  --ec-sbThumbCol: rgba(255, 255, 255, 0.1);
+  --ec-sbThumbHoverCol: rgba(255, 255, 255, 0.3);
 }
 
-/* Make light-mode code blocks use dark syntax colors */
+/* Use dark syntax colors in light mode */
 :root[data-theme="light"] .expressive-code:not([data-theme="dark"]) .ec-line :where(span[style^="--"]:not([class])) {
   color: var(--0, inherit);
   background-color: var(--0bg, transparent);

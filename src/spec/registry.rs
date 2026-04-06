@@ -107,6 +107,35 @@ impl CommandRegistry {
         }
     }
 
+    /// Merge TOML-formatted command spec overrides from a string.
+    pub fn merge_toml_overrides(&mut self, toml_source: &str) -> Result<()> {
+        let mut overrides: SpecOverrideFile = toml::from_str(toml_source)
+            .map_err(|e| Error::Formatter(format!("spec TOML error: {e}")))?;
+        self.apply_overrides(&mut overrides);
+        Ok(())
+    }
+
+    /// Merge YAML-formatted command spec overrides from a string.
+    pub fn merge_yaml_overrides(&mut self, yaml_source: &str) -> Result<()> {
+        let mut overrides: SpecOverrideFile = serde_yaml::from_str(yaml_source)
+            .map_err(|e| Error::Formatter(format!("spec YAML error: {e}")))?;
+        self.apply_overrides(&mut overrides);
+        Ok(())
+    }
+
+    fn apply_overrides(&mut self, overrides: &mut SpecOverrideFile) {
+        normalize_override_file(overrides);
+        let commands = std::mem::take(&mut overrides.commands);
+        for (name, override_spec) in commands {
+            match self.commands.get_mut(&name) {
+                Some(existing) => merge_command_spec(existing, override_spec),
+                None => {
+                    self.commands.insert(name, override_spec.into_full_spec());
+                }
+            }
+        }
+    }
+
     /// Merge a supported user override file from disk into the registry.
     #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
     pub fn merge_override_file(&mut self, path: &Path) -> Result<()> {

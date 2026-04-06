@@ -15,12 +15,15 @@ export default defineConfig({
   },
   markdown: {
     shikiConfig: {
-      langs: ["cmake", "rust", "bash", "yaml", "toml", "diff", "text"],
+      langs: ["cmake", "rust", "bash", "yaml", "toml", "diff", "text", "python"],
     },
   },
   integrations: [
     sitemap(),
     starlight({
+      expressiveCode: {
+        themes: ["github-dark-default"],
+      },
       title: "cmakefmt",
       description: "A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.",
       logo: {
