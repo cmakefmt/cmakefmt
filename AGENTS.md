@@ -52,8 +52,14 @@ cmakefmt/
 ├── Cargo.toml
 ├── docs/
 │   ├── README.md              ← docs site contributor notes
-│   ├── book.toml              ← mdBook configuration
-│   └── src/                   ← docs source published to cmakefmt.dev
+│   ├── logo.png               ← square docs/site logo source
+│   ├── astro.config.mjs       ← Astro + Starlight site configuration
+│   ├── package.json           ← docs app dependencies and scripts
+│   ├── public/                ← static site assets such as robots.txt
+│   └── src/
+│       ├── content/docs/      ← published docs pages
+│       ├── assets/            ← docs site branding assets
+│       └── styles/            ← Starlight theme customizations
 ├── src/
 │   ├── main.rs                ← CLI entry point (clap)
 │   ├── lib.rs                 ← public API (format_source, format_file)
@@ -109,7 +115,7 @@ Types of comments in CMake:
 4. `~/.cmake-format.toml` (user default)
 5. Built-in defaults
 
-The full config schema is documented in `docs/src/config.md`.
+The full config schema is documented in `docs/src/content/docs/config.md`.
 Config sections: `[format]`, `[style]`, `[markup]`, `[per_command.<name>]`.
 Goal: match or exceed every useful option from the original cmake-format tool.
 

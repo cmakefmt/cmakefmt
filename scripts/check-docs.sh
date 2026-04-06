@@ -16,17 +16,25 @@ required_files=(
   "tests/fixtures/README.md"
   "tests/snapshots.rs"
   "benches/README.md"
-  "docs/book.toml"
-  "docs/src/SUMMARY.md"
-  "docs/src/README.md"
-  "docs/src/install.md"
-  "docs/src/cli.md"
-  "docs/src/config.md"
-  "docs/src/behavior.md"
-  "docs/src/migration.md"
-  "docs/src/api.md"
-  "docs/src/architecture.md"
-  "docs/src/changelog.md"
+  "docs/astro.config.mjs"
+  "docs/package-lock.json"
+  "docs/package.json"
+  "docs/tsconfig.json"
+  "docs/src/content.config.ts"
+  "docs/public/robots.txt"
+  "docs/src/content/docs/index.mdx"
+  "docs/src/content/docs/install.md"
+  "docs/src/content/docs/coverage.md"
+  "docs/src/content/docs/release.md"
+  "docs/src/content/docs/cli.md"
+  "docs/src/content/docs/config.md"
+  "docs/src/content/docs/behavior.md"
+  "docs/src/content/docs/migration.md"
+  "docs/src/content/docs/performance.md"
+  "docs/src/content/docs/troubleshooting.md"
+  "docs/src/content/docs/api.md"
+  "docs/src/content/docs/architecture.md"
+  "docs/src/content/docs/changelog.md"
 )
 
 for file in "${required_files[@]}"; do
@@ -51,8 +59,8 @@ grep -q "https://cmakefmt.dev" README.md || {
   exit 1
 }
 
-if command -v mdbook >/dev/null 2>&1; then
-  mdbook build docs >/dev/null
+if command -v npm >/dev/null 2>&1 && [[ -f docs/package-lock.json ]]; then
+  (cd docs && npm run build >/dev/null)
 fi
 
 echo "docs checks passed"

@@ -1,0 +1,32 @@
+/*
+SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+*/
+
+:root {
+  --sl-color-accent-low: #f5ddd2;
+  --sl-color-accent: #c74d1f;
+  --sl-color-accent-high: #8f3010;
+  --sl-color-text-accent: #8f3010;
+  --sl-color-bg-sidebar: #fcfaf8;
+}
+
+[data-theme="dark"] {
+  --sl-color-accent-low: #3f1c12;
+  --sl-color-accent: #de6c3e;
+  --sl-color-accent-high: #f5b392;
+  --sl-color-text-accent: #f5b392;
+}
+
+.hero .tagline {
+  max-width: 44rem;
+}
+
+.hero .actions {
+  gap: 0.85rem;
+}
+
+.sl-markdown-content table td strong {
+  color: var(--sl-color-text-accent);
+}

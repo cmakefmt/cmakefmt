@@ -1,0 +1,95 @@
+---
+title: cmakefmt
+description: Fast, workflow-first CMake formatting with first-party docs for installation, migration, configuration, automation, and embedding.
+template: splash
+hero:
+  tagline: A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.
+  image:
+    file: ../../assets/logo.png
+    alt: cmakefmt logo
+  actions:
+    - text: Get Started
+      link: /install/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/cmakefmt/cmakefmt
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+`cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format)
+tool with a single native Rust binary built for modern developer workflows.
+Same spirit. No Python. No compromises.
+
+Crates.io package name: `cmakefmt-rust` (CLI binary remains `cmakefmt`).
+This project is independent from other Rust implementations, including
+`azais-corentin/cmakefmt` and `yamadapc/cmakefmt`.
+
+## Performance Snapshot
+
+The numbers speak for themselves:
+
+| Metric | Signal |
+| --- | --- |
+| Geometric-mean speedup vs `cmake-format` | **`20.69x`** |
+| End-to-end `format_source`, large synthetic input (1000+ lines) | estimate `8.8248 ms` (95% CI `8.8018–8.8519 ms`) |
+| Parser-only, large synthetic input | estimate `7.1067 ms` (95% CI `7.0793–7.1359 ms`) |
+| Serial whole-corpus batch (220 files) | `184.5 ms ± 1.3 ms` |
+| `--parallel 8` whole-corpus batch | **`48.5 ms ± 1.5 ms`** |
+
+95% CI is the Criterion-reported confidence interval: the range within which the
+true mean is expected to fall 95% of the time.
+
+Curious about methodology or migration risk? Read [Performance](/performance/)
+and [Migration From `cmake-format`](/migration/).
+
+## Why `cmakefmt`?
+
+<CardGrid stagger>
+  <Card title="Zero dependencies" icon="rocket">
+    One binary, no Python bootstrap, no virtualenvs, no dependency drift.
+  </Card>
+  <Card title="Workflow-first" icon="seti:github">
+    `--check`, `--diff`, `--staged`, `--changed`, `--files-from`, and stable machine-readable reports are built in.
+  </Card>
+  <Card title="Knows your commands" icon="open-book">
+    Teach `cmakefmt` about project-specific CMake functions and macros instead of settling for generic token wrapping.
+  </Card>
+  <Card title="Errors that help" icon="warning">
+    Parse and config failures include file and line context, source snippets, and reproduction hints instead of opaque noise.
+  </Card>
+</CardGrid>
+
+## Quick Start
+
+```bash
+cargo install cmakefmt-rust
+cmakefmt --version
+cmakefmt --dump-config > .cmakefmt.yaml
+cmakefmt --check .
+cmakefmt --in-place .
+```
+
+## Suggested Reading Paths
+
+### New here?
+
+1. [Install](/install/)
+2. [Coverage](/coverage/)
+3. [CLI Reference](/cli/)
+4. [Config Reference](/config/)
+5. [Formatter Behavior](/behavior/)
+
+### Migrating from `cmake-format`?
+
+1. [Migration From `cmake-format`](/migration/)
+2. [Coverage](/coverage/)
+3. [Config Reference](/config/)
+4. [Troubleshooting](/troubleshooting/)
+
+### Embedding `cmakefmt` as a library?
+
+1. [Library API](/api/)
+2. [Architecture](/architecture/)

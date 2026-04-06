@@ -30,31 +30,29 @@ jobs:
         with:
           enablement: true
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          toolchain: stable
-
-      - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2.9.1
-
-      - name: Install mdBook
-        run: cargo install mdbook --locked
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: docs/package-lock.json
 
       - name: Validate docs structure
         run: bash scripts/check-docs.sh
 
-      - name: Build mdBook
-        run: mdbook build docs
+      - name: Install docs dependencies
+        working-directory: docs
+        run: npm ci
 
-      - name: Generate sitemap and robots metadata
-        run: python3 scripts/generate-site-metadata.py docs/book --base-url https://cmakefmt.dev/
+      - name: Build Starlight site
+        working-directory: docs
+        run: npm run build
 
       - name: Upload site artifact
         if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-pages-artifact@v4.0.0
         with:
-          path: docs/book
+          path: docs/dist
 
       - name: Deploy to GitHub Pages
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}

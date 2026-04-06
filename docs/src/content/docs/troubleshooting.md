@@ -1,10 +1,12 @@
+---
+title: Troubleshooting
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Troubleshooting
 
 Your diagnostic companion for the most common failure modes and confusing
 situations when using `cmakefmt`.

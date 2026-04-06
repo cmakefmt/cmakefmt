@@ -1,4 +1,6 @@
 /target
-/docs/book
+/docs/dist
+/docs/.astro
+/docs/node_modules
 .cmakefmt-cache/
 *.pending-snap

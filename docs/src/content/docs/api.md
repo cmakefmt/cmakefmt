@@ -1,10 +1,12 @@
+---
+title: Library API
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Library API
 
 `cmakefmt` is primarily a CLI tool, but the crate already exposes a capable
 embedded API for Rust code that wants to parse or format CMake sources
@@ -230,4 +232,4 @@ context so callers can surface useful diagnostics to users.
 - library stability is not promised yet — the crate is still pre-`1.0`
 - workflow features like Git-aware selection and ignore-file handling live in the CLI layer, not the formatting API itself
 
-For deeper implementation details, continue with [Architecture](architecture.md).
+For deeper implementation details, continue with [Architecture](/architecture/).

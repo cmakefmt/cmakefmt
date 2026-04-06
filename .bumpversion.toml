@@ -28,7 +28,7 @@ replace = 'version = "{new_version}"'
 filename = "README.md"
 
 [[tool.bumpversion.files]]
-filename = "docs/src/cli.md"
+filename = "docs/src/content/docs/cli.md"
 
 [[tool.bumpversion.files]]
-filename = "docs/src/troubleshooting.md"
+filename = "docs/src/content/docs/troubleshooting.md"

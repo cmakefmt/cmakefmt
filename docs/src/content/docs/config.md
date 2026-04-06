@@ -1,10 +1,12 @@
+---
+title: Config Reference
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Config Reference
 
 Everything you need to know to tune `cmakefmt` for your project.
 
@@ -559,6 +561,6 @@ page. If you have an older local config, rename any of the following before use:
 
 ## Related Reading
 
-- [CLI Reference](cli.md)
-- [Formatter Behavior](behavior.md)
-- [Troubleshooting](troubleshooting.md)
+- [CLI Reference](/cli/)
+- [Formatter Behavior](/behavior/)
+- [Troubleshooting](/troubleshooting/)

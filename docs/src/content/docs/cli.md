@@ -1,13 +1,15 @@
+---
+title: CLI Reference
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-# CLI Reference
-
 The complete reference for everything `cmakefmt` can do from the command line.
-If you just want to get up and running, start with [Install](install.md) first
+If you just want to get up and running, start with [Install](/install/) first
 and come back here when you want the full picture.
 
 ## Synopsis
@@ -414,6 +416,6 @@ When formatting results surprise you rather than hard-failing, reach for
 
 ## Related Reading
 
-- [Config Reference](config.md)
-- [Formatter Behavior](behavior.md)
-- [Troubleshooting](troubleshooting.md)
+- [Config Reference](/config/)
+- [Formatter Behavior](/behavior/)
+- [Troubleshooting](/troubleshooting/)

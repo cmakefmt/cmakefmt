@@ -1,10 +1,12 @@
+---
+title: Formatter Behavior
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Formatter Behavior
 
 What `cmakefmt` preserves, what it intentionally changes, and how to reason
 about the output when you run it across a real codebase.
@@ -231,7 +233,7 @@ for. It surfaces everything the formatter normally keeps to itself:
 clone. That means:
 
 - some outputs differ while still being valid and stable
-- the config surface has been cleaned up in places (see [Config Reference](config.md)
+- the config surface has been cleaned up in places (see [Config Reference](/config/)
   for the old-to-new key name mapping)
 - workflow features are intentionally broader
 - diagnostics are intentionally much more explicit

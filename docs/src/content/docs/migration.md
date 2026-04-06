@@ -1,10 +1,12 @@
+---
+title: Migration From `cmake-format`
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Migration From `cmake-format`
 
 Switching to `cmakefmt` is designed to be straightforward. The goal is easy
 adoption, not a risky big-bang rewrite — roll out incrementally, compare output
@@ -28,12 +30,11 @@ at each step, and flip the switch once you are satisfied.
 3. If you already have a `cmake-format` config file, convert it automatically:
 
    ```bash
-   cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
+   cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.yaml
    ```
 
-   Note: `--convert-legacy-config` always produces TOML output. If you prefer
-   YAML (recommended for larger configs), convert the result using any TOML-to-YAML
-   tool, or manually translate the key names to a new `.cmakefmt.yaml` file.
+   YAML is the default output. If you prefer TOML instead, add
+   `--convert-legacy-config-format toml`.
 
 4. Compare output on a representative sample. Use `--diff` to see exactly what
    would change without touching any files:
@@ -53,7 +54,7 @@ at each step, and flip the switch once you are satisfied.
 
 If you want to roll out formatting gradually — file by file — use
 `--require-pragma` to opt individual files in before going repository-wide.
-See [Formatter Behavior](behavior.md) for the pragma syntax.
+See [Formatter Behavior](/behavior/) for the pragma syntax.
 
 ## CLI Mapping
 
@@ -63,7 +64,7 @@ See [Formatter Behavior](behavior.md) for the pragma syntax.
 | in-place format | `cmakefmt -i FILE` |
 | CI check | `cmakefmt --check PATH` |
 | recursive target filtering | `cmakefmt --path-regex REGEX PATH` |
-| convert old config file | `cmakefmt --convert-legacy-config OLD.py > .cmakefmt.toml` |
+| convert old config file | `cmakefmt --convert-legacy-config OLD.py > .cmakefmt.yaml` |
 | disable formatting regions | supports both `cmake-format` and `cmakefmt` spellings |
 
 ## Compatibility Notes
@@ -95,5 +96,5 @@ comparison data. The recommended pattern:
 **Output will not be identical to `cmake-format`.** The goal is a clean,
 correct, stable result — not byte-for-byte reproduction. Judge the migration by
 readability, idempotency, and ease of automation rather than by whether every
-wrapped line matches historical output exactly. See [Formatter Behavior](behavior.md)
+wrapped line matches historical output exactly. See [Formatter Behavior](/behavior/)
 for a concrete summary of what `cmakefmt` preserves and what it intentionally changes.

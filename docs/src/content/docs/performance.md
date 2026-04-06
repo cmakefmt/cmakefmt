@@ -1,10 +1,12 @@
+---
+title: Performance
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Performance
 
 `cmakefmt` is fast enough that you never have to think twice about running it
 — in local workflows, editor integrations, pre-commit hooks, or CI. That is
@@ -143,6 +145,6 @@ cargo bench --bench formatter -- --baseline before-change
 
 ## Related Reading
 
-- [CLI Reference](cli.md)
-- [Architecture](architecture.md)
-- [Troubleshooting](troubleshooting.md)
+- [CLI Reference](/cli/)
+- [Architecture](/architecture/)
+- [Troubleshooting](/troubleshooting/)

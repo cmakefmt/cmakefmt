@@ -1,10 +1,12 @@
+---
+title: Coverage
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Coverage
 
 `cmakefmt` treats coverage as a contributor tool, not as a vanity number.
 

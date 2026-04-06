@@ -1,10 +1,12 @@
+---
+title: Install
+---
+
 <!--
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
-
-# Install
 
 Get `cmakefmt` running, wire it into your project, and never think about CMake
 formatting again.
@@ -275,13 +277,15 @@ cmakefmt --explain-config
 
 ## Local Docs Preview
 
-Preview the published docs locally with `mdbook`:
+Preview the published docs locally with Astro and Starlight:
 
 ```bash
-mdbook serve docs
+cd docs
+npm install
+npm run dev
 ```
 
-Then open the local URL that `mdbook` prints.
+Then open the local URL that Astro prints, usually <http://localhost:4321>.
 
 ## Upgrade And Uninstall
 

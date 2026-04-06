@@ -82,7 +82,7 @@ Then update:
 - `README.md` if user-visible behavior changed
 
 If formatting semantics changed in a meaningful way, review whether
-`docs/src/architecture.md`
+`docs/src/content/docs/architecture.md`
 should also be updated.
 
 If the change affects real-world behavior, also update:
@@ -151,7 +151,7 @@ Keep these aligned:
 - `docs/`
 - `CHANGELOG.md`
 - `docs/README.md`
-- any relevant long-form docs under `docs/src/`
+- any relevant published docs pages under `docs/src/content/docs/`
 
 If the change affects contributor workflow or repo structure, also update:
 
@@ -162,11 +162,11 @@ If the change affects contributor workflow or repo structure, also update:
 
 If you add a new primary docs page, add it to:
 
-- `docs/src/SUMMARY.md`
-- `docs/src/README.md` or another appropriate chapter
+- the sidebar in `docs/astro.config.mjs`
+- `docs/src/content/docs/`
 - `scripts/check-docs.sh`
 
-The docs site is an `mdBook`. Before you finish a docs-heavy change, run:
+The docs site is an Astro + Starlight app. Before you finish a docs-heavy change, run:
 
 ```bash
 bash scripts/check-docs.sh

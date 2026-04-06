@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="cmakefmt logo" width="100%"/>
+  <img src="assets/banner.png" alt="cmakefmt banner" width="100%"/>
 </p>
 
 <h1><code>cmakefmt</code></h1>
@@ -73,7 +73,7 @@ This project is independent from other Rust implementations, including:
 Geometric-mean speedup across the full corpus: **`20.69×`**.
 On a 220-file batch, `--parallel 8` improves throughput by **`3.80×`** vs serial.
 
-Full methodology and profiler notes: [cmakefmt.dev/performance.html](https://cmakefmt.dev/performance.html).
+Full methodology and profiler notes: [cmakefmt.dev/performance/](https://cmakefmt.dev/performance/).
 
 Refresh the pinned local corpus and generate local before/after review artefacts with:
 
@@ -117,8 +117,8 @@ Verify:
 cmakefmt --version
 ```
 
-Planned release channels and support levels are documented at [cmakefmt.dev/release.html](https://cmakefmt.dev/release.html).
-Shell completion installation guidance lives in [cmakefmt.dev/install.html](https://cmakefmt.dev/install.html).
+Planned release channels and support levels are documented at [cmakefmt.dev/release/](https://cmakefmt.dev/release/).
+Shell completion installation guidance lives in [cmakefmt.dev/install/](https://cmakefmt.dev/install/).
 
 ## Quick Start
 
@@ -200,7 +200,7 @@ Migrate from an existing `cmake-format` config:
 cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.yaml
 ```
 
-Full config reference: [cmakefmt.dev/config.html](https://cmakefmt.dev/config.html).
+Full config reference: [cmakefmt.dev/config/](https://cmakefmt.dev/config/).
 
 ## Formatter Disable Regions
 
@@ -254,7 +254,7 @@ fn main() -> Result<(), cmakefmt::Error> {
 }
 ```
 
-Full API docs: [cmakefmt.dev/api.html](https://cmakefmt.dev/api.html).
+Full API docs: [cmakefmt.dev/api/](https://cmakefmt.dev/api/).
 
 ## Documentation
 
@@ -262,30 +262,30 @@ Start here: [https://cmakefmt.dev](https://cmakefmt.dev).
 
 | Doc                                                                  | Description                                                              |
 |----------------------------------------------------------------------|--------------------------------------------------------------------------|
-| [Install](https://cmakefmt.dev/install.html)                         | Install options, first-project setup, CI wiring                          |
-| [Coverage](https://cmakefmt.dev/coverage.html)                       | How coverage is measured, published, and interpreted                     |
-| [Release Channels](https://cmakefmt.dev/release.html)                | Release contract, support levels, release artifacts, and shell completions |
-| [CLI Reference](https://cmakefmt.dev/cli.html)                       | Every flag, exit code, and discovery rule                                |
-| [Config Reference](https://cmakefmt.dev/config.html)                 | Full config schema with examples                                         |
-| [Formatter Behavior](https://cmakefmt.dev/behavior.html)             | How the formatter makes layout decisions                                 |
-| [Migration from `cmake-format`](https://cmakefmt.dev/migration.html) | Incremental rollout guide and CLI mapping                                |
-| [Library API](https://cmakefmt.dev/api.html)                         | Embedding `cmakefmt` in your own Rust tools                              |
-| [Troubleshooting](https://cmakefmt.dev/troubleshooting.html)         | Common issues and debug workflow                                         |
-| [Performance](https://cmakefmt.dev/performance.html)                 | Benchmark methodology and profiler notes                                 |
+| [Install](https://cmakefmt.dev/install/)                             | Install options, first-project setup, CI wiring                          |
+| [Coverage](https://cmakefmt.dev/coverage/)                           | How coverage is measured, published, and interpreted                     |
+| [Release Channels](https://cmakefmt.dev/release/)                    | Release contract, support levels, release artifacts, and shell completions |
+| [CLI Reference](https://cmakefmt.dev/cli/)                           | Every flag, exit code, and discovery rule                                |
+| [Config Reference](https://cmakefmt.dev/config/)                     | Full config schema with examples                                         |
+| [Formatter Behavior](https://cmakefmt.dev/behavior/)                 | How the formatter makes layout decisions                                 |
+| [Migration from `cmake-format`](https://cmakefmt.dev/migration/)     | Incremental rollout guide and CLI mapping                                |
+| [Library API](https://cmakefmt.dev/api/)                             | Embedding `cmakefmt` in your own Rust tools                              |
+| [Troubleshooting](https://cmakefmt.dev/troubleshooting/)             | Common issues and debug workflow                                         |
+| [Performance](https://cmakefmt.dev/performance/)                     | Benchmark methodology and profiler notes                                 |
 | [Contributing](CONTRIBUTING.md)                                      | How to contribute, run tests, and open PRs                               |
 | [Changelog](CHANGELOG.md)                                            | What's changed in each release                                           |
 
 Preview the full docs locally:
 
 ```bash
-mdbook serve docs
+cd docs && npm install && npm run dev
 ```
 
 ## Project Layout
 
 ```text
 cmakefmt/
-├── docs/        # mdBook source published to cmakefmt.dev
+├── docs/        # Astro + Starlight source published to cmakefmt.dev
 ├── src/         # CLI, library API, parser, config, spec, formatter
 ├── tests/       # integration tests, snapshots, and fixtures
 ├── benches/     # Criterion benchmarks
@@ -327,7 +327,7 @@ pre-`1.0`, so release packaging, package-manager distribution, and some output
 or API details may continue to evolve. The built-in command registry is audited
 through CMake 4.3.1.
 
-Hit something unexpected? See [Troubleshooting](https://cmakefmt.dev/troubleshooting.html) or run:
+Hit something unexpected? See [Troubleshooting](https://cmakefmt.dev/troubleshooting/) or run:
 
 ```bash
 cmakefmt --debug --check path/to/CMakeLists.txt

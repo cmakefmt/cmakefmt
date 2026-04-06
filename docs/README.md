@@ -1,28 +1,30 @@
 # `docs/`
 
-This directory contains the `mdBook` source for the GitHub Pages
+This directory contains the Astro + Starlight source for the GitHub Pages
 documentation site for `cmakefmt`.
 
 ## Local Preview
 
-Use `mdbook` to preview or build the docs locally:
+Install dependencies and start the local dev server:
 
 ```bash
-mdbook serve docs
+cd docs
+npm install
+npm run dev
 ```
 
-Then open the local URL printed by `mdbook`, usually
-<http://localhost:3000>.
+Then open the local URL Astro prints, usually <http://localhost:4321>.
 
 To build the static site without serving it:
 
 ```bash
-mdbook build docs
+cd docs
+npm run build
 ```
 
 ## Rules
 
-- keep `docs/src/SUMMARY.md` in sync with the available chapters
-- if you add a new primary docs page, add it to `docs/src/SUMMARY.md`
+- keep the sidebar in `docs/astro.config.mjs` aligned with the available pages
+- put published docs pages under `docs/src/content/docs/`
 - keep the site content aligned with `README.md`, `CHANGELOG.md`, and
   `CONTRIBUTING.md`
