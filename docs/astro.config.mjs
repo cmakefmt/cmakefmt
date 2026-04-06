@@ -35,9 +35,6 @@ export default defineConfig({
           href: "https://github.com/cmakefmt/cmakefmt",
         },
       ],
-      editLink: {
-        baseUrl: "https://github.com/cmakefmt/cmakefmt/edit/main/docs/src/content/docs/",
-      },
       head: [
         {
           tag: "meta",
@@ -63,6 +60,7 @@ export default defineConfig({
       ],
       components: {
         ThemeSelect: "./src/components/ThemeToggle.astro",
+        Header: "./src/components/Header.astro",
       },
       lastUpdated: true,
       customCss: [

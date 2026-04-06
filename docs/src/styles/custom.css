@@ -352,6 +352,10 @@ nav.sidebar a[aria-current="true"] {
   font-size: var(--sl-text-body);
 }
 
+.sidebar-content .top-level > li > details > summary {
+  margin-bottom: 0.5em;
+}
+
 /* ─── Cards — subtle hover effect ───────────────────────────────────────── */
 
 .card {
@@ -363,15 +367,29 @@ nav.sidebar a[aria-current="true"] {
   border-color: var(--sl-color-accent);
 }
 
-/* ─── Pagination links — rounded ────────────────────────────────────────── */
+/* ─── Pagination links — compact, subtle ───────────────────────────────── */
 
 .pagination-links a {
   border-radius: 0.5rem;
-  transition: border-color 0.15s ease;
+  border: none;
+  box-shadow: none;
+  padding: 0.5rem 0;
+  font-size: 0.8125rem;
+  color: var(--sl-color-gray-3);
+  transition: color 0.15s ease;
 }
 
 .pagination-links a:hover {
-  border-color: var(--sl-color-accent);
+  color: var(--sl-color-text-accent);
+}
+
+.pagination-links .link-title {
+  font-size: 0.875rem;
+  color: var(--sl-color-white);
+}
+
+.pagination-links a:hover .link-title {
+  color: var(--sl-color-text-accent);
 }
 
 /* ─── Performance banner ─────────────────────────────────────────────────── */
