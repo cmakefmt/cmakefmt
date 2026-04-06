@@ -8,6 +8,10 @@ hero:
     - text: Documentation
       link: /getting-started/
       icon: right-arrow
+    - text: Try in Playground
+      link: /playground/
+      variant: secondary
+      icon: pencil
     - text: View on GitHub
       link: https://github.com/cmakefmt/cmakefmt
       icon: github
@@ -15,7 +19,6 @@ hero:
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
-import Button from '@/components/starwind/starwind/button/Button.astro';
 
 ## Quick Start
 
@@ -34,14 +37,10 @@ Then:
 ```bash
 cmakefmt --version
 cmakefmt --dump-config > .cmakefmt.yaml   # generate a starter config
-cmakefmt --check .                         # dry-run: show what would change
-cmakefmt --in-place .                      # apply formatting
-cmakefmt --staged --check                  # pre-commit: format only staged files
+cmakefmt --check .                        # dry-run: show what would change
+cmakefmt --in-place .                     # apply formatting
+cmakefmt --staged --check                 # pre-commit: format only staged files
 ```
-
-<div class="not-content" style="margin-top: 1.5rem;">
-  <Button href="/playground/" variant="outline" size="sm">Try in the Playground →</Button>
-</div>
 
 ## Performance
 
