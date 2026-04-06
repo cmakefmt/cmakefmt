@@ -8,31 +8,52 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+_No user-visible changes yet._
+
+## 0.1.1
+
 ### Added
 
-- full CLI workflow for formatting, checking, recursive discovery, file
-  filtering, debug diagnostics, parallel formatting, and config dumping
-- comment preservation, fence/barrier support, and real-world regression
-  corpus coverage
-- performance benchmarking, profiling notes, and direct `cmake-format`
-  comparisons
-- expanding built-in and module-command spec coverage audited against
-  CMake `4.3.1`
-- contributor guidance, docs roadmap, and GitHub Pages-ready docs structure
+- Homebrew installation support (`brew install cmakefmt/cmakefmt/cmakefmt`)
+- shell completion installation instructions
+- site metadata and crate status badge on docs.rs
 
 ### Changed
 
-- formatter output is now validated against real-world fixtures and snapshots
-- the built-in command registry is cached to reduce end-to-end formatter cost
-- parallel formatting remains opt-in by default while large-codebase RAM/system
-  impact is still being surveyed
+- improved docs.rs readability and tightened public API surface
+- documentation clarity and wording improvements
+
+## 0.1.0
+
+### Added
+
+- full CLI workflow: `--check`, `--diff`, `--in-place`, `--staged`,
+  `--changed`, `--files-from`, `--parallel`, `--dump-config`, `--list-input`,
+  `--list-changed`, `--explain-config`, `--quiet`, `--keep-going`
+- recursive file discovery with `.cmakefmtignore` and `--exclude-regex` support
+- YAML and TOML config file support with automatic discovery
+- comment preservation and fence/barrier support (`# cmakefmt: off/on`)
+- pragma-gated rollout mode
+- formatter result caching
+- colored diff output and in-place progress bar
+- CI-oriented report formats (JSON, JUnit, SARIF, GitHub Actions, GitLab CI)
+- legacy `cmake-format` config conversion (`--convert-config`)
+- built-in and module-command spec coverage audited against CMake 4.3.1
+- custom command specifications via config
+- real-world regression corpus covering LLVM, Qt, protobuf, and more
+- performance benchmarks: ~20× geometric-mean speedup over `cmake-format`
+- parallel formatting with `--parallel`
+- comprehensive docs site at cmakefmt.dev
+- shell completion generation (`--completions`)
+- dual MIT/Apache-2.0 licensing with full REUSE compliance
+- Windows, macOS, and Linux support
 
 ### Compatibility Notes
 
 - `cmakefmt` aims to be easy to migrate to from `cmake-format`, but output is
   not intended to be byte-for-byte identical
-- config and CLI compatibility are still being expanded as Phase 9 and Phase 10
-  continue
+- config option names differ from `cmake-format` in places; use
+  `--convert-config` to migrate
 
 ## Release Process
 

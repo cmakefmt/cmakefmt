@@ -13,10 +13,20 @@ When you add a user-visible feature, also update:
 - the implementation
 - the tests
 - the user-facing docs
+- `CHANGELOG.md` — add an entry under `## Unreleased`
 - the roadmap if the project scope or milestone state changed
 
 Do not leave “I’ll document it later” gaps behind. This repo already has enough
 moving parts that drift becomes expensive quickly.
+
+## Changelog
+
+Every user-facing change must have an entry in `CHANGELOG.md` under the
+`## Unreleased` section before it is merged. Group entries under `### Added`,
+`### Changed`, `### Fixed`, or `### Removed` as appropriate.
+
+Internal-only changes (refactors, CI tweaks, test-only changes) do not need a
+changelog entry unless they affect the user experience.
 
 ## If You Add Or Change A CLI Flag
 
