@@ -25,7 +25,7 @@ required_files=(
   "docs/src/content/docs/index.mdx"
   "docs/src/content/docs/getting-started.md"
   "docs/src/content/docs/playground.mdx"
-  "docs/src/content/docs/install.md"
+  "docs/src/content/docs/installation.md"
   "docs/src/content/docs/coverage.md"
   "docs/src/content/docs/release.md"
   "docs/src/content/docs/cli.md"
