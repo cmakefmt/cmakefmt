@@ -61,6 +61,13 @@ grep -q "https://cmakefmt.dev" README.md || {
   exit 1
 }
 
+# Verify the docs changelog is in sync with the root CHANGELOG.md.
+python3 scripts/sync-changelog.py
+if ! git diff --quiet docs/src/content/docs/changelog.md 2>/dev/null; then
+  echo "docs changelog is out of sync — run: python3 scripts/sync-changelog.py" >&2
+  exit 1
+fi
+
 if command -v npm >/dev/null 2>&1 && [[ -d docs/node_modules ]]; then
   (cd docs && npm run build >/dev/null)
 fi

@@ -3,8 +3,9 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
+    "prebuild": "python3 ../scripts/sync-changelog.py",
+    "dev": "python3 ../scripts/sync-changelog.py && astro dev",
+    "start": "python3 ../scripts/sync-changelog.py && astro dev",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
