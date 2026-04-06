@@ -22,8 +22,7 @@ export default defineConfig({
     sitemap(),
     starlight({
       title: "cmakefmt",
-      description:
-        "A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.",
+      description: "A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.",
       logo: {
         src: "./src/assets/logo.png",
         alt: "cmakefmt logo",
@@ -37,8 +36,7 @@ export default defineConfig({
         },
       ],
       editLink: {
-        baseUrl:
-          "https://github.com/cmakefmt/cmakefmt/edit/main/docs/src/content/docs/",
+        baseUrl: "https://github.com/cmakefmt/cmakefmt/edit/main/docs/src/content/docs/",
       },
       head: [
         {
@@ -63,6 +61,9 @@ export default defineConfig({
           },
         },
       ],
+      components: {
+        ThemeSelect: "./src/components/ThemeToggle.astro",
+      },
       lastUpdated: true,
       customCss: [
         // Tailwind v4 entry point — base styles sit in @layer base, so
@@ -75,9 +76,8 @@ export default defineConfig({
         {
           label: "Getting Started",
           items: [
-            { label: "Overview", slug: "" },
             { label: "Getting Started", slug: "getting-started" },
-            { label: "Installation", slug: "install" },
+            { label: "Installation", slug: "installation" },
             { label: "Coverage", slug: "coverage" },
             { label: "Release Channels", slug: "release" },
           ],

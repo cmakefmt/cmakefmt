@@ -9,7 +9,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
 The complete reference for everything `cmakefmt` can do from the command line.
-If you just want to get up and running, start with [Install](/install/) first
+If you just want to get up and running, start with [Installation](/installation/) first
 and come back here when you want the full picture.
 
 ## Synopsis

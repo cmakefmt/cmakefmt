@@ -76,7 +76,7 @@ pre-commit install
 
 ## What's Next
 
-- [Install](/install/) — full install options, shell completions, editor setup
+- [Installation](/installation/) — full install options, shell completions, editor setup
 - [CLI Reference](/cli/) — every flag documented
 - [Config Reference](/config/) — tune `cmakefmt` for your project
 - [Formatter Behavior](/behavior/) — understand what gets changed and why

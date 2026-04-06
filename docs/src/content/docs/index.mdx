@@ -4,50 +4,18 @@ description: A blazing-fast, workflow-first CMake formatter — built in Rust, b
 template: splash
 hero:
   tagline: Same spirit as cmake-format. No Python. No compromises.
-  image:
-    file: ../../assets/logo.png
-    alt: cmakefmt logo
   actions:
-    - text: Get Started
+    - text: Documentation
       link: /getting-started/
       icon: right-arrow
     - text: View on GitHub
       link: https://github.com/cmakefmt/cmakefmt
       icon: github
-      variant: minimal
+      variant: secondary
 ---
 
-import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 import Button from '@/components/starwind/starwind/button/Button.astro';
-
-<div class="not-content perf-banner">
-  <span class="perf-number">20.69×</span>
-  <span class="perf-label">
-    faster than <code>cmake-format</code> — geometric mean across real-world CMake corpora
-    including LLVM, Qt, protobuf, and a dozen more
-  </span>
-</div>
-
-## Why `cmakefmt`?
-
-<CardGrid stagger>
-  <Card title="Zero dependencies" icon="rocket">
-    One native Rust binary. No Python environment, no virtualenv bootstrap, no dependency
-    drift. Drop it in CI and forget about it.
-  </Card>
-  <Card title="Workflow-first" icon="puzzle">
-    `--check`, `--diff`, `--staged`, `--changed`, `--files-from`, and six machine-readable
-    report formats. Every power-user feature `cmake-format` made you script around is built in.
-  </Card>
-  <Card title="Knows your commands" icon="open-book">
-    Teach `cmakefmt` the argument structure of your project's custom CMake functions and
-    macros — no more generic token wrapping for commands you wrote.
-  </Card>
-  <Card title="Errors that actually help" icon="warning">
-    Parse and config failures include file, line, column, source context, and a reproduction
-    hint — not an opaque wall of parser noise.
-  </Card>
-</CardGrid>
 
 ## Quick Start
 

@@ -1,0 +1,135 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Sun/moon toggle button to replace Starlight's default theme <select>.
+// Cycles: auto -> light -> dark -> auto (or just toggles light/dark
+// based on the current resolved theme).
+---
+
+<starlight-theme-select>
+  <button
+    type="button"
+    class="theme-toggle"
+    aria-label="Toggle theme"
+  >
+    {/* Sun icon (shown in dark mode) */}
+    <svg class="theme-toggle-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fill-rule="evenodd"
+        d="M10 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm4 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm-.464 4.95.707.707a1 1 0 0 0 1.414-1.414l-.707-.707a1 1 0 0 0-1.414 1.414Zm2.12-10.607a1 1 0 0 1 0 1.414l-.706.707a1 1 0 1 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0ZM17 11a1 1 0 1 0 0-2h-1a1 1 0 1 0 0 2h1Zm-7 4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1ZM5.05 6.464A1 1 0 1 0 6.465 5.05l-.708-.707a1 1 0 0 0-1.414 1.414l.707.707ZM4 11a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2h1Zm.536 3.536a1 1 0 0 1 0-1.414l.707-.707a1 1 0 0 1 1.414 1.414l-.707.707a1 1 0 0 1-1.414 0Z"
+        clip-rule="evenodd"
+      />
+    </svg>
+    {/* Moon icon (shown in light mode) */}
+    <svg class="theme-toggle-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586Z" />
+    </svg>
+  </button>
+  {/* Hidden select kept for Starlight's StarlightThemeProvider.updatePickers() */}
+  <select aria-hidden="true" style="display:none">
+    <option value="dark">Dark</option>
+    <option value="light">Light</option>
+    <option value="auto" selected>Auto</option>
+  </select>
+</starlight-theme-select>
+
+{/* Inlined to avoid FOUC. Uses global scope from ThemeProvider.astro */}
+<script is:inline>
+  StarlightThemeProvider.updatePickers();
+</script>
+
+<script>
+  type Theme = 'auto' | 'dark' | 'light';
+
+  const storageKey = 'starlight-theme';
+
+  const parseTheme = (theme: unknown): Theme =>
+    theme === 'auto' || theme === 'dark' || theme === 'light' ? theme : 'auto';
+
+  const loadTheme = (): Theme =>
+    parseTheme(typeof localStorage !== 'undefined' && localStorage.getItem(storageKey));
+
+  function storeTheme(theme: Theme): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(storageKey, theme === 'light' || theme === 'dark' ? theme : '');
+    }
+  }
+
+  const getPreferredColorScheme = (): Theme =>
+    matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+
+  function getResolvedTheme(): 'light' | 'dark' {
+    const theme = loadTheme();
+    return theme === 'auto' ? getPreferredColorScheme() : theme;
+  }
+
+  function onThemeChange(theme: Theme): void {
+    StarlightThemeProvider.updatePickers(theme);
+    document.documentElement.dataset.theme = theme === 'auto' ? getPreferredColorScheme() : theme;
+    storeTheme(theme);
+  }
+
+  matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if (loadTheme() === 'auto') onThemeChange('auto');
+  });
+
+  class StarlightThemeSelect extends HTMLElement {
+    constructor() {
+      super();
+      onThemeChange(loadTheme());
+
+      // Toggle button: flip between light and dark
+      this.querySelector('button')?.addEventListener('click', () => {
+        const resolved = getResolvedTheme();
+        onThemeChange(resolved === 'dark' ? 'light' : 'dark');
+      });
+
+      // Keep hidden select working for any external callers
+      this.querySelector('select')?.addEventListener('change', (e) => {
+        if (e.currentTarget instanceof HTMLSelectElement) {
+          onThemeChange(parseTheme(e.currentTarget.value));
+        }
+      });
+    }
+  }
+  customElements.define('starlight-theme-select', StarlightThemeSelect);
+</script>
+
+<style>
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .theme-toggle:hover {
+    color: var(--sl-color-white);
+  }
+
+  /* In dark mode: show sun, hide moon */
+  :global([data-theme='dark']) .theme-toggle-sun {
+    display: block;
+  }
+  :global([data-theme='dark']) .theme-toggle-moon {
+    display: none;
+  }
+
+  /* In light mode: show moon, hide sun */
+  :global([data-theme='light']) .theme-toggle-sun {
+    display: none;
+  }
+  :global([data-theme='light']) .theme-toggle-moon {
+    display: block;
+  }
+</style>

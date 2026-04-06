@@ -4,39 +4,374 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 */
 
-/* ─── Brand colours ──────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Protocol-inspired restyle — zinc grays, emerald accent, system UI font,
+   compact 14px body text, refined spacing
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Font — system UI stack (same as Protocol / Tailwind defaults) ─────── */
 
 :root {
-  --sl-color-accent-low: #f5ddd2;
-  --sl-color-accent: #c74d1f;
-  --sl-color-accent-high: #8f3010;
-  --sl-color-text-accent: #8f3010;
-  --sl-color-bg-sidebar: #fcfaf8;
+  --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --sl-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
 
-  /* Starwind UI primary token — kept in sync with Starlight accent */
-  --sw-color-primary: #c74d1f;
+/* ─── Text sizing — Protocol uses 14px (0.875rem) body text ─────────────── */
+
+:root {
+  --sl-text-body: 0.875rem;
+  --sl-text-body-sm: 0.8125rem;
+  --sl-text-code: 0.8125rem;
+  --sl-text-code-sm: 0.75rem;
+  --sl-text-h1: 1.5rem;
+  --sl-text-h2: 1.125rem;
+  --sl-text-h3: 1rem;
+  --sl-text-h4: 0.875rem;
+  --sl-text-h5: 0.875rem;
+
+  --sl-line-height: 1.714;
+  --sl-line-height-headings: 1.333;
+}
+
+@media (min-width: 50em) {
+  :root {
+    --sl-text-h1: 1.5rem;
+    --sl-text-h2: 1.125rem;
+    --sl-text-h3: 1rem;
+    --sl-text-h4: 0.875rem;
+  }
+}
+
+/* ─── Zinc colour palette (matches Protocol/Tailwind zinc exactly) ──────── */
+
+:root {
+  /* light mode — Starlight's naming is inverted: "white" = darkest text */
+  --sl-color-white: hsl(240, 6%, 10%);           /* zinc-900 */
+  --sl-color-gray-1: hsl(240, 4%, 16%);           /* zinc-800 */
+  --sl-color-gray-2: hsl(240, 5%, 26%);           /* zinc-700 */
+  --sl-color-gray-3: hsl(240, 4%, 46%);           /* zinc-500 */
+  --sl-color-gray-4: hsl(240, 5%, 65%);           /* zinc-400 */
+  --sl-color-gray-5: hsl(240, 6%, 90%);           /* zinc-200 */
+  --sl-color-gray-6: hsl(240, 5%, 96%);           /* zinc-100 */
+  --sl-color-black: hsl(0, 0%, 100%);             /* white */
+
+  /* Sky blue accent */
+  --sl-color-accent-low: hsl(204, 94%, 94%);      /* sky-100 */
+  --sl-color-accent: hsl(200, 98%, 39%);           /* sky-600 */
+  --sl-color-accent-high: hsl(204, 80%, 16%);      /* sky-950ish */
+  --sl-color-text-accent: hsl(200, 98%, 39%);      /* sky-600 */
+
+  --sl-color-bg-sidebar: hsl(0, 0%, 100%);
+  --sl-color-bg-nav: hsl(240, 5%, 96%);
+  --sl-color-bg-inline-code: hsl(240, 5%, 96%);   /* zinc-100 */
+  --sl-color-hairline-light: hsl(240, 6%, 93%);   /* zinc-200ish */
+  --sl-color-hairline: hsl(240, 6%, 93%);
+
+  --sw-color-primary: hsl(200, 98%, 39%);
 }
 
 [data-theme="dark"] {
-  --sl-color-accent-low: #3f1c12;
-  --sl-color-accent: #de6c3e;
-  --sl-color-accent-high: #f5b392;
-  --sl-color-text-accent: #f5b392;
+  --sl-color-white: hsl(0, 0%, 100%);
+  --sl-color-gray-1: hsl(240, 5%, 91%);           /* zinc-200 */
+  --sl-color-gray-2: hsl(240, 5%, 65%);           /* zinc-400 */
+  --sl-color-gray-3: hsl(240, 4%, 46%);           /* zinc-500 */
+  --sl-color-gray-4: hsl(240, 5%, 34%);           /* zinc-600 */
+  --sl-color-gray-5: hsl(240, 4%, 16%);           /* zinc-800 */
+  --sl-color-gray-6: hsl(240, 6%, 10%);           /* zinc-900 */
+  --sl-color-black: hsl(240, 6%, 10%);            /* zinc-900 */
 
-  /* Restore Starlight's dark-mode sidebar colour (overridden by :root above). */
-  --sl-color-bg-sidebar: var(--sl-color-gray-6);
+  --sl-color-accent-low: hsl(204, 80%, 16%);      /* sky-950ish */
+  --sl-color-accent: hsl(198, 93%, 60%);           /* sky-400 */
+  --sl-color-accent-high: hsl(204, 94%, 94%);      /* sky-100 */
+  --sl-color-text-accent: hsl(199, 89%, 48%);      /* sky-500 */
 
-  --sw-color-primary: #de6c3e;
+  --sl-color-bg: hsl(240, 6%, 10%);               /* zinc-900 */
+  --sl-color-bg-sidebar: hsl(240, 6%, 10%);
+  --sl-color-bg-nav: hsl(240, 6%, 10%);
+  --sl-color-bg-inline-code: hsl(240, 4%, 16%);   /* zinc-800 */
+  --sl-color-hairline-light: hsl(240, 4%, 16%);
+  --sl-color-hairline: hsl(240, 4%, 16%);
+
+  --sw-color-primary: hsl(199, 89%, 48%);
 }
 
-/* ─── Hero ───────────────────────────────────────────────────────────────── */
+/* ─── Layout — match Protocol's content width ───────────────────────────── */
+
+:root {
+  --sl-content-width: 50rem;
+  --sl-content-gap-y: 1rem;
+  --sl-sidebar-width: 18rem;
+}
+
+/* ─── Body — antialiased rendering ──────────────────────────────────────── */
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Logo — tight spacing ──────────────────────────────────────────────── */
+
+.site-title img {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.site-title.sl-flex {
+  gap: 0.75rem;
+}
+
+/* ─── Headings — Protocol uses semibold with tight tracking ─────────────── */
+
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6):not(:where(.not-content *)) {
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+.sl-markdown-content h1:not(:where(.not-content *)) {
+  font-weight: 700;
+}
+
+/* ─── Links — emerald-500 with hover to emerald-600 ─────────────────────── */
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--sl-color-text-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.sl-markdown-content a:hover:not(:where(.not-content *)) {
+  color: var(--sl-color-accent);
+  text-decoration-color: currentColor;
+}
+
+/* ─── Code blocks — Protocol style: rounded-2xl, dark bg, inset ring ────── */
+
+/* Override Expressive Code variables for rounded corners and styling */
+:root,
+:root:not([data-theme="dark"]) .expressive-code[data-theme="dark"] {
+  --ec-brdRad: 1rem;
+  --ec-brdWd: 0px;
+  --ec-brdCol: transparent;
+  --ec-codeBg: hsl(240, 6%, 10%);
+  --ec-codeFontSize: 0.8125rem;
+  --ec-codePadBlk: 1rem;
+  --ec-codePadInl: 1.25rem;
+  --ec-frm-frameBoxShdCssVal: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  --ec-frm-edBg: hsl(240, 6%, 10%);
+  --ec-frm-edTabBarBg: hsl(240, 5%, 13%);
+  --ec-frm-edTabBarBrdCol: transparent;
+  --ec-frm-edTabBarBrdBtmCol: rgba(255, 255, 255, 0.1);
+  --ec-frm-edActTabBg: hsl(240, 6%, 10%);
+  --ec-frm-edActTabBrdCol: transparent;
+  --ec-frm-edActTabIndTopCol: var(--sl-color-accent);
+  --ec-frm-edActTabIndBtmCol: transparent;
+  --ec-frm-trmTtbBg: hsl(240, 5%, 13%);
+  --ec-frm-trmTtbBrdBtmCol: rgba(255, 255, 255, 0.1);
+  --ec-frm-trmBg: hsl(240, 6%, 10%);
+}
+
+/* Light mode — keep code blocks dark (like Protocol) */
+:root[data-theme="light"] .expressive-code:not([data-theme="dark"]),
+.expressive-code[data-theme="light"] {
+  --ec-brdRad: 1rem;
+  --ec-brdWd: 0px;
+  --ec-brdCol: transparent;
+  --ec-codeBg: hsl(240, 6%, 10%);
+  --ec-codeFg: #d6deeb;
+  --ec-codeFontSize: 0.8125rem;
+  --ec-codePadBlk: 1rem;
+  --ec-codePadInl: 1.25rem;
+  --ec-frm-frameBoxShdCssVal: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --ec-frm-edBg: hsl(240, 6%, 10%);
+  --ec-frm-edTabBarBg: hsl(240, 5%, 13%);
+  --ec-frm-edTabBarBrdCol: transparent;
+  --ec-frm-edTabBarBrdBtmCol: rgba(255, 255, 255, 0.1);
+  --ec-frm-edActTabBg: hsl(240, 6%, 10%);
+  --ec-frm-edActTabBrdCol: transparent;
+  --ec-frm-edActTabIndTopCol: var(--sl-color-accent);
+  --ec-frm-trmTtbBg: hsl(240, 5%, 13%);
+  --ec-frm-trmTtbBrdBtmCol: rgba(255, 255, 255, 0.1);
+  --ec-frm-trmBg: hsl(240, 6%, 10%);
+}
+
+/* Make light-mode code blocks use dark syntax colors */
+:root[data-theme="light"] .expressive-code:not([data-theme="dark"]) .ec-line :where(span[style^="--"]:not([class])) {
+  color: var(--0, inherit);
+  background-color: var(--0bg, transparent);
+  font-style: var(--0fs, inherit);
+  font-weight: var(--0fw, inherit);
+  text-decoration: var(--0td, inherit);
+}
+
+/* Inline code — Protocol style: rounded-lg, subtle ring */
+:not(pre) > code {
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.375rem;
+  box-shadow: inset 0 0 0 1px var(--sl-color-hairline-light);
+}
+
+.sl-markdown-content h2 code,
+.sl-markdown-content h3 code {
+  font-size: 0.85em;
+}
+
+/* ─── Lists — restore styles stripped by Tailwind reset ─────────────────── */
+
+.sl-markdown-content ul:not(:where(.not-content *)) {
+  list-style-type: disc;
+  padding-inline-start: 1.5em;
+}
+
+.sl-markdown-content ol:not(:where(.not-content *)) {
+  list-style-type: decimal;
+  padding-inline-start: 1.5em;
+}
+
+.sl-markdown-content ul ul:not(:where(.not-content *)) {
+  list-style-type: circle;
+}
+
+.sl-markdown-content ul ul ul:not(:where(.not-content *)) {
+  list-style-type: square;
+}
+
+/* ─── Tables — Protocol style: clean, small headers ─────────────────────── */
+
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--sl-color-hairline-light);
+  font-size: var(--sl-text-body);
+}
+
+.sl-markdown-content th:not(:where(.not-content *)) {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--sl-color-gray-3);
+}
+
+.sl-markdown-content table td strong {
+  color: var(--sl-color-text-accent);
+}
+
+/* ─── Blockquotes — emerald left accent ─────────────────────────────────── */
+
+.sl-markdown-content blockquote:not(:where(.not-content *)) {
+  border-inline-start: 2px solid var(--sl-color-accent);
+  padding-inline-start: 1rem;
+  color: var(--sl-color-gray-2);
+}
+
+/* ─── Buttons — pill-shaped like Protocol ───────────────────────────────── */
+
+.hero .actions a.primary {
+  background: var(--sl-color-white);
+  border-color: var(--sl-color-white);
+  color: var(--sl-color-black);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.375rem 0.875rem;
+  transition: background 0.15s ease;
+}
+
+[data-theme="dark"] .hero .actions a.primary {
+  background: hsl(156, 72%, 67%, 0.1);
+  border-color: transparent;
+  color: hsl(156, 72%, 67%);
+}
+
+.hero .actions a.primary:hover {
+  opacity: 0.85;
+}
+
+.hero .actions a.secondary {
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--sl-color-gray-5);
+  color: var(--sl-color-gray-2);
+}
+
+.hero .actions a.secondary:hover {
+  border-color: var(--sl-color-gray-4);
+  color: var(--sl-color-white);
+}
+
+/* ─── Hero — centered, no image ─────────────────────────────────────────── */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hero .stack,
+.hero .copy {
+  align-items: center;
+  text-align: center;
+}
+
+.hero h1 {
+  width: 100%;
+  text-align: center;
+}
 
 .hero .tagline {
   max-width: 44rem;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--sl-color-gray-2);
 }
 
 .hero .actions {
-  gap: 0.85rem;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+/* ─── Sidebar refinements ───────────────────────────────────────────────── */
+
+nav.sidebar a[aria-current="page"],
+nav.sidebar a[aria-current="true"] {
+  font-weight: 600;
+}
+
+/* Sidebar group labels — smaller, muted, uppercase */
+.sidebar-content .top-level > li > details > summary span,
+.sidebar-content .top-level > li:not(:has(details)) > a {
+  font-size: var(--sl-text-body);
+}
+
+/* ─── Cards — subtle hover effect ───────────────────────────────────────── */
+
+.card {
+  border-radius: 0.5rem;
+  transition: border-color 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--sl-color-accent);
+}
+
+/* ─── Pagination links — rounded ────────────────────────────────────────── */
+
+.pagination-links a {
+  border-radius: 0.5rem;
+  transition: border-color 0.15s ease;
+}
+
+.pagination-links a:hover {
+  border-color: var(--sl-color-accent);
 }
 
 /* ─── Performance banner ─────────────────────────────────────────────────── */
@@ -51,14 +386,14 @@ SPDX-License-Identifier: MIT OR Apache-2.0
     var(--sl-color-accent-low) 0%,
     transparent 80%
   );
-  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 40%, transparent);
-  border-radius: 0.875rem;
-  padding: 1.5rem 2rem;
-  margin: 2.5rem 0 3rem;
+  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 30%, transparent);
+  border-radius: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  margin: 2rem 0 2.5rem;
 }
 
 .perf-number {
-  font-size: clamp(2.75rem, 6vw, 4rem);
+  font-size: clamp(2.25rem, 5vw, 3rem);
   font-weight: 800;
   color: var(--sl-color-accent);
   line-height: 1;
@@ -67,29 +402,33 @@ SPDX-License-Identifier: MIT OR Apache-2.0
   letter-spacing: -0.02em;
 }
 
+[data-theme="dark"] .perf-number {
+  color: var(--sl-color-text-accent);
+}
+
 .perf-label {
-  font-size: 1.05rem;
+  font-size: 0.875rem;
   color: var(--sl-color-gray-2);
-  line-height: 1.5;
+  line-height: 1.625;
   max-width: 36rem;
 }
 
 .perf-label code {
   background: color-mix(in srgb, var(--sl-color-accent-low) 60%, transparent);
-  color: var(--sl-color-accent-high);
-  padding: 0.1em 0.4em;
-  border-radius: 0.3em;
-  font-size: 0.9em;
+  color: var(--sl-color-text-accent);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25em;
+  font-size: 0.85em;
 }
 
 /* ─── Reading-path section headings ──────────────────────────────────────── */
 
 .reading-path-heading {
-  font-size: 1rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--sl-color-gray-2);
+  color: var(--sl-color-gray-3);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   margin: 2rem 0 0.75rem;
 }
 
@@ -101,10 +440,10 @@ SPDX-License-Identifier: MIT OR Apache-2.0
   align-items: center;
   text-align: center;
   gap: 1rem;
-  padding: 4rem 2rem 3.5rem;
+  padding: 3.5rem 2rem 3rem;
   border: 2px dashed
     color-mix(in srgb, var(--sl-color-accent) 35%, var(--sl-color-gray-5));
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   margin: 2rem 0;
   background: color-mix(in srgb, var(--sl-color-accent-low) 30%, transparent);
 }
@@ -115,33 +454,23 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 }
 
 .playground-soon h2 {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
   color: var(--sl-color-white);
 }
 
 .playground-soon p {
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: var(--sl-color-gray-2);
   max-width: 40rem;
   margin: 0;
-  line-height: 1.65;
+  line-height: 1.625;
 }
 
-/* ─── Table accent values ────────────────────────────────────────────────── */
+/* ─── Scrollbar — thin and subtle ───────────────────────────────────────── */
 
-.sl-markdown-content table td strong {
-  color: var(--sl-color-text-accent);
-}
-
-/* ─── Inline code — rounded and slightly softened ───────────────────────── */
-
-:not(pre) > code {
-  border-radius: 0.35em;
-}
-
-.sl-markdown-content h2 code,
-.sl-markdown-content h3 code {
-  font-size: 0.85em;
+.sidebar-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sl-color-gray-5) transparent;
 }
