@@ -16,11 +16,11 @@ _No user-visible changes yet._
 
 - Homebrew installation support (`brew install cmakefmt/cmakefmt/cmakefmt`)
 - shell completion installation instructions
-- site metadata and crate status badge on docs.rs
+- site metadata and crate status badge on [docs.rs](https://docs.rs)
 
 ### Changed
 
-- improved docs.rs readability and tightened public API surface
+- improved [docs.rs](https://docs.rs) readability and tightened public API surface
 - documentation clarity and wording improvements
 
 ## 0.1.0
@@ -43,7 +43,7 @@ _No user-visible changes yet._
 - real-world regression corpus covering LLVM, Qt, protobuf, and more
 - performance benchmarks: ~20× geometric-mean speedup over `cmake-format`
 - parallel formatting with `--parallel`
-- comprehensive docs site at cmakefmt.dev
+- comprehensive docs site at [cmakefmt.dev](https://cmakefmt.dev)
 - shell completion generation (`--completions`)
 - dual MIT/Apache-2.0 licensing with full REUSE compliance
 - Windows, macOS, and Linux support
