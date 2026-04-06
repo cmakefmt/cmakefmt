@@ -14,10 +14,15 @@ class Cmakefmt < Formula
   def install
     system "cargo", "install", *std_cargo_args(path: ".")
 
-    bash_completion.install Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "bash")
-    zsh_completion.install "_cmakefmt" => Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "zsh")
-    fish_completion.install "cmakefmt.fish" => Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "fish")
-    man1.write Utils.safe_popen_read(bin/"cmakefmt", "--generate-man-page")
+    (buildpath/"cmakefmt.bash").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "bash")
+    (buildpath/"_cmakefmt").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "zsh")
+    (buildpath/"cmakefmt.fish").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "fish")
+    (buildpath/"cmakefmt.1").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-man-page")
+
+    bash_completion.install buildpath/"cmakefmt.bash"
+    zsh_completion.install buildpath/"_cmakefmt"
+    fish_completion.install buildpath/"cmakefmt.fish"
+    man1.install buildpath/"cmakefmt.1"
   end
 
   test do
