@@ -84,10 +84,31 @@ scripts/review-real-world-corpus.sh
 
 ## Installation
 
-Install via Cargo (the reference install path):
+**Homebrew (macOS and Linux):**
+
+```bash
+brew tap cmakefmt/cmakefmt
+brew install cmakefmt
+```
+
+Or in one step:
+
+```bash
+brew install cmakefmt/cmakefmt/cmakefmt
+```
+
+**Cargo:**
 
 ```bash
 cargo install cmakefmt-rust
+```
+
+**Build from source:**
+
+```bash
+git clone https://github.com/cmakefmt/cmakefmt
+cd cmakefmt
+cargo install --path .
 ```
 
 Verify:
@@ -96,15 +117,6 @@ Verify:
 cmakefmt --version
 ```
 
-Or build from source:
-
-```bash
-git clone https://github.com/cmakefmt/cmakefmt
-cd cmakefmt
-cargo install --path .
-```
-
-First-party Homebrew and pre-built binary releases are being rolled out.
 Planned release channels and support levels are documented at [cmakefmt.dev/release.html](https://cmakefmt.dev/release.html).
 Shell completion installation guidance lives in [cmakefmt.dev/install.html](https://cmakefmt.dev/install.html).
 

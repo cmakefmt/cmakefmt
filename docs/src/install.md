@@ -11,8 +11,21 @@ formatting again.
 
 ## Current Installation Options
 
-The reference install path is `cargo install cmakefmt-rust`. It is
-officially maintained and works today:
+**Homebrew** is the recommended install path for macOS and Linux users who want
+a native binary without a Rust toolchain:
+
+```bash
+brew tap cmakefmt/cmakefmt
+brew install cmakefmt
+```
+
+Or in one step:
+
+```bash
+brew install cmakefmt/cmakefmt/cmakefmt
+```
+
+**Cargo** is the reference install path for developers already using Rust:
 
 ```bash
 cargo install cmakefmt-rust
@@ -21,24 +34,19 @@ cargo install cmakefmt-rust
 If you prefer to build from a local checkout — for development, benchmarking,
 or reviewing changes — see [Build From This Repository](#build-from-this-repository) below.
 
-First-party Homebrew and pre-built binary releases are being rolled out. Until
-they land, Cargo is the fastest path to a working binary.
-
 ## Support Levels
 
 The release plan separates channels into explicit support levels so users know
 what to trust:
 
-| Channel | Planned support level | Notes |
-|---------|------------------------|-------|
-| `cargo install cmakefmt-rust` | Officially maintained | The reference install path for developers already using Rust. |
+| Channel | Support level | Notes |
+|---------|---------------|-------|
+| Homebrew (`cmakefmt/cmakefmt`) | Officially maintained | Recommended for macOS and Linux users. Ships completions and man page. |
+| `cargo install cmakefmt-rust` | Officially maintained | Reference install path for developers already using Rust. |
 | GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
-| Docs site / CLI reference | Officially maintained | Should stay in lock-step with each tagged release. |
-| Homebrew / `winget` / Scoop | Officially maintained | Planned first-party package-manager channels. |
-| Additional package managers (`npm`, AUR, Nix, containers, etc.) | Automated or best-effort | Useful channels, but not the first rollout priority. |
-
-Until tagged distribution channels land, repository-based installs remain the
-fully supported path.
+| Docs site / CLI reference | Officially maintained | Stays in lock-step with each tagged release. |
+| `winget` / Scoop | Officially maintained | Planned first-party Windows package-manager channels. |
+| Additional package managers (AUR, Nix, containers, etc.) | Automated or best-effort | Useful channels, but not the first rollout priority. |
 
 ## Build From This Repository
 
@@ -276,6 +284,20 @@ mdbook serve docs
 Then open the local URL that `mdbook` prints.
 
 ## Upgrade And Uninstall
+
+### Upgrade a Homebrew install
+
+```bash
+brew update
+brew upgrade cmakefmt
+```
+
+### Remove a Homebrew install
+
+```bash
+brew uninstall cmakefmt
+brew untap cmakefmt/cmakefmt
+```
 
 ### Upgrade a local source install
 
