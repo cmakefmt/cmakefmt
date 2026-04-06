@@ -22,6 +22,25 @@ use super::{
 const BUILTINS_PATH: &str = "src/spec/builtins.toml";
 const BUILTINS_TOML: &str = include_str!("builtins.toml");
 
+/// Registry of known CMake command specifications used to guide formatting.
+///
+/// The registry describes the argument structure of each command — positional
+/// slots, keyword sections, flags, and per-form layout hints — so the formatter
+/// can group and wrap arguments correctly.
+///
+/// # Two-tier model
+///
+/// The built-in registry covers the full CMake standard library.  User override
+/// files (TOML or YAML) can extend or modify any entry without replacing the
+/// whole registry.
+///
+/// # Getting a registry
+///
+/// | Situation | Recommended call |
+/// |-----------|-----------------|
+/// | No customisation needed | [`CommandRegistry::builtins`] — lazily initialised singleton, cheapest |
+/// | Fresh owned copy | [`CommandRegistry::load`] — allocates every call |
+/// | Merge with user override file | [`CommandRegistry::from_builtins_and_overrides`] |
 #[derive(Debug, Clone)]
 pub struct CommandRegistry {
     metadata: SpecMetadata,
@@ -31,11 +50,19 @@ pub struct CommandRegistry {
 
 impl CommandRegistry {
     /// Load the embedded built-in registry from `builtins.toml`.
+    ///
+    /// Returns a fresh owned [`CommandRegistry`] on every call.  Prefer
+    /// [`CommandRegistry::builtins`] when you only need a read-only reference —
+    /// it initialises once and amortises the parse cost across all callers.
     pub fn load() -> Result<Self> {
         Self::from_builtins_and_overrides(None::<&Path>)
     }
 
-    /// Return the lazily initialized singleton built-in registry.
+    /// Return the lazily initialised built-in registry singleton.
+    ///
+    /// The registry is parsed exactly once on first call; subsequent calls
+    /// return a `&'static` reference at zero cost.  Use [`CommandRegistry::load`]
+    /// if you need an owned, mutable copy.
     pub fn builtins() -> &'static Self {
         static BUILTINS: OnceLock<CommandRegistry> = OnceLock::new();
         BUILTINS.get_or_init(|| {
@@ -56,7 +83,7 @@ impl CommandRegistry {
     }
 
     /// Build a registry directly from a deserialized [`SpecFile`].
-    pub fn from_spec_file(mut spec_file: SpecFile) -> Self {
+    pub(crate) fn from_spec_file(mut spec_file: SpecFile) -> Self {
         normalize_spec_file(&mut spec_file);
         Self {
             metadata: spec_file.metadata,

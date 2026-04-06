@@ -7,8 +7,8 @@
 //! These functions parse input, apply barrier handling, and render a formatted
 //! output string using the command registry and runtime configuration.
 
-pub mod comment;
-pub mod node;
+pub(crate) mod comment;
+pub(crate) mod node;
 
 use crate::config::Config;
 use crate::error::{Error, Result};
@@ -16,6 +16,16 @@ use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
 /// Format raw CMake source using the built-in command registry.
+///
+/// # Examples
+///
+/// ```
+/// use cmakefmt::{format_source, Config};
+///
+/// let cmake = "CMAKE_MINIMUM_REQUIRED(VERSION 3.20)\n";
+/// let formatted = format_source(cmake, &Config::default()).unwrap();
+/// assert_eq!(formatted, "cmake_minimum_required(VERSION 3.20)\n");
+/// ```
 pub fn format_source(source: &str, config: &Config) -> Result<String> {
     format_source_with_registry(source, config, CommandRegistry::builtins())
 }
@@ -27,6 +37,24 @@ pub fn format_source_with_debug(source: &str, config: &Config) -> Result<(String
 }
 
 /// Format raw CMake source using an explicit command registry.
+///
+/// Use this when you need a registry that merges the built-ins with a user
+/// override file.
+///
+/// # Examples
+///
+/// ```
+/// use cmakefmt::{format_source_with_registry, Config, CommandRegistry};
+///
+/// let registry = CommandRegistry::from_builtins_and_overrides(
+///     None::<&std::path::Path>,
+/// ).unwrap();
+/// let cmake = "TARGET_LINK_LIBRARIES(mylib PUBLIC dep1)\n";
+/// let formatted = format_source_with_registry(
+///     cmake, &Config::default(), &registry,
+/// ).unwrap();
+/// assert_eq!(formatted, "target_link_libraries(mylib PUBLIC dep1)\n");
+/// ```
 pub fn format_source_with_registry(
     source: &str,
     config: &Config,
@@ -49,8 +77,21 @@ pub fn format_source_with_registry_debug(
 
 /// Format an already parsed AST file.
 ///
-/// This is useful when callers want to parse once and format repeatedly with
-/// different config or registry settings.
+/// Useful when you want to parse once and format the same AST repeatedly with
+/// different [`Config`] or registry settings, avoiding re-parsing overhead.
+///
+/// # Examples
+///
+/// ```
+/// use cmakefmt::{format_file, Config, CommandRegistry};
+///
+/// let cmake = "PROJECT(MyProject)\n";
+/// let file = cmakefmt::parser::parse(cmake).unwrap();
+/// let formatted = format_file(
+///     &file, &Config::default(), CommandRegistry::builtins(),
+/// ).unwrap();
+/// assert_eq!(formatted, "project(MyProject)\n");
+/// ```
 pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> Result<String> {
     format_file_with_debug(file, config, registry, &mut DebugLog::disabled())
 }

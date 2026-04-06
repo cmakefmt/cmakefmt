@@ -35,6 +35,21 @@ pub enum CaseStyle {
 }
 
 /// How to align the dangling closing paren.
+///
+/// Only takes effect when [`Config::dangle_parens`] is `true`.
+/// Controls where `)` is placed when a call wraps onto multiple lines:
+///
+/// ```cmake
+/// # Prefix / Close — `)` at the command-name column (tracks block depth):
+/// target_link_libraries(
+///   mylib PUBLIC dep1
+/// )
+///
+/// # Open — `)` at the opening-paren column:
+/// target_link_libraries(
+///   mylib PUBLIC dep1
+///                      )
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum DangleAlign {
@@ -49,8 +64,36 @@ pub enum DangleAlign {
 
 /// Full formatter configuration.
 ///
-/// This struct is used at runtime. It is populated from defaults, supported
-/// user config files (YAML or TOML), and CLI flag overrides (highest wins).
+/// Construct [`Config::default`] and set fields as needed before passing it to
+/// [`format_source`](crate::format_source) or related functions.
+///
+/// ```
+/// use cmakefmt::{Config, CaseStyle, DangleAlign};
+///
+/// let config = Config {
+///     line_width: 100,
+///     command_case: CaseStyle::Lower,
+///     dangle_parens: true,
+///     dangle_align: DangleAlign::Open,
+///     ..Config::default()
+/// };
+/// ```
+///
+/// # Defaults
+///
+/// | Field | Default |
+/// |-------|---------|
+/// | `line_width` | `80` |
+/// | `tab_size` | `2` |
+/// | `use_tabchars` | `false` |
+/// | `max_empty_lines` | `1` |
+/// | `command_case` | [`CaseStyle::Lower`] |
+/// | `keyword_case` | [`CaseStyle::Upper`] |
+/// | `dangle_parens` | `false` |
+/// | `dangle_align` | [`DangleAlign::Prefix`] |
+/// | `enable_markup` | `true` |
+/// | `reflow_comments` | `false` |
+/// | `first_comment_is_literal` | `true` |
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
     // ── Layout ──────────────────────────────────────────────────────────

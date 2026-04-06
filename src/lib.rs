@@ -2,24 +2,48 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-//! `cmakefmt` is a fast, configurable CMake formatter and parser.
+//! `cmakefmt` is a fast, configurable CMake formatter.
 //!
-//! The crate exposes:
+//! # Quick start
 //!
-//! - configuration types under [`config`]
-//! - parser entry points under [`parser`]
-//! - formatting entry points under [`formatter`]
-//! - command-spec registry types under [`spec`]
+//! Format a CMake source string with the default configuration:
 //!
-//! Most embedders will start with [`format_source`] or
-//! [`format_source_with_debug`].
+//! ```
+//! use cmakefmt::{format_source, Config};
+//!
+//! let cmake = "CMAKE_MINIMUM_REQUIRED(VERSION 3.20)\n";
+//! let formatted = format_source(cmake, &Config::default()).unwrap();
+//! assert_eq!(formatted, "cmake_minimum_required(VERSION 3.20)\n");
+//! ```
+//!
+//! To customise formatting, modify [`Config`] fields before passing it in:
+//!
+//! ```
+//! use cmakefmt::{format_source, Config, CaseStyle};
+//!
+//! let mut config = Config::default();
+//! config.line_width = 100;
+//! config.command_case = CaseStyle::Upper;
+//!
+//! let cmake = "target_link_libraries(mylib PUBLIC dep1)\n";
+//! let formatted = format_source(cmake, &config).unwrap();
+//! assert_eq!(formatted, "TARGET_LINK_LIBRARIES(mylib PUBLIC dep1)\n");
+//! ```
+//!
+//! # Organisation
+//!
+//! | Module | Purpose |
+//! |--------|---------|
+//! | [`config`] | Runtime configuration types and config-file loading |
+//! | [`error`] | Error and result types |
+//! | [`formatter`] | Source-to-source formatting pipeline |
+//! | [`parser`] | CMake parser and AST definitions |
+//! | [`spec`] | Built-in and user-extensible command registry |
 
 /// Runtime formatter configuration and config-file loading.
 pub mod config;
 /// Shared error types used across parsing, config loading, and formatting.
 pub mod error;
-/// Recursive CMake file discovery helpers used by the CLI and benchmarks.
-pub mod files;
 /// Source-to-source formatting pipeline.
 pub mod formatter;
 /// CMake parser and AST definitions.
@@ -27,16 +51,30 @@ pub mod parser;
 /// Built-in and user-extensible command specification registry.
 pub mod spec;
 
-/// Re-exported configuration entry points.
+// Recursive CMake file-discovery helpers used by the CLI.  Not part of the
+// library embedding API; hidden from generated documentation.
+#[doc(hidden)]
+pub mod files;
+
+// ── Configuration ────────────────────────────────────────────────────────────
+
 pub use config::{
     convert_legacy_config_files, default_config_template, default_config_template_for,
     render_effective_config, CaseStyle, CommandConfig, Config, DangleAlign, DumpConfigFormat,
     PerCommandConfig,
 };
-/// Re-exported error types.
+
+// ── Errors ───────────────────────────────────────────────────────────────────
+
 pub use error::{Error, Result};
-/// Re-exported formatter entry points.
+
+// ── Formatting ───────────────────────────────────────────────────────────────
+
 pub use formatter::{
-    format_source, format_source_with_debug, format_source_with_registry,
+    format_file, format_source, format_source_with_debug, format_source_with_registry,
     format_source_with_registry_debug,
 };
+
+// ── Registry ─────────────────────────────────────────────────────────────────
+
+pub use spec::registry::CommandRegistry;

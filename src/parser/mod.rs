@@ -14,6 +14,7 @@ use pest_derive::Parser;
 pub mod ast;
 
 /// Internal pest parser generated from `cmake.pest`.
+#[doc(hidden)]
 #[derive(Parser)]
 #[grammar = "parser/cmake.pest"]
 pub struct CmakeParser;

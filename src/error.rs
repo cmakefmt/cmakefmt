@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+//! Structured error types returned by parsing, config loading, and formatting.
+
 use thiserror::Error;
 
 /// Structured config/spec deserialization failure metadata used for

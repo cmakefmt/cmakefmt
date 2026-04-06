@@ -92,6 +92,7 @@ impl<'de> Deserialize<'de> for NArgs {
 
 // ── Fully specified command model ────────────────────────────────────────────
 
+/// Per-command-form layout hints that override global [`Config`] values.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutOverrides {
@@ -201,7 +202,7 @@ fn has_ascii_lowercase(s: &str) -> bool {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
-pub struct SpecMetadata {
+pub(crate) struct SpecMetadata {
     /// Upstream CMake version the built-in spec was last audited against.
     #[serde(default)]
     pub cmake_version: String,
@@ -215,7 +216,7 @@ pub struct SpecMetadata {
 
 /// Top-level spec file containing metadata plus command entries.
 #[derive(Debug, Default, Deserialize)]
-pub struct SpecFile {
+pub(crate) struct SpecFile {
     /// Version and audit metadata for the built-in spec surface.
     #[serde(default)]
     pub metadata: SpecMetadata,
@@ -228,7 +229,7 @@ pub struct SpecFile {
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct LayoutOverridesOverride {
+pub(crate) struct LayoutOverridesOverride {
     /// Override line width for this command form.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line_width: Option<usize>,
@@ -249,7 +250,7 @@ pub struct LayoutOverridesOverride {
 /// Partial override for a keyword specification.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct KwargSpecOverride {
+pub(crate) struct KwargSpecOverride {
     /// Override the number of positional arguments accepted after the keyword.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nargs: Option<NArgs>,
@@ -266,7 +267,7 @@ pub struct KwargSpecOverride {
 /// Partial override for a command form.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct CommandFormOverride {
+pub(crate) struct CommandFormOverride {
     /// Override the positional argument count for the form.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pargs: Option<NArgs>,
@@ -286,7 +287,7 @@ pub struct CommandFormOverride {
 /// Partial override for a full command spec.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
-pub enum CommandSpecOverride {
+pub(crate) enum CommandSpecOverride {
     /// Override a single-form command.
     Single(CommandFormOverride),
     /// Override one or more discriminated forms.
@@ -304,7 +305,7 @@ pub enum CommandSpecOverride {
 
 /// Top-level user override file containing command overrides only.
 #[derive(Debug, Default, Deserialize, Serialize)]
-pub struct SpecOverrideFile {
+pub(crate) struct SpecOverrideFile {
     /// Override specs keyed by command name.
     #[serde(default)]
     pub commands: IndexMap<String, CommandSpecOverride>,
@@ -313,7 +314,7 @@ pub struct SpecOverrideFile {
 impl CommandSpecOverride {
     /// Convert a partial override into a fully specified standalone command
     /// spec.
-    pub fn into_full_spec(self) -> CommandSpec {
+    pub(crate) fn into_full_spec(self) -> CommandSpec {
         match self {
             CommandSpecOverride::Single(form) => CommandSpec::Single(form.into_full_form()),
             CommandSpecOverride::Discriminated { forms, fallback } => CommandSpec::Discriminated {
@@ -329,7 +330,7 @@ impl CommandSpecOverride {
 
 impl CommandFormOverride {
     /// Convert a partial command form override into a fully specified form.
-    pub fn into_full_form(self) -> CommandForm {
+    pub(crate) fn into_full_form(self) -> CommandForm {
         CommandForm {
             pargs: self.pargs.unwrap_or_default(),
             kwargs: self
@@ -349,7 +350,7 @@ impl CommandFormOverride {
 
 impl KwargSpecOverride {
     /// Convert a partial keyword override into a fully specified keyword spec.
-    pub fn into_full_spec(self) -> KwargSpec {
+    pub(crate) fn into_full_spec(self) -> KwargSpec {
         KwargSpec {
             nargs: self.nargs.unwrap_or_default(),
             kwargs: self
@@ -368,7 +369,7 @@ impl KwargSpecOverride {
 
 impl LayoutOverridesOverride {
     /// Convert a partial layout override into a fully specified layout block.
-    pub fn into_full_layout(self) -> LayoutOverrides {
+    pub(crate) fn into_full_layout(self) -> LayoutOverrides {
         LayoutOverrides {
             line_width: self.line_width,
             tab_size: self.tab_size,
