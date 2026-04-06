@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 # Summary
 
-- [Documentation Home](README.md)
+- [cmakefmt: Fast CMake Formatting](README.md)
 - [Install](install.md)
 - [Coverage](coverage.md)
 - [Release Channels](release.md)
