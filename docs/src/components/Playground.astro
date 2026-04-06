@@ -149,7 +149,6 @@ endif()
     bracketMatching(),
     history(),
     keymap.of([...defaultKeymap, ...historyKeymap]),
-    EditorView.lineWrapping,
   ];
 
   const sourceEditor = new EditorView({
@@ -180,8 +179,7 @@ endif()
       extensions: [
         lineNumbers(),
         EditorState.readOnly.of(true),
-        EditorView.lineWrapping,
-        ...getThemeExtensions(),
+            ...getThemeExtensions(),
       ],
     }),
     parent: document.getElementById('editor-output')!,
@@ -204,8 +202,7 @@ endif()
       effects: EditorView.reconfigure.of([
         lineNumbers(),
         EditorState.readOnly.of(true),
-        EditorView.lineWrapping,
-        ...themeExts,
+            ...themeExts,
       ]),
     });
   });
