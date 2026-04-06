@@ -35,6 +35,9 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Cache Cargo registry and build artifacts
+        uses: Swatinem/rust-cache@v2.9.1
+
       - name: Install wasm-pack
         run: cargo install wasm-pack
 
