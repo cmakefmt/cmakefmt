@@ -7,7 +7,7 @@ use std::process::Command;
 
 fn main() {
     // Skip git version embedding when cross-compiling for WASM.
-    if env::var("TARGET").map_or(false, |t| t.contains("wasm32")) {
+    if env::var("TARGET").is_ok_and(|t| t.contains("wasm32")) {
         return;
     }
 
