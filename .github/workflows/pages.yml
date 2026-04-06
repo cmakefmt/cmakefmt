@@ -30,6 +30,17 @@ jobs:
         with:
           enablement: true
 
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Build WASM playground module
+        run: bash scripts/build-wasm.sh
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
