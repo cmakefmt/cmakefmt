@@ -3,12 +3,16 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 // @ts-check
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 
 export default defineConfig({
   site: "https://cmakefmt.dev/",
+  vite: {
+    plugins: [tailwindcss()],
+  },
   markdown: {
     shikiConfig: {
       langs: ["cmake", "rust", "bash", "yaml", "toml", "diff", "text"],
@@ -19,7 +23,7 @@ export default defineConfig({
     starlight({
       title: "cmakefmt",
       description:
-        "Installation guide, workflow-focused CLI reference, config guide, migration notes, API examples, and architecture notes for cmakefmt.",
+        "A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.",
       logo: {
         src: "./src/assets/logo.png",
         alt: "cmakefmt logo",
@@ -60,13 +64,20 @@ export default defineConfig({
         },
       ],
       lastUpdated: true,
-      customCss: ["./src/styles/custom.css"],
+      customCss: [
+        // Tailwind v4 entry point — base styles sit in @layer base, so
+        // Starlight's component styles naturally take precedence.
+        "./src/styles/starwind.css",
+        // Brand colours and layout tweaks.
+        "./src/styles/custom.css",
+      ],
       sidebar: [
         {
           label: "Getting Started",
           items: [
             { label: "Overview", slug: "" },
-            { label: "Install", slug: "install" },
+            { label: "Getting Started", slug: "getting-started" },
+            { label: "Installation", slug: "install" },
             { label: "Coverage", slug: "coverage" },
             { label: "Release Channels", slug: "release" },
           ],
@@ -82,7 +93,7 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
-            { label: "Migration From `cmake-format`", slug: "migration" },
+            { label: "Migration from cmake-format", slug: "migration" },
             { label: "Performance", slug: "performance" },
             { label: "Troubleshooting", slug: "troubleshooting" },
           ],
@@ -95,6 +106,7 @@ export default defineConfig({
             { label: "Changelog", slug: "changelog" },
           ],
         },
+        { label: "Playground", slug: "playground" },
       ],
     }),
   ],

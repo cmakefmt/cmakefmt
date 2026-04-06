@@ -3,6 +3,16 @@
 
 version = 1
 
+# Starwind UI components — MIT licensed, copied into the project by the Starwind CLI.
+[[annotations]]
+path = [
+  "docs/starwind.config.json",
+  "docs/src/components/starwind/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Copyright Starwind UI contributors"
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = [
   ".github/workflows/*.yml",

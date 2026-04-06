@@ -4,12 +4,17 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 */
 
+/* ─── Brand colours ──────────────────────────────────────────────────────── */
+
 :root {
   --sl-color-accent-low: #f5ddd2;
   --sl-color-accent: #c74d1f;
   --sl-color-accent-high: #8f3010;
   --sl-color-text-accent: #8f3010;
   --sl-color-bg-sidebar: #fcfaf8;
+
+  /* Starwind UI primary token — kept in sync with Starlight accent */
+  --sw-color-primary: #c74d1f;
 }
 
 [data-theme="dark"] {
@@ -17,7 +22,14 @@ SPDX-License-Identifier: MIT OR Apache-2.0
   --sl-color-accent: #de6c3e;
   --sl-color-accent-high: #f5b392;
   --sl-color-text-accent: #f5b392;
+
+  /* Restore Starlight's dark-mode sidebar colour (overridden by :root above). */
+  --sl-color-bg-sidebar: var(--sl-color-gray-6);
+
+  --sw-color-primary: #de6c3e;
 }
+
+/* ─── Hero ───────────────────────────────────────────────────────────────── */
 
 .hero .tagline {
   max-width: 44rem;
@@ -27,6 +39,109 @@ SPDX-License-Identifier: MIT OR Apache-2.0
   gap: 0.85rem;
 }
 
+/* ─── Performance banner ─────────────────────────────────────────────────── */
+
+.perf-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem 2rem;
+  background: linear-gradient(
+    135deg,
+    var(--sl-color-accent-low) 0%,
+    transparent 80%
+  );
+  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 40%, transparent);
+  border-radius: 0.875rem;
+  padding: 1.5rem 2rem;
+  margin: 2.5rem 0 3rem;
+}
+
+.perf-number {
+  font-size: clamp(2.75rem, 6vw, 4rem);
+  font-weight: 800;
+  color: var(--sl-color-accent);
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.perf-label {
+  font-size: 1.05rem;
+  color: var(--sl-color-gray-2);
+  line-height: 1.5;
+  max-width: 36rem;
+}
+
+.perf-label code {
+  background: color-mix(in srgb, var(--sl-color-accent-low) 60%, transparent);
+  color: var(--sl-color-accent-high);
+  padding: 0.1em 0.4em;
+  border-radius: 0.3em;
+  font-size: 0.9em;
+}
+
+/* ─── Reading-path section headings ──────────────────────────────────────── */
+
+.reading-path-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--sl-color-gray-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 2rem 0 0.75rem;
+}
+
+/* ─── Playground coming-soon ─────────────────────────────────────────────── */
+
+.playground-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  padding: 4rem 2rem 3.5rem;
+  border: 2px dashed
+    color-mix(in srgb, var(--sl-color-accent) 35%, var(--sl-color-gray-5));
+  border-radius: 1rem;
+  margin: 2rem 0;
+  background: color-mix(in srgb, var(--sl-color-accent-low) 30%, transparent);
+}
+
+.playground-soon-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.playground-soon h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--sl-color-white);
+}
+
+.playground-soon p {
+  font-size: 1rem;
+  color: var(--sl-color-gray-2);
+  max-width: 40rem;
+  margin: 0;
+  line-height: 1.65;
+}
+
+/* ─── Table accent values ────────────────────────────────────────────────── */
+
 .sl-markdown-content table td strong {
   color: var(--sl-color-text-accent);
+}
+
+/* ─── Inline code — rounded and slightly softened ───────────────────────── */
+
+:not(pre) > code {
+  border-radius: 0.35em;
+}
+
+.sl-markdown-content h2 code,
+.sl-markdown-content h3 code {
+  font-size: 0.85em;
 }

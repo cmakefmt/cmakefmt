@@ -1,0 +1,80 @@
+---
+title: Playground
+description: Try cmakefmt in your browser — no install needed.
+template: splash
+hero:
+  tagline: Format CMake code in your browser — no install, no setup.
+  actions:
+    - text: Install locally instead
+      link: /getting-started/
+      icon: right-arrow
+      variant: minimal
+---
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/starwind/starwind/card/index.ts';
+
+<div class="not-content playground-soon">
+  <span class="playground-soon-icon">⚡</span>
+  <h2>Coming Soon</h2>
+  <p>
+    The interactive playground will run <code>cmakefmt</code> entirely in your browser via
+    a WebAssembly build of the Rust library — no server, no install, no round-trips.
+    Paste your CMake, tweak the config, and see the formatted output in real time.
+  </p>
+  <p>
+    While you wait, you can{' '}
+    <a href="/getting-started/">install cmakefmt locally</a> in under a minute,
+    or explore the <a href="/cli/">CLI Reference</a> and{' '}
+    <a href="/config/">Config Reference</a>.
+  </p>
+</div>
+
+## Planned Features
+
+<div class="not-content" style="margin-top: 1rem;">
+  <Card>
+    <CardHeader>
+      <CardTitle>In-browser formatter</CardTitle>
+      <CardDescription>
+        Powered by a WebAssembly build of the same Rust library the CLI uses.
+        Zero latency, zero server dependency.
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      Paste any CMake source and see the formatted result update as you type.
+    </CardContent>
+  </Card>
+
+  <Card style="margin-top: 1rem;">
+    <CardHeader>
+      <CardTitle>Live config editor</CardTitle>
+      <CardDescription>
+        Adjust line width, command case, dangle parens, and every other option
+        without touching a file.
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      The config panel mirrors the full <a href="/config/">Config Reference</a> — all
+      options, live.
+    </CardContent>
+  </Card>
+
+  <Card style="margin-top: 1rem;">
+    <CardHeader>
+      <CardTitle>Shareable links</CardTitle>
+      <CardDescription>
+        Encode your source and config in the URL hash and share a snapshot with
+        teammates or a bug report.
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      No account, no storage — everything lives in the URL.
+    </CardContent>
+  </Card>
+</div>

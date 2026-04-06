@@ -14,10 +14,12 @@
 `cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format) tool with a
 single native binary. Same spirit. No Python. No compromises.
 
-Crates.io package name: `cmakefmt-rust` (CLI binary remains `cmakefmt`).
-This project is independent from other Rust implementations, including:
-[`azais-corentin/cmakefmt`](https://github.com/azais-corentin/cmakefmt) and
-[`yamadapc/cmakefmt`](https://github.com/yamadapc/cmakefmt).
+* [crates.io](crates.io): `cmakefmt-rust`
+* cli name: `cmakefmt`
+
+> [!NOTE]
+>
+> This project is independent from other Rust implementations, including: [`azais-corentin/cmakefmt`](https://github.com/azais-corentin/cmakefmt) and [`yamadapc/cmakefmt`](https://github.com/yamadapc/cmakefmt).
 
 <h2>Contents</h2>
 
@@ -37,18 +39,18 @@ This project is independent from other Rust implementations, including:
 
 ## Why `cmakefmt`?
 
-- **20× faster — not a typo.** Geometric-mean speedup of `20.69x` over `cmake-format` on real-world corpora.
+* **20× faster — not a typo.** Geometric-mean speedup of `20.69x` over `cmake-format` on real-world corpora.
   Pre-commit hooks that once made you wince now finish before you blink.
-- **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
+* **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
   Drop it in CI and forget about it.
-- **Built for actual workflows.** `--check`, `--diff`, `--staged`, `--changed`, `--files-from`,
+* **Built for actual workflows.** `--check`, `--diff`, `--staged`, `--changed`, `--files-from`,
   `--show-config`, `--explain-config`, semantic verification, JSON reporting — all first-class,
   not scripted workarounds.
-- **Knows your commands.** Teach `cmakefmt` the shape of your project's custom CMake functions and macros.
+* **Knows your commands.** Teach `cmakefmt` the shape of your project's custom CMake functions and macros.
   No more generic token-wrapping for code *you* wrote.
-- **Errors that actually help.** Parse and config failures come with file/line context, source snippets,
+* **Errors that actually help.** Parse and config failures come with file/line context, source snippets,
   and reproduction hints — not opaque parser noise.
-- **Designed for real repositories.** Comment preservation, disable-region passthrough, config discovery,
+* **Designed for real repositories.** Comment preservation, disable-region passthrough, config discovery,
   ignore files, Git-aware file selection, and opt-in parallelism are core features, not afterthoughts.
 
 ## Performance
@@ -295,13 +297,13 @@ cmakefmt/
 
 Key modules under `src/`:
 
-- `main.rs`: CLI entry point and workflow orchestration
-- `lib.rs`: public library API
-- `config/`: config loading, merging, and legacy conversion
-- `parser/`: `pest` grammar, AST, and parse pipeline
-- `spec/`: built-in and user-defined command registry
-- `formatter/`: AST-to-doc formatting logic and comment handling
-- `files.rs`: file discovery and ignore handling
+* `main.rs`: CLI entry point and workflow orchestration
+* `lib.rs`: public library API
+* `config/`: config loading, merging, and legacy conversion
+* `parser/`: `pest` grammar, AST, and parse pipeline
+* `spec/`: built-in and user-defined command registry
+* `formatter/`: AST-to-doc formatting logic and comment handling
+* `files.rs`: file discovery and ignore handling
 
 ## Development
 

@@ -23,6 +23,8 @@ required_files=(
   "docs/src/content.config.ts"
   "docs/public/robots.txt"
   "docs/src/content/docs/index.mdx"
+  "docs/src/content/docs/getting-started.md"
+  "docs/src/content/docs/playground.mdx"
   "docs/src/content/docs/install.md"
   "docs/src/content/docs/coverage.md"
   "docs/src/content/docs/release.md"
@@ -59,7 +61,7 @@ grep -q "https://cmakefmt.dev" README.md || {
   exit 1
 }
 
-if command -v npm >/dev/null 2>&1 && [[ -f docs/package-lock.json ]]; then
+if command -v npm >/dev/null 2>&1 && [[ -d docs/node_modules ]]; then
   (cd docs && npm run build >/dev/null)
 fi
 

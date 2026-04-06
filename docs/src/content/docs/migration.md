@@ -1,5 +1,5 @@
 ---
-title: Migration From `cmake-format`
+title: Migration from cmake-format
 ---
 
 <!--
