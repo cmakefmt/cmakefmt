@@ -34,6 +34,12 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: check-docs
+        name: check docs
+        entry: bash scripts/check-docs.sh
+        language: system
+        pass_filenames: false
+
       - id: cargo-clippy
         name: cargo clippy --all-targets -- -D warnings
         entry: cargo
