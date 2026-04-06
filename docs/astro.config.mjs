@@ -60,6 +60,7 @@ export default defineConfig({
       ],
       components: {
         ThemeSelect: "./src/components/ThemeToggle.astro",
+        ThemeProvider: "./src/components/ThemeProvider.astro",
         Header: "./src/components/Header.astro",
       },
       lastUpdated: true,

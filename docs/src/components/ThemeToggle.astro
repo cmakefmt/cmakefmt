@@ -46,7 +46,7 @@
   const storageKey = 'starlight-theme';
 
   const parseTheme = (theme: unknown): Theme =>
-    theme === 'auto' || theme === 'dark' || theme === 'light' ? theme : 'auto';
+    theme === 'auto' || theme === 'dark' || theme === 'light' ? theme : 'light';
 
   const loadTheme = (): Theme =>
     parseTheme(typeof localStorage !== 'undefined' && localStorage.getItem(storageKey));

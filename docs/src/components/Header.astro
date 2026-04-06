@@ -46,8 +46,10 @@ const currentPath = Astro.url.pathname;
     <div class="sl-flex social-icons">
       <SocialIcons />
     </div>
-    <ThemeSelect />
     <LanguageSelect />
+  </div>
+  <div class="sl-flex print:hidden theme-toggle-wrapper">
+    <ThemeSelect />
   </div>
 </div>
 
@@ -77,6 +79,10 @@ const currentPath = Astro.url.pathname;
       content: '';
       height: 2rem;
       border-inline-end: 1px solid var(--sl-color-gray-5);
+    }
+
+    .theme-toggle-wrapper {
+      align-items: center;
     }
 
     .header-nav {
@@ -134,6 +140,7 @@ const currentPath = Astro.url.pathname;
             auto
           )
           1fr
+          auto
           auto;
         align-content: center;
       }

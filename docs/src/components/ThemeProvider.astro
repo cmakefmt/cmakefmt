@@ -1,0 +1,25 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Custom ThemeProvider that defaults to light mode instead of auto-detecting.
+---
+
+{/* Intentionally inlined to avoid FOUC. */}
+<script is:inline>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme = storedTheme || 'light';
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'light') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+				});
+			},
+		};
+	})();
+</script>
