@@ -152,46 +152,9 @@ body {
   text-decoration-color: currentColor;
 }
 
-/* ─── Code blocks — rounded, always dark, GitHub Dark Default theme ─────── */
-
-:root {
-  --ec-brdRad: 1rem;
-  --ec-brdWd: 0px;
-  --ec-brdCol: transparent;
-  --ec-codeFontSize: 0.8125rem;
-  --ec-codePadBlk: 1rem;
-  --ec-codePadInl: 1.25rem;
-  --ec-frm-frameBoxShdCssVal: 0 0 0 1px rgba(255, 255, 255, 0.15);
-  --ec-frm-edActTabIndTopCol: var(--sl-color-accent);
-}
-
-/* Force dark code blocks in light mode — use the GitHub Dark theme colors */
-:root[data-theme="light"] .expressive-code:not([data-theme="dark"]),
-.expressive-code[data-theme="light"] {
-  --ec-codeBg: #0d1117;
-  --ec-codeFg: #e6edf3;
-  --ec-frm-edBg: #0d1117;
-  --ec-frm-edTabBarBg: #161b22;
-  --ec-frm-edTabBarBrdCol: transparent;
-  --ec-frm-edTabBarBrdBtmCol: #30363d;
-  --ec-frm-edActTabBg: #0d1117;
-  --ec-frm-edActTabBrdCol: transparent;
-  --ec-frm-trmTtbBg: #161b22;
-  --ec-frm-trmTtbBrdBtmCol: #30363d;
-  --ec-frm-trmBg: #0d1117;
-  --ec-gtrFg: #6e7681;
-  --ec-sbThumbCol: rgba(255, 255, 255, 0.1);
-  --ec-sbThumbHoverCol: rgba(255, 255, 255, 0.3);
-}
-
-/* Use dark syntax colors in light mode */
-:root[data-theme="light"] .expressive-code:not([data-theme="dark"]) .ec-line :where(span[style^="--"]:not([class])) {
-  color: var(--0, inherit);
-  background-color: var(--0bg, transparent);
-  font-style: var(--0fs, inherit);
-  font-weight: var(--0fw, inherit);
-  text-decoration: var(--0td, inherit);
-}
+/* ─── Code blocks — shape overrides are in expressiveCode.styleOverrides
+   in astro.config.mjs. Themes: github-dark-default + github-light-default.
+   Starlight auto-syncs the active code theme with the site theme. ────────── */
 
 /* Inline code — Protocol style: rounded-lg, subtle ring */
 :not(pre) > code {

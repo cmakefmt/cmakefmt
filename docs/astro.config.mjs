@@ -22,7 +22,20 @@ export default defineConfig({
     sitemap(),
     starlight({
       expressiveCode: {
-        themes: ["github-dark-default"],
+        themes: ["github-dark-default", "github-light-default"],
+        styleOverrides: {
+          borderRadius: "1rem",
+          borderWidth: "0px",
+          borderColor: "transparent",
+          codeFontSize: "0.8125rem",
+          codePaddingBlock: "1rem",
+          codePaddingInline: "1.25rem",
+          frames: {
+            frameBoxShadowCssValue: "0 0 0 1px var(--sl-color-gray-5)",
+            editorActiveTabIndicatorTopColor: "var(--sl-color-accent)",
+            editorActiveTabIndicatorBottomColor: "transparent",
+          },
+        },
       },
       title: "cmakefmt",
       description: "A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.",

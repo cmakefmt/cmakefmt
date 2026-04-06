@@ -37,11 +37,11 @@
 
 <script>
   import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
-  import { EditorState } from '@codemirror/state';
+  import { Compartment, EditorState } from '@codemirror/state';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-  import { syntaxHighlighting, defaultHighlightStyle, bracketMatching, StreamLanguage } from '@codemirror/language';
+  import { syntaxHighlighting, bracketMatching, StreamLanguage } from '@codemirror/language';
   import { yaml } from '@codemirror/lang-yaml';
-  import { oneDark } from '@codemirror/theme-one-dark';
+  import { HighlightStyle } from '@codemirror/language';
   import { tags } from '@lezer/highlight';
 
   // ── CMake syntax highlighting ──────────────────────────────────────
@@ -64,7 +64,7 @@
       // Variables ${...} or $ENV{...} or $CACHE{...}
       if (stream.match(/\$\w*\{/)) {
         while (!stream.eol() && !stream.match('}', true)) stream.next();
-        return 'variableName.special';
+        return 'cmakeVariable';
       }
       // Generator expressions $<...>
       if (stream.match('$<')) {
@@ -74,11 +74,15 @@
           if (ch === '<') depth++;
           else if (ch === '>') depth--;
         }
-        return 'variableName.special';
+        return 'cmakeVariable';
       }
       // Parentheses
       if (stream.match('(') || stream.match(')')) {
         return 'paren';
+      }
+      // Numbers
+      if (stream.match(/\d+(?:\.\d+)?/)) {
+        return 'number';
       }
       // Keywords (uppercase identifiers commonly used as keyword args)
       if (stream.match(/[A-Z_][A-Z_0-9]{2,}(?=[\s\)])/)) {
@@ -86,7 +90,7 @@
       }
       // Command names (identifiers followed by open paren)
       if (stream.match(/[a-zA-Z_]\w*(?=\s*\()/)) {
-        return 'function';
+        return 'cmakeCommand';
       }
       // Regular identifiers / arguments
       if (stream.match(/[^\s()#"$]+/)) {
@@ -95,6 +99,10 @@
       // Whitespace
       stream.next();
       return null;
+    },
+    tokenTable: {
+      cmakeCommand: tags.function(tags.variableName),
+      cmakeVariable: tags.special(tags.variableName),
     },
   });
 
@@ -183,35 +191,105 @@ commands:
         nargs: 1
 `;
 
-  // ── Theme ──────────────────────────────────────────────────────────
+  // ── GitHub Dark Default theme for CodeMirror ────────────────────────
 
-  const lightTheme = EditorView.theme({
+  const githubDarkTheme = EditorView.theme({
     '&': {
-      backgroundColor: '#f8fafb',
-      color: '#1a1a1a',
+      backgroundColor: '#0d1117',
+      color: '#e6edf3',
     },
     '.cm-gutters': {
-      backgroundColor: '#f0f2f4',
-      color: '#6b7280',
+      backgroundColor: '#0d1117',
+      color: '#6e7681',
       border: 'none',
     },
     '.cm-activeLineGutter': {
-      backgroundColor: '#e8eaed',
+      backgroundColor: '#161b22',
     },
     '.cm-activeLine': {
-      backgroundColor: '#f0f2f480',
+      backgroundColor: '#161b2280',
+    },
+    '.cm-cursor': {
+      borderLeftColor: '#e6edf3',
+    },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+      backgroundColor: '#264f78',
+    },
+    '.cm-matchingBracket': {
+      backgroundColor: '#3fb95040',
+      outline: '1px solid #3fb95080',
+    },
+  }, { dark: true });
+
+  const githubDarkHighlight = HighlightStyle.define([
+    { tag: tags.keyword, color: '#ff7b72' },
+    { tag: tags.function(tags.variableName), color: '#d2a8ff' },
+    { tag: tags.typeName, color: '#79c0ff' },
+    { tag: tags.string, color: '#a5d6ff' },
+    { tag: tags.comment, color: '#8b949e' },
+    { tag: tags.number, color: '#79c0ff' },
+    { tag: tags.bool, color: '#79c0ff' },
+    { tag: tags.variableName, color: '#e6edf3' },
+    { tag: tags.special(tags.variableName), color: '#ffa657' },
+    { tag: tags.operator, color: '#ff7b72' },
+    { tag: tags.paren, color: '#e6edf3' },
+    { tag: tags.propertyName, color: '#79c0ff' },
+    { tag: tags.atom, color: '#79c0ff' },
+    { tag: tags.definition(tags.variableName), color: '#ffa657' },
+  ], { themeType: 'dark' });
+
+  // GitHub Light Default theme for CodeMirror
+  const githubLightTheme = EditorView.theme({
+    '&': {
+      backgroundColor: '#ffffff',
+      color: '#1f2328',
+    },
+    '.cm-gutters': {
+      backgroundColor: '#ffffff',
+      color: '#636c76',
+      border: 'none',
+    },
+    '.cm-activeLineGutter': {
+      backgroundColor: '#f6f8fa',
+    },
+    '.cm-activeLine': {
+      backgroundColor: '#f6f8fa80',
+    },
+    '.cm-cursor': {
+      borderLeftColor: '#1f2328',
+    },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+      backgroundColor: '#dbe7f5',
+    },
+    '.cm-matchingBracket': {
+      backgroundColor: '#4ac26b40',
+      outline: '1px solid #4ac26b80',
     },
   });
+
+  const githubLightHighlight = HighlightStyle.define([
+    { tag: tags.keyword, color: '#cf222e' },
+    { tag: tags.function(tags.variableName), color: '#8250df' },
+    { tag: tags.typeName, color: '#0550ae' },
+    { tag: tags.string, color: '#0a3069' },
+    { tag: tags.comment, color: '#6e7781' },
+    { tag: tags.number, color: '#0550ae' },
+    { tag: tags.bool, color: '#0550ae' },
+    { tag: tags.variableName, color: '#1f2328' },
+    { tag: tags.special(tags.variableName), color: '#953800' },
+    { tag: tags.operator, color: '#cf222e' },
+    { tag: tags.paren, color: '#1f2328' },
+    { tag: tags.propertyName, color: '#0550ae' },
+    { tag: tags.atom, color: '#0550ae' },
+    { tag: tags.definition(tags.variableName), color: '#953800' },
+  ], { themeType: 'light' });
 
   function isDarkMode(): boolean {
     return document.documentElement.dataset.theme === 'dark';
   }
 
-  function getThemeExtensions() {
-    if (isDarkMode()) {
-      return [oneDark];
-    }
-    return [lightTheme, syntaxHighlighting(defaultHighlightStyle)];
+  function getEditorTheme() {
+    return isDarkMode() ? githubDarkTheme : githubLightTheme;
   }
 
   // ── Editors ────────────────────────────────────────────────────────
@@ -223,10 +301,15 @@ commands:
     bracketMatching(),
     history(),
     keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+    syntaxHighlighting(githubLightHighlight),
+    syntaxHighlighting(githubDarkHighlight),
   ];
 
-  const cmakeExts = [cmakeLanguage, syntaxHighlighting(defaultHighlightStyle)];
-  const yamlExts = [yaml(), syntaxHighlighting(defaultHighlightStyle)];
+  const cmakeExts = [cmakeLanguage];
+  const yamlExts = [yaml()];
+  const sourceTheme = new Compartment();
+  const configTheme = new Compartment();
+  const outputTheme = new Compartment();
 
   const sourceEditor = new EditorView({
     state: EditorState.create({
@@ -234,7 +317,7 @@ commands:
       extensions: [
         ...sharedExtensions,
         ...cmakeExts,
-        ...getThemeExtensions(),
+        sourceTheme.of(getEditorTheme()),
       ],
     }),
     parent: document.getElementById('editor-source')!,
@@ -246,7 +329,7 @@ commands:
       extensions: [
         ...sharedExtensions,
         ...yamlExts,
-        ...getThemeExtensions(),
+        configTheme.of(getEditorTheme()),
       ],
     }),
     parent: document.getElementById('editor-config')!,
@@ -258,8 +341,10 @@ commands:
       extensions: [
         lineNumbers(),
         EditorState.readOnly.of(true),
+        syntaxHighlighting(githubLightHighlight),
+        syntaxHighlighting(githubDarkHighlight),
         ...cmakeExts,
-        ...getThemeExtensions(),
+        outputTheme.of(getEditorTheme()),
       ],
     }),
     parent: document.getElementById('editor-output')!,
@@ -268,21 +353,14 @@ commands:
   // ── Theme sync ─────────────────────────────────────────────────────
 
   const observer = new MutationObserver(() => {
-    const themeExts = getThemeExtensions();
     sourceEditor.dispatch({
-      effects: EditorView.reconfigure.of([
-        ...sharedExtensions, ...cmakeExts, ...themeExts,
-      ]),
+      effects: sourceTheme.reconfigure(getEditorTheme()),
     });
     configEditor.dispatch({
-      effects: EditorView.reconfigure.of([
-        ...sharedExtensions, ...yamlExts, ...themeExts,
-      ]),
+      effects: configTheme.reconfigure(getEditorTheme()),
     });
     outputEditor.dispatch({
-      effects: EditorView.reconfigure.of([
-        lineNumbers(), EditorState.readOnly.of(true), ...cmakeExts, ...themeExts,
-      ]),
+      effects: outputTheme.reconfigure(getEditorTheme()),
     });
   });
   observer.observe(document.documentElement, {
@@ -536,15 +614,15 @@ commands:
     min-height: 0;
     border-radius: 0.75rem;
     overflow: hidden;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
-    background: hsl(240, 6%, 10%);
+    box-shadow: 0 0 0 1px #30363d;
+    background: #0d1117;
   }
 
   .playground-pane-tabs {
     display: flex;
     gap: 0;
-    background: hsl(240, 5%, 13%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
   }
 
   .playground-tab {
@@ -553,7 +631,7 @@ commands:
     padding: 0.5rem 1rem;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.5);
+    color: #7d8590;
     cursor: pointer;
     transition: color 0.15s, background 0.15s;
     font-family: inherit;
@@ -561,11 +639,11 @@ commands:
   }
 
   .playground-tab:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: #e6edf3;
   }
 
   .playground-tab.active {
-    color: white;
+    color: #e6edf3;
   }
 
   .playground-tab.active::after {
@@ -583,9 +661,9 @@ commands:
     font-size: 0.75rem;
     font-weight: 500;
     padding: 0.5rem 1rem;
-    color: rgba(255, 255, 255, 0.5);
-    background: hsl(240, 5%, 13%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #7d8590;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
   }
 
   .playground-editor {
@@ -603,41 +681,36 @@ commands:
     overflow: auto;
   }
 
-  /* Dark background for all editors by default */
-  .playground-editor :global(.cm-editor) {
-    background: hsl(240, 6%, 10%);
-  }
-
-  /* Light mode overrides for editor backgrounds */
+  /* Light mode overrides — GitHub Light Default */
   :global([data-theme='light']) .playground-pane {
-    background: #f8fafb;
-    box-shadow: 0 0 0 1px var(--sl-color-hairline-light);
+    background: #ffffff;
+    box-shadow: 0 0 0 1px #d1d9e0;
   }
 
   :global([data-theme='light']) .playground-pane-tabs {
-    background: #f0f2f4;
-    border-bottom-color: var(--sl-color-hairline-light);
+    background: #f6f8fa;
+    border-bottom-color: #d1d9e0;
   }
 
   :global([data-theme='light']) .playground-tab {
-    color: var(--sl-color-gray-3);
+    color: #636c76;
   }
 
   :global([data-theme='light']) .playground-tab:hover {
-    color: var(--sl-color-gray-2);
+    color: #1f2328;
   }
 
   :global([data-theme='light']) .playground-tab.active {
-    color: var(--sl-color-white);
+    color: #1f2328;
   }
 
   :global([data-theme='light']) .playground-pane-header {
-    background: #f0f2f4;
-    color: var(--sl-color-gray-3);
-    border-bottom-color: var(--sl-color-hairline-light);
+    background: #f6f8fa;
+    color: #636c76;
+    border-bottom-color: #d1d9e0;
   }
 
   :global([data-theme='light']) .playground-editor :global(.cm-editor) {
-    background: #f8fafb;
+    background: #ffffff;
   }
 </style>
