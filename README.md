@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="assets/banner.png" alt="cmakefmt banner" width="100%"/>
+  <a href="https://cmakefmt.dev">
+    <img src="assets/banner.png" alt="cmakefmt banner" width="100%"/>
+  </a>
 </p>
 
 <h1><code>cmakefmt</code></h1>
