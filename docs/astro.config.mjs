@@ -113,6 +113,7 @@ export default defineConfig({
             { label: "Performance", slug: "performance" },
             { label: "Comparison", slug: "comparison" },
             { label: "Badge", slug: "badge" },
+            { label: "Projects using cmakefmt", slug: "users" },
             { label: "Troubleshooting", slug: "troubleshooting" },
           ],
         },

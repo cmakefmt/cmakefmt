@@ -1411,4 +1411,103 @@ markup:
         assert!(converted.contains("[markup]"));
         assert!(converted.contains("reflow_comments = true"));
     }
+
+    // ── Phase-16 option tests ─────────────────────────────────────────────
+
+    #[test]
+    fn converts_format_disable() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  disable: true\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("disable = true"));
+    }
+
+    #[test]
+    fn converts_format_line_ending_unix() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  line_ending: unix\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("line_ending = \"unix\""));
+    }
+
+    #[test]
+    fn converts_format_line_ending_windows() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  line_ending: windows\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("line_ending = \"windows\""));
+    }
+
+    #[test]
+    fn converts_format_always_wrap() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            "format:\n  always_wrap:\n    - target_link_libraries\n    - target_sources\n",
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("always_wrap"));
+        assert!(converted.contains("target_link_libraries"));
+        assert!(converted.contains("target_sources"));
+    }
+
+    #[test]
+    fn converts_format_require_valid_layout() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  require_valid_layout: true\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("require_valid_layout = true"));
+    }
+
+    #[test]
+    fn converts_format_fractional_tab_policy_use_space() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  fractional_tab_policy: use-space\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("fractional_tab_policy = \"use-space\""));
+    }
+
+    #[test]
+    fn converts_format_fractional_tab_policy_round_up() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  fractional_tab_policy: round-up\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("fractional_tab_policy = \"round-up\""));
+    }
+
+    #[test]
+    fn converts_format_max_rows_cmdline() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  max_rows_cmdline: 3\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("max_rows_cmdline = 3"));
+    }
+
+    #[test]
+    fn converts_markup_explicit_trailing_pattern() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "markup:\n  explicit_trailing_pattern: '#<'\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("explicit_trailing_pattern"));
+        assert!(converted.contains("#<"));
+    }
 }

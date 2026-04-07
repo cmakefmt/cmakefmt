@@ -627,6 +627,149 @@ fn dangle_align_open() {
     assert_eq!(last, &format!("{})", " ".repeat(21)));
 }
 
+// --- Phase-16 config option tests ---
+
+#[test]
+fn disable_returns_source_unchanged() {
+    let src = "message(  hello   world  )\n";
+    let config = Config {
+        disable: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert_eq!(formatted, src);
+}
+
+#[test]
+fn line_ending_windows_produces_crlf() {
+    use cmakefmt::LineEnding;
+    let src = "message(hello)\n";
+    let config = Config {
+        line_ending: LineEnding::Windows,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(formatted.contains("\r\n"), "expected CRLF line ending");
+    assert!(!formatted.replace("\r\n", "").contains('\r'), "no stray CR");
+}
+
+#[test]
+fn line_ending_auto_detects_crlf_from_input() {
+    use cmakefmt::LineEnding;
+    let src = "message(hello)\r\nset(X 1)\r\n";
+    let config = Config {
+        line_ending: LineEnding::Auto,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.contains("\r\n"),
+        "auto should preserve CRLF from input"
+    );
+}
+
+#[test]
+fn line_ending_auto_detects_lf_from_input() {
+    use cmakefmt::LineEnding;
+    let src = "message(hello)\nset(X 1)\n";
+    let config = Config {
+        line_ending: LineEnding::Auto,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        !formatted.contains("\r\n"),
+        "auto should preserve LF from input"
+    );
+}
+
+#[test]
+fn always_wrap_forces_vertical_layout() {
+    // Without always_wrap this fits on one line; with it it must be vertical.
+    let src = "message(hello world)\n";
+    let config = Config {
+        always_wrap: vec!["message".to_string()],
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.lines().count() > 1,
+        "always_wrap should force multiline output"
+    );
+}
+
+#[test]
+fn require_valid_layout_errors_on_overlong_line() {
+    use cmakefmt::Error;
+    let src =
+        "message(\"this is a very very very very very very long argument that exceeds limit\")\n";
+    let config = Config {
+        line_width: 40,
+        require_valid_layout: true,
+        ..Config::default()
+    };
+    let result = format_source(src, &config);
+    assert!(
+        matches!(result, Err(Error::LayoutTooWide { .. })),
+        "expected LayoutTooWide error, got: {result:?}"
+    );
+}
+
+#[test]
+fn require_valid_layout_passes_when_lines_fit() {
+    let src = "message(hello)\n";
+    let config = Config {
+        line_width: 40,
+        require_valid_layout: true,
+        ..Config::default()
+    };
+    assert!(format_source(src, &config).is_ok());
+}
+
+#[test]
+fn fractional_tab_policy_use_space_preserves_remainder() {
+    use cmakefmt::FractionalTabPolicy;
+    // "set(" is 4 chars wide; with tab_size=3 the hanging-wrap continuation
+    // is 4 spaces = 1 full tab + 1 fractional space.
+    // UseSpace keeps the fractional space, so continuation lines start with "\t ".
+    let src = "set(AVAR BVAR CVAR DVAR)\n";
+    let config = Config {
+        use_tabchars: true,
+        tab_size: 3,
+        line_width: 15, // forces multi-line hanging wrap
+        fractional_tab_policy: FractionalTabPolicy::UseSpace,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    let has_tab_space = formatted.lines().any(|l| l.starts_with("\t "));
+    assert!(
+        has_tab_space,
+        "use-space should produce tab+space for fractional indentation, got:\n{formatted}"
+    );
+}
+
+#[test]
+fn fractional_tab_policy_round_up_promotes_to_tab() {
+    use cmakefmt::FractionalTabPolicy;
+    // Same setup: "set(" = 4 chars, tab_size=3 → 1 full tab + 1 fractional.
+    // RoundUp promotes the fractional space to an extra tab, so continuation
+    // lines start with "\t\t" rather than "\t ".
+    let src = "set(AVAR BVAR CVAR DVAR)\n";
+    let config = Config {
+        use_tabchars: true,
+        tab_size: 3,
+        line_width: 15,
+        fractional_tab_policy: FractionalTabPolicy::RoundUp,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    let has_double_tab = formatted.lines().any(|l| l.starts_with("\t\t"));
+    assert!(
+        has_double_tab,
+        "round-up should promote fractional space to extra tab, got:\n{formatted}"
+    );
+}
+
 // --- Existing tests ---
 
 #[test]

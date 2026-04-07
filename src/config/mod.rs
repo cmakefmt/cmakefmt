@@ -439,3 +439,215 @@ fn apply_case(style: CaseStyle, s: &str) -> String {
         CaseStyle::Unchanged => s.to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Config::for_command ───────────────────────────────────────────────
+
+    #[test]
+    fn for_command_control_flow_sets_space_before_paren() {
+        let config = Config {
+            separate_ctrl_name_with_space: true,
+            ..Config::default()
+        };
+        for cmd in ["if", "elseif", "foreach", "while", "return"] {
+            let cc = config.for_command(cmd);
+            assert!(
+                cc.space_before_paren,
+                "{cmd} should have space_before_paren=true"
+            );
+        }
+    }
+
+    #[test]
+    fn for_command_fn_definition_sets_space_before_paren() {
+        let config = Config {
+            separate_fn_name_with_space: true,
+            ..Config::default()
+        };
+        for cmd in ["function", "endfunction", "macro", "endmacro"] {
+            let cc = config.for_command(cmd);
+            assert!(
+                cc.space_before_paren,
+                "{cmd} should have space_before_paren=true"
+            );
+        }
+    }
+
+    #[test]
+    fn for_command_regular_command_no_space_before_paren() {
+        let config = Config {
+            separate_ctrl_name_with_space: true,
+            separate_fn_name_with_space: true,
+            ..Config::default()
+        };
+        let cc = config.for_command("message");
+        assert!(
+            !cc.space_before_paren,
+            "message should not have space_before_paren"
+        );
+    }
+
+    #[test]
+    fn for_command_lookup_is_case_insensitive() {
+        let mut overrides = HashMap::new();
+        overrides.insert(
+            "message".to_string(),
+            PerCommandConfig {
+                line_width: Some(120),
+                ..Default::default()
+            },
+        );
+        let config = Config {
+            per_command_overrides: overrides,
+            ..Config::default()
+        };
+        // uppercase lookup should still find the "message" override
+        assert_eq!(config.for_command("MESSAGE").line_width(), 120);
+    }
+
+    // ── CommandConfig accessors ───────────────────────────────────────────
+
+    #[test]
+    fn command_config_returns_global_defaults_when_no_override() {
+        let config = Config::default();
+        let cc = config.for_command("set");
+        assert_eq!(cc.line_width(), config.line_width);
+        assert_eq!(cc.tab_size(), config.tab_size);
+        assert_eq!(cc.dangle_parens(), config.dangle_parens);
+        assert_eq!(cc.command_case(), config.command_case);
+        assert_eq!(cc.keyword_case(), config.keyword_case);
+        assert_eq!(cc.max_pargs_hwrap(), config.max_pargs_hwrap);
+        assert_eq!(cc.max_subgroups_hwrap(), config.max_subgroups_hwrap);
+    }
+
+    #[test]
+    fn command_config_per_command_overrides_take_effect() {
+        let mut overrides = HashMap::new();
+        overrides.insert(
+            "set".to_string(),
+            PerCommandConfig {
+                line_width: Some(120),
+                tab_size: Some(4),
+                dangle_parens: Some(true),
+                dangle_align: Some(DangleAlign::Open),
+                command_case: Some(CaseStyle::Upper),
+                keyword_case: Some(CaseStyle::Lower),
+                max_pargs_hwrap: Some(10),
+                max_subgroups_hwrap: Some(5),
+            },
+        );
+        let config = Config {
+            per_command_overrides: overrides,
+            ..Config::default()
+        };
+        let cc = config.for_command("set");
+        assert_eq!(cc.line_width(), 120);
+        assert_eq!(cc.tab_size(), 4);
+        assert!(cc.dangle_parens());
+        assert_eq!(cc.dangle_align(), DangleAlign::Open);
+        assert_eq!(cc.command_case(), CaseStyle::Upper);
+        assert_eq!(cc.keyword_case(), CaseStyle::Lower);
+        assert_eq!(cc.max_pargs_hwrap(), 10);
+        assert_eq!(cc.max_subgroups_hwrap(), 5);
+    }
+
+    #[test]
+    fn indent_str_spaces() {
+        let config = Config {
+            tab_size: 4,
+            use_tabchars: false,
+            ..Config::default()
+        };
+        assert_eq!(config.indent_str(), "    ");
+        assert_eq!(config.for_command("set").indent_str(), "    ");
+    }
+
+    #[test]
+    fn indent_str_tab() {
+        let config = Config {
+            use_tabchars: true,
+            ..Config::default()
+        };
+        assert_eq!(config.indent_str(), "\t");
+        assert_eq!(config.for_command("set").indent_str(), "\t");
+    }
+
+    // ── Case helpers ─────────────────────────────────────────────────────
+
+    #[test]
+    fn apply_command_case_lower() {
+        let config = Config {
+            command_case: CaseStyle::Lower,
+            ..Config::default()
+        };
+        assert_eq!(
+            config.apply_command_case("TARGET_LINK_LIBRARIES"),
+            "target_link_libraries"
+        );
+    }
+
+    #[test]
+    fn apply_command_case_upper() {
+        let config = Config {
+            command_case: CaseStyle::Upper,
+            ..Config::default()
+        };
+        assert_eq!(
+            config.apply_command_case("target_link_libraries"),
+            "TARGET_LINK_LIBRARIES"
+        );
+    }
+
+    #[test]
+    fn apply_command_case_unchanged() {
+        let config = Config {
+            command_case: CaseStyle::Unchanged,
+            ..Config::default()
+        };
+        assert_eq!(
+            config.apply_command_case("Target_Link_Libraries"),
+            "Target_Link_Libraries"
+        );
+    }
+
+    #[test]
+    fn apply_keyword_case_variants() {
+        let config_upper = Config {
+            keyword_case: CaseStyle::Upper,
+            ..Config::default()
+        };
+        assert_eq!(config_upper.apply_keyword_case("public"), "PUBLIC");
+
+        let config_lower = Config {
+            keyword_case: CaseStyle::Lower,
+            ..Config::default()
+        };
+        assert_eq!(config_lower.apply_keyword_case("PUBLIC"), "public");
+    }
+
+    // ── Error Display ─────────────────────────────────────────────────────
+
+    #[test]
+    fn error_layout_too_wide_display() {
+        use crate::error::Error;
+        let err = Error::LayoutTooWide {
+            line_no: 5,
+            width: 95,
+            limit: 80,
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("5"), "should mention line number");
+        assert!(msg.contains("95"), "should mention actual width");
+        assert!(msg.contains("80"), "should mention limit");
+    }
+
+    #[test]
+    fn error_formatter_display() {
+        use crate::error::Error;
+        let err = Error::Formatter("something went wrong".to_string());
+        assert!(err.to_string().contains("something went wrong"));
+    }
+}
