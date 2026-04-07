@@ -108,7 +108,11 @@ export default defineConfig({
           label: "Guides",
           items: [
             { label: "Migration from cmake-format", slug: "migration" },
+            { label: "Editor Integration", slug: "editors" },
+            { label: "CI Integration", slug: "ci" },
             { label: "Performance", slug: "performance" },
+            { label: "Comparison", slug: "comparison" },
+            { label: "Badge", slug: "badge" },
             { label: "Troubleshooting", slug: "troubleshooting" },
           ],
         },
