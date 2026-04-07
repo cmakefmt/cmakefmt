@@ -9,7 +9,7 @@
 [![Coverage](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml)
 [![Crates.io](https://img.shields.io/crates/v/cmakefmt-rust.svg)](https://crates.io/crates/cmakefmt-rust)
 
-**A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.**
+**A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
 `cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format) tool with a
 single native binary. Same spirit. No Python. No compromises.

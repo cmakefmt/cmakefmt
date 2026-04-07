@@ -38,7 +38,7 @@ export default defineConfig({
         },
       },
       title: "cmakefmt",
-      description: "A blazing-fast, workflow-first CMake formatter — built in Rust, built to last.",
+      description: "A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.",
       logo: {
         src: "./src/assets/logo.png",
         alt: "cmakefmt logo",
