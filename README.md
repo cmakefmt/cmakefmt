@@ -10,6 +10,9 @@
 [![Pages](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml)
 [![Coverage](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg)](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml)
 [![Crates.io](https://img.shields.io/crates/v/cmakefmt-rust.svg)](https://crates.io/crates/cmakefmt-rust)
+[![dependency status](https://deps.rs/repo/github/cmakefmt/cmakefmt/status.svg)](https://deps.rs/repo/github/cmakefmt/cmakefmt)
+[![REUSE status](https://api.reuse.software/badge/github.com/cmakefmt/cmakefmt)](https://api.reuse.software/info/github.com/cmakefmt/cmakefmt)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cmakefmt/cmakefmt/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cmakefmt/cmakefmt)
 
 **A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
