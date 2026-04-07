@@ -64,6 +64,10 @@ jobs:
         shell: bash
         run: cargo generate-lockfile
 
+      - name: Verify docs checks
+        shell: bash
+        run: bash scripts/check-docs.sh
+
       - name: Stamp changelog
         shell: bash
         run: python3 scripts/stamp-changelog.py "${{ inputs.version }}"
@@ -71,10 +75,6 @@ jobs:
       - name: Sync docs changelog
         shell: bash
         run: python3 scripts/sync-changelog.py
-
-      - name: Verify docs checks
-        shell: bash
-        run: bash scripts/check-docs.sh
 
       - name: Verify version matches Cargo.toml
         shell: bash
