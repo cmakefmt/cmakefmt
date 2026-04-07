@@ -217,6 +217,8 @@ the human summary.
 
 ## Still Stuck?
 
+Open an issue at [github.com/cmakefmt/cmakefmt/issues](https://github.com/cmakefmt/cmakefmt/issues).
+
 When reporting an issue, include:
 
 - the exact command you ran

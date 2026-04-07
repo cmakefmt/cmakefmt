@@ -12,6 +12,17 @@ Thanks for your interest in contributing to cmakefmt. This page covers the
 contributor workflow: setting up your environment, building from source,
 running tests, setting up hooks, and keeping docs accurate.
 
+## Feedback and Bug Reports
+
+Bug reports, feature requests, and questions are tracked on GitHub Issues:
+
+**[github.com/cmakefmt/cmakefmt/issues](https://github.com/cmakefmt/cmakefmt/issues)**
+
+When filing a bug, include the output of `cmakefmt --version`, the command you
+ran, and a minimal CMake file that reproduces the problem. For formatting
+behaviour questions, the [Playground](/playground/) is a quick way to
+share a reproducible example.
+
 ## Dev Environment Setup
 
 The repository ships a [mise](https://mise.jdx.dev) config that pins and
