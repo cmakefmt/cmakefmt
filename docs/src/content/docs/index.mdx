@@ -45,6 +45,8 @@ cmakefmt --staged --check                 # pre-commit: format only staged files
 
 ## Performance
 
+<div class="perf-table">
+
 | Fixture | Lines | `cmakefmt` ms | `cmake-format` ms | Speedup |
 | --- | ---: | ---: | ---: | ---: |
 | `abseil/CMakeLists.txt` | 280 | 5.804 | 168.570 | 29.04× |
@@ -61,6 +63,8 @@ cmakefmt --staged --check                 # pre-commit: format only staged files
 | `protobuf/CMakeLists.txt` | 351 | 6.226 | 111.802 | 17.96× |
 | `spdlog/CMakeLists.txt` | 413 | 9.204 | 213.649 | 23.21× |
 | `qtbase_network/CMakeLists.txt` | 420 | 8.146 | 284.355 | 34.91× |
+
+</div>
 
 **Geometric-mean speedup: `20.69×`** across the full corpus.
 On a 612-file real-world repo: `~97×` faster than `cmake-format` sequentially, and `~240×` faster with `--parallel 8`.
