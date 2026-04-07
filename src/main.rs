@@ -608,7 +608,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     if cli.dump_schema {
-        print!("{}", generate_json_schema());
+        println!("{}", generate_json_schema());
         return Ok(EXIT_OK);
     }
 
