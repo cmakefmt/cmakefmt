@@ -38,6 +38,35 @@ Current headline measurements were captured on:
 Exact numbers vary by machine. What matters across releases is that relative
 performance trends remain strong and regressions are caught early.
 
+## Benchmark Approach
+
+Per-file timings are measured with `hyperfine` against a corpus of 15
+real-world `CMakeLists.txt` files sourced from well-known open-source projects.
+Each fixture is run in isolation — one file, one process — to isolate
+single-file formatting performance from batch overhead.
+
+Both `cmakefmt` and `cmake-format` are timed in the same `hyperfine` invocation
+so they share the same system conditions:
+
+```bash
+hyperfine --warmup 10 --runs 50 \
+  "cmakefmt path/to/CMakeLists.txt" \
+  "cmake-format path/to/CMakeLists.txt"
+```
+
+- **10 warmup runs** — allow the OS page cache and branch predictor to reach a
+  steady state before measurements are recorded
+- **50 timed runs** — give hyperfine enough samples for a stable mean and tight
+  confidence interval
+- **Geometric mean** — used instead of arithmetic mean because it is resistant
+  to outliers and gives equal weight to each fixture regardless of absolute
+  runtime
+
+The fixture corpus and its pinned commit SHAs are stored in
+`tests/fixtures/real_world/manifest.toml`. To reproduce the measurements
+locally, fetch the corpus and run hyperfine against each file using the commands
+in [How To Reproduce](#how-to-reproduce) below.
+
 ## Benchmark Results
 
 Time comparison across real-world fixtures. Hover a bar to see the exact
