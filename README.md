@@ -39,7 +39,7 @@ single native binary. Same spirit. No Python.
 
 ## Why `cmakefmt`?
 
-* **22× faster — not a typo.** Geometric-mean speedup of `22.18x` over `cmake-format` on real-world corpora.
+* **25× faster — not a typo.** Geometric-mean speedup of `25.33x` over `cmake-format` on real-world corpora.
   Pre-commit hooks that once made you wince now finish before you blink.
 * **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
   Drop it in CI and forget about it.
@@ -57,23 +57,23 @@ single native binary. Same spirit. No Python.
 
 | Fixture                         | Lines | `cmakefmt` ms | `cmake-format` ms | Speedup |
 |---------------------------------|------:|--------------:|------------------:|--------:|
-| `abseil/CMakeLists.txt`         |   280 |         5.804 |           168.570 |  29.04× |
-| `catch2/CMakeLists.txt`         |   230 |         5.768 |           105.614 |  18.31× |
-| `cli11/CMakeLists.txt`          |   283 |         5.570 |           120.994 |  21.72× |
-| `cmake_cmbzip2/CMakeLists.txt`  |    25 |         5.042 |            61.751 |  12.25× |
-| `googletest/CMakeLists.txt`     |    36 |         5.004 |            62.439 |  12.48× |
-| `ggml/CMakeLists.txt`           |   498 |         7.773 |           210.200 |  27.04× |
-| `llama_cpp/CMakeLists.txt`      |   286 |         6.257 |           126.584 |  20.23× |
-| `llvm_tablegen/CMakeLists.txt`  |    83 |         5.172 |            75.429 |  14.58× |
-| `mariadb_server/CMakeLists.txt` |   656 |         9.774 |           473.879 |  48.49× |
-| `nlohmann_json/CMakeLists.txt`  |   237 |         5.705 |           138.936 |  24.35× |
-| `opencv_flann/CMakeLists.txt`   |     2 |         4.719 |            51.497 |  10.91× |
-| `protobuf/CMakeLists.txt`       |   351 |         6.226 |           111.802 |  17.96× |
-| `spdlog/CMakeLists.txt`         |   413 |         9.204 |           213.649 |  23.21× |
-| `qtbase_network/CMakeLists.txt` |   420 |         8.146 |           284.355 |  34.91× |
-| `xnnpack/CMakeLists.txt`        |  1354 |        24.800 |          1452.000 |  58.48× |
+| `abseil/CMakeLists.txt`         |   280 |         5.358 |           172.882 |  32.27× |
+| `catch2/CMakeLists.txt`         |   230 |         5.177 |           110.495 |  21.34× |
+| `cli11/CMakeLists.txt`          |   283 |         5.174 |           125.992 |  24.35× |
+| `cmake_cmbzip2/CMakeLists.txt`  |    25 |         4.563 |            63.034 |  13.81× |
+| `googletest/CMakeLists.txt`     |    36 |         4.376 |            65.244 |  14.91× |
+| `ggml/CMakeLists.txt`           |   498 |         7.371 |           216.193 |  29.33× |
+| `llama_cpp/CMakeLists.txt`      |   286 |         5.755 |           131.230 |  22.80× |
+| `llvm_tablegen/CMakeLists.txt`  |    83 |         4.439 |            79.608 |  17.93× |
+| `mariadb_server/CMakeLists.txt` |   656 |         9.097 |           489.035 |  53.76× |
+| `nlohmann_json/CMakeLists.txt`  |   237 |         5.035 |           140.580 |  27.92× |
+| `opencv_flann/CMakeLists.txt`   |     2 |         4.263 |            54.812 |  12.86× |
+| `protobuf/CMakeLists.txt`       |   351 |         5.478 |           114.711 |  20.94× |
+| `spdlog/CMakeLists.txt`         |   413 |         6.461 |           220.804 |  34.17× |
+| `qtbase_network/CMakeLists.txt` |   420 |         7.852 |           293.745 |  37.41× |
+| `xnnpack/CMakeLists.txt`        |  1354 |        26.965 |          1432.939 |  53.14× |
 
-Geometric-mean speedup across the full corpus: **`22.18×`**.
+Geometric-mean speedup across the full corpus: **`25.33×`**.
 On a 220-file batch, `--parallel 8` improves throughput by **`3.80×`** vs serial.
 
 Full methodology and profiler notes: [cmakefmt.dev/performance/](https://cmakefmt.dev/performance/).
