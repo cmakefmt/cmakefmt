@@ -95,6 +95,7 @@ jobs:
         uses: Swatinem/rust-cache@v2.9.1
         with:
           key: ${{ matrix.target }}
+          save-if: false
 
       - name: Install musl toolchain
         if: matrix.target == 'x86_64-unknown-linux-musl'

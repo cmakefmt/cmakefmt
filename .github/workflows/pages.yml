@@ -35,6 +35,8 @@ jobs:
 
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@v2.9.1
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install wasm-pack
         uses: taiki-e/install-action@wasm-pack
