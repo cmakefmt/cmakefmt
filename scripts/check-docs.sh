@@ -7,6 +7,8 @@
 set -euo pipefail
 
 required_files=(
+  "scripts/stamp-changelog.py"
+  "scripts/sync-changelog.py"
   "README.md"
   "CONTRIBUTING.md"
   "CHANGELOG.md"
