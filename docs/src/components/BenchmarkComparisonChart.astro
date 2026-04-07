@@ -223,19 +223,18 @@
 
   .scale-toggle {
     display: flex;
-    border: 1px solid var(--sl-color-hairline, hsl(240, 6%, 90%));
-    border-radius: 0.375rem;
-    overflow: hidden;
+    gap: 0.25rem;
   }
 
   .scale-btn {
     padding: 0.2rem 0.65rem;
     font-size: 0.75rem;
     cursor: pointer;
-    border: none;
+    border: 1px solid var(--sl-color-hairline, hsl(240, 6%, 90%));
+    border-radius: 0.375rem;
     background: transparent;
     color: var(--sl-color-gray-3, hsl(240, 4%, 46%));
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
 
   .scale-btn:hover:not(.active) {
@@ -245,10 +244,7 @@
 
   .scale-btn.active {
     background: var(--sl-color-accent, hsl(200, 98%, 39%));
+    border-color: var(--sl-color-accent, hsl(200, 98%, 39%));
     color: #fff;
-  }
-
-  .scale-btn + .scale-btn {
-    border-left: 1px solid var(--sl-color-hairline, hsl(240, 6%, 90%));
   }
 </style>
