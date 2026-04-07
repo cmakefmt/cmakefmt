@@ -218,20 +218,14 @@ body {
 /* ─── Buttons — pill-shaped like Protocol ───────────────────────────────── */
 
 .hero .actions a.primary {
-  background: var(--sl-color-white);
-  border-color: var(--sl-color-white);
-  color: var(--sl-color-black);
+  background: var(--sl-color-accent);
+  border-color: var(--sl-color-accent);
+  color: #fff;
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
   padding: 0.375rem 0.875rem;
-  transition: background 0.15s ease;
-}
-
-[data-theme="dark"] .hero .actions a.primary {
-  background: hsl(156, 72%, 67%, 0.1);
-  border-color: transparent;
-  color: hsl(156, 72%, 67%);
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .hero .actions a.primary:hover {
