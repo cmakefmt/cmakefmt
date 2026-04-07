@@ -12,10 +12,10 @@
 **A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
 `cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format) tool with a
-single native binary. Same spirit. No Python. No compromises.
+single native binary. Same spirit. No Python.
 
 * [crates.io](crates.io): `cmakefmt-rust`
-* cli name: `cmakefmt`
+* CLI name: `cmakefmt`
 
 > [!NOTE]
 >
