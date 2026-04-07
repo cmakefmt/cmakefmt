@@ -57,6 +57,10 @@ pub mod spec;
 #[doc(hidden)]
 pub mod files;
 
+// LSP server — only compiled when the `lsp` feature is enabled.
+#[cfg(feature = "lsp")]
+pub mod lsp;
+
 // WASM entry point — only compiled for wasm32 targets.
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;

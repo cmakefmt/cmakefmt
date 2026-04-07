@@ -33,7 +33,9 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["cli"]
+lsp = ["lsp-server", "lsp-types"]
 cli = [
+  "lsp",
   "clap",
   "clap_complete",
   "clap_mangen",
@@ -65,6 +67,8 @@ rayon = { version = "1", optional = true }
 indicatif = { version = "0.18", optional = true }
 similar = { version = "3.0", optional = true }
 schemars = { version = "0.8", optional = true }
+lsp-server = { version = "0.7", optional = true }
+lsp-types = { version = "0.97", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

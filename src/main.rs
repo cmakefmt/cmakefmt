@@ -511,6 +511,11 @@ struct Cli {
     /// Format only files that opt in with a `# cmakefmt: enable` style pragma.
     #[arg(long, help_heading = "Execution")]
     require_pragma: bool,
+
+    /// Start the cmakefmt LSP server (reads/writes JSON-RPC on stdio).
+    #[cfg(feature = "lsp")]
+    #[arg(long = "lsp", help_heading = "Config And Conversion")]
+    lsp: bool,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -601,6 +606,12 @@ fn main() -> ExitCode {
 
 fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     check_required_version(cli)?;
+
+    #[cfg(feature = "lsp")]
+    if cli.lsp {
+        cmakefmt::lsp::run().map_err(|e| cmakefmt::Error::Formatter(e.to_string()))?;
+        return Ok(EXIT_OK);
+    }
 
     if let Some(format) = cli.dump_config {
         print!("{}", default_config_template_for(format));
@@ -3062,6 +3073,7 @@ mod tests {
             "version",
             "in-place",
             "dump-schema",
+            "lsp",
         ];
 
         for arg in Cli::command().get_arguments() {
