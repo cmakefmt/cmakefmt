@@ -9,7 +9,8 @@
     "start": "python3 ../scripts/sync-changelog.py && astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "clean": "rm -rf node_modules .astro dist"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
