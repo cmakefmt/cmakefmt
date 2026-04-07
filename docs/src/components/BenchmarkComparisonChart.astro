@@ -5,6 +5,13 @@
 ---
 
 <div class="chart-wrapper">
+  <div class="chart-controls">
+    <span class="scale-label">Scale</span>
+    <div class="scale-toggle" role="group" aria-label="Y-axis scale">
+      <button id="btn-linear" class="scale-btn active" type="button">Linear</button>
+      <button id="btn-log"    class="scale-btn"        type="button">Log</button>
+    </div>
+  </div>
   <canvas
     id="benchmark-comparison-chart"
     aria-label="cmakefmt vs cmake-format per-fixture timing comparison"></canvas>
@@ -56,19 +63,22 @@
   function colors() {
     const dark = isDark();
     return {
-      cmakefmt: dark ? "hsl(198,93%,60%)" : "hsl(200,98%,39%)",
-      cmakefmtHover: dark ? "hsl(198,93%,70%)" : "hsl(200,98%,28%)",
-      legacy: dark ? "hsl(240,4%,40%)" : "hsl(240,5%,72%)",
-      legacyHover: dark ? "hsl(240,4%,50%)" : "hsl(240,5%,60%)",
-      grid: dark ? "hsl(240,4%,20%)" : "hsl(240,6%,90%)",
-      text: dark ? "hsl(0,0%,100%)" : "hsl(240,6%,10%)",
-      subtext: dark ? "hsl(240,5%,65%)" : "hsl(240,4%,46%)",
+      cmakefmt:     dark ? "hsl(198,93%,60%)" : "hsl(200,98%,39%)",
+      cmakefmtHover:dark ? "hsl(198,93%,70%)" : "hsl(200,98%,28%)",
+      legacy:       dark ? "hsl(240,4%,40%)"  : "hsl(240,5%,72%)",
+      legacyHover:  dark ? "hsl(240,4%,50%)"  : "hsl(240,5%,60%)",
+      grid:         dark ? "hsl(240,4%,20%)"  : "hsl(240,6%,90%)",
+      text:         dark ? "hsl(0,0%,100%)"   : "hsl(240,6%,10%)",
+      subtext:      dark ? "hsl(240,5%,65%)"  : "hsl(240,4%,46%)",
     };
   }
 
   const canvas = document.getElementById("benchmark-comparison-chart") as HTMLCanvasElement;
+  const btnLinear = document.getElementById("btn-linear") as HTMLButtonElement;
+  const btnLog    = document.getElementById("btn-log")    as HTMLButtonElement;
 
   let chart: Chart | null = null;
+  let logScale = false;
 
   function buildChart() {
     const c = colors();
@@ -112,14 +122,14 @@
               maxRotation: 35,
               minRotation: 35,
             },
-            grid: { color: c.grid },
+            grid:   { color: c.grid },
             border: { color: c.grid },
           },
           y: {
-            type: "linear",
+            type: logScale ? "logarithmic" : "linear",
             title: {
               display: true,
-              text: "Time (ms, log scale)",
+              text: logScale ? "Time (ms, log scale)" : "Time (ms)",
               color: c.subtext,
               font: { size: 11 },
             },
@@ -128,7 +138,7 @@
               font: { size: 11 },
               callback: (v) => `${v} ms`,
             },
-            grid: { color: c.grid },
+            grid:   { color: c.grid },
             border: { color: c.grid },
           },
         },
@@ -143,10 +153,10 @@
           },
           tooltip: {
             backgroundColor: isDark() ? "hsl(240,6%,14%)" : "hsl(0,0%,100%)",
-            borderColor: isDark() ? "hsl(240,4%,24%)" : "hsl(240,6%,90%)",
+            borderColor:     isDark() ? "hsl(240,4%,24%)" : "hsl(240,6%,90%)",
             borderWidth: 1,
             titleColor: c.text,
-            bodyColor: c.subtext,
+            bodyColor:  c.subtext,
             padding: 10,
             callbacks: {
               title: (items) => {
@@ -170,6 +180,16 @@
     });
   }
 
+  function setScale(log: boolean) {
+    logScale = log;
+    btnLinear.classList.toggle("active",  !log);
+    btnLog.classList.toggle("active",      log);
+    buildChart();
+  }
+
+  btnLinear.addEventListener("click", () => setScale(false));
+  btnLog.addEventListener(   "click", () => setScale(true));
+
   buildChart();
 
   // Re-render when the theme toggles
@@ -187,5 +207,48 @@
     border-radius: 0.75rem;
     padding: 1.5rem 1rem 1rem;
     background: color-mix(in srgb, var(--sl-color-accent-low, hsl(200, 98%, 95%)) 10%, transparent);
+  }
+
+  .chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .scale-label {
+    font-size: 0.75rem;
+    color: var(--sl-color-gray-3, hsl(240, 4%, 46%));
+  }
+
+  .scale-toggle {
+    display: flex;
+    border: 1px solid var(--sl-color-hairline, hsl(240, 6%, 90%));
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .scale-btn {
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--sl-color-gray-3, hsl(240, 4%, 46%));
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .scale-btn:hover:not(.active) {
+    background: var(--sl-color-gray-6, hsl(240, 6%, 90%));
+    color: var(--sl-color-text, hsl(240, 6%, 10%));
+  }
+
+  .scale-btn.active {
+    background: var(--sl-color-accent, hsl(200, 98%, 39%));
+    color: #fff;
+  }
+
+  .scale-btn + .scale-btn {
+    border-left: 1px solid var(--sl-color-hairline, hsl(240, 6%, 90%));
   }
 </style>
