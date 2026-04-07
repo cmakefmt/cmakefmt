@@ -71,7 +71,7 @@ pub use config::{
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use config::{
     convert_legacy_config_files, default_config_template, default_config_template_for,
-    render_effective_config, DumpConfigFormat,
+    generate_json_schema, render_effective_config, DumpConfigFormat,
 };
 
 // ── Errors ───────────────────────────────────────────────────────────────────

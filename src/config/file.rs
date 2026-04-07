@@ -18,65 +18,103 @@ use crate::error::{Error, FileParseError, Result};
 /// `.cmakefmt.toml`.
 ///
 /// All fields are optional — only specified values override the defaults.
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
+#[schemars(title = "cmakefmt configuration")]
 #[serde(default)]
 struct FileConfig {
+    /// Formatting options controlling line width, indentation, and layout.
     format: FormatSection,
+    /// Style options controlling command and keyword casing.
     style: StyleSection,
+    /// Comment markup processing options.
     markup: MarkupSection,
+    /// Per-command configuration overrides keyed by lowercase command name.
     #[serde(rename = "per_command_overrides")]
     per_command_overrides: HashMap<String, PerCommandConfig>,
     #[serde(rename = "per_command")]
+    #[schemars(skip)]
     legacy_per_command: HashMap<String, PerCommandConfig>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 struct FormatSection {
+    /// Disable formatting entirely and return the source unchanged.
     disable: Option<bool>,
+    /// Output line-ending style: `unix` (LF), `windows` (CRLF), or `auto` (detect from input).
     line_ending: Option<LineEnding>,
+    /// Maximum rendered line width before cmakefmt wraps a call. Default: `80`.
     line_width: Option<usize>,
+    /// Number of spaces per indentation level when `use_tabs` is `false`. Default: `2`.
     tab_size: Option<usize>,
+    /// Indent with tab characters instead of spaces.
     use_tabs: Option<bool>,
+    /// How to handle fractional indentation when `use_tabs` is `true`: `use-space` or `round-up`.
     fractional_tab_policy: Option<FractionalTabPolicy>,
+    /// Maximum number of consecutive blank lines to preserve. Default: `1`.
     max_empty_lines: Option<usize>,
+    /// Maximum wrapped lines to tolerate before switching to a more vertical layout. Default: `2`.
     max_hanging_wrap_lines: Option<usize>,
+    /// Maximum positional arguments to keep in a hanging-wrap layout. Default: `6`.
     max_hanging_wrap_positional_args: Option<usize>,
+    /// Maximum keyword/flag subgroups to keep in a hanging-wrap layout. Default: `2`.
     max_hanging_wrap_groups: Option<usize>,
+    /// Maximum rows a hanging-wrap positional group may consume before nesting is forced. Default: `2`.
     max_rows_cmdline: Option<usize>,
+    /// Command names (lowercase) that must always use vertical layout regardless of line width.
     always_wrap: Option<Vec<String>>,
+    /// Return an error if any formatted output line exceeds `line_width`.
     require_valid_layout: Option<bool>,
+    /// Place the closing `)` on its own line when a call wraps.
     dangle_parens: Option<bool>,
+    /// Alignment strategy for a dangling `)`: `prefix`, `open`, or `close`.
     dangle_align: Option<DangleAlign>,
+    /// Lower heuristic bound used when deciding between compact and wrapped layouts. Default: `4`.
     min_prefix_length: Option<usize>,
+    /// Upper heuristic bound used when deciding between compact and wrapped layouts. Default: `10`.
     max_prefix_length: Option<usize>,
+    /// Insert a space before `(` for control-flow commands such as `if`, `foreach`, `while`.
     space_before_control_paren: Option<bool>,
+    /// Insert a space before `(` for `function()` and `macro()` definitions.
     space_before_definition_paren: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 struct StyleSection {
+    /// Output casing for command names: `lower`, `upper`, or `unchanged`.
     command_case: Option<CaseStyle>,
+    /// Output casing for recognized keywords and flags: `lower`, `upper`, or `unchanged`.
     keyword_case: Option<CaseStyle>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 struct MarkupSection {
+    /// Enable markup-aware comment handling.
     enable_markup: Option<bool>,
+    /// Reflow plain line comments to fit within the configured line width.
     reflow_comments: Option<bool>,
+    /// Preserve the first comment block in a file literally.
     first_comment_is_literal: Option<bool>,
+    /// Regex for comments that should never be reflowed.
     literal_comment_pattern: Option<String>,
+    /// Preferred bullet character when normalizing markup lists. Default: `*`.
     bullet_char: Option<String>,
+    /// Preferred punctuation for numbered lists when normalizing markup. Default: `.`.
     enum_char: Option<String>,
+    /// Regex describing fenced literal comment blocks.
     fence_pattern: Option<String>,
+    /// Regex describing ruler-style comments that should be treated specially.
     ruler_pattern: Option<String>,
+    /// Minimum ruler length before a hash-only line is treated as a ruler. Default: `10`.
     hashruler_min_length: Option<usize>,
+    /// Normalize ruler comments when markup handling is enabled.
     canonicalize_hashrulers: Option<bool>,
+    /// Regex pattern for inline comments explicitly trailing their preceding argument. Default: `#<`.
     explicit_trailing_pattern: Option<String>,
 }
 
@@ -144,6 +182,15 @@ pub fn render_effective_config(config: &Config, format: DumpConfigFormat) -> Res
 /// Render a commented starter config using the default user-facing dump format.
 pub fn default_config_template() -> String {
     default_config_template_for(DumpConfigFormat::Yaml)
+}
+
+/// Generate a JSON Schema for the cmakefmt config file format.
+///
+/// The output is a pretty-printed JSON string suitable for publishing to
+/// `cmakefmt.dev/schemas/v{version}/schema.json`.
+pub fn generate_json_schema() -> String {
+    let schema = schemars::schema_for!(FileConfig);
+    serde_json::to_string_pretty(&schema).expect("JSON schema serialization failed")
 }
 
 fn default_config_template_toml() -> String {
@@ -383,6 +430,7 @@ impl From<&Config> for EffectiveConfigFile {
 fn default_config_template_yaml() -> String {
     format!(
         concat!(
+            "# yaml-language-server: $schema=https://cmakefmt.dev/schemas/latest/schema.json\n",
             "# Default cmakefmt configuration.\n",
             "# Copy this to .cmakefmt.yaml and uncomment the optional settings\n",
             "# you want to customize.\n\n",

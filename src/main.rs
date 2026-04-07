@@ -17,7 +17,7 @@ use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
     convert_legacy_config_files, default_config_template_for,
     files::{discover_cmake_files_with_options, is_cmake_file, matches_filter, DiscoveryOptions},
-    format_source_with_registry, format_source_with_registry_debug, parser,
+    format_source_with_registry, format_source_with_registry_debug, generate_json_schema, parser,
     render_effective_config, CaseStyle, Config, DumpConfigFormat,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
@@ -179,6 +179,13 @@ struct Cli {
         default_missing_value = "yaml"
     )]
     dump_config: Option<DumpConfigFormat>,
+
+    /// Print the JSON Schema for the cmakefmt config file and exit.
+    ///
+    /// The schema describes every option in `.cmakefmt.yaml` / `.cmakefmt.toml`
+    /// and is used by editor language servers for autocomplete and validation.
+    #[arg(long = "dump-schema", help_heading = "Config And Conversion")]
+    dump_schema: bool,
 
     /// Generate shell completion scripts and print them to stdout.
     #[arg(
@@ -597,6 +604,11 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     if let Some(format) = cli.dump_config {
         print!("{}", default_config_template_for(format));
+        return Ok(EXIT_OK);
+    }
+
+    if cli.dump_schema {
+        print!("{}", generate_json_schema());
         return Ok(EXIT_OK);
     }
 
@@ -3049,6 +3061,7 @@ mod tests {
             "stdin-path",
             "version",
             "in-place",
+            "dump-schema",
         ];
 
         for arg in Cli::command().get_arguments() {

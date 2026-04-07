@@ -16,7 +16,8 @@ mod legacy;
 /// Render a commented starter config template.
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use file::{
-    default_config_template, default_config_template_for, render_effective_config, DumpConfigFormat,
+    default_config_template, default_config_template_for, generate_json_schema,
+    render_effective_config, DumpConfigFormat,
 };
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use legacy::convert_legacy_config_files;
@@ -27,7 +28,7 @@ use serde::{Deserialize, Serialize};
 
 /// How to normalise command/keyword casing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum CaseStyle {
     /// Force lowercase output.
@@ -41,7 +42,7 @@ pub enum CaseStyle {
 
 /// Output line-ending style.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum LineEnding {
     /// Unix-style LF (`\n`). The default.
@@ -56,7 +57,7 @@ pub enum LineEnding {
 /// How to handle fractional tab indentation when [`Config::use_tabchars`] is
 /// `true`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum FractionalTabPolicy {
     /// Leave fractional spaces as-is (utf-8 0x20). The default.
@@ -83,6 +84,7 @@ pub enum FractionalTabPolicy {
 ///                      )
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum DangleAlign {
     /// Align with the start of the command name.
@@ -224,6 +226,7 @@ pub struct Config {
 /// Per-command overrides. All fields are optional — only specified fields
 /// override the global config for that command.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct PerCommandConfig {
     /// Override the command casing rule for this command only.
