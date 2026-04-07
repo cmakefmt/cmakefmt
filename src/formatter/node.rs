@@ -4,7 +4,9 @@
 
 //! Command-invocation formatting logic.
 
-use crate::config::{CaseStyle, CommandConfig, Config, DangleAlign};
+use regex::Regex;
+
+use crate::config::{CaseStyle, CommandConfig, Config, DangleAlign, FractionalTabPolicy};
 use crate::error::Result;
 use crate::formatter::comment;
 use crate::parser::ast::{Argument, CommandInvocation};
@@ -57,7 +59,26 @@ pub(crate) fn format_command(
         cmd_config.max_subgroups_hwrap(),
     ));
 
-    let output = if let Some(inline) = try_format_inline(
+    // Check whether this command must always be laid out vertically: either
+    // the global config lists it, or the resolved command spec requests it.
+    let spec_always_wrap = form
+        .layout
+        .as_ref()
+        .and_then(|l| l.always_wrap)
+        .unwrap_or(false);
+    let config_always_wrap = config
+        .always_wrap
+        .iter()
+        .any(|n| n.eq_ignore_ascii_case(&command.name));
+    let force_vertical = spec_always_wrap || config_always_wrap;
+
+    let output = if force_vertical {
+        debug.log(format!(
+            "formatter: command {} layout=vertical (always_wrap)",
+            command.name
+        ));
+        format_command_vertical(command, &sections, &cmd_config, block_depth)?
+    } else if let Some(inline) = try_format_inline(
         command,
         &sections,
         &cmd_config,
@@ -102,7 +123,11 @@ pub(crate) fn format_command(
     };
 
     if config.use_tabchars {
-        Ok(spaces_to_tabs(&output, cmd_config.tab_size()))
+        Ok(spaces_to_tabs(
+            &output,
+            cmd_config.tab_size(),
+            config.fractional_tab_policy,
+        ))
     } else {
         Ok(output)
     }
@@ -325,6 +350,11 @@ fn try_format_hanging(
         cmd_config.global.max_lines_hwrap,
         break_before,
     )?;
+    // Reject the hanging layout if it produces more rows than the cmdline
+    // threshold allows.
+    if lines.len() > cmd_config.global.max_rows_cmdline {
+        return None;
+    }
     if lines.len() == 1 {
         lines[0].push(')');
         return Some(lines.remove(0));
@@ -599,9 +629,27 @@ fn write_vertical_arguments(
     indent: &str,
     config: &Config,
 ) {
+    // Pre-compile the explicit trailing pattern once for this call.
+    let trailing_re = if !config.explicit_trailing_pattern.is_empty() {
+        Regex::new(&config.explicit_trailing_pattern).ok()
+    } else {
+        None
+    };
+
     for argument in arguments {
         match argument {
             Argument::InlineComment(comment) => {
+                // If the comment matches the explicit trailing pattern and there
+                // is a preceding argument line in the output, append it inline.
+                if let Some(re) = &trailing_re {
+                    if re.is_match(comment.as_str()) && output.ends_with('\n') {
+                        output.pop(); // remove trailing newline
+                        output.push(' ');
+                        output.push_str(comment.as_str());
+                        output.push('\n');
+                        continue;
+                    }
+                }
                 for line in comment::format_comment_lines(
                     comment,
                     config,
@@ -798,7 +846,7 @@ fn match_condition_breaks(name: &str) -> &'static [&'static str] {
 }
 
 /// Replace leading spaces with tab characters.
-fn spaces_to_tabs(output: &str, tab_size: usize) -> String {
+fn spaces_to_tabs(output: &str, tab_size: usize, policy: FractionalTabPolicy) -> String {
     if tab_size == 0 {
         return output.to_string();
     }
@@ -814,8 +862,17 @@ fn spaces_to_tabs(output: &str, tab_size: usize) -> String {
         for _ in 0..tabs {
             result.push('\t');
         }
-        for _ in 0..remaining {
-            result.push(' ');
+        match policy {
+            FractionalTabPolicy::UseSpace => {
+                for _ in 0..remaining {
+                    result.push(' ');
+                }
+            }
+            FractionalTabPolicy::RoundUp => {
+                if remaining > 0 {
+                    result.push('\t');
+                }
+            }
         }
         result.push_str(&line[leading..]);
     }

@@ -14,7 +14,10 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::config::{file::DumpConfigFormat, CaseStyle, DangleAlign, PerCommandConfig};
+use crate::config::{
+    file::DumpConfigFormat, CaseStyle, DangleAlign, FractionalTabPolicy, LineEnding,
+    PerCommandConfig,
+};
 use crate::error::{Error, Result};
 use crate::spec::{
     CommandFormOverride, CommandSpecOverride, KwargSpecOverride, LayoutOverridesOverride, NArgs,
@@ -650,11 +653,17 @@ struct OutputConfigFile {
 #[derive(Debug, Clone, Default, Serialize)]
 struct OutputFormatSection {
     #[serde(skip_serializing_if = "Option::is_none")]
+    disable: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    line_ending: Option<LineEnding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     line_width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tab_size: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     use_tabs: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fractional_tab_policy: Option<FractionalTabPolicy>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_empty_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -663,6 +672,12 @@ struct OutputFormatSection {
     max_hanging_wrap_positional_args: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_hanging_wrap_groups: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_rows_cmdline: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    always_wrap: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    require_valid_layout: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     dangle_parens: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -679,13 +694,19 @@ struct OutputFormatSection {
 
 impl OutputFormatSection {
     fn has_any(&self) -> bool {
-        self.line_width.is_some()
+        self.disable.is_some()
+            || self.line_ending.is_some()
+            || self.line_width.is_some()
             || self.tab_size.is_some()
             || self.use_tabs.is_some()
+            || self.fractional_tab_policy.is_some()
             || self.max_empty_lines.is_some()
             || self.max_hanging_wrap_lines.is_some()
             || self.max_hanging_wrap_positional_args.is_some()
             || self.max_hanging_wrap_groups.is_some()
+            || self.max_rows_cmdline.is_some()
+            || self.always_wrap.is_some()
+            || self.require_valid_layout.is_some()
             || self.dangle_parens.is_some()
             || self.dangle_align.is_some()
             || self.min_prefix_length.is_some()
@@ -731,6 +752,8 @@ struct OutputMarkupSection {
     hashruler_min_length: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     canonicalize_hashrulers: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    explicit_trailing_pattern: Option<String>,
 }
 
 impl OutputMarkupSection {
@@ -745,6 +768,7 @@ impl OutputMarkupSection {
             || self.ruler_pattern.is_some()
             || self.hashruler_min_length.is_some()
             || self.canonicalize_hashrulers.is_some()
+            || self.explicit_trailing_pattern.is_some()
     }
 }
 
@@ -809,9 +833,14 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
 
     for (key, value) in table {
         match key.as_str() {
+            "disable" => converted.format.disable = as_bool(value),
+            "line_ending" => converted.format.line_ending = as_line_ending(value),
             "line_width" => converted.format.line_width = as_usize(value),
             "tab_size" => converted.format.tab_size = as_usize(value),
             "use_tabchars" | "use_tabs" => converted.format.use_tabs = as_bool(value),
+            "fractional_tab_policy" => {
+                converted.format.fractional_tab_policy = as_fractional_tab_policy(value)
+            }
             "max_pargs_hwrap" | "max_hanging_wrap_positional_args" => {
                 converted.format.max_hanging_wrap_positional_args = as_usize(value)
             }
@@ -822,6 +851,9 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
                 converted.format.max_hanging_wrap_lines = as_usize(value)
             }
             "max_empty_lines" => converted.format.max_empty_lines = as_usize(value),
+            "max_rows_cmdline" => converted.format.max_rows_cmdline = as_usize(value),
+            "always_wrap" => converted.format.always_wrap = as_string_list(value),
+            "require_valid_layout" => converted.format.require_valid_layout = as_bool(value),
             "dangle_parens" => converted.format.dangle_parens = as_bool(value),
             "dangle_align" => converted.format.dangle_align = as_dangle_align(value),
             "min_prefix_chars" | "min_prefix_length" => {
@@ -869,6 +901,9 @@ fn merge_markup_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
             "ruler_pattern" => converted.markup.ruler_pattern = as_string(value),
             "hashruler_min_length" => converted.markup.hashruler_min_length = as_usize(value),
             "canonicalize_hashrulers" => converted.markup.canonicalize_hashrulers = as_bool(value),
+            "explicit_trailing_pattern" => {
+                converted.markup.explicit_trailing_pattern = as_string(value)
+            }
             unsupported => converted.note_unsupported(path, &format!("[markup].{unsupported}")),
         }
     }
@@ -1151,6 +1186,35 @@ fn as_bool(value: &LegacyValue) -> Option<bool> {
 fn as_string(value: &LegacyValue) -> Option<String> {
     match value {
         LegacyValue::String(value) => Some(value.clone()),
+        _ => None,
+    }
+}
+
+fn as_line_ending(value: &LegacyValue) -> Option<LineEnding> {
+    match value.as_str()?.to_ascii_lowercase().as_str() {
+        "unix" => Some(LineEnding::Unix),
+        "windows" => Some(LineEnding::Windows),
+        "auto" => Some(LineEnding::Auto),
+        _ => None,
+    }
+}
+
+fn as_fractional_tab_policy(value: &LegacyValue) -> Option<FractionalTabPolicy> {
+    match value.as_str()?.to_ascii_lowercase().as_str() {
+        "use-space" => Some(FractionalTabPolicy::UseSpace),
+        "round-up" => Some(FractionalTabPolicy::RoundUp),
+        _ => None,
+    }
+}
+
+fn as_string_list(value: &LegacyValue) -> Option<Vec<String>> {
+    match value {
+        LegacyValue::Array(items) => Some(
+            items
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_ascii_lowercase()))
+                .collect(),
+        ),
         _ => None,
     }
 }

@@ -63,7 +63,10 @@ pub mod wasm;
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
-pub use config::{CaseStyle, CommandConfig, Config, DangleAlign, PerCommandConfig};
+pub use config::{
+    CaseStyle, CommandConfig, Config, DangleAlign, FractionalTabPolicy, LineEnding,
+    PerCommandConfig,
+};
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use config::{

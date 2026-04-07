@@ -9,7 +9,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{CaseStyle, Config, DangleAlign, PerCommandConfig};
+use crate::config::{
+    CaseStyle, Config, DangleAlign, FractionalTabPolicy, LineEnding, PerCommandConfig,
+};
 use crate::error::{Error, FileParseError, Result};
 
 /// The user-config file structure for `.cmakefmt.yaml`, `.cmakefmt.yml`, and
@@ -32,13 +34,19 @@ struct FileConfig {
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 struct FormatSection {
+    disable: Option<bool>,
+    line_ending: Option<LineEnding>,
     line_width: Option<usize>,
     tab_size: Option<usize>,
     use_tabs: Option<bool>,
+    fractional_tab_policy: Option<FractionalTabPolicy>,
     max_empty_lines: Option<usize>,
     max_hanging_wrap_lines: Option<usize>,
     max_hanging_wrap_positional_args: Option<usize>,
     max_hanging_wrap_groups: Option<usize>,
+    max_rows_cmdline: Option<usize>,
+    always_wrap: Option<Vec<String>>,
+    require_valid_layout: Option<bool>,
     dangle_parens: Option<bool>,
     dangle_align: Option<DangleAlign>,
     min_prefix_length: Option<usize>,
@@ -69,6 +77,7 @@ struct MarkupSection {
     ruler_pattern: Option<String>,
     hashruler_min_length: Option<usize>,
     canonicalize_hashrulers: Option<bool>,
+    explicit_trailing_pattern: Option<String>,
 }
 
 const CONFIG_FILE_NAME_TOML: &str = ".cmakefmt.toml";
@@ -144,12 +153,18 @@ fn default_config_template_toml() -> String {
             "# Copy this to .cmakefmt.toml and uncomment the optional settings\n",
             "# you want to customize.\n\n",
             "[format]\n",
+            "# Disable formatting entirely (return source unchanged).\n",
+            "# disable = true\n\n",
+            "# Output line-ending style: unix (LF), windows (CRLF), or auto (detect from input).\n",
+            "# line_ending = \"windows\"\n\n",
             "# Maximum rendered line width before cmakefmt wraps a call.\n",
             "line_width = {line_width}\n\n",
             "# Number of spaces per indentation level when use_tabs is false.\n",
             "tab_size = {tab_size}\n\n",
             "# Indent with tab characters instead of spaces.\n",
             "# use_tabs = true\n\n",
+            "# How to handle fractional indentation when use_tabs is true: use-space or round-up.\n",
+            "# fractional_tab_policy = \"round-up\"\n\n",
             "# Maximum number of consecutive blank lines to preserve.\n",
             "max_empty_lines = {max_empty_lines}\n\n",
             "# Maximum wrapped lines to tolerate before switching to a more vertical layout.\n",
@@ -158,6 +173,12 @@ fn default_config_template_toml() -> String {
             "max_hanging_wrap_positional_args = {max_pargs_hwrap}\n\n",
             "# Maximum keyword/flag subgroups to keep in a hanging-wrap layout.\n",
             "max_hanging_wrap_groups = {max_subgroups_hwrap}\n\n",
+            "# Maximum rows a hanging-wrap positional group may consume before nesting is forced.\n",
+            "max_rows_cmdline = {max_rows_cmdline}\n\n",
+            "# Commands that must always use vertical (wrapped) layout.\n",
+            "# always_wrap = [\"target_link_libraries\"]\n\n",
+            "# Return an error if any formatted line exceeds line_width.\n",
+            "# require_valid_layout = true\n\n",
             "# Put the closing ')' on its own line when a call wraps.\n",
             "dangle_parens = {dangle_parens}\n\n",
             "# Alignment strategy for a dangling ')': prefix, open, or close.\n",
@@ -196,6 +217,9 @@ fn default_config_template_toml() -> String {
             "hashruler_min_length = {hashruler_min_length}\n\n",
             "# Normalize ruler comments when markup handling is enabled.\n",
             "canonicalize_hashrulers = {canonicalize_hashrulers}\n\n",
+            "# Regex pattern for inline comments that are explicitly trailing their preceding\n",
+            "# argument (rendered on the same line). Default: '#<'.\n",
+            "# explicit_trailing_pattern = \"#<\"\n\n",
             "# Uncomment and edit a block like this to override formatting knobs\n",
             "# for a specific command. This changes layout behavior for that\n",
             "# command name only; it does not define new command syntax.\n",
@@ -237,6 +261,7 @@ fn default_config_template_toml() -> String {
         max_lines_hwrap = Config::default().max_lines_hwrap,
         max_pargs_hwrap = Config::default().max_pargs_hwrap,
         max_subgroups_hwrap = Config::default().max_subgroups_hwrap,
+        max_rows_cmdline = Config::default().max_rows_cmdline,
         dangle_parens = Config::default().dangle_parens,
         dangle_align = "prefix",
         min_prefix_chars = Config::default().min_prefix_chars,
@@ -264,13 +289,22 @@ struct EffectiveConfigFile {
 
 #[derive(Debug, Clone, Serialize)]
 struct EffectiveFormatSection {
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    disable: bool,
+    line_ending: LineEnding,
     line_width: usize,
     tab_size: usize,
     use_tabs: bool,
+    fractional_tab_policy: FractionalTabPolicy,
     max_empty_lines: usize,
     max_hanging_wrap_lines: usize,
     max_hanging_wrap_positional_args: usize,
     max_hanging_wrap_groups: usize,
+    max_rows_cmdline: usize,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    always_wrap: Vec<String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    require_valid_layout: bool,
     dangle_parens: bool,
     dangle_align: DangleAlign,
     min_prefix_length: usize,
@@ -297,19 +331,26 @@ struct EffectiveMarkupSection {
     ruler_pattern: String,
     hashruler_min_length: usize,
     canonicalize_hashrulers: bool,
+    explicit_trailing_pattern: String,
 }
 
 impl From<&Config> for EffectiveConfigFile {
     fn from(config: &Config) -> Self {
         Self {
             format: EffectiveFormatSection {
+                disable: config.disable,
+                line_ending: config.line_ending,
                 line_width: config.line_width,
                 tab_size: config.tab_size,
                 use_tabs: config.use_tabchars,
+                fractional_tab_policy: config.fractional_tab_policy,
                 max_empty_lines: config.max_empty_lines,
                 max_hanging_wrap_lines: config.max_lines_hwrap,
                 max_hanging_wrap_positional_args: config.max_pargs_hwrap,
                 max_hanging_wrap_groups: config.max_subgroups_hwrap,
+                max_rows_cmdline: config.max_rows_cmdline,
+                always_wrap: config.always_wrap.clone(),
+                require_valid_layout: config.require_valid_layout,
                 dangle_parens: config.dangle_parens,
                 dangle_align: config.dangle_align,
                 min_prefix_length: config.min_prefix_chars,
@@ -332,6 +373,7 @@ impl From<&Config> for EffectiveConfigFile {
                 ruler_pattern: config.ruler_pattern.clone(),
                 hashruler_min_length: config.hashruler_min_length,
                 canonicalize_hashrulers: config.canonicalize_hashrulers,
+                explicit_trailing_pattern: config.explicit_trailing_pattern.clone(),
             },
             per_command_overrides: config.per_command_overrides.clone(),
         }
@@ -345,12 +387,18 @@ fn default_config_template_yaml() -> String {
             "# Copy this to .cmakefmt.yaml and uncomment the optional settings\n",
             "# you want to customize.\n\n",
             "format:\n",
+            "  # Disable formatting entirely (return source unchanged).\n",
+            "  # disable: true\n\n",
+            "  # Output line-ending style: unix (LF), windows (CRLF), or auto (detect from input).\n",
+            "  # line_ending: windows\n\n",
             "  # Maximum rendered line width before cmakefmt wraps a call.\n",
             "  line_width: {line_width}\n\n",
             "  # Number of spaces per indentation level when use_tabs is false.\n",
             "  tab_size: {tab_size}\n\n",
             "  # Indent with tab characters instead of spaces.\n",
             "  # use_tabs: true\n\n",
+            "  # How to handle fractional indentation when use_tabs is true: use-space or round-up.\n",
+            "  # fractional_tab_policy: round-up\n\n",
             "  # Maximum number of consecutive blank lines to preserve.\n",
             "  max_empty_lines: {max_empty_lines}\n\n",
             "  # Maximum wrapped lines to tolerate before switching to a more vertical layout.\n",
@@ -359,6 +407,13 @@ fn default_config_template_yaml() -> String {
             "  max_hanging_wrap_positional_args: {max_pargs_hwrap}\n\n",
             "  # Maximum keyword/flag subgroups to keep in a hanging-wrap layout.\n",
             "  max_hanging_wrap_groups: {max_subgroups_hwrap}\n\n",
+            "  # Maximum rows a hanging-wrap positional group may consume before nesting is forced.\n",
+            "  max_rows_cmdline: {max_rows_cmdline}\n\n",
+            "  # Commands that must always use vertical (wrapped) layout.\n",
+            "  # always_wrap:\n",
+            "  #   - target_link_libraries\n\n",
+            "  # Return an error if any formatted line exceeds line_width.\n",
+            "  # require_valid_layout: true\n\n",
             "  # Put the closing ')' on its own line when a call wraps.\n",
             "  dangle_parens: {dangle_parens}\n\n",
             "  # Alignment strategy for a dangling ')': prefix, open, or close.\n",
@@ -397,6 +452,9 @@ fn default_config_template_yaml() -> String {
             "  hashruler_min_length: {hashruler_min_length}\n\n",
             "  # Normalize ruler comments when markup handling is enabled.\n",
             "  canonicalize_hashrulers: {canonicalize_hashrulers}\n\n",
+            "  # Regex pattern for inline comments that are explicitly trailing their preceding\n",
+            "  # argument (rendered on the same line). Default: '#<'.\n",
+            "  # explicit_trailing_pattern: '#<'\n\n",
             "# Uncomment and edit a block like this to override formatting knobs\n",
             "# for a specific command. This changes layout behavior for that\n",
             "# command name only; it does not define new command syntax.\n",
@@ -450,6 +508,7 @@ fn default_config_template_yaml() -> String {
         max_lines_hwrap = Config::default().max_lines_hwrap,
         max_pargs_hwrap = Config::default().max_pargs_hwrap,
         max_subgroups_hwrap = Config::default().max_subgroups_hwrap,
+        max_rows_cmdline = Config::default().max_rows_cmdline,
         dangle_parens = Config::default().dangle_parens,
         dangle_align = "prefix",
         min_prefix_chars = Config::default().min_prefix_chars,
@@ -508,6 +567,12 @@ impl Config {
 
     fn apply(&mut self, fc: FileConfig) {
         // Format section
+        if let Some(v) = fc.format.disable {
+            self.disable = v;
+        }
+        if let Some(v) = fc.format.line_ending {
+            self.line_ending = v;
+        }
         if let Some(v) = fc.format.line_width {
             self.line_width = v;
         }
@@ -516,6 +581,9 @@ impl Config {
         }
         if let Some(v) = fc.format.use_tabs {
             self.use_tabchars = v;
+        }
+        if let Some(v) = fc.format.fractional_tab_policy {
+            self.fractional_tab_policy = v;
         }
         if let Some(v) = fc.format.max_empty_lines {
             self.max_empty_lines = v;
@@ -528,6 +596,15 @@ impl Config {
         }
         if let Some(v) = fc.format.max_hanging_wrap_groups {
             self.max_subgroups_hwrap = v;
+        }
+        if let Some(v) = fc.format.max_rows_cmdline {
+            self.max_rows_cmdline = v;
+        }
+        if let Some(v) = fc.format.always_wrap {
+            self.always_wrap = v.into_iter().map(|s| s.to_ascii_lowercase()).collect();
+        }
+        if let Some(v) = fc.format.require_valid_layout {
+            self.require_valid_layout = v;
         }
         if let Some(v) = fc.format.dangle_parens {
             self.dangle_parens = v;
@@ -586,6 +663,9 @@ impl Config {
         }
         if let Some(v) = fc.markup.canonicalize_hashrulers {
             self.canonicalize_hashrulers = v;
+        }
+        if let Some(v) = fc.markup.explicit_trailing_pattern {
+            self.explicit_trailing_pattern = v;
         }
 
         // Per-command overrides (merge, don't replace)

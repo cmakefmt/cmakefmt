@@ -39,6 +39,33 @@ pub enum CaseStyle {
     Unchanged,
 }
 
+/// Output line-ending style.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+#[serde(rename_all = "lowercase")]
+pub enum LineEnding {
+    /// Unix-style LF (`\n`). The default.
+    #[default]
+    Unix,
+    /// Windows-style CRLF (`\r\n`).
+    Windows,
+    /// Auto-detect the line ending from the input source.
+    Auto,
+}
+
+/// How to handle fractional tab indentation when [`Config::use_tabchars`] is
+/// `true`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+#[serde(rename_all = "kebab-case")]
+pub enum FractionalTabPolicy {
+    /// Leave fractional spaces as-is (utf-8 0x20). The default.
+    #[default]
+    UseSpace,
+    /// Round fractional indentation up to the next full tab stop (utf-8 0x09).
+    RoundUp,
+}
+
 /// How to align the dangling closing paren.
 ///
 /// Only takes effect when [`Config::dangle_parens`] is `true`.
@@ -102,6 +129,14 @@ pub enum DangleAlign {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
+    // ── Kill-switch ─────────────────────────────────────────────────────
+    /// When `true`, skip all formatting and return the source unchanged.
+    pub disable: bool,
+
+    // ── Line endings ─────────────────────────────────────────────────────
+    /// Output line-ending style.
+    pub line_ending: LineEnding,
+
     // ── Layout ──────────────────────────────────────────────────────────
     /// Maximum rendered line width before wrapping is attempted.
     pub line_width: usize,
@@ -110,6 +145,9 @@ pub struct Config {
     pub tab_size: usize,
     /// Emit tab characters for indentation instead of spaces.
     pub use_tabchars: bool,
+    /// How to handle fractional indentation when [`Self::use_tabchars`] is
+    /// `true`.
+    pub fractional_tab_policy: FractionalTabPolicy,
     /// Maximum number of consecutive empty lines to preserve.
     pub max_empty_lines: usize,
     /// Maximum number of wrapped lines tolerated before switching to a more
@@ -120,6 +158,15 @@ pub struct Config {
     pub max_pargs_hwrap: usize,
     /// Maximum number of keyword/flag subgroups to keep in a horizontal wrap.
     pub max_subgroups_hwrap: usize,
+    /// Maximum rows a hanging-wrap positional group may consume before the
+    /// layout is rejected and nesting is forced.
+    pub max_rows_cmdline: usize,
+    /// Command names (lowercase) that must always use vertical layout,
+    /// regardless of line width.
+    pub always_wrap: Vec<String>,
+    /// Return an error when any formatted output line exceeds
+    /// [`Self::line_width`].
+    pub require_valid_layout: bool,
 
     // ── Parenthesis style ───────────────────────────────────────────────
     /// Place the closing `)` on its own line when a call wraps.
@@ -164,6 +211,10 @@ pub struct Config {
     pub hashruler_min_length: usize,
     /// Normalize ruler comments when markup handling is enabled.
     pub canonicalize_hashrulers: bool,
+    /// Regex pattern that marks an inline comment as explicitly trailing its
+    /// preceding argument. Matching comments are rendered on the same line as
+    /// the preceding token rather than on their own line.
+    pub explicit_trailing_pattern: String,
 
     // ── Per-command overrides ────────────────────────────────────────────
     /// Per-command configuration overrides keyed by lowercase command name.
@@ -199,13 +250,19 @@ pub struct PerCommandConfig {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            disable: false,
+            line_ending: LineEnding::Unix,
             line_width: 80,
             tab_size: 2,
             use_tabchars: false,
+            fractional_tab_policy: FractionalTabPolicy::UseSpace,
             max_empty_lines: 1,
             max_lines_hwrap: 2,
             max_pargs_hwrap: 6,
             max_subgroups_hwrap: 2,
+            max_rows_cmdline: 2,
+            always_wrap: Vec::new(),
+            require_valid_layout: false,
             dangle_parens: false,
             dangle_align: DangleAlign::Prefix,
             min_prefix_chars: 4,
@@ -224,6 +281,7 @@ impl Default for Config {
             ruler_pattern: r"^[^\w\s]{3}.*[^\w\s]{3}$".to_string(),
             hashruler_min_length: 10,
             canonicalize_hashrulers: true,
+            explicit_trailing_pattern: "#<".to_string(),
             per_command_overrides: HashMap::new(),
         }
     }

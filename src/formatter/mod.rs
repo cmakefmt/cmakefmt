@@ -10,7 +10,7 @@
 pub(crate) mod comment;
 pub(crate) mod node;
 
-use crate::config::Config;
+use crate::config::{Config, LineEnding};
 use crate::error::{Error, Result};
 use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
@@ -60,7 +60,11 @@ pub fn format_source_with_registry(
     config: &Config,
     registry: &CommandRegistry,
 ) -> Result<String> {
-    Ok(format_source_impl(source, config, registry, &mut DebugLog::disabled())?.0)
+    if config.disable {
+        return Ok(source.to_owned());
+    }
+    let formatted = format_source_impl(source, config, registry, &mut DebugLog::disabled())?.0;
+    Ok(apply_line_ending(source, &formatted, config.line_ending))
 }
 
 /// Format raw CMake source using an explicit registry and return debug output.
@@ -69,10 +73,16 @@ pub fn format_source_with_registry_debug(
     config: &Config,
     registry: &CommandRegistry,
 ) -> Result<(String, Vec<String>)> {
+    if config.disable {
+        return Ok((source.to_owned(), Vec::new()));
+    }
     let mut lines = Vec::new();
     let mut debug = DebugLog::enabled(&mut lines);
     let (formatted, _) = format_source_impl(source, config, registry, &mut debug)?;
-    Ok((formatted, lines))
+    Ok((
+        apply_line_ending(source, &formatted, config.line_ending),
+        lines,
+    ))
 }
 
 /// Format an already parsed AST file.
@@ -183,7 +193,44 @@ fn format_file_with_debug(
         output.push('\n');
     }
 
+    if config.require_valid_layout {
+        for (i, line) in output.split('\n').enumerate() {
+            // Skip the final empty string produced by the trailing newline.
+            if line.is_empty() {
+                continue;
+            }
+            let width = line.chars().count();
+            if width > config.line_width {
+                return Err(Error::LayoutTooWide {
+                    line_no: i + 1,
+                    width,
+                    limit: config.line_width,
+                });
+            }
+        }
+    }
+
     Ok(output)
+}
+
+/// Apply the configured line-ending style to `formatted` output.
+///
+/// The formatter always emits LF internally. `source` is consulted when
+/// `line_ending` is [`LineEnding::Auto`] to detect the predominant style.
+fn apply_line_ending(source: &str, formatted: &str, line_ending: LineEnding) -> String {
+    let use_crlf = match line_ending {
+        LineEnding::Unix => false,
+        LineEnding::Windows => true,
+        LineEnding::Auto => {
+            // Detect from input: if any \r\n is present, assume CRLF.
+            source.contains("\r\n")
+        }
+    };
+    if use_crlf {
+        formatted.replace('\n', "\r\n")
+    } else {
+        formatted.to_owned()
+    }
 }
 
 fn format_source_impl(

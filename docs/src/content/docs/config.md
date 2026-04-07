@@ -68,13 +68,19 @@ cmakefmt --dump-config toml > .cmakefmt.toml
 ## Table Of Contents
 
 - [Format Options](#format-options)
+  - [`disable`](#disable)
+  - [`line_ending`](#line_ending)
   - [`line_width`](#line_width)
   - [`tab_size`](#tab_size)
   - [`use_tabs`](#use_tabs)
+  - [`fractional_tab_policy`](#fractional_tab_policy)
   - [`max_empty_lines`](#max_empty_lines)
   - [`max_hanging_wrap_lines`](#max_hanging_wrap_lines)
   - [`max_hanging_wrap_positional_args`](#max_hanging_wrap_positional_args)
   - [`max_hanging_wrap_groups`](#max_hanging_wrap_groups)
+  - [`max_rows_cmdline`](#max_rows_cmdline)
+  - [`always_wrap`](#always_wrap)
+  - [`require_valid_layout`](#require_valid_layout)
   - [`dangle_parens`](#dangle_parens)
   - [`dangle_align`](#dangle_align)
   - [`min_prefix_length`](#min_prefix_length)
@@ -95,6 +101,7 @@ cmakefmt --dump-config toml > .cmakefmt.toml
   - [`ruler_pattern`](#ruler_pattern)
   - [`hashruler_min_length`](#hashruler_min_length)
   - [`canonicalize_hashrulers`](#canonicalize_hashrulers)
+  - [`explicit_trailing_pattern`](#explicit_trailing_pattern)
 - [Per-command Overrides](#per-command-overrides)
 - [Custom Command Specs](#custom-command-specs)
 - [Old Draft Key Names](#old-draft-key-names)
@@ -103,13 +110,19 @@ cmakefmt --dump-config toml > .cmakefmt.toml
 
 ```yaml
 format:
+  disable: false
+  line_ending: unix
   line_width: 80
   tab_size: 2
   use_tabs: false
+  fractional_tab_policy: use-space
   max_empty_lines: 1
   max_hanging_wrap_lines: 2
   max_hanging_wrap_positional_args: 6
   max_hanging_wrap_groups: 2
+  max_rows_cmdline: 2
+  always_wrap: []
+  require_valid_layout: false
   dangle_parens: false
   dangle_align: prefix
   min_prefix_length: 4
@@ -132,9 +145,42 @@ markup:
   ruler_pattern: "^[^\\w\\s]{3}.*[^\\w\\s]{3}$"
   hashruler_min_length: 10
   canonicalize_hashrulers: true
+  explicit_trailing_pattern: "#<"
 ```
 
 ## Format Options
+
+### `disable`
+
+Disable formatting entirely. When `true`, `cmakefmt` returns the source
+unchanged — no layout changes, no casing normalization, nothing.
+
+```yaml
+format:
+  disable: true
+```
+
+Useful as a temporary escape hatch or for opting individual files out via a
+project-local config.
+
+### `line_ending`
+
+Output line-ending style.
+
+Allowed values:
+
+- `unix` — LF (`\n`). The default.
+- `windows` — CRLF (`\r\n`).
+- `auto` — detect from the input source; if the input contains any `\r\n`,
+  use CRLF; otherwise use LF.
+
+```yaml
+format:
+  line_ending: windows
+```
+
+The formatter normalizes line endings internally to LF. This option controls
+only the final output.
 
 ### `line_width`
 
@@ -167,6 +213,24 @@ format:
 
 This affects leading indentation only. Internal alignment rules use the
 configured indentation unit but are not otherwise changed.
+
+### `fractional_tab_policy`
+
+Controls what happens to fractional (sub-tab-stop) indentation when
+`use_tabs` is `true`.
+
+Allowed values:
+
+- `use-space` — leave remaining spaces as-is (utf-8 0x20). The default.
+- `round-up` — promote the remaining spaces to a full tab character
+  (utf-8 0x09), shifting the column to the next tab stop.
+
+```yaml
+format:
+  fractional_tab_policy: round-up
+```
+
+Only relevant when `use_tabs: true`. Has no effect when `use_tabs: false`.
 
 ### `max_empty_lines`
 
@@ -213,6 +277,52 @@ format:
 ```
 
 Lower this to push keyword-heavy commands toward vertical layout sooner.
+
+### `max_rows_cmdline`
+
+Maximum number of rows a hanging-wrap positional group may consume before the
+formatter rejects the hanging layout and forces nesting.
+
+```yaml
+format:
+  max_rows_cmdline: 2
+```
+
+This is a second threshold that works alongside `max_hanging_wrap_lines`.
+Where `max_hanging_wrap_lines` limits the total line count packed by the token
+packer, `max_rows_cmdline` limits how many rows the result may span before
+being rejected outright.
+
+### `always_wrap`
+
+A list of command names that the formatter must always lay out vertically,
+regardless of line width or argument count.
+
+```yaml
+format:
+  always_wrap:
+    - target_link_libraries
+    - target_sources
+```
+
+Commands in this list skip the inline and hanging-wrap layout attempts and go
+directly to vertical layout. This is also configurable per-command via
+`layout.always_wrap` in a custom command spec under `commands:`.
+
+### `require_valid_layout`
+
+When `true`, return an error if any formatted output line exceeds `line_width`.
+The formatter does not guarantee that every line fits — long unbreakable tokens
+or deeply nested commands can exceed the limit — and this option makes such
+cases visible.
+
+```yaml
+format:
+  require_valid_layout: true
+```
+
+Useful in CI to enforce a strict line-width contract. The error message
+includes the line number, actual width, and configured limit.
 
 ### `dangle_parens`
 
@@ -464,6 +574,35 @@ markup:
 
 If your project uses decorative comment rulers and wants them normalized
 consistently, keep this enabled.
+
+### `explicit_trailing_pattern`
+
+A regex pattern that identifies inline comments as _explicitly trailing_ their
+preceding argument. When a comment matches this pattern it is rendered on the
+same line as the preceding token rather than on its own indented line.
+
+```yaml
+markup:
+  explicit_trailing_pattern: "#<"
+```
+
+The default `#<` means that inline comments starting with `#<` are treated as
+trailing the immediately preceding argument.
+
+Example — given `explicit_trailing_pattern: "#<"`:
+
+```cmake
+target_sources(
+  mylib
+  PRIVATE
+    src/foo.cpp #< main module
+    src/bar.cpp #< helper
+)
+```
+
+Without this option the `#<` comments would each appear on their own line.
+
+Set to an empty string to disable explicit trailing comment detection entirely.
 
 ## `commands:` vs `per_command_overrides:` — Which One Do I Need?
 

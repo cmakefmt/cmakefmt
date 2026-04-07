@@ -703,7 +703,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                         .unwrap_or("<unknown>")
                         .trim()
                         .to_owned(),
-                    cmakefmt::Error::Io(_) | cmakefmt::Error::Parse(_) => "<unknown>".to_owned(),
+                    cmakefmt::Error::Io(_)
+                    | cmakefmt::Error::Parse(_)
+                    | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
                 };
                 failures.push(FailedTarget {
                     display_name,
@@ -2554,6 +2556,14 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
         cmakefmt::Error::Parse(source) => {
             format!("error: parse failure\n\nparser detail: {source}")
         }
+        cmakefmt::Error::LayoutTooWide {
+            line_no,
+            width,
+            limit,
+        } => format!(
+            "error: line {line_no} is {width} characters wide, exceeding the limit of {limit}\n\
+             hint: raise line_width, shorten the line, or disable require_valid_layout"
+        ),
     }
 }
 

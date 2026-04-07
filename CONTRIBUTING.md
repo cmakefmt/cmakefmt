@@ -69,15 +69,28 @@ Then update:
   - TOML deserialization structs
   - config merge logic
   - `default_config_template()`
+- `src/config/legacy.rs`
+  - add a match arm in `merge_format_section` or `merge_markup_section` so
+    `--convert-legacy-config` converts the option instead of emitting an
+    "unsupported" note
+  - add the corresponding field to `OutputFormatSection` / `OutputMarkupSection`
+    and its `has_any()` method
+- `docs/src/content/docs/config.md`
+  - add a subsection to the relevant Options group
+  - add the option to the table of contents and the Defaults block
 - `README.md`
-  - config examples
-  - supported option lists
+  - config examples or supported option lists if applicable
 - tests covering config parsing, precedence, and behavior
 
 If the option has a CLI override flag, also update:
 
 - `src/main.rs`
 - `tests/cli.rs`
+
+If the option should be surfaced in the browser playground, also update:
+
+- `docs/src/components/Playground.astro`
+  - the `DEFAULT_CONFIG` string near the top of the `<script>` block
 
 ## If You Change Formatting Behavior
 
@@ -222,6 +235,14 @@ If you changed CLI behavior, also check:
 ```bash
 cargo run -- --help
 cargo run -- --dump-config
+```
+
+If you added or changed a config option, also verify the legacy conversion
+round-trip produces no new "unsupported" notes:
+
+```bash
+cmake-format --dump-config > /tmp/cmf_dump.py
+cargo run -- --convert-legacy-config /tmp/cmf_dump.py
 ```
 
 If you changed docs, also check:

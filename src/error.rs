@@ -73,6 +73,20 @@ pub enum Error {
     /// structured variant.
     #[error("formatter error: {0}")]
     Formatter(String),
+
+    /// A formatted line exceeded the configured line width and
+    /// `require_valid_layout` is enabled.
+    #[error(
+        "line {line_no} is {width} characters wide, exceeding the configured limit of {limit}"
+    )]
+    LayoutTooWide {
+        /// 1-based line number in the formatted output.
+        line_no: usize,
+        /// Actual character width of the offending line.
+        width: usize,
+        /// Configured [`Config::line_width`] limit.
+        limit: usize,
+    },
 }
 
 /// Convenience alias for crate-level results.
