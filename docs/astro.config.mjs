@@ -117,6 +117,7 @@ export default defineConfig({
           items: [
             { label: "Library API", slug: "api" },
             { label: "Architecture", slug: "architecture" },
+            { label: "Contributing", slug: "contributing" },
             { label: "Changelog", slug: "changelog" },
           ],
         },

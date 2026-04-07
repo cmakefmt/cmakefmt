@@ -36,6 +36,7 @@ required_files=(
   "docs/src/content/docs/troubleshooting.md"
   "docs/src/content/docs/api.md"
   "docs/src/content/docs/architecture.md"
+  "docs/src/content/docs/contributing.md"
   "docs/src/content/docs/changelog.md"
 )
 

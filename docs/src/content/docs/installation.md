@@ -182,26 +182,6 @@ What each one does:
 - `--staged --check`: pre-commit guard — only touches staged files
 - `--changed --since origin/main --check`: PR-scoped check for branch-only changes
 
-## Pre-commit
-
-The repository ships a `pre-commit` configuration out of the box. Install both
-commit and pre-push hooks:
-
-```bash
-pre-commit install
-pre-commit install --hook-type pre-push
-```
-
-Useful spot checks:
-
-```bash
-pre-commit run --all-files
-cmakefmt --staged --check
-```
-
-The shipped hook set covers code-quality checks and REUSE/license metadata
-validation — worth installing early in any contributor workflow.
-
 ## CI-Friendly Shell Usage
 
 The simplest CI baseline:
@@ -250,18 +230,6 @@ cmakefmt --show-config-path src/CMakeLists.txt
 cmakefmt --show-config src/CMakeLists.txt
 cmakefmt --explain-config
 ```
-
-## Local Docs Preview
-
-Preview the published docs locally with Astro and Starlight:
-
-```bash
-cd docs
-npm install
-npm run dev
-```
-
-Then open the local URL that Astro prints, usually <http://localhost:4321>.
 
 ## Upgrade And Uninstall
 
