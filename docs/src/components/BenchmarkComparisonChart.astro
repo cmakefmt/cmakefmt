@@ -1,0 +1,167 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+---
+
+<div class="chart-wrapper">
+  <canvas id="benchmark-comparison-chart" aria-label="cmakefmt vs cmake-format per-fixture timing comparison"></canvas>
+</div>
+
+<script>
+import { Chart, BarController, BarElement, CategoryScale, LinearScale, LogarithmicScale, Tooltip, Legend } from 'chart.js';
+Chart.register(BarController, BarElement, CategoryScale, LinearScale, LogarithmicScale, Tooltip, Legend);
+
+const DATA = [
+  { label: 'abseil',         lines: 280,  cmakefmt: 5.804,  legacy: 168.570, speedup: 29.04 },
+  { label: 'catch2',         lines: 230,  cmakefmt: 5.768,  legacy: 105.614, speedup: 18.31 },
+  { label: 'cli11',          lines: 283,  cmakefmt: 5.570,  legacy: 120.994, speedup: 21.72 },
+  { label: 'cmake_cmbzip2',  lines: 25,   cmakefmt: 5.042,  legacy:  61.751, speedup: 12.25 },
+  { label: 'googletest',     lines: 36,   cmakefmt: 5.004,  legacy:  62.439, speedup: 12.48 },
+  { label: 'ggml',           lines: 498,  cmakefmt: 7.773,  legacy: 210.200, speedup: 27.04 },
+  { label: 'llama_cpp',      lines: 286,  cmakefmt: 6.257,  legacy: 126.584, speedup: 20.23 },
+  { label: 'llvm_tablegen',  lines: 83,   cmakefmt: 5.172,  legacy:  75.429, speedup: 14.58 },
+  { label: 'mariadb_server', lines: 656,  cmakefmt: 9.774,  legacy: 473.879, speedup: 48.49 },
+  { label: 'nlohmann_json',  lines: 237,  cmakefmt: 5.705,  legacy: 138.936, speedup: 24.35 },
+  { label: 'opencv_flann',   lines: 2,    cmakefmt: 4.719,  legacy:  51.497, speedup: 10.91 },
+  { label: 'protobuf',       lines: 351,  cmakefmt: 6.226,  legacy: 111.802, speedup: 17.96 },
+  { label: 'spdlog',         lines: 413,  cmakefmt: 9.204,  legacy: 213.649, speedup: 23.21 },
+  { label: 'qtbase_network', lines: 420,  cmakefmt: 8.146,  legacy: 284.355, speedup: 34.91 },
+];
+
+function isDark() {
+  return document.documentElement.dataset.theme === 'dark';
+}
+
+function colors() {
+  const dark = isDark();
+  return {
+    cmakefmt:     dark ? 'hsl(198,93%,60%)'  : 'hsl(200,98%,39%)',
+    cmakefmtHover:dark ? 'hsl(198,93%,70%)'  : 'hsl(200,98%,28%)',
+    legacy:       dark ? 'hsl(240,4%,40%)'   : 'hsl(240,5%,72%)',
+    legacyHover:  dark ? 'hsl(240,4%,50%)'   : 'hsl(240,5%,60%)',
+    grid:         dark ? 'hsl(240,4%,20%)'   : 'hsl(240,6%,90%)',
+    text:         dark ? 'hsl(0,0%,100%)'    : 'hsl(240,6%,10%)',
+    subtext:      dark ? 'hsl(240,5%,65%)'   : 'hsl(240,4%,46%)',
+  };
+}
+
+const canvas = document.getElementById('benchmark-comparison-chart') as HTMLCanvasElement;
+
+let chart: Chart | null = null;
+
+function buildChart() {
+  const c = colors();
+  if (chart) chart.destroy();
+
+  chart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: DATA.map(d => d.label),
+      datasets: [
+        {
+          label: 'cmakefmt',
+          data: DATA.map(d => d.cmakefmt),
+          backgroundColor: c.cmakefmt,
+          hoverBackgroundColor: c.cmakefmtHover,
+          borderRadius: 3,
+          borderSkipped: false,
+        },
+        {
+          label: 'cmake-format',
+          data: DATA.map(d => d.legacy),
+          backgroundColor: c.legacy,
+          hoverBackgroundColor: c.legacyHover,
+          borderRadius: 3,
+          borderSkipped: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: c.subtext,
+            font: { size: 11 },
+            maxRotation: 35,
+            minRotation: 35,
+          },
+          grid: { color: c.grid },
+          border: { color: c.grid },
+        },
+        y: {
+          type: 'logarithmic',
+          title: {
+            display: true,
+            text: 'Time (ms, log scale)',
+            color: c.subtext,
+            font: { size: 11 },
+          },
+          ticks: {
+            color: c.subtext,
+            font: { size: 11 },
+            callback: (v) => `${v} ms`,
+          },
+          grid: { color: c.grid },
+          border: { color: c.grid },
+        },
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: c.text,
+            font: { size: 12 },
+            boxWidth: 12,
+            boxHeight: 12,
+          },
+        },
+        tooltip: {
+          backgroundColor: isDark() ? 'hsl(240,6%,14%)' : 'hsl(0,0%,100%)',
+          borderColor: isDark() ? 'hsl(240,4%,24%)' : 'hsl(240,6%,90%)',
+          borderWidth: 1,
+          titleColor: c.text,
+          bodyColor: c.subtext,
+          padding: 10,
+          callbacks: {
+            title: (items) => {
+              const d = DATA[items[0].dataIndex];
+              return `${d.label}  (${d.lines} lines)`;
+            },
+            label: (item) => {
+              const d = DATA[item.dataIndex];
+              if (item.datasetIndex === 0) {
+                return [
+                  `  cmakefmt:      ${d.cmakefmt.toFixed(3)} ms`,
+                  `  speedup:       ${d.speedup}×`,
+                ];
+              }
+              return `  cmake-format:  ${d.legacy.toFixed(3)} ms`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+buildChart();
+
+// Re-render when the theme toggles
+const observer = new MutationObserver(() => buildChart());
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+
+<style>
+  .chart-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 860px;
+    margin: 1.5rem auto;
+  }
+</style>

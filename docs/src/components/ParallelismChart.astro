@@ -1,0 +1,157 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+---
+
+<div class="chart-wrapper">
+  <canvas id="parallelism-chart" aria-label="Parallelism scaling: time vs worker count for 220-file and 612-file batches"></canvas>
+</div>
+
+<script>
+import { Chart, LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
+Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
+
+// Time in ms for each worker count
+const BATCH_220 = [
+  { workers: 'serial', ms: 184.5 },
+  { workers: '--parallel 2', ms: 111.5 },
+  { workers: '--parallel 4', ms: 64.7 },
+  { workers: '--parallel 8', ms: 48.5 },
+];
+
+const BATCH_612 = [
+  { workers: 'serial', ms: 412.5 },
+  { workers: '--parallel 2', ms: 296.0 },
+  { workers: '--parallel 4', ms: 191.8 },
+  { workers: '--parallel 8', ms: 152.5 },
+];
+
+function isDark() {
+  return document.documentElement.dataset.theme === 'dark';
+}
+
+function colors() {
+  const dark = isDark();
+  return {
+    line1:    dark ? 'hsl(198,93%,60%)' : 'hsl(200,98%,39%)',
+    line2:    dark ? 'hsl(38,92%,60%)'  : 'hsl(38,92%,44%)',
+    grid:     dark ? 'hsl(240,4%,20%)'  : 'hsl(240,6%,90%)',
+    text:     dark ? 'hsl(0,0%,100%)'   : 'hsl(240,6%,10%)',
+    subtext:  dark ? 'hsl(240,5%,65%)'  : 'hsl(240,4%,46%)',
+  };
+}
+
+const canvas = document.getElementById('parallelism-chart') as HTMLCanvasElement;
+let chart: Chart | null = null;
+
+function buildChart() {
+  const c = colors();
+  if (chart) chart.destroy();
+
+  chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: BATCH_220.map(d => d.workers),
+      datasets: [
+        {
+          label: '220-file batch',
+          data: BATCH_220.map(d => d.ms),
+          borderColor: c.line1,
+          backgroundColor: c.line1 + '22',
+          pointBackgroundColor: c.line1,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          fill: false,
+          tension: 0.3,
+        },
+        {
+          label: '612-file batch',
+          data: BATCH_612.map(d => d.ms),
+          borderColor: c.line2,
+          backgroundColor: c.line2 + '22',
+          pointBackgroundColor: c.line2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          fill: false,
+          tension: 0.3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      scales: {
+        x: {
+          ticks: { color: c.subtext, font: { size: 12 } },
+          grid: { color: c.grid },
+          border: { color: c.grid },
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Time (ms)',
+            color: c.subtext,
+            font: { size: 11 },
+          },
+          min: 0,
+          ticks: {
+            color: c.subtext,
+            font: { size: 11 },
+            callback: (v) => `${v} ms`,
+          },
+          grid: { color: c.grid },
+          border: { color: c.grid },
+        },
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: c.text,
+            font: { size: 12 },
+            boxWidth: 12,
+            boxHeight: 12,
+          },
+        },
+        tooltip: {
+          backgroundColor: isDark() ? 'hsl(240,6%,14%)' : 'hsl(0,0%,100%)',
+          borderColor: isDark() ? 'hsl(240,4%,24%)' : 'hsl(240,6%,90%)',
+          borderWidth: 1,
+          titleColor: c.text,
+          bodyColor: c.subtext,
+          padding: 10,
+          callbacks: {
+            label: (item) => {
+              const serialMs = item.datasetIndex === 0 ? BATCH_220[0].ms : BATCH_612[0].ms;
+              const speedup = (serialMs / (item.raw as number)).toFixed(2);
+              const label = item.datasetIndex === 0 ? '220-file batch' : '612-file batch';
+              return [
+                `  ${label}: ${(item.raw as number).toFixed(1)} ms`,
+                `  ${speedup}× faster than serial`,
+              ];
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+buildChart();
+
+const observer = new MutationObserver(() => buildChart());
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+
+<style>
+  .chart-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+    margin: 1.5rem auto;
+  }
+</style>

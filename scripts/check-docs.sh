@@ -32,7 +32,7 @@ required_files=(
   "docs/src/content/docs/config.md"
   "docs/src/content/docs/behavior.md"
   "docs/src/content/docs/migration.md"
-  "docs/src/content/docs/performance.md"
+  "docs/src/content/docs/performance.mdx"
   "docs/src/content/docs/troubleshooting.md"
   "docs/src/content/docs/api.md"
   "docs/src/content/docs/architecture.md"

@@ -2,11 +2,15 @@
 title: Performance
 ---
 
-<!--
+{/*
 SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 
 SPDX-License-Identifier: MIT OR Apache-2.0
--->
+*/}
+
+import BenchmarkComparisonChart from '../../components/BenchmarkComparisonChart.astro';
+import SpeedupChart from '../../components/SpeedupChart.astro';
+import ParallelismChart from '../../components/ParallelismChart.astro';
 
 `cmakefmt` is fast enough that you never have to think twice about running it
 — in local workflows, editor integrations, pre-commit hooks, or CI. That is
@@ -36,6 +40,15 @@ performance trends remain strong and regressions are caught early.
 
 ## Benchmark Results
 
+Time comparison across real-world fixtures. Hover a bar to see the exact
+timings and speedup for that fixture.
+
+<BenchmarkComparisonChart />
+
+Per-fixture speedup. The dashed line marks the geometric mean (`20.69×`).
+
+<SpeedupChart />
+
 | Fixture | Lines | `cmakefmt` ms | `cmake-format` ms | Speedup |
 |---------------------------------|------:|--------------:|------------------:|--------:|
 | `abseil/CMakeLists.txt`         |   280 |         5.804 |           168.570 |  29.04× |
@@ -52,9 +65,6 @@ performance trends remain strong and regressions are caught early.
 | `protobuf/CMakeLists.txt`       |   351 |         6.226 |           111.802 |  17.96× |
 | `spdlog/CMakeLists.txt`         |   413 |         9.204 |           213.649 |  23.21× |
 | `qtbase_network/CMakeLists.txt` |   420 |         8.146 |           284.355 |  34.91× |
-
-Geometric-mean speedup across the full corpus: **`20.69×`**.
-On a 220-file batch, `--parallel 8` improves throughput by **`3.80×`** vs serial.
 
 The following Criterion estimates cover a 1000+ line synthetic stress-test file:
 
@@ -73,7 +83,11 @@ produced by parsing, before formatting.
 ## Parallel Batch Throughput
 
 Multi-file runs are single-threaded by default, but opt-in parallelism scales
-well:
+well. Hover a point to see the time and speedup vs serial for each batch size.
+
+<ParallelismChart />
+
+**220-file batch:**
 
 | Mode | Time |
 | --- | --- |
