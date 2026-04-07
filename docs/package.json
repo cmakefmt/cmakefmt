@@ -25,6 +25,7 @@
     "astro": "^6.1.4",
     "chart.js": "^4.5.1",
     "codemirror": "^6.0.2",
+    "daisyui": "^5.5.19",
     "sharp": "^0.34.2",
     "tailwind-merge": "^3.5.0",
     "tailwind-variants": "^3.2.2",

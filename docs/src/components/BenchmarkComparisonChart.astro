@@ -6,12 +6,11 @@
 
 <div class="chart-wrapper">
   <div class="chart-controls">
-    <span class="scale-label">Linear</span>
     <label class="toggle-label" title="Switch y-axis scale">
-      <input type="checkbox" id="scale-toggle" class="toggle-input" />
-      <span class="toggle-track"></span>
+      <span class="scale-label">Linear</span>
+      <input type="checkbox" id="scale-toggle" class="toggle toggle-sm" />
+      <span class="scale-label">Log</span>
     </label>
-    <span class="scale-label">Log</span>
   </div>
   <canvas
     id="benchmark-comparison-chart"
@@ -222,54 +221,27 @@
     color: var(--sl-color-gray-3, hsl(240, 4%, 46%));
   }
 
-  /* Hide the native checkbox */
-  .toggle-input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
   .toggle-label {
     display: inline-flex;
     align-items: center;
+    gap: 0.4rem;
     cursor: pointer;
   }
 
-  /* The pill track */
-  .toggle-track {
-    display: inline-block;
-    position: relative;
-    width: 2.25rem;
-    height: 1.25rem;
-    background: var(--sl-color-hairline, hsl(240, 6%, 90%));
-    border-radius: 9999px;
-    transition: background 0.2s;
+  /* Accent border in both states */
+  .toggle {
+    --input-color: var(--sl-color-accent, hsl(200, 98%, 39%));
   }
 
-  /* The sliding thumb */
-  .toggle-track::after {
-    content: "";
-    position: absolute;
-    top: 0.1875rem;
-    left: 0.1875rem;
-    width: 0.875rem;
-    height: 0.875rem;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s;
+  /* Filled accent track when checked; border stays accent via --input-color */
+  .toggle:checked,
+  .toggle[aria-checked="true"] {
+    background-color: var(--sl-color-accent, hsl(200, 98%, 39%));
   }
 
-  .toggle-input:checked + .toggle-track {
-    background: var(--sl-color-accent, hsl(200, 98%, 39%));
-  }
-
-  .toggle-input:checked + .toggle-track::after {
-    transform: translateX(1rem);
-  }
-
-  .toggle-label:hover .toggle-track {
-    opacity: 0.85;
+  /* White thumb on the filled blue background */
+  .toggle:checked::before,
+  .toggle[aria-checked="true"]::before {
+    background-color: #fff;
   }
 </style>
