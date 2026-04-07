@@ -279,23 +279,17 @@ jobs:
   publish-homebrew-tap:
     name: publish-homebrew-tap
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test]
+    needs: [verify-version, build, test, publish]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6.0.2
-        with:
-          ref: ${{ github.ref }}
-
-      - name: Render Homebrew formula
+      - name: Download Homebrew formula from GitHub release
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          SOURCE_URL="https://github.com/cmakefmt/cmakefmt/archive/refs/tags/v${VERSION}.tar.gz"
-          curl -L --fail --silent --show-error "${SOURCE_URL}" -o /tmp/cmakefmt-source.tar.gz
-          SOURCE_SHA256="$(sha256sum /tmp/cmakefmt-source.tar.gz | awk '{print $1}')"
-          bash scripts/render-homebrew-formula.sh "${VERSION}" "${SOURCE_SHA256}" > /tmp/cmakefmt.rb
+          curl -L --fail --silent --show-error \
+            "https://github.com/cmakefmt/cmakefmt/releases/download/v${VERSION}/cmakefmt.rb" \
+            -o /tmp/cmakefmt.rb
 
       - name: Check out Homebrew tap
         uses: actions/checkout@v6.0.2

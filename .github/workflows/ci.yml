@@ -45,6 +45,7 @@ jobs:
         run: cargo test
 
       - name: Build API docs
+        if: matrix.os == 'ubuntu-latest'
         run: cargo doc --no-deps
 
       - name: Install cargo-audit

@@ -13,8 +13,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.head_ref) || 'pages-deploy' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -27,8 +27,6 @@ jobs:
       - name: Configure GitHub Pages
         if: ${{ github.event_name != 'pull_request' }}
         uses: actions/configure-pages@v6.0.0
-        with:
-          enablement: true
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -39,7 +37,7 @@ jobs:
         uses: Swatinem/rust-cache@v2.9.1
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack
+        uses: taiki-e/install-action@wasm-pack
 
       - name: Build WASM playground module
         run: bash scripts/build-wasm.sh
