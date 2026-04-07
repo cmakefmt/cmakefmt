@@ -20,6 +20,7 @@ hero:
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+import BenchmarkComparisonChart from '../../components/BenchmarkComparisonChart.astro';
 
 ## Quick Start
 
@@ -46,28 +47,9 @@ cmakefmt --staged --check                 # pre-commit: format only staged files
 ## Performance
 
 **Geometric-mean speedup: `20.69×`** across the full corpus.
-On a 612-file real-world repo: `~97×` faster than `cmake-format` sequentially, and `~240×` faster with `--parallel 8`.
+On a 612-file real-world repo ([oomph-lib](https://github.com/oomph-lib/oomph-lib)): `~97×` faster than `cmake-format` sequentially, and `~240×` faster with `--parallel 8`.
 
-<div class="perf-table">
-
-| Fixture | Lines | `cmakefmt` ms | `cmake-format` ms | Speedup |
-| --- | ---: | ---: | ---: | ---: |
-| `abseil/CMakeLists.txt` | 280 | 5.804 | 168.570 | 29.04× |
-| `catch2/CMakeLists.txt` | 230 | 5.768 | 105.614 | 18.31× |
-| `cli11/CMakeLists.txt` | 283 | 5.570 | 120.994 | 21.72× |
-| `cmake_cmbzip2/CMakeLists.txt` | 25 | 5.042 | 61.751 | 12.25× |
-| `googletest/CMakeLists.txt` | 36 | 5.004 | 62.439 | 12.48× |
-| `ggml/CMakeLists.txt` | 498 | 7.773 | 210.200 | 27.04× |
-| `llama_cpp/CMakeLists.txt` | 286 | 6.257 | 126.584 | 20.23× |
-| `llvm_tablegen/CMakeLists.txt` | 83 | 5.172 | 75.429 | 14.58× |
-| `mariadb_server/CMakeLists.txt` | 656 | 9.774 | 473.879 | 48.49× |
-| `nlohmann_json/CMakeLists.txt` | 237 | 5.705 | 138.936 | 24.35× |
-| `opencv_flann/CMakeLists.txt` | 2 | 4.719 | 51.497 | 10.91× |
-| `protobuf/CMakeLists.txt` | 351 | 6.226 | 111.802 | 17.96× |
-| `spdlog/CMakeLists.txt` | 413 | 9.204 | 213.649 | 23.21× |
-| `qtbase_network/CMakeLists.txt` | 420 | 8.146 | 284.355 | 34.91× |
-
-</div>
+<BenchmarkComparisonChart />
 
 See [Performance](/performance/) for the full methodology and benchmark environment.
 
