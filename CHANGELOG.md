@@ -8,6 +8,7 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.2.0 — 2026-04-07
 ### Added
 
 - interactive browser playground at [cmakefmt.dev/playground](https://cmakefmt.dev/playground/) —
