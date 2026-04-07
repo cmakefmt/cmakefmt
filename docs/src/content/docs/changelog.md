@@ -43,7 +43,7 @@ This project follows a simple changelog discipline:
   `#<`) that marks an inline comment as trailing its preceding argument,
   keeping it on the same line rather than wrapping to a new line
 
-## 0.1.1
+## 0.1.1 — 2026-04-06
 
 ### Added
 
@@ -56,7 +56,7 @@ This project follows a simple changelog discipline:
 - improved [docs.rs](https://docs.rs) readability and tightened public API surface
 - documentation clarity and wording improvements
 
-## 0.1.0
+## 0.1.0 — 2026-04-05
 
 ### Added
 
