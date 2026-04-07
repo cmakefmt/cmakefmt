@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
@@ -81,18 +81,18 @@ jobs:
             archive_ext: zip
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
         with:
           key: ${{ matrix.target }}
           save-if: false
@@ -185,12 +185,12 @@ jobs:
 
       - name: Attest release archive
         if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4
         with:
           subject-path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
         with:
           name: release-${{ steps.version.outputs.value }}-${{ matrix.target }}
           path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}
@@ -201,17 +201,17 @@ jobs:
     needs: [verify-version, build]
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
         with:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
 
       - name: Run tests
         run: cargo test --locked
@@ -224,12 +224,12 @@ jobs:
     environment: publish-crate
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ github.ref }}
 
       - name: Download packaged artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
         with:
           pattern: release-*
           merge-multiple: true
@@ -252,7 +252,7 @@ jobs:
           bash scripts/render-homebrew-formula.sh "${VERSION}" "${SOURCE_SHA256}" > dist/cmakefmt.rb
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe  # v2.6.1
         with:
           tag_name: ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -268,17 +268,17 @@ jobs:
     environment: publish-crate
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ github.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
         with:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
 
       - name: Publish crate to crates.io
         run: cargo publish --locked
@@ -301,7 +301,7 @@ jobs:
             -o /tmp/cmakefmt.rb
 
       - name: Check out Homebrew tap
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: cmakefmt/homebrew-cmakefmt
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -343,17 +343,17 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           ref: ${{ inputs.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
         with:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
 
       - name: Dry-run crate publish
         run: cargo publish --locked --dry-run

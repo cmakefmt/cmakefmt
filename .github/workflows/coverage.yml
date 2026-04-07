@@ -13,6 +13,8 @@ concurrency:
   group: coverage-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   coverage:
     name: coverage
@@ -20,18 +22,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
         with:
           toolchain: stable
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@0967b2b57a225496457784e67192d3e6e3054cf8  # cargo-llvm-cov
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
@@ -54,13 +56,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage summary
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
         with:
           name: coverage-summary
           path: coverage-summary.txt
 
       - name: Upload HTML coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
         with:
           name: coverage-html
           path: target/llvm-cov/html
