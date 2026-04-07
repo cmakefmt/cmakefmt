@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+# Dev environment managed by mise (https://mise.jdx.dev).
+# Install everything with: mise install
+
+[tools]
+# Language runtimes
+rust    = "stable"
+node    = "22"
+python  = "3.12"
+
+# Cargo tools (coverage, WASM)
+# cargo-audit and cargo-deny are intentionally omitted — they are run by CI
+# on every push and do not work reliably as local pre-push hooks due to PATH
+# limitations with mise-managed binaries in git hook subprocesses.
+"cargo:cargo-llvm-cov" = "latest"
+"cargo:wasm-pack"      = "latest"
+
+# Python tools
+"pipx:pre-commit"      = "latest"
+"pipx:reuse"           = "latest"
+"pipx:bump-my-version" = "latest"
+
+[hooks]
+postinstall = "pre-commit install && pre-commit install --hook-type pre-push"

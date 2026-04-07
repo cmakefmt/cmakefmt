@@ -9,12 +9,49 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
 Thanks for your interest in contributing to cmakefmt. This page covers the
-contributor workflow: building from source, running tests, setting up hooks,
-and keeping docs accurate.
+contributor workflow: setting up your environment, building from source,
+running tests, setting up hooks, and keeping docs accurate.
+
+## Dev Environment Setup
+
+The repository ships a [mise](https://mise.jdx.dev) config that pins and
+installs every required tool — Rust, Node, Python, and all cargo/pip tools —
+in one step.
+
+Install mise:
+
+```bash
+# macOS
+brew install mise
+
+# macOS / Linux / WSL
+curl https://mise.run | sh
+```
+
+Then activate it in your shell (one-time):
+
+```bash
+# zsh
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc && source ~/.zshrc
+
+# bash
+echo 'eval "$(mise activate bash)"' >> ~/.bashrc && source ~/.bashrc
+```
+
+Then from the repo root:
+
+```bash
+mise install
+```
+
+This installs Rust (stable), Node 22, Python 3.12, `cargo-audit`,
+`cargo-deny`, `cargo-llvm-cov`, `wasm-pack`, `pre-commit`, `reuse`, and
+`bump-my-version` — and automatically installs the pre-commit and pre-push
+hooks as a post-install step.
 
 ## Building From Source
 
-You need a Rust toolchain (stable, 1.70+). Clone and build:
+Clone and build:
 
 ```bash
 git clone https://github.com/cmakefmt/cmakefmt.git
@@ -36,8 +73,7 @@ cargo test
 
 ## Pre-commit Hooks
 
-The repository ships a `pre-commit` configuration. Install both commit and
-pre-push hooks early in your workflow:
+Hooks are installed automatically by `mise install`. To reinstall manually:
 
 ```bash
 pre-commit install
@@ -51,7 +87,8 @@ pre-commit run --all-files
 cmakefmt --staged --check
 ```
 
-The hook set covers code-quality checks and REUSE/license metadata validation.
+The hook set covers code-quality checks, security scanning (`cargo audit`,
+`cargo deny`), and REUSE/license metadata validation.
 
 ## Before/After Examples in Docs
 

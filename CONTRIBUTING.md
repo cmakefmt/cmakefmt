@@ -6,6 +6,42 @@ the same change.
 
 This applies to both human contributors and any automated tooling used to generate code.
 
+## Dev Environment Setup
+
+The repository ships a [mise](https://mise.jdx.dev) config that installs
+every required tool in one step.
+
+Install mise:
+
+```bash
+# macOS
+brew install mise
+
+# macOS / Linux / WSL
+curl https://mise.run | sh
+```
+
+Then activate it in your shell (one-time):
+
+```bash
+# zsh
+echo 'eval "$(mise activate zsh)"' >> ~/.zshrc && source ~/.zshrc
+
+# bash
+echo 'eval "$(mise activate bash)"' >> ~/.bashrc && source ~/.bashrc
+```
+
+Then from the repo root:
+
+```bash
+mise install
+```
+
+This installs Rust (stable), Node 22, Python 3.12, `cargo-audit`,
+`cargo-deny`, `cargo-llvm-cov`, `wasm-pack`, `pre-commit`, `reuse`, and
+`bump-my-version` — and automatically installs the pre-commit and pre-push
+hooks as a post-install step.
+
 ## Core Rule
 
 When you add a user-visible feature, also update:

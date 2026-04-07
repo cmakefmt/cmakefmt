@@ -7,6 +7,7 @@
 set -euo pipefail
 
 required_files=(
+  ".mise.toml"
   "scripts/stamp-changelog.py"
   "scripts/sync-changelog.py"
   "README.md"
