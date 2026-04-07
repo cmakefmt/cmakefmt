@@ -6,6 +6,9 @@
 
 """Promote '## Unreleased' to '## <version> — <date>' in CHANGELOG.md.
 
+Replaces the '## Unreleased' heading with the versioned heading and inserts a
+fresh empty '## Unreleased' section above it, ready for the next release cycle.
+
 Usage:
     python3 scripts/stamp-changelog.py <version> [<date>]
 
@@ -41,10 +44,12 @@ def main() -> None:
         print("error: no '## Unreleased' heading found in CHANGELOG.md")
         sys.exit(1)
 
-    replacement = f"## {version} \u2014 {date}"
+    stamped_heading = f"## {version} \u2014 {date}"
+    fresh_unreleased = "## Unreleased\n\n"
+    replacement = f"{fresh_unreleased}{stamped_heading}"
     updated = pattern.sub(replacement, text, count=1)
     CHANGELOG.write_text(updated, encoding="utf-8")
-    print(f"stamped CHANGELOG.md: Unreleased \u2192 {version} \u2014 {date}")
+    print(f"stamped CHANGELOG.md: Unreleased \u2192 {version} \u2014 {date} (new Unreleased section added)")
 
 
 if __name__ == "__main__":
