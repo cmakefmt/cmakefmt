@@ -199,8 +199,8 @@ body {
 
 .sl-markdown-content th:not(:where(.not-content *)) {
   font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--sl-color-gray-3);
+  font-weight: 600;
+  color: var(--sl-color-white);
 }
 
 .sl-markdown-content table td strong {
@@ -434,11 +434,6 @@ nav.sidebar a[aria-current="true"] {
 
 .perf-table table {
   margin-inline: auto;
-}
-
-.perf-table th {
-  color: var(--sl-color-white) !important;
-  font-weight: 600;
 }
 
 /* ─── Scrollbar — thin and subtle ───────────────────────────────────────── */
