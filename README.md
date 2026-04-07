@@ -6,13 +6,41 @@
 
 <h1><code>cmakefmt</code></h1>
 
-[![CI](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml)
-[![Pages](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml)
-[![Coverage](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml)
-[![Crates.io](https://img.shields.io/crates/v/cmakefmt-rust.svg)](https://crates.io/crates/cmakefmt-rust)
-[![dependency status](https://deps.rs/repo/github/cmakefmt/cmakefmt/status.svg?branch=main)](https://deps.rs/repo/github/cmakefmt/cmakefmt)
-[![REUSE status](https://api.reuse.software/badge/github.com/cmakefmt/cmakefmt)](https://api.reuse.software/info/github.com/cmakefmt/cmakefmt)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cmakefmt/cmakefmt/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cmakefmt/cmakefmt)
+<p align="center">
+  <sup>CI</sup><br>
+  <a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml">
+    <img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" />
+  </a>
+  <a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml">
+    <img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg?branch=main" alt="Pages" />
+  </a>
+  <a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml">
+    <img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg?branch=main" alt="Coverage" />
+  </a>
+</p>
+
+<p align="center">
+  <sup>Package</sup><br>
+  <a href="https://crates.io/crates/cmakefmt-rust">
+    <img src="https://img.shields.io/crates/v/cmakefmt-rust.svg" alt="Crates.io" />
+  </a>
+  <a href="https://deps.rs/repo/github/cmakefmt/cmakefmt">
+    <img src="https://deps.rs/repo/github/cmakefmt/cmakefmt/status.svg?branch=main" alt="dependency status" />
+  </a>
+</p>
+
+<p align="center">
+  <sup>Security &amp; Quality</sup><br>
+  <a href="https://api.reuse.software/info/github.com/cmakefmt/cmakefmt">
+    <img src="https://api.reuse.software/badge/github.com/cmakefmt/cmakefmt" alt="REUSE status" />
+  </a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/cmakefmt/cmakefmt">
+    <img src="https://api.securityscorecards.dev/projects/github.com/cmakefmt/cmakefmt/badge" alt="OpenSSF Scorecard" />
+  </a>
+  <a href="https://www.bestpractices.dev/projects/12392">
+    <img src="https://www.bestpractices.dev/projects/12392/badge" alt="OpenSSF Best Practices" />
+  </a>
+</p>
 
 **A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
