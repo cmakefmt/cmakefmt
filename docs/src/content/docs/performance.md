@@ -12,7 +12,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 — in local workflows, editor integrations, pre-commit hooks, or CI. That is
 not an accident. Speed is a design goal, not a side effect.
 
-## Overview
+## Highlights
 
 - **20.69×** geometric-mean speedup over `cmake-format` on real-world CMake files
 - **~97×** faster than `cmake-format` on a 612-file repository (sequential)
