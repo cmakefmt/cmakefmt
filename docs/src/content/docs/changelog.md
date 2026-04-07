@@ -21,6 +21,27 @@ This project follows a simple changelog discipline:
 - interactive browser playground at [cmakefmt.dev/playground](https://cmakefmt.dev/playground/) —
   format CMake code, edit config, and define custom command specs entirely in
   the browser via WebAssembly
+- `format.disable` config option — global kill-switch that returns the source
+  file unchanged; useful for temporarily opting out of formatting without
+  removing the config file
+- `format.line_ending` config option — controls output line endings: `unix`
+  (LF, default), `windows` (CRLF), or `auto` (detects predominant ending in
+  the input and preserves it)
+- `format.always_wrap` config option — list of command names that are always
+  rendered in vertical (wrapped) layout, never inline or hanging; the
+  `always_wrap` flag in per-command specs (`commands:`) is now also honoured
+- `format.require_valid_layout` config option — when `true`, the formatter
+  returns an error if any output line exceeds `line_width`; useful for strict
+  CI enforcement
+- `format.fractional_tab_policy` config option — controls sub-tab-stop
+  indentation remainders when `use_tabs` is `true`: `use-space` (default)
+  keeps them as spaces, `round-up` promotes them to a full tab
+- `format.max_rows_cmdline` config option — maximum number of rows a
+  positional argument group may occupy before the hanging-wrap layout is
+  rejected and vertical layout is used instead (default: `2`)
+- `markup.explicit_trailing_pattern` config option — regex pattern (default
+  `#<`) that marks an inline comment as trailing its preceding argument,
+  keeping it on the same line rather than wrapping to a new line
 
 ## 0.1.1
 
