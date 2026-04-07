@@ -53,10 +53,10 @@ Without it, every argument in:
 target_link_libraries(foo PUBLIC bar PRIVATE baz)
 ```
 
-looks like a generic positional token. The registry knows that `PUBLIC` and
-`PRIVATE` are not generic tokens — they start new argument groups. That
-knowledge is what lets the formatter produce keyword-aware, correctly grouped
-output instead of flattened token streams.
+looks like a generic positional token. With it, the registry recognizes that
+`PUBLIC` and `PRIVATE` are semantic keywords that start new argument groups.
+That knowledge is what lets the formatter produce keyword-aware, correctly
+grouped output instead of flattened token streams.
 
 The registry is populated from two sources:
 
@@ -66,7 +66,8 @@ The registry is populated from two sources:
 ### Formatter
 
 Once the source is parsed and command shapes are known, the formatter converts
-the AST into layout decisions using a Wadler-Lindig-style document model.
+the AST into layout decisions using a document model inspired by Wadler and
+Lindig's pretty-printing algorithm.
 
 In practice, this means it can ask:
 

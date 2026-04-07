@@ -112,8 +112,8 @@ Once `cmakefmt` understands the argument structure, it can produce
 keyword-aware, properly grouped output instead of flattening everything into a
 token stream.
 
-If you only want layout or style tweaks for an already-known command, use
-`per_command_overrides:` instead.
+If you only want layout or style tweaks for a command whose argument structure
+`cmakefmt` already understands, use `per_command_overrides:` instead.
 
 ## Stdin Formatting Ignores My Project Config
 
@@ -193,7 +193,7 @@ cmakefmt --cache --check .
 cmakefmt --cache-location .cache/cmakefmt --cache-strategy content --check .
 ```
 
-Use `--debug` if you want to see cache hits and misses explicitly.
+Use `--debug` to see detailed cache hit and miss information.
 
 ## I Want A Gradual Rollout Instead Of Formatting Everything
 

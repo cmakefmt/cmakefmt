@@ -47,7 +47,7 @@ leans heavily on:
 - real-world corpus tests
 - performance benchmarks
 
-High coverage with weak corpus coverage would still be a bad trade.
+High code coverage with weak real-world corpus coverage provides false confidence — both matter.
 
 ## Local Coverage
 

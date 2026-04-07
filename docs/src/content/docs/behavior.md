@@ -105,8 +105,8 @@ add_library(foo foo.cc)
 
 ## Comments
 
-Comments are not stripped and reattached later. They are first-class parsed
-elements that move through the entire formatter pipeline.
+Comments are never discarded and re-inserted later. They are tracked as real
+syntax nodes throughout the entire formatter pipeline.
 
 That distinction matters. It means `cmakefmt` can reliably preserve:
 
@@ -240,10 +240,10 @@ clone. That means:
 
 ### Output differences you may notice
 
-**Wrapping thresholds.** `cmakefmt` uses a Wadler-Lindig document model to
-decide layouts. The exact line at which a call wraps can differ from
-`cmake-format`'s heuristics, even when using identical config values. The
-result is still correct and idempotent — just not always byte-identical.
+**Wrapping thresholds.** `cmakefmt` uses a principled pretty-printing algorithm
+to decide layouts. The exact line at which a call wraps can differ from
+`cmake-format`'s heuristics, even with identical config values. The result is
+still correct and idempotent — just not always output-identical.
 
 **Keyword grouping.** When `cmakefmt` knows a command's structure (via the
 built-in registry or a `commands:` entry), it groups keyword sections
@@ -251,10 +251,9 @@ deliberately. `cmake-format` without a matching spec entry would often treat
 the same tokens as undifferentiated positional arguments and produce a flatter
 layout.
 
-**Comment reflow.** `cmakefmt` defaults to `reflow_comments: false`. If your
-old `cmake-format` config had `line_width` enforcement on comments, you may
-see comments left wider than the configured limit until you explicitly enable
-`markup.reflow_comments: true`.
+**Comment reflow.** By default, `cmakefmt` preserves comments without
+modification. If you want comments reflowed to fit within the configured line
+width, explicitly enable `markup.reflow_comments: true`.
 
 **Config key names.** Several config keys were renamed for clarity. Any key
 `cmakefmt` does not recognise will produce a fast-fail error, not a silent

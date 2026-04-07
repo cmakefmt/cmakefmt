@@ -46,7 +46,7 @@ single native binary. Same spirit. No Python. No compromises.
 * **Built for actual workflows.** `--check`, `--diff`, `--staged`, `--changed`, `--files-from`,
   `--show-config`, `--explain-config`, semantic verification, JSON reporting — all first-class,
   not scripted workarounds.
-* **Knows your commands.** Teach `cmakefmt` the shape of your project's custom CMake functions and macros.
+* **Knows your commands.** Teach `cmakefmt` the argument structure of your project's custom CMake functions and macros.
   No more generic token-wrapping for code *you* wrote.
 * **Errors that actually help.** Parse and config failures come with file/line context, source snippets,
   and reproduction hints — not opaque parser noise.
@@ -77,7 +77,7 @@ On a 220-file batch, `--parallel 8` improves throughput by **`3.80×`** vs seria
 
 Full methodology and profiler notes: [cmakefmt.dev/performance/](https://cmakefmt.dev/performance/).
 
-Refresh the pinned local corpus and generate local before/after review artefacts with:
+Update the pinned local corpus and generate local before/after review artifacts with:
 
 ```bash
 python3 scripts/fetch-real-world-corpus.py
@@ -119,8 +119,8 @@ Verify:
 cmakefmt --version
 ```
 
-Planned release channels and support levels are documented at [cmakefmt.dev/release/](https://cmakefmt.dev/release/).
-Shell completion installation guidance lives in [cmakefmt.dev/install/](https://cmakefmt.dev/install/).
+Release channels and support levels are documented at [cmakefmt.dev/release/](https://cmakefmt.dev/release/).
+Shell completion installation instructions are available at [cmakefmt.dev/install/](https://cmakefmt.dev/install/).
 
 ## Quick Start
 

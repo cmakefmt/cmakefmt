@@ -120,8 +120,8 @@ Current headline measurements were captured on:
 - `hyperfine 1.20.0`
 - `cmake-format 0.6.13`
 
-Exact numbers vary by machine. What matters release to release is that
-relative trends stay strong and regressions are caught quickly.
+Exact numbers vary by machine. What matters across releases is that relative
+performance trends remain strong and regressions are caught early.
 
 ## How To Reproduce
 

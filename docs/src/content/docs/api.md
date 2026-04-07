@@ -8,9 +8,9 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-`cmakefmt` is primarily a CLI tool, but the crate already exposes a capable
-embedded API for Rust code that wants to parse or format CMake sources
-in-process — no subprocess, no shell escape, no overhead.
+`cmakefmt` is primarily a CLI tool, but the crate also exposes a capable
+embedded API for Rust code that needs to parse or format CMake sources
+in-process — no subprocess, no shell escaping, no overhead.
 
 ## When To Use The Library
 
@@ -24,9 +24,8 @@ The crate is a strong fit when you want to:
 
 ## Crate Status
 
-The library API is usable today. This repository is stable, but the crate is
-still pre-`1.0`, so expect some surface evolution before long-term
-compatibility guarantees settle.
+The library API is usable today. The crate is still pre-`1.0`, so the public
+API surface may evolve before long-term compatibility is guaranteed.
 
 ## Public Entry Points
 
@@ -86,7 +85,7 @@ target_link_libraries(foo PUBLIC bar baz)
 }
 ```
 
-The right pattern when your application needs to supply formatter policy at
+Use this pattern when the application needs to supply formatter policy at
 runtime rather than discovering it from disk.
 
 ## Loading Config From Disk

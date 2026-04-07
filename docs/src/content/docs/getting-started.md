@@ -9,8 +9,8 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-`cmakefmt` is a fast, workflow-first formatter for CMake files. This page takes you from
-zero to a formatted repository in under a minute.
+`cmakefmt` is a fast, workflow-first formatter for CMake files. This page gets you from
+installation to a fully formatted repository in under a minute.
 
 ## Install
 
@@ -42,8 +42,8 @@ Dump a starter config to your repository root:
 cmakefmt --dump-config > .cmakefmt.yaml
 ```
 
-YAML is the recommended format. Open the file and adjust `format.line_width`,
-`style.command_case`, or any other option that doesn't match your project's conventions.
+YAML is the recommended format. Open the file and adjust options like
+`format.line_width` and `style.command_case` to match your project's style.
 See the [Config Reference](/config/) for every available option.
 
 ## Your First Run

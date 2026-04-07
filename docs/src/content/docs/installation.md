@@ -164,11 +164,9 @@ Dump a starter config into your repo root:
 cmakefmt --dump-config > .cmakefmt.yaml
 ```
 
-Why YAML by default?
-
-- it is easier to read for larger custom-command specs
-- it is the recommended user-facing format for `cmakefmt`
-- `--dump-config toml` still exists if you prefer TOML
+Why YAML by default? For larger configs, YAML requires less punctuation and is
+more readable with nested custom-command specs. TOML is still available via
+`--dump-config toml` if you prefer it.
 
 Do a dry run — check your whole project without rewriting a single file:
 
@@ -350,4 +348,4 @@ Pass `--stdin-path` with the buffer's real project-relative path.
 cmakefmt --dump-config toml > .cmakefmt.toml
 ```
 
-YAML is simply the recommended default for larger configs.
+YAML is the recommended default because it is more readable for larger configurations with nested custom command specs.

@@ -4,7 +4,7 @@ This repository moves fastest when code, docs, config surface, and tests stay
 in sync. If you add a feature or change behavior, update the related files in
 the same change.
 
-This applies to both human contributors and Codex.
+This applies to both human contributors and any automated tooling used to generate code.
 
 ## Core Rule
 
@@ -16,8 +16,9 @@ When you add a user-visible feature, also update:
 - `CHANGELOG.md` — add an entry under `## Unreleased`
 - the roadmap if the project scope or milestone state changed
 
-Do not leave “I’ll document it later” gaps behind. This repo already has enough
-moving parts that drift becomes expensive quickly.
+Do not leave “I’ll document it later” gaps behind. This repository has many
+interconnected components, and documentation that drifts from the implementation
+becomes expensive to untangle quickly.
 
 ## Changelog
 
@@ -104,9 +105,9 @@ Then update:
   `tests/fixtures/`
 - `README.md` if user-visible behavior changed
 
-If formatting semantics changed in a meaningful way, review whether
-`docs/src/content/docs/architecture.md`
-should also be updated.
+If the formatted output changes in ways that would affect real-world projects
+(different indentation, wrapping behavior, or keyword grouping), review whether
+`docs/src/content/docs/architecture.md` should also be updated.
 
 If the change affects real-world behavior, also update:
 

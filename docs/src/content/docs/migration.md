@@ -9,8 +9,8 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
 Switching to `cmakefmt` is designed to be straightforward. The goal is easy
-adoption, not a risky big-bang rewrite — roll out incrementally, compare output
-at each step, and flip the switch once you are satisfied.
+adoption, not a risky repository-wide rewrite — roll out incrementally, compare
+output at each step, and commit to full migration once you are satisfied.
 
 ## Recommended Rollout
 
@@ -33,8 +33,8 @@ at each step, and flip the switch once you are satisfied.
    cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.yaml
    ```
 
-   YAML is the default output. If you prefer TOML instead, add
-   `--convert-legacy-config-format toml`.
+   YAML is the default output format. For TOML instead, pass
+   `--convert-legacy-config-format toml` to the same command.
 
 4. Compare output on a representative sample. Use `--diff` to see exactly what
    would change without touching any files:
@@ -73,7 +73,7 @@ See [Formatter Behavior](/behavior/) for the pragma syntax.
 - the built-in command registry is audited through CMake 4.3.1
 - `--config` is still accepted as an alias for `--config-file`
 - `--path-regex` replaces the older `--file-regex`
-- any unsupported compatibility should be treated as a bug, not silently assumed
+- any compatibility gaps should be reported as bugs, not silently worked around
 
 ## Operational Advice
 

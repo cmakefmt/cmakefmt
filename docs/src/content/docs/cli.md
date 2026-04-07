@@ -55,7 +55,7 @@ Ignore rules only affect:
 | `--changed` | Use modified Git-tracked files instead of explicit input paths. |
 | `--since <REF>` | Choose the Git base ref used by `--changed`. Without it, `HEAD` is the base. |
 | `--stdin-path <PATH>` | Give stdin formatting a virtual on-disk path for config discovery and diagnostics. |
-| `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges on a single target. |
+| `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges within a single file. |
 
 ## Output Mode Flags
 
@@ -133,8 +133,8 @@ cmakefmt --in-place .
 ```
 
 The "apply formatting now" mode. Every discovered CMake file gets rewritten.
-In-place rewrites also verify parse-tree stability by default; use `--fast`
-only when you are intentionally trading that extra safety check for throughput.
+In-place rewrites verify parse-tree stability by default. Use `--fast` to skip
+this verification and improve throughput on trusted inputs.
 
 ### Verify A Dry Run Semantically
 

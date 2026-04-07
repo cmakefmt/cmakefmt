@@ -12,7 +12,7 @@ Everything you need to know to tune `cmakefmt` for your project.
 
 The short version:
 
-- user config may be YAML or TOML
+- configuration files may be YAML or TOML
 - YAML is the recommended default for hand-edited configs
 - custom command syntax goes under `commands:`
 - command-specific layout and style tweaks go under `per_command_overrides:`
@@ -241,7 +241,7 @@ format:
   max_empty_lines: 1
 ```
 
-Blank-line runs larger than this limit are clamped down. Vertical breathing room is preserved; runaway gaps are not.
+Blank-line runs that exceed this limit are reduced to the configured maximum. Intentional vertical separation is preserved; excessive gaps are removed.
 
 ### `max_hanging_wrap_lines`
 
@@ -253,7 +253,7 @@ format:
   max_hanging_wrap_lines: 2
 ```
 
-Lower values force more aggressively vertical output.
+Lower values cause more commands to fall back to fully vertical layout.
 
 ### `max_hanging_wrap_positional_args`
 
@@ -276,7 +276,7 @@ format:
   max_hanging_wrap_groups: 2
 ```
 
-Lower this to push keyword-heavy commands toward vertical layout sooner.
+Lower this to format keyword-heavy commands with vertical layout more readily.
 
 ### `max_rows_cmdline`
 
@@ -379,8 +379,7 @@ format:
   max_prefix_length: 10
 ```
 
-Like `min_prefix_length`, this is a layout-tuning knob rather than a
-day-one config option.
+Like `min_prefix_length`, this is primarily for advanced layout tuning and rarely needs adjustment.
 
 ### `space_before_control_paren`
 
@@ -679,8 +678,7 @@ This tells `cmakefmt` that:
 
 Once the formatter knows the structure, it can group and wrap the command
 intelligently — instead of treating every token as an undifferentiated argument.
-For larger custom specs, YAML is much easier to maintain than TOML, which is
-why the default starter config is YAML.
+For larger custom specs, YAML requires less punctuation and is easier to read with deeply nested structures, which is why the default starter config is YAML.
 
 ## Old Draft Key Names
 

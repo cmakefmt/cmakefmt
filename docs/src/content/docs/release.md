@@ -23,7 +23,7 @@ The first public release should mean:
 - the CLI, config surface, and diagnostics are intentionally designed rather
   than experimental
 - formatting output may still change between early releases when bugs are fixed
-  or layouts are improved
+  or layout behavior is refined based on user feedback
 
 In other words: usable now, but not yet promising `1.0`-level formatting
 stability.
@@ -75,7 +75,7 @@ Before `1.0`, formatting behavior may still change between releases. The goal
 is to keep those changes understandable and intentional:
 
 - bug fixes that make output more obviously correct are expected
-- formatter churn should be documented in the changelog
+- formatting behavior changes should be documented in the changelog
 - teams should pin an explicit released version in CI if output stability matters
 
 Release notes and support policy updates are published with each tagged release
