@@ -15,7 +15,7 @@ targets = []
 [advisories]
 # Warn on unmaintained crates; promote to deny once the dependency tree is
 # stable and any known unmaintained crates are reviewed.
-unmaintained = "warn"
+unmaintained = "all"
 yanked = "deny"
 
 # ---------------------------------------------------------------------------
