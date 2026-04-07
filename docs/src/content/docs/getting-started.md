@@ -14,13 +14,17 @@ installation to a fully formatted repository in under a minute.
 
 ## Install
 
-**Homebrew** is the recommended path for macOS and Linux users — no Rust toolchain needed:
+**Homebrew** — recommended for macOS, no Rust toolchain needed:
 
 ```bash
 brew install cmakefmt/cmakefmt/cmakefmt
 ```
 
-**Cargo** for developers already using Rust:
+**Pre-built binaries** — for Linux, macOS, and Windows, download the `.zip` / `.tar.gz`
+from [GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest),
+extract, and place the binary on your `PATH`.
+
+**Cargo** — for developers already using Rust, works on any platform:
 
 ```bash
 cargo install cmakefmt-rust
@@ -32,7 +36,7 @@ Verify the install:
 cmakefmt --version
 ```
 
-For Windows, pre-built binaries, and more install options see the full [Install](/install/) page.
+For shell completions, editor setup, and more install options see the full [Installation](/installation/) page.
 
 ## Generate a Config
 

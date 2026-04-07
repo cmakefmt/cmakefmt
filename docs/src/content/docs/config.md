@@ -67,6 +67,10 @@ cmakefmt --dump-config toml > .cmakefmt.toml
 
 ## Table Of Contents
 
+- [Config Discovery Order](#config-discovery-order)
+- [Recommended Starter File](#recommended-starter-file)
+- [Table Of Contents](#table-of-contents)
+- [Defaults](#defaults)
 - [Format Options](#format-options)
   - [`disable`](#disable)
   - [`line_ending`](#line_ending)
@@ -102,9 +106,19 @@ cmakefmt --dump-config toml > .cmakefmt.toml
   - [`hashruler_min_length`](#hashruler_min_length)
   - [`canonicalize_hashrulers`](#canonicalize_hashrulers)
   - [`explicit_trailing_pattern`](#explicit_trailing_pattern)
+- [`commands:` vs `per_command_overrides:` — Which One Do I Need?](#commands-vs-per_command_overrides--which-one-do-i-need)
 - [Per-command Overrides](#per-command-overrides)
 - [Custom Command Specs](#custom-command-specs)
+  - [Before and after](#before-and-after)
+  - [Spec fields](#spec-fields)
+    - [`pargs`](#pargs)
+    - [`flags`](#flags)
+    - [`kwargs`](#kwargs)
+    - [`layout`](#layout)
+  - [Discriminated commands](#discriminated-commands)
+  - [A larger example](#a-larger-example)
 - [Old Draft Key Names](#old-draft-key-names)
+- [Related Reading](#related-reading)
 
 ## Defaults
 
@@ -612,7 +626,7 @@ These two config sections are easy to confuse. The short rule:
 | "The formatter doesn't know what `SOURCES` or `QUIET` mean in my command." | Use `commands:` — teach it the argument structure. |
 | "The formatter knows the command fine, but I want it wider / different casing." | Use `per_command_overrides:` — change the layout knobs only. |
 
-In other words: `commands:` is about *what* the arguments mean; `per_command_overrides:` is about *how* they get laid out on the page.
+In other words: `commands:` is about _what_ the arguments mean; `per_command_overrides:` is about _how_ they get laid out on the page.
 
 ## Per-command Overrides
 
@@ -654,11 +668,42 @@ Do **not** use it to define a command's argument structure — that belongs in
 Use `commands:` to teach `cmakefmt` about custom functions and macros, or to
 override the built-in shape of an existing command.
 
-Example:
+Without a spec, `cmakefmt` sees every token as an undifferentiated positional
+argument and has no way to group keyword sections or recognize flags. With a
+spec, it understands the structure and can produce properly grouped, readable
+output.
+
+### Before and after
+
+Consider this call — long enough to exceed the default `line_width` of 80:
+
+```text
+my_library(mylib SOURCES src/foo.cpp src/bar.cpp src/baz.cpp LIBRARIES Boost::filesystem fmt::fmt spdlog::spdlog QUIET)
+```
+
+**Without a spec**, `cmakefmt` has no idea that `SOURCES` and `LIBRARIES` are
+keywords or that `QUIET` is a flag. It treats every token as a positional
+argument and wraps them all at the same indent level, with no grouping:
+
+```text
+my_library(
+  mylib
+  SOURCES
+  src/foo.cpp
+  src/bar.cpp
+  src/baz.cpp
+  LIBRARIES
+  Boost::filesystem
+  fmt::fmt
+  spdlog::spdlog
+  QUIET)
+```
+
+After adding this spec:
 
 ```yaml
 commands:
-  my_custom_command:
+  my_library:
     pargs: 1
     flags:
       - QUIET
@@ -669,16 +714,188 @@ commands:
         nargs: "+"
 ```
 
-This tells `cmakefmt` that:
+**With a spec**, `cmakefmt` groups each keyword with its values in a
+hanging-wrap layout, and recognizes `QUIET` as a standalone flag:
 
-- the command starts with one positional argument
-- `QUIET` is a standalone flag
-- `SOURCES` starts a keyword section with one or more values
-- `LIBRARIES` starts a keyword section with one or more values
+```text
+my_library(
+  mylib
+  SOURCES src/foo.cpp src/bar.cpp src/baz.cpp
+  LIBRARIES Boost::filesystem fmt::fmt spdlog::spdlog
+  QUIET)
+```
 
-Once the formatter knows the structure, it can group and wrap the command
-intelligently — instead of treating every token as an undifferentiated argument.
-For larger custom specs, YAML requires less punctuation and is easier to read with deeply nested structures, which is why the default starter config is YAML.
+### Spec fields
+
+#### `pargs`
+
+How many positional arguments appear before keyword/flag processing begins.
+Accepts an integer or one of the `nargs` strings described below.
+
+```yaml
+commands:
+  my_command:
+    pargs: 2      # exactly two positional args before keywords
+```
+
+#### `flags`
+
+A list of standalone keyword tokens that take no values. When `cmakefmt` sees
+one of these tokens it treats it as a boolean flag, not the start of a keyword
+section.
+
+```yaml
+commands:
+  my_command:
+    flags:
+      - QUIET
+      - REQUIRED
+      - GLOBAL
+```
+
+#### `kwargs`
+
+Keyword sections that accept one or more values. Each entry names the keyword
+and specifies how many values follow it via `nargs`.
+
+```yaml
+commands:
+  my_command:
+    kwargs:
+      OUTPUT_DIRECTORY:
+        nargs: 1        # exactly one value
+      SOURCES:
+        nargs: "+"      # one or more values
+      OPTIONAL_SOURCES:
+        nargs: "*"      # zero or more values
+      MAYBE_ONE:
+        nargs: "?"      # zero or one value
+      AT_LEAST_TWO:
+        nargs: "2+"     # two or more values
+```
+
+**`nargs` values:**
+
+| Value | Meaning |
+| --- | --- |
+| `1`, `2`, … | Exactly that many values |
+| `"*"` | Zero or more values |
+| `"+"` | One or more values |
+| `"?"` | Zero or one value |
+| `"N+"` e.g. `"2+"` | At least N values |
+
+Keywords can also nest their own `flags` and `kwargs` for commands with
+multi-level structure:
+
+```yaml
+commands:
+  my_command:
+    kwargs:
+      INSTALL:
+        nargs: 0
+        kwargs:
+          DESTINATION:
+            nargs: 1
+        flags:
+          - OPTIONAL
+```
+
+#### `layout`
+
+Per-command layout hints that override the global config for this command only.
+
+```yaml
+commands:
+  my_command:
+    pargs: 1
+    kwargs:
+      SOURCES:
+        nargs: "+"
+    layout:
+      always_wrap: true      # always use vertical layout
+      line_width: 120        # allow wider lines for this command
+      tab_size: 4
+      dangle_parens: true
+```
+
+### Discriminated commands
+
+Some commands dispatch on their first token — `file()`, `install()`, and
+`string()` are typical examples. You can define a separate form for each
+discriminator and an optional fallback:
+
+```yaml
+commands:
+  my_command:
+    forms:
+      READ:
+        pargs: 1
+        kwargs:
+          INTO:
+            nargs: 1
+      WRITE:
+        pargs: 1
+        kwargs:
+          CONTENT:
+            nargs: 1
+    fallback:
+      pargs: "*"
+```
+
+`cmakefmt` picks the form whose key matches the first argument
+(case-insensitively) and falls back to `fallback` when nothing matches.
+
+### A larger example
+
+```yaml
+commands:
+  my_library:
+    pargs: 1
+    flags:
+      - QUIET
+      - EXCLUDE_FROM_ALL
+    kwargs:
+      SOURCES:
+        nargs: "+"
+      HEADERS:
+        nargs: "*"
+      LIBRARIES:
+        nargs: "+"
+      INSTALL:
+        nargs: 0
+        kwargs:
+          DESTINATION:
+            nargs: 1
+        flags:
+          - OPTIONAL
+    layout:
+      always_wrap: true
+```
+
+With this spec, given:
+
+```text
+my_library(mylib SOURCES src/foo.cpp src/bar.cpp src/baz.cpp HEADERS include/foo.h include/bar.h LIBRARIES Boost::filesystem fmt::fmt INSTALL DESTINATION lib/mylib OPTIONAL QUIET)
+```
+
+`cmakefmt` produces:
+
+```text
+my_library(
+  mylib
+  SOURCES src/foo.cpp src/bar.cpp src/baz.cpp
+  HEADERS include/foo.h include/bar.h
+  LIBRARIES Boost::filesystem fmt::fmt
+  INSTALL DESTINATION lib/mylib OPTIONAL
+  QUIET)
+```
+
+`always_wrap: true` in the layout forces the vertical layout unconditionally.
+Each keyword group starts on its own line. Without this flag, short calls that
+fit within `line_width` would stay on a single line.
+
+For larger custom specs, YAML requires less punctuation and is easier to read
+with deeply nested structures, which is why the default starter config is YAML.
 
 ## Old Draft Key Names
 
@@ -686,7 +903,7 @@ The current `cmakefmt` config schema only accepts the clearer names on this
 page. If you have an older local config, rename any of the following before use:
 
 | Old key | New key |
-|---|---|
+| --- | --- |
 | `use_tabchars` | `use_tabs` |
 | `max_pargs_hwrap` | `max_hanging_wrap_positional_args` |
 | `max_subgroups_hwrap` | `max_hanging_wrap_groups` |

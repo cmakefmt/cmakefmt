@@ -196,6 +196,16 @@ The docs site is an Astro + Starlight app. Before you finish a docs-heavy change
 bash scripts/check-docs.sh
 ```
 
+If you add or edit a before/after formatting example in any doc page, verify
+the "after" output by running the input through `cmakefmt` directly — either
+via the CLI or the [playground](/playground/). Never write an "after" by hand;
+the formatter is the source of truth.
+
+```bash
+# Quick way to verify a before/after snippet:
+printf 'your_cmake_input_here\n' | cargo run --quiet -- /dev/stdin
+```
+
 If you changed the public Rust API or the meaning of exported types/functions,
 also update the rustdoc comments on the affected items and verify the API docs
 still build:

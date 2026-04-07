@@ -13,58 +13,17 @@ formatting again.
 
 ## Current Installation Options
 
-**Homebrew** is the recommended install path for macOS and Linux users who want
-a native binary without a Rust toolchain:
+### Homebrew
 
-```bash
-brew tap cmakefmt/cmakefmt
-brew install cmakefmt
-```
-
-Or in one step:
+Recommended for macOS users — no Rust toolchain needed:
 
 ```bash
 brew install cmakefmt/cmakefmt/cmakefmt
 ```
 
-**Cargo** is the reference install path for developers already using Rust:
+### Cargo
 
-```bash
-cargo install cmakefmt-rust
-```
-
-If you prefer to build from a local checkout — for development, benchmarking,
-or reviewing changes — see [Build From This Repository](#build-from-this-repository) below.
-
-## Support Levels
-
-The release plan separates channels into explicit support levels so users know
-what to trust:
-
-| Channel | Support level | Notes |
-|---------|---------------|-------|
-| Homebrew (`cmakefmt/cmakefmt`) | Officially maintained | Recommended for macOS and Linux users. Ships completions and man page. |
-| `cargo install cmakefmt-rust` | Officially maintained | Reference install path for developers already using Rust. |
-| GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
-| Docs site / CLI reference | Officially maintained | Stays in lock-step with each tagged release. |
-| `winget` / Scoop | Officially maintained | Planned first-party Windows package-manager channels. |
-| Additional package managers (AUR, Nix, containers, etc.) | Automated or best-effort | Useful channels, but not the first rollout priority. |
-
-## Build From This Repository
-
-```bash
-git clone https://github.com/cmakefmt/cmakefmt
-cd cmakefmt
-cargo build --release
-./target/release/cmakefmt --help
-```
-
-This is the right path if you are actively developing `cmakefmt`, reviewing
-changes, or benchmarking local modifications.
-
-## Install With Cargo
-
-### From crates.io (recommended)
+Reference install path for developers already using Rust, works on any platform:
 
 ```bash
 cargo install cmakefmt-rust
@@ -77,26 +36,45 @@ cmakefmt --version
 cmakefmt --help
 ```
 
-### From a local checkout
+You can also install from a local checkout — for development, benchmarking, or
+reviewing changes:
 
 ```bash
 cargo install --path .
 ```
 
-This is the right path when you have cloned the repository and want to run the
-exact version you have checked out — for development, reviewing changes, or
-benchmarking local modifications. The verify step above applies here too.
+### Pre-built Binaries
 
-You can also inspect release-oriented helper outputs directly from the built
-binary:
+Native binaries for Linux, macOS, and Windows are published to
+[GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest).
+Download the `.zip` / `.tar.gz` for your platform, extract, and place the
+binary on your `PATH`.
+
+### Build From Source
 
 ```bash
-cmakefmt --generate-completion bash > cmakefmt.bash
-cmakefmt --generate-man-page > cmakefmt.1
+git clone https://github.com/cmakefmt/cmakefmt
+cd cmakefmt
+cargo build --release
+./target/release/cmakefmt --help
 ```
 
-Those outputs are intended for packaging and release artifacts, but they are
-also useful for local shell setup.
+This is the right path if you are actively developing `cmakefmt`, reviewing
+changes, or benchmarking local modifications.
+
+## Support Levels
+
+The release plan separates channels into explicit support levels so users know
+what to trust:
+
+| Channel | Support level | Notes |
+| --- | --- | --- |
+| Homebrew (`cmakefmt/cmakefmt`) | Officially maintained | Recommended for macOS users. Ships completions and man page. |
+| `cargo install cmakefmt-rust` | Officially maintained | Reference install path for developers already using Rust. |
+| GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
+| Docs site / CLI reference | Officially maintained | Stays in lock-step with each tagged release. |
+| `winget` / Scoop | Officially maintained | Planned first-party Windows package-manager channels. |
+| Additional package managers (AUR, Nix, containers, etc.) | Automated or best-effort | Useful channels, but not the first rollout priority. |
 
 ## Shell Completions
 

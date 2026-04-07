@@ -86,24 +86,23 @@ scripts/review-real-world-corpus.sh
 
 ## Installation
 
-**Homebrew (macOS and Linux):**
-
-```bash
-brew tap cmakefmt/cmakefmt
-brew install cmakefmt
-```
-
-Or in one step:
+**Homebrew (macOS):**
 
 ```bash
 brew install cmakefmt/cmakefmt/cmakefmt
 ```
 
-**Cargo:**
+**Cargo (any platform):**
 
 ```bash
 cargo install cmakefmt-rust
 ```
+
+**Pre-built binaries (Linux, macOS, and Windows):**
+
+Download the `.zip` / `.tar.gz` for your platform from
+[GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest),
+extract, and place the binary on your `PATH`.
 
 **Build from source:**
 
@@ -266,7 +265,7 @@ Start here: [https://cmakefmt.dev](https://cmakefmt.dev).
 |----------------------------------------------------------------------|--------------------------------------------------------------------------|
 | [Install](https://cmakefmt.dev/install/)                             | Install options, first-project setup, CI wiring                          |
 | [Coverage](https://cmakefmt.dev/coverage/)                           | How coverage is measured, published, and interpreted                     |
-| [Release Channels](https://cmakefmt.dev/release/)                    | Release contract, support levels, release artifacts, and shell completions |
+| [Release Channels](https://cmakefmt.dev/release/)                    | Release contract, support levels, and release artifacts                  |
 | [CLI Reference](https://cmakefmt.dev/cli/)                           | Every flag, exit code, and discovery rule                                |
 | [Config Reference](https://cmakefmt.dev/config/)                     | Full config schema with examples                                         |
 | [Formatter Behavior](https://cmakefmt.dev/behavior/)                 | How the formatter makes layout decisions                                 |

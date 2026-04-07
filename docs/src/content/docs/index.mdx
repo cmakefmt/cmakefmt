@@ -24,15 +24,19 @@ import BenchmarkComparisonChart from '../../components/BenchmarkComparisonChart.
 
 ## Quick Start
 
-Install in one line:
+**macOS** — no Rust toolchain needed:
 
 ```bash
-# macOS and Linux — no Rust toolchain needed
 brew install cmakefmt/cmakefmt/cmakefmt
+```
 
-# Rust developers
+**Any platform** — if you already have Rust:
+
+```bash
 cargo install cmakefmt-rust
 ```
+
+**Linux, macOS, and Windows** — download the pre-built binary from [GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest).
 
 Then:
 
@@ -43,6 +47,55 @@ cmakefmt --check .                        # dry-run: show what would change
 cmakefmt --in-place .                     # apply formatting
 cmakefmt --staged --check                 # pre-commit: format only staged files
 ```
+
+## Before and After
+
+<div class="before-after">
+<div class="before-after-col">
+
+**Before**
+
+```cmake
+CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
+Project(myproject LANGUAGES CXX)
+
+set(SOURCES src/main.cpp
+src/utils.cpp
+  src/parser.cpp)
+
+target_link_libraries(mylib PUBLIC
+Boost::filesystem Boost::system    fmt::fmt
+  PRIVATE
+    spdlog::spdlog)
+
+IF(WIN32)
+MESSAGE(STATUS "building on Windows")
+ENDIF()
+```
+
+</div>
+<div class="before-after-col">
+
+**After**
+
+```cmake
+cmake_minimum_required(VERSION 3.20)
+project(myproject LANGUAGES CXX)
+
+set(SOURCES src/main.cpp src/utils.cpp src/parser.cpp)
+
+target_link_libraries(
+  mylib
+  PUBLIC Boost::filesystem Boost::system fmt::fmt
+  PRIVATE spdlog::spdlog)
+
+if(WIN32)
+  message(STATUS "building on Windows")
+endif()
+```
+
+</div>
+</div>
 
 ## Performance
 
