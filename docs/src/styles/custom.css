@@ -468,6 +468,12 @@ nav.sidebar a[aria-current="true"] {
   }
 }
 
+/* ─── Playground — full-width content area ──────────────────────────────── */
+
+.sl-container:has(.playground) {
+  max-width: 90rem;
+}
+
 /* ─── Scrollbar — thin and subtle ───────────────────────────────────────── */
 
 .sidebar-content {
