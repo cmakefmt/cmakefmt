@@ -10,6 +10,7 @@ required_files=(
   "scripts/stamp-changelog.py"
   "scripts/sync-changelog.py"
   "README.md"
+  "SECURITY.md"
   "CONTRIBUTING.md"
   "CHANGELOG.md"
   "docs/README.md"

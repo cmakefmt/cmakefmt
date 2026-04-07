@@ -55,3 +55,11 @@ jobs:
       - name: Security audit
         if: matrix.os == 'ubuntu-latest'
         run: cargo audit
+
+      - name: Install cargo-deny
+        if: matrix.os == 'ubuntu-latest'
+        uses: taiki-e/install-action@cargo-deny
+
+      - name: Dependency licences, bans, and advisories
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo deny check
