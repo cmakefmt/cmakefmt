@@ -184,7 +184,7 @@ jobs:
 
       - name: Attest release archive
         if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}
 
