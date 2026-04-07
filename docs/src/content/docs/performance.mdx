@@ -18,10 +18,10 @@ not an accident. Speed is a design goal, not a side effect.
 
 ## Highlights
 
-- **20.69×** geometric-mean speedup over `cmake-format` on real-world CMake files
+- **22.18×** geometric-mean speedup over `cmake-format` on real-world CMake files
 - **~97×** faster than `cmake-format` on a 612-file repository (sequential, [oomph-lib](https://github.com/oomph-lib/oomph-lib))
 - **~240×** faster with `--parallel 8` on the same repository
-- Fastest individual fixture: **48.49×** speedup (`mariadb_server/CMakeLists.txt`, 656 lines)
+- Fastest individual fixture: **58.48×** speedup (`xnnpack/CMakeLists.txt`, 1354 lines)
 - End-to-end format of a 1000+ line synthetic file: **~8.8 ms**
 
 ## Benchmark Environment
@@ -45,7 +45,7 @@ timings and speedup for that fixture.
 
 <BenchmarkComparisonChart />
 
-Per-fixture speedup. The dashed line marks the geometric mean (`20.69×`).
+Per-fixture speedup. The dashed line marks the geometric mean (`22.18×`).
 
 <SpeedupChart />
 

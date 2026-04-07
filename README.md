@@ -39,7 +39,7 @@ single native binary. Same spirit. No Python.
 
 ## Why `cmakefmt`?
 
-* **20× faster — not a typo.** Geometric-mean speedup of `20.69x` over `cmake-format` on real-world corpora.
+* **22× faster — not a typo.** Geometric-mean speedup of `22.18x` over `cmake-format` on real-world corpora.
   Pre-commit hooks that once made you wince now finish before you blink.
 * **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
   Drop it in CI and forget about it.
@@ -71,8 +71,9 @@ single native binary. Same spirit. No Python.
 | `protobuf/CMakeLists.txt`       |   351 |         6.226 |           111.802 |  17.96× |
 | `spdlog/CMakeLists.txt`         |   413 |         9.204 |           213.649 |  23.21× |
 | `qtbase_network/CMakeLists.txt` |   420 |         8.146 |           284.355 |  34.91× |
+| `xnnpack/CMakeLists.txt`        |  1354 |        24.800 |          1452.000 |  58.48× |
 
-Geometric-mean speedup across the full corpus: **`20.69×`**.
+Geometric-mean speedup across the full corpus: **`22.18×`**.
 On a 220-file batch, `--parallel 8` improves throughput by **`3.80×`** vs serial.
 
 Full methodology and profiler notes: [cmakefmt.dev/performance/](https://cmakefmt.dev/performance/).

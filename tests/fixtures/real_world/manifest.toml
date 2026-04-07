@@ -129,3 +129,12 @@ commit = "e72d6e46282e476290e657a434ceeeaea40625f7"
 source_url = "https://github.com/qt/qtbase/blob/e72d6e46282e476290e657a434ceeeaea40625f7/src/network/CMakeLists.txt"
 raw_url = "https://raw.githubusercontent.com/qt/qtbase/e72d6e46282e476290e657a434ceeeaea40625f7/src/network/CMakeLists.txt"
 sha256 = "d00fa8dbc6baf6c7de89cafdf3f447cc864a2d538dc95f312c8a080725b65c85"
+
+[[fixture]]
+name = "xnnpack"
+relative_path = "xnnpack/CMakeLists.txt"
+branch = "master"
+commit = "538ac8ffc5b31d163648bf9c6954e978a69337ee"
+source_url = "https://github.com/google/XNNPACK/blob/538ac8ffc5b31d163648bf9c6954e978a69337ee/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/google/XNNPACK/538ac8ffc5b31d163648bf9c6954e978a69337ee/CMakeLists.txt"
+sha256 = "9e4d944fbacf0e5160872d57417fb6ab763073c809647fdd48a1054826e081fb"
