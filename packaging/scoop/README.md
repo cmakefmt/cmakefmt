@@ -3,6 +3,10 @@
 `packaging/scoop/cmakefmt.json` is the Scoop manifest for the
 [ScoopInstaller/Extras](https://github.com/ScoopInstaller/Extras) bucket.
 
+> **Note:** ScoopInstaller/Extras requires the project to have 50–100+ GitHub
+> stars before a manifest is accepted. Revisit this once the repo reaches that
+> threshold.
+
 ## Before submitting
 
 Read the [Scoop bucket contribution guidelines](https://github.com/ScoopInstaller/.github/blob/main/.github/CONTRIBUTING.md#for-scoop-buckets)
