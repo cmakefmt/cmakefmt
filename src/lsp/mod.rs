@@ -174,6 +174,26 @@ fn handle_range_formatting(req: Request, documents: &HashMap<String, String>) ->
     Some(Response::new_ok(id, result))
 }
 
+/// Build a [`lsp_types::TextEdit`] that replaces the entire document.
+fn full_document_edit(original: &str, formatted: String) -> lsp_types::TextEdit {
+    let lines: Vec<&str> = original.lines().collect();
+    let last_line = lines.len().saturating_sub(1);
+    let last_char = lines.last().map(|l: &&str| l.len()).unwrap_or(0) as u32;
+    lsp_types::TextEdit {
+        range: lsp_types::Range {
+            start: lsp_types::Position {
+                line: 0,
+                character: 0,
+            },
+            end: lsp_types::Position {
+                line: last_line as u32,
+                character: last_char,
+            },
+        },
+        new_text: formatted,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,25 +422,5 @@ mod tests {
             params: serde_json::Value::Null,
         };
         handle_notification(notif, &mut docs); // should not panic
-    }
-}
-
-/// Build a [`lsp_types::TextEdit`] that replaces the entire document.
-fn full_document_edit(original: &str, formatted: String) -> lsp_types::TextEdit {
-    let lines: Vec<&str> = original.lines().collect();
-    let last_line = lines.len().saturating_sub(1);
-    let last_char = lines.last().map(|l: &&str| l.len()).unwrap_or(0) as u32;
-    lsp_types::TextEdit {
-        range: lsp_types::Range {
-            start: lsp_types::Position {
-                line: 0,
-                character: 0,
-            },
-            end: lsp_types::Position {
-                line: last_line as u32,
-                character: last_char,
-            },
-        },
-        new_text: formatted,
     }
 }
