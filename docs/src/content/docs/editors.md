@@ -9,9 +9,15 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-`cmakefmt` reads from stdin and writes to stdout, which means every editor that
-supports external formatters works out of the box. Install `cmakefmt` once,
-then drop the config snippet for your editor below.
+`cmakefmt` works with every editor in two ways:
+
+1. **LSP server** (`cmakefmt --lsp`) — the recommended approach for editors
+   with LSP client support. Provides format-on-save and range formatting with
+   no extra plugins.
+2. **Stdin pipe** (`cmakefmt --stdin-path <file> -`) — works with any editor
+   that supports external formatters.
+
+Install `cmakefmt` once, then drop the config snippet for your editor below.
 
 ## VS Code
 
@@ -39,6 +45,33 @@ is on your `PATH`. To customise, add any of the following to your
 | `cmakefmt.onSave` | `true` | Format CMake files automatically on save |
 
 ## Neovim
+
+### Option A: LSP (recommended)
+
+Add `cmakefmt` as a language server via
+[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig):
+
+```lua
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "cmake",
+  callback = function()
+    vim.lsp.start({
+      name = "cmakefmt",
+      cmd = { "cmakefmt", "--lsp" },
+    })
+  end,
+})
+
+-- Format on save
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = { "CMakeLists.txt", "*.cmake" },
+  callback = function()
+    vim.lsp.buf.format({ timeout_ms = 2000 })
+  end,
+})
+```
+
+### Option B: conform.nvim
 
 Use [conform.nvim](https://github.com/stevearc/conform.nvim) — the standard
 Neovim formatter plugin. Add `cmakefmt` as a custom formatter and associate it
@@ -68,7 +101,22 @@ config relative to the file being formatted.
 
 ## Helix
 
-Add a `[[language]]` entry to `~/.config/helix/languages.toml`:
+### Option A: LSP (recommended)
+
+Add `cmakefmt` as a language server in `~/.config/helix/languages.toml`:
+
+```toml
+[language-server.cmakefmt]
+command = "cmakefmt"
+args = ["--lsp"]
+
+[[language]]
+name = "cmake"
+language-servers = ["cmakefmt"]
+auto-format = true
+```
+
+### Option B: External formatter
 
 ```toml
 [[language]]
@@ -83,7 +131,27 @@ from stdin.
 
 ## Zed
 
-Add the following to `~/.config/zed/settings.json`:
+### Option A: LSP (recommended)
+
+Add `cmakefmt` as a language server in `~/.config/zed/settings.json`:
+
+```json
+{
+  "lsp": {
+    "cmakefmt": {
+      "binary": { "path": "cmakefmt", "arguments": ["--lsp"] }
+    }
+  },
+  "languages": {
+    "CMake": {
+      "language_servers": ["cmakefmt"],
+      "format_on_save": "on"
+    }
+  }
+}
+```
+
+### Option B: External formatter
 
 ```json
 {
@@ -124,7 +192,17 @@ Apheleia replaces `filepath` with the path of the buffer being formatted.
 
 ## Any other editor
 
-The general pattern is:
+If your editor has an LSP client, point it at:
+
+```
+cmakefmt --lsp
+```
+
+This provides format-on-save and range formatting over the standard Language
+Server Protocol (JSON-RPC on stdio).
+
+If your editor does not support LSP but does support external formatters, use
+the stdin pipe approach:
 
 ```
 cmakefmt --stdin-path <current-file-path> -
