@@ -29,11 +29,6 @@ This project follows a simple changelog discipline:
 - Guide pages on [cmakefmt.dev](https://cmakefmt.dev): editor integration,
   CI integration, tool comparison, badge, and "Projects using cmakefmt"
 
-### Fixed
-
-- `--dump-schema` was missing a trailing newline, causing the CI schema
-  staleness check to report a spurious diff
-
 ## 0.2.0 — 2026-04-07
 
 ### Added
