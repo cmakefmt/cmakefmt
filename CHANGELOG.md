@@ -8,6 +8,7 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.3.0 — 2026-04-08
 ### Added
 
 - `--dump-schema` flag — prints the JSON Schema for the `.cmakefmt.yaml` /
