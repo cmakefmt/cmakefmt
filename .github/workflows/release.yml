@@ -353,6 +353,48 @@ jobs:
           git tag "${GITHUB_REF_NAME}"
           git push origin "${GITHUB_REF_NAME}"
 
+  publish-vscode-extension:
+    name: publish-vscode-extension
+    runs-on: ubuntu-latest
+    needs: [verify-version, build, test, publish]
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    steps:
+      - name: Check out VS Code extension repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: cmakefmt/vscode-cmakefmt
+          token: ${{ secrets.VSCODE_CMAKEFMT_TOKEN }}
+          path: vscode-cmakefmt
+          persist-credentials: false
+
+      - name: Bump extension version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd vscode-cmakefmt
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"${VERSION}\"/" package.json
+
+      - name: Commit, tag, and push
+        shell: bash
+        env:
+          VSCODE_CMAKEFMT_TOKEN: ${{ secrets.VSCODE_CMAKEFMT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${VSCODE_CMAKEFMT_TOKEN}" ]]; then
+            echo "VSCODE_CMAKEFMT_TOKEN secret is not configured."
+            exit 1
+          fi
+          cd vscode-cmakefmt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "Bump version to ${GITHUB_REF_NAME#v} for cmakefmt ${GITHUB_REF_NAME}"
+          git remote set-url origin "https://x-access-token:${VSCODE_CMAKEFMT_TOKEN}@github.com/cmakefmt/vscode-cmakefmt.git"
+          git push origin HEAD:main
+          git tag "${GITHUB_REF_NAME}"
+          git push origin "${GITHUB_REF_NAME}"
+
   publish-crates-io-dry-run:
     name: publish-crates-io-dry-run
     runs-on: ubuntu-latest
