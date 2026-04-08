@@ -32,6 +32,7 @@ path = [
   "docs/package.json",
   "docs/public/*.png",
   "docs/public/*.txt",
+  "docs/public/schemas/**",
   "docs/src/assets/*.png",
   "docs/src/content.config.ts",
   "docs/src/content/docs/*.md",
