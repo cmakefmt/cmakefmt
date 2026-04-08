@@ -313,6 +313,18 @@ struct Cli {
     )]
     quiet: bool,
 
+    /// Print a git-style summary after formatting (e.g. "3 files changed, 12 lines reformatted").
+    ///
+    /// This works with all output modes (`--check`, `--diff`, `--in-place`, and
+    /// stdout). When combined with `--quiet`, the stat line is still printed.
+    #[arg(
+        long,
+        help_heading = "Execution",
+        conflicts_with = "dump_config",
+        conflicts_with = "convert_config_paths"
+    )]
+    stat: bool,
+
     /// Continue processing other files after a file-level parse or format error.
     ///
     /// Without this flag, human runs still fail at the first file error.
@@ -705,6 +717,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                     summary.skipped += 1;
                 } else if result.would_change {
                     summary.changed += 1;
+                    summary.total_changed_lines += result.changed_lines.len();
                 } else {
                     summary.unchanged += 1;
                 }
@@ -854,6 +867,10 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     if should_print_human_summary(cli, &summary, &failures, results.len()) {
         eprintln!("{}", render_human_summary(&summary));
+    }
+
+    if cli.stat {
+        eprintln!("{}", render_stat_summary(&summary));
     }
 
     if !failures.is_empty() {
@@ -1410,6 +1427,7 @@ struct RunSummary {
     unchanged: usize,
     skipped: usize,
     failed: usize,
+    total_changed_lines: usize,
 }
 
 fn process_targets_serial(
@@ -1709,6 +1727,7 @@ fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
     colorize_stdout
         || !cli.line_ranges.is_empty()
         || cli.debug
+        || cli.stat
         || cli.report_format != ReportFormat::Human
 }
 
@@ -2184,6 +2203,7 @@ fn build_json_report(
             unchanged: summary.unchanged,
             skipped: summary.skipped,
             failed: summary.failed,
+            total_changed_lines: summary.total_changed_lines,
         },
         files: results
             .iter()
@@ -2530,6 +2550,23 @@ fn render_human_summary(summary: &RunSummary) -> String {
     }
     let _ = write!(rendered, ", failed={}", summary.failed);
     rendered
+}
+
+fn render_stat_summary(summary: &RunSummary) -> String {
+    let files_word = if summary.changed == 1 {
+        "file changed"
+    } else {
+        "files changed"
+    };
+    let lines_word = if summary.total_changed_lines == 1 {
+        "line reformatted"
+    } else {
+        "lines reformatted"
+    };
+    format!(
+        "{} {}, {} {}",
+        summary.changed, files_word, summary.total_changed_lines, lines_word
+    )
 }
 
 fn describe_config_context(config_context: &ConfigContext) -> String {
@@ -3092,6 +3129,7 @@ mod tests {
             "parallel",
             "progress-bar",
             "quiet",
+            "stat",
             "report-format",
             "show-config",
             "show-config-path",
