@@ -1,92 +1,68 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "cmakefmt configuration",
-  "description": "The user-config file structure for `.cmakefmt.yaml`, `.cmakefmt.yml`, and `.cmakefmt.toml`.\n\nAll fields are optional — only specified values override the defaults.",
+  "description": "The user-config file structure for `.cmakefmt.yaml`, `.cmakefmt.yml`, and\n`.cmakefmt.toml`.\n\nAll fields are optional — only specified values override the defaults.",
   "type": "object",
   "properties": {
     "format": {
       "description": "Formatting options controlling line width, indentation, and layout.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/FormatSection"
-        }
-      ]
+      "$ref": "#/$defs/FormatSection"
     },
     "markup": {
       "description": "Comment markup processing options.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/MarkupSection"
-        }
-      ]
+      "$ref": "#/$defs/MarkupSection"
     },
     "per_command_overrides": {
       "description": "Per-command configuration overrides keyed by lowercase command name.",
-      "default": {},
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/definitions/PerCommandConfig"
-      }
+        "$ref": "#/$defs/PerCommandConfig"
+      },
+      "default": {}
     },
     "style": {
       "description": "Style options controlling command and keyword casing.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/StyleSection"
-        }
-      ]
+      "$ref": "#/$defs/StyleSection"
     }
   },
-  "definitions": {
+  "$defs": {
     "CaseStyle": {
       "description": "How to normalise command/keyword casing.",
       "oneOf": [
         {
           "description": "Force lowercase output.",
           "type": "string",
-          "enum": [
-            "lower"
-          ]
+          "const": "lower"
         },
         {
           "description": "Force uppercase output.",
           "type": "string",
-          "enum": [
-            "upper"
-          ]
+          "const": "upper"
         },
         {
           "description": "Preserve the original source casing.",
           "type": "string",
-          "enum": [
-            "unchanged"
-          ]
+          "const": "unchanged"
         }
       ]
     },
     "DangleAlign": {
-      "description": "How to align the dangling closing paren.\n\nOnly takes effect when [`Config::dangle_parens`] is `true`. Controls where `)` is placed when a call wraps onto multiple lines:\n\n```cmake # Prefix / Close — `)` at the command-name column (tracks block depth): target_link_libraries( mylib PUBLIC dep1 )\n\n# Open — `)` at the opening-paren column: target_link_libraries( mylib PUBLIC dep1 ) ```",
+      "description": "How to align the dangling closing paren.\n\nOnly takes effect when [`Config::dangle_parens`] is `true`.\nControls where `)` is placed when a call wraps onto multiple lines:\n\n```cmake\n# Prefix / Close — `)` at the command-name column (tracks block depth):\ntarget_link_libraries(\n  mylib PUBLIC dep1\n)\n\n# Open — `)` at the opening-paren column:\ntarget_link_libraries(\n  mylib PUBLIC dep1\n                     )\n```",
       "oneOf": [
         {
           "description": "Align with the start of the command name.",
           "type": "string",
-          "enum": [
-            "prefix"
-          ]
+          "const": "prefix"
         },
         {
           "description": "Align with the opening paren column.",
           "type": "string",
-          "enum": [
-            "open"
-          ]
+          "const": "open"
         },
         {
           "description": "No extra indent (flush with current indent level).",
           "type": "string",
-          "enum": [
-            "close"
-          ]
+          "const": "close"
         }
       ]
     },
@@ -95,208 +71,204 @@
       "properties": {
         "always_wrap": {
           "description": "Command names (lowercase) that must always use vertical layout regardless of line width.",
-          "default": null,
           "type": [
             "array",
             "null"
           ],
+          "default": null,
           "items": {
             "type": "string"
           }
         },
         "dangle_align": {
           "description": "Alignment strategy for a dangling `)`: `prefix`, `open`, or `close`.",
-          "default": null,
           "anyOf": [
             {
-              "$ref": "#/definitions/DangleAlign"
+              "$ref": "#/$defs/DangleAlign"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "default": null
         },
         "dangle_parens": {
           "description": "Place the closing `)` on its own line when a call wraps.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "disable": {
           "description": "Disable formatting entirely and return the source unchanged.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "fractional_tab_policy": {
           "description": "How to handle fractional indentation when `use_tabs` is `true`: `use-space` or `round-up`.",
-          "default": null,
           "anyOf": [
             {
-              "$ref": "#/definitions/FractionalTabPolicy"
+              "$ref": "#/$defs/FractionalTabPolicy"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "default": null
         },
         "line_ending": {
           "description": "Output line-ending style: `unix` (LF), `windows` (CRLF), or `auto` (detect from input).",
-          "default": null,
           "anyOf": [
             {
-              "$ref": "#/definitions/LineEnding"
+              "$ref": "#/$defs/LineEnding"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "default": null
         },
         "line_width": {
           "description": "Maximum rendered line width before cmakefmt wraps a call. Default: `80`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "max_empty_lines": {
           "description": "Maximum number of consecutive blank lines to preserve. Default: `1`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "max_hanging_wrap_groups": {
           "description": "Maximum keyword/flag subgroups to keep in a hanging-wrap layout. Default: `2`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "max_hanging_wrap_lines": {
           "description": "Maximum wrapped lines to tolerate before switching to a more vertical layout. Default: `2`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "max_hanging_wrap_positional_args": {
           "description": "Maximum positional arguments to keep in a hanging-wrap layout. Default: `6`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "max_prefix_length": {
           "description": "Upper heuristic bound used when deciding between compact and wrapped layouts. Default: `10`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "max_rows_cmdline": {
           "description": "Maximum rows a hanging-wrap positional group may consume before nesting is forced. Default: `2`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "min_prefix_length": {
           "description": "Lower heuristic bound used when deciding between compact and wrapped layouts. Default: `4`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "require_valid_layout": {
           "description": "Return an error if any formatted output line exceeds `line_width`.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "space_before_control_paren": {
           "description": "Insert a space before `(` for control-flow commands such as `if`, `foreach`, `while`.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "space_before_definition_paren": {
           "description": "Insert a space before `(` for `function()` and `macro()` definitions.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "tab_size": {
           "description": "Number of spaces per indentation level when `use_tabs` is `false`. Default: `2`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "use_tabs": {
           "description": "Indent with tab characters instead of spaces.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         }
       },
       "additionalProperties": false
     },
     "FractionalTabPolicy": {
-      "description": "How to handle fractional tab indentation when [`Config::use_tabchars`] is `true`.",
+      "description": "How to handle fractional tab indentation when [`Config::use_tabchars`] is\n`true`.",
       "oneOf": [
         {
           "description": "Leave fractional spaces as-is (utf-8 0x20). The default.",
           "type": "string",
-          "enum": [
-            "use-space"
-          ]
+          "const": "use-space"
         },
         {
           "description": "Round fractional indentation up to the next full tab stop (utf-8 0x09).",
           "type": "string",
-          "enum": [
-            "round-up"
-          ]
+          "const": "round-up"
         }
       ]
     },
@@ -306,23 +278,17 @@
         {
           "description": "Unix-style LF (`\\n`). The default.",
           "type": "string",
-          "enum": [
-            "unix"
-          ]
+          "const": "unix"
         },
         {
           "description": "Windows-style CRLF (`\\r\\n`).",
           "type": "string",
-          "enum": [
-            "windows"
-          ]
+          "const": "windows"
         },
         {
           "description": "Auto-detect the line ending from the input source.",
           "type": "string",
-          "enum": [
-            "auto"
-          ]
+          "const": "auto"
         }
       ]
     },
@@ -331,106 +297,106 @@
       "properties": {
         "bullet_char": {
           "description": "Preferred bullet character when normalizing markup lists. Default: `*`.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "canonicalize_hashrulers": {
           "description": "Normalize ruler comments when markup handling is enabled.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "enable_markup": {
           "description": "Enable markup-aware comment handling.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "enum_char": {
           "description": "Preferred punctuation for numbered lists when normalizing markup. Default: `.`.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "explicit_trailing_pattern": {
           "description": "Regex pattern for inline comments explicitly trailing their preceding argument. Default: `#<`.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "fence_pattern": {
           "description": "Regex describing fenced literal comment blocks.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "first_comment_is_literal": {
           "description": "Preserve the first comment block in a file literally.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "hashruler_min_length": {
           "description": "Minimum ruler length before a hash-only line is treated as a ruler. Default: `10`.",
-          "default": null,
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "default": null,
+          "minimum": 0
         },
         "literal_comment_pattern": {
           "description": "Regex for comments that should never be reflowed.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "reflow_comments": {
           "description": "Reflow plain line comments to fit within the configured line width.",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "ruler_pattern": {
           "description": "Regex describing ruler-style comments that should be treated specially.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         }
       },
       "additionalProperties": false
     },
     "PerCommandConfig": {
-      "description": "Per-command overrides. All fields are optional — only specified fields override the global config for that command.",
+      "description": "Per-command overrides. All fields are optional — only specified fields\noverride the global config for that command.",
       "type": "object",
       "properties": {
         "command_case": {
           "description": "Override the command casing rule for this command only.",
           "anyOf": [
             {
-              "$ref": "#/definitions/CaseStyle"
+              "$ref": "#/$defs/CaseStyle"
             },
             {
               "type": "null"
@@ -441,7 +407,7 @@
           "description": "Override dangling paren alignment for this command only.",
           "anyOf": [
             {
-              "$ref": "#/definitions/DangleAlign"
+              "$ref": "#/$defs/DangleAlign"
             },
             {
               "type": "null"
@@ -459,7 +425,7 @@
           "description": "Override the keyword casing rule for this command only.",
           "anyOf": [
             {
-              "$ref": "#/definitions/CaseStyle"
+              "$ref": "#/$defs/CaseStyle"
             },
             {
               "type": "null"
@@ -473,7 +439,7 @@
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "minimum": 0
         },
         "max_hanging_wrap_groups": {
           "description": "Override the hanging-wrap subgroup threshold for this command only.",
@@ -482,16 +448,16 @@
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "minimum": 0
         },
         "max_hanging_wrap_positional_args": {
-          "description": "Override the hanging-wrap positional argument threshold for this command only.",
+          "description": "Override the hanging-wrap positional argument threshold for this\ncommand only.",
           "type": [
             "integer",
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "minimum": 0
         },
         "tab_size": {
           "description": "Override the indentation width for this command only.",
@@ -500,7 +466,7 @@
             "null"
           ],
           "format": "uint",
-          "minimum": 0.0
+          "minimum": 0
         }
       },
       "additionalProperties": false
@@ -510,27 +476,27 @@
       "properties": {
         "command_case": {
           "description": "Output casing for command names: `lower`, `upper`, or `unchanged`.",
-          "default": null,
           "anyOf": [
             {
-              "$ref": "#/definitions/CaseStyle"
+              "$ref": "#/$defs/CaseStyle"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "default": null
         },
         "keyword_case": {
           "description": "Output casing for recognized keywords and flags: `lower`, `upper`, or `unchanged`.",
-          "default": null,
           "anyOf": [
             {
-              "$ref": "#/definitions/CaseStyle"
+              "$ref": "#/$defs/CaseStyle"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "default": null
         }
       },
       "additionalProperties": false
