@@ -8,8 +8,9 @@ This directory contains the winget manifest for
 Read the [winget-pkgs contributing guide](https://github.com/microsoft/winget-pkgs/blob/master/CONTRIBUTING.md)
 before opening a PR. Key points: use the PR template checklist, sign the
 [CLA](https://cla.opensource.microsoft.com/microsoft/winget-pkgs), use the
-latest manifest schema (currently 1.12.0), and validate locally with
-`winget validate --manifest <path>` on Windows before submitting.
+latest manifest schema (currently 1.12.0), do not include `yaml-language-server`
+comment lines in the manifests (the validator rejects them), and validate locally
+with `winget validate --manifest <path>` on Windows before submitting.
 
 ## Submitting to winget-pkgs
 
