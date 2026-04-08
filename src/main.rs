@@ -774,8 +774,21 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 println!("{}", result.display_name);
             }
         } else if cli.check {
-            if result.would_change && !cli.quiet {
-                eprintln!("{} would be reformatted", result.display_name);
+            if result.would_change {
+                if cli.diff {
+                    let diff_output = result.unified_diff.as_deref().unwrap_or_default();
+                    let display_output = if colorize_stdout {
+                        colorize_unified_diff(diff_output)
+                    } else {
+                        diff_output.to_owned()
+                    };
+                    io::stdout()
+                        .write_all(display_output.as_bytes())
+                        .map_err(cmakefmt::Error::Io)?;
+                }
+                if !cli.quiet {
+                    eprintln!("{} would be reformatted", result.display_name);
+                }
             }
         } else if cli.in_place {
             if let Some(path) = &result.path {
