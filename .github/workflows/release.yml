@@ -350,6 +350,8 @@ jobs:
           git commit -m "Update cmakefmt formula for ${GITHUB_REF_NAME}"
           git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/cmakefmt/homebrew-cmakefmt.git"
           git push origin HEAD:main
+          git tag "${GITHUB_REF_NAME}"
+          git push origin "${GITHUB_REF_NAME}"
 
   publish-crates-io-dry-run:
     name: publish-crates-io-dry-run
