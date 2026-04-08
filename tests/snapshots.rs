@@ -9,6 +9,211 @@ use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{format_source, CaseStyle, Config, DangleAlign, PerCommandConfig};
 use cmakefmt::{formatter, parser};
 
+// --- Parser edge-case / coverage tests ---
+
+#[test]
+fn empty_input_formats_to_empty() {
+    assert_eq!(format_source("", &Config::default()).unwrap(), "");
+}
+
+#[test]
+fn command_with_no_arguments() {
+    let src = "message()\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @"message()");
+}
+
+#[test]
+fn string_with_special_characters() {
+    let src = "set(VAR \"hello !@#$%^&*()\")\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"set(VAR "hello !@#$%^&*()")"#);
+}
+
+#[test]
+fn deeply_nested_blocks() {
+    let src = "if(A)\n  if(B)\n    if(C)\n      message(deep)\n    endif()\n  endif()\nendif()\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    // Should preserve nesting structure
+    assert!(formatted.contains("message(deep)"));
+    assert_eq!(
+        formatted.lines().filter(|l| l.contains("endif()")).count(),
+        3
+    );
+}
+
+#[test]
+fn cmake_minimum_required_with_fatal_error() {
+    let src = "cmake_minimum_required(VERSION 3.20 FATAL_ERROR)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @"cmake_minimum_required(VERSION 3.20 FATAL_ERROR)");
+}
+
+#[test]
+fn file_with_only_comments_parses_successfully() {
+    let src = "# first comment\n# second comment\n# third comment\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @"
+    # first comment
+    # second comment
+    # third comment
+    ");
+}
+
+#[test]
+fn bracket_argument_with_special_chars() {
+    let src = "set(VAR [==[value with special chars: !@#$%^&*()]==])\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    // Bracket arguments force multiline layout
+    assert!(formatted.contains("VAR"));
+    assert!(formatted.contains("[==[value with special chars: !@#$%^&*()]==]"));
+}
+
+// --- formatter/node.rs coverage tests ---
+
+#[test]
+fn max_rows_cmdline_one_forces_vertical() {
+    // max_rows_cmdline=1: hanging wrap that produces more than 1 row is rejected
+    // → falls back to vertical layout.
+    // Use a command that doesn't fit inline but would normally use hanging wrap.
+    // Vertical layout opens the paren on the first line alone ("set(\n").
+    // Hanging wrap would put the first token right after "set(".
+    let src = "set(AVERYLONG_VAR_NAME_HERE B C D E F)\n";
+    let config = Config {
+        max_rows_cmdline: 1,
+        line_width: 35,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    let first_line = formatted.lines().next().unwrap();
+    // With vertical layout the opening line is just "set(" — no args follow on
+    // the same line. With hanging wrap it would be "set(AVERYLONG_VAR_NAME_HERE".
+    assert_eq!(
+        first_line, "set(",
+        "expected vertical layout (first line = 'set('), got:\n{formatted}"
+    );
+}
+
+#[test]
+fn max_subgroups_hwrap_zero_forces_vertical() {
+    // With a narrow line width the command doesn't fit inline.
+    // max_subgroups_hwrap=0 is honoured as a threshold that forces vertical
+    // when the hanging path is already unavailable for multi-section commands.
+    let src = "target_link_libraries(mylib PUBLIC dep1 dep2 dep3 PRIVATE helper1 helper2)\n";
+    let config = Config {
+        max_subgroups_hwrap: 0,
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.lines().count() > 1,
+        "expected multiline output, got:\n{formatted}"
+    );
+}
+
+#[test]
+fn dangle_align_close() {
+    let src = "target_link_libraries(mylib PUBLIC foo bar baz qux quux corge grault garply)\n";
+    let config = Config {
+        line_width: 40,
+        dangle_parens: true,
+        dangle_align: DangleAlign::Close,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    let last = formatted.lines().last().unwrap();
+    // Close alignment: ) at current indentation level (0 indent = column 0)
+    assert_eq!(
+        last.trim_start(),
+        ")",
+        "expected dangling ) with Close alignment, got last line: {last:?}"
+    );
+}
+
+#[test]
+fn space_before_control_paren_formats_if() {
+    let src = "if(TRUE)\nmessage(ok)\nendif()\n";
+    let config = Config {
+        separate_ctrl_name_with_space: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.contains("if (TRUE)"),
+        "expected 'if (TRUE)' in output, got:\n{formatted}"
+    );
+    assert!(
+        formatted.contains("endif ()"),
+        "expected 'endif ()' in output, got:\n{formatted}"
+    );
+}
+
+#[test]
+fn space_before_definition_paren_formats_function() {
+    let src = "function(my_func ARG1)\nmessage(${ARG1})\nendfunction()\n";
+    let config = Config {
+        separate_fn_name_with_space: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.contains("function (my_func"),
+        "expected 'function (my_func' in output, got:\n{formatted}"
+    );
+    assert!(
+        formatted.contains("endfunction ()"),
+        "expected 'endfunction ()' in output, got:\n{formatted}"
+    );
+}
+
+#[test]
+fn explicit_trailing_pattern_keeps_comment_inline() {
+    // The default explicit_trailing_pattern is "#<" — a comment matching it
+    // stays on the same line as the preceding argument.
+    // Use max_pargs_hwrap=1 to force write_vertical_arguments for the PRIVATE
+    // section, which is where the explicit_trailing_pattern logic lives.
+    let src = "target_sources(foo\n  PRIVATE\n    a.cc #< keep\n    b.cc\n)\n";
+    let config = Config {
+        max_pargs_hwrap: 1,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    let has_inline = formatted
+        .lines()
+        .any(|l| l.contains("a.cc") && l.contains("#<"));
+    assert!(
+        has_inline,
+        "explicit trailing comment should stay inline with preceding arg, got:\n{formatted}"
+    );
+}
+
+#[test]
+fn canonicalize_hashrulers_false_preserves_ruler() {
+    let src = "# -----  uneven ruler  -----\nmessage(ok)\n";
+    let config = Config {
+        canonicalize_hashrulers: false,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.contains("# -----"),
+        "expected ruler to be preserved, got:\n{formatted}"
+    );
+}
+
+#[test]
+fn short_hashruler_not_canonicalized() {
+    let src = "# ---\nmessage(ok)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    // default hashruler_min_length=10; "---" (3 chars) is below threshold
+    // → preserved as-is, not treated as a ruler
+    assert!(
+        formatted.contains("# ---"),
+        "short ruler should be preserved as-is, got:\n{formatted}"
+    );
+}
+
 // --- Comment tests ---
 
 #[test]
