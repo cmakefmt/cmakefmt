@@ -12,6 +12,7 @@ repos:
       - id: check-case-conflict
       - id: check-added-large-files
       - id: check-yaml
+        exclude: ^packaging/conda-forge/meta\.yaml$
       - id: check-toml
 
   - repo: https://github.com/rhysd/actionlint
