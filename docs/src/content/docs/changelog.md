@@ -16,7 +16,26 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `--dump-schema` flag — prints the JSON Schema for the `.cmakefmt.yaml` /
+  `.cmakefmt.toml` config file to stdout and exits; schema is also published
+  at `cmakefmt.dev/schemas/latest/schema.json` for zero-config YAML
+  autocomplete in editors with `redhat.vscode-yaml` or similar plugins
+- `--lsp` flag — starts a stdio JSON-RPC Language Server Protocol server
+  supporting `textDocument/formatting` and `textDocument/rangeFormatting`;
+  enables format-on-save in any editor with LSP client support (Neovim,
+  Helix, Zed, Emacs, …) without a dedicated extension
+- Guide pages on [cmakefmt.dev](https://cmakefmt.dev): editor integration,
+  CI integration, tool comparison, badge, and "Projects using cmakefmt"
+
+### Fixed
+
+- `--dump-schema` was missing a trailing newline, causing the CI schema
+  staleness check to report a spurious diff
+
 ## 0.2.0 — 2026-04-07
+
 ### Added
 
 - interactive browser playground at [cmakefmt.dev/playground](https://cmakefmt.dev/playground/) —

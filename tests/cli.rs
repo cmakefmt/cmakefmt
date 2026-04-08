@@ -1985,3 +1985,51 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--progress-bar"));
     assert!(stdout.contains("formatting stays single-threaded"));
 }
+
+// ── --dump-schema ───────────────────────────────────────────────────────────
+
+#[test]
+fn dump_schema_exits_zero() {
+    let output = cmakefmt().arg("--dump-schema").output().unwrap();
+    assert!(output.status.success());
+}
+
+#[test]
+fn dump_schema_prints_valid_json() {
+    let output = cmakefmt().arg("--dump-schema").output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: Value =
+        serde_json::from_str(&stdout).expect("--dump-schema output should be valid JSON");
+    // Verify it is a JSON Schema object with expected top-level keys
+    assert!(parsed.get("$schema").is_some(), "should have $schema key");
+    assert!(parsed.get("title").is_some(), "should have title key");
+    assert!(
+        parsed.get("properties").is_some(),
+        "should have properties key"
+    );
+}
+
+#[test]
+fn dump_schema_output_ends_with_newline() {
+    let output = cmakefmt().arg("--dump-schema").output().unwrap();
+    assert!(
+        output.stdout.ends_with(b"\n"),
+        "--dump-schema output should end with a newline"
+    );
+}
+
+#[test]
+fn dump_schema_appears_in_help() {
+    let output = cmakefmt().arg("--help").output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("--dump-schema"));
+}
+
+// ── --lsp ───────────────────────────────────────────────────────────────────
+
+#[test]
+fn lsp_appears_in_help() {
+    let output = cmakefmt().arg("--help").output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("--lsp"));
+}

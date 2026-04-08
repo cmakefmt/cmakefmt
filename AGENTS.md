@@ -7,7 +7,7 @@ Goal: fast, correct, configurable CMake formatter distributed as a single binary
 
 - **Parser**: `pest` (PEG, pure Rust). Grammar lives in `src/parser/cmake.pest`.
 - **Formatter**: Wadler-Lindig algorithm via the `pretty` crate. AST → Doc IR → string.
-- **Config**: TOML via `serde` + `toml`. Config file: `.cmake-format.toml`.
+- **Config**: YAML/TOML via `serde`. Config files: `.cmakefmt.yaml`, `.cmakefmt.yml`, `.cmakefmt.toml`.
 - **CLI**: `clap` (derive API).
 - **Snapshot tests**: `insta` crate. Snapshots live in `tests/snapshots/`.
 - **Idempotency invariant**: `format(format(x)) == format(x)` must always hold.
