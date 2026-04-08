@@ -1,8 +1,9 @@
-{ lib
-, fetchurl
-, stdenv
-, autoPatchelfHook
-, gcc-unwrapped
+{
+  lib,
+  fetchurl,
+  stdenv,
+  autoPatchelfHook,
+  gcc-unwrapped,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -56,9 +57,18 @@ stdenv.mkDerivation (finalAttrs: {
     '';
     homepage = "https://cmakefmt.dev";
     changelog = "https://github.com/cmakefmt/cmakefmt/blob/main/CHANGELOG.md";
-    license = with lib.licenses; [ mit asl20 ];
-    maintainers = [ ];
+    license = with lib.licenses; [
+      mit
+      asl20
+    ];
+    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
+    maintainers = with lib.maintainers; [ puneetmatharu ];
     mainProgram = "cmakefmt";
-    platforms = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+      "x86_64-darwin"
+      "aarch64-darwin"
+    ];
   };
 })
