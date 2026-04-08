@@ -14,7 +14,7 @@ use lsp_server::{Connection, Message, Request, Response};
 use lsp_types::notification::Notification as _;
 use lsp_types::request::Request as _;
 use lsp_types::{
-    InitializeParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    InitializeParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
 };
 
 use crate::Config;
@@ -36,7 +36,8 @@ pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
         serde_json::from_value(connection.initialize(server_capabilities)?)?;
 
     // Main message loop.
-    let mut documents: HashMap<Uri, String> = HashMap::new();
+    // Use String keys to avoid clippy::mutable_key_type (Uri has interior mutability).
+    let mut documents: HashMap<String, String> = HashMap::new();
     main_loop(&connection, &mut documents)?;
 
     io_threads.join()?;
@@ -45,7 +46,7 @@ pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
 
 fn main_loop(
     connection: &Connection,
-    documents: &mut HashMap<Uri, String>,
+    documents: &mut HashMap<String, String>,
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     for msg in &connection.receiver {
         match msg {
@@ -68,7 +69,7 @@ fn main_loop(
     Ok(())
 }
 
-fn handle_request(req: Request, documents: &HashMap<Uri, String>) -> Option<Response> {
+fn handle_request(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
     use lsp_types::request::{Formatting, RangeFormatting};
 
     if req.method == Formatting::METHOD {
@@ -86,7 +87,7 @@ fn handle_request(req: Request, documents: &HashMap<Uri, String>) -> Option<Resp
     ))
 }
 
-fn handle_notification(notif: lsp_server::Notification, documents: &mut HashMap<Uri, String>) {
+fn handle_notification(notif: lsp_server::Notification, documents: &mut HashMap<String, String>) {
     use lsp_types::notification::{
         DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument,
     };
@@ -96,7 +97,10 @@ fn handle_notification(notif: lsp_server::Notification, documents: &mut HashMap<
             if let Ok(params) =
                 serde_json::from_value::<lsp_types::DidOpenTextDocumentParams>(notif.params)
             {
-                documents.insert(params.text_document.uri, params.text_document.text);
+                documents.insert(
+                    params.text_document.uri.to_string(),
+                    params.text_document.text,
+                );
             }
         }
         m if m == DidChangeTextDocument::METHOD => {
@@ -105,7 +109,7 @@ fn handle_notification(notif: lsp_server::Notification, documents: &mut HashMap<
             {
                 // With FULL sync, there is always exactly one content change.
                 if let Some(change) = params.content_changes.into_iter().last() {
-                    documents.insert(params.text_document.uri, change.text);
+                    documents.insert(params.text_document.uri.to_string(), change.text);
                 }
             }
         }
@@ -113,17 +117,17 @@ fn handle_notification(notif: lsp_server::Notification, documents: &mut HashMap<
             if let Ok(params) =
                 serde_json::from_value::<lsp_types::DidCloseTextDocumentParams>(notif.params)
             {
-                documents.remove(&params.text_document.uri);
+                documents.remove(params.text_document.uri.as_str());
             }
         }
         _ => {}
     }
 }
 
-fn handle_formatting(req: Request, documents: &HashMap<Uri, String>) -> Option<Response> {
+fn handle_formatting(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
     let (id, params): (_, lsp_types::DocumentFormattingParams) =
         req.extract(lsp_types::request::Formatting::METHOD).ok()?;
-    let text = documents.get(&params.text_document.uri)?;
+    let text = documents.get(params.text_document.uri.as_str())?;
     let formatted = crate::format_source(text, &Config::default()).ok()?;
 
     let edit = full_document_edit(text, formatted);
@@ -131,11 +135,11 @@ fn handle_formatting(req: Request, documents: &HashMap<Uri, String>) -> Option<R
     Some(Response::new_ok(id, result))
 }
 
-fn handle_range_formatting(req: Request, documents: &HashMap<Uri, String>) -> Option<Response> {
+fn handle_range_formatting(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
     let (id, params): (_, lsp_types::DocumentRangeFormattingParams) = req
         .extract(lsp_types::request::RangeFormatting::METHOD)
         .ok()?;
-    let text = documents.get(&params.text_document.uri)?;
+    let text = documents.get(params.text_document.uri.as_str())?;
 
     let range = params.range;
     let start_line = range.start.line as usize;
