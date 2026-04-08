@@ -695,6 +695,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ));
     }
 
+    let start = std::time::Instant::now();
     let target_results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
         process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout, &progress)?
     } else {
@@ -703,10 +704,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         process_targets_serial(&targets, cli, colorize_stdout, &progress)
     };
+    let elapsed = start.elapsed();
     let mut results = Vec::new();
     let mut failures = Vec::new();
     let mut summary = RunSummary {
         selected: targets.len(),
+        elapsed,
         ..RunSummary::default()
     };
 
@@ -1428,6 +1431,8 @@ struct RunSummary {
     skipped: usize,
     failed: usize,
     total_changed_lines: usize,
+    #[serde(skip)]
+    elapsed: std::time::Duration,
 }
 
 fn process_targets_serial(
@@ -2204,6 +2209,7 @@ fn build_json_report(
             skipped: summary.skipped,
             failed: summary.failed,
             total_changed_lines: summary.total_changed_lines,
+            ..RunSummary::default()
         },
         files: results
             .iter()
@@ -2549,6 +2555,8 @@ fn render_human_summary(summary: &RunSummary) -> String {
         let _ = write!(rendered, ", skipped={}", summary.skipped);
     }
     let _ = write!(rendered, ", failed={}", summary.failed);
+    let secs = summary.elapsed.as_secs_f64();
+    let _ = write!(rendered, " in {secs:.2}s");
     rendered
 }
 

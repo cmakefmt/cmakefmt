@@ -2075,3 +2075,23 @@ fn lsp_appears_in_help() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("--lsp"));
 }
+
+// ── elapsed time ──────────────────────────────────────────────────────────
+
+#[test]
+fn summary_includes_elapsed_time() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "message(hello)\n");
+
+    let output = cmakefmt()
+        .args(["--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("in "),
+        "summary should include elapsed time"
+    );
+}
