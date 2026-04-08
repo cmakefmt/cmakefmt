@@ -46,7 +46,7 @@ def main() -> None:
 
     stamped_heading = f"## {version} \u2014 {date}"
     fresh_unreleased = "## Unreleased\n\n"
-    replacement = f"{fresh_unreleased}{stamped_heading}"
+    replacement = f"{fresh_unreleased}{stamped_heading}\n"
     updated = pattern.sub(replacement, text, count=1)
     CHANGELOG.write_text(updated, encoding="utf-8")
     print(f"stamped CHANGELOG.md: Unreleased \u2192 {version} \u2014 {date} (new Unreleased section added)")
