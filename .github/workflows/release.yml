@@ -353,6 +353,19 @@ jobs:
           git tag "${GITHUB_REF_NAME}"
           git push origin "${GITHUB_REF_NAME}"
 
+      - name: Create Homebrew tap GitHub release
+        shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo cmakefmt/homebrew-cmakefmt \
+            --title "cmakefmt ${GITHUB_REF_NAME}" \
+            --notes "Formula update for [cmakefmt ${GITHUB_REF_NAME}](https://github.com/cmakefmt/cmakefmt/releases/tag/${GITHUB_REF_NAME})."
+
   publish-crates-io-dry-run:
     name: publish-crates-io-dry-run
     runs-on: ubuntu-latest
