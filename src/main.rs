@@ -856,6 +856,10 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         eprintln!("{}", render_human_summary(&summary));
     }
 
+    if cli.check && summary.changed > 0 && !cli.quiet && cli.report_format == ReportFormat::Human {
+        eprintln!("hint: run `cmakefmt --in-place .` to fix formatting");
+    }
+
     if !failures.is_empty() {
         Ok(EXIT_ERROR)
     } else if (cli.check || cli.list_changed_files) && summary.changed > 0 {

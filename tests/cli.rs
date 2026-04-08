@@ -464,6 +464,21 @@ fn quiet_check_emits_summary_without_per_file_lines() {
 }
 
 #[test]
+fn check_failure_prints_fix_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "MESSAGE(hello)\n");
+
+    let output = cmakefmt()
+        .args(["--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("cmakefmt --in-place"));
+}
+
+#[test]
 fn cache_reports_hit_on_second_run() {
     let dir = tempfile::tempdir().unwrap();
     let cache_dir = dir.path().join("cache");
