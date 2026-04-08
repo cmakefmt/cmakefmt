@@ -16,6 +16,11 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- `--check --diff` now correctly emits the unified diff alongside the check
+  summary; previously `--check` suppressed all `--diff` output
+
 ## 0.3.0 — 2026-04-08
 
 ### Added
