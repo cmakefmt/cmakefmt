@@ -187,6 +187,26 @@ struct Cli {
     #[arg(long = "dump-schema", help_heading = "Config And Conversion")]
     dump_schema: bool,
 
+    /// Write a starter `.cmakefmt.yaml` config file to the current directory and exit.
+    #[arg(
+        long = "init",
+        help_heading = "Config And Conversion",
+        conflicts_with = "dump_config",
+        conflicts_with = "dump_schema",
+        conflicts_with = "convert_config_paths",
+        conflicts_with = "check",
+        conflicts_with = "diff",
+        conflicts_with = "in_place",
+        conflicts_with = "list_changed_files",
+        conflicts_with = "list_input_files",
+        conflicts_with = "show_config",
+        conflicts_with = "show_config_path",
+        conflicts_with = "explain_config",
+        conflicts_with = "generate_completion",
+        conflicts_with = "generate_man_page"
+    )]
+    init: bool,
+
     /// Generate shell completion scripts and print them to stdout.
     #[arg(
         long = "generate-completion",
@@ -620,6 +640,18 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     if cli.dump_schema {
         println!("{}", generate_json_schema());
+        return Ok(EXIT_OK);
+    }
+
+    if cli.init {
+        let path = Path::new(".cmakefmt.yaml");
+        if path.exists() {
+            eprintln!(".cmakefmt.yaml already exists");
+            return Ok(EXIT_ERROR);
+        }
+        std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
+            .map_err(cmakefmt::Error::Io)?;
+        eprintln!("created .cmakefmt.yaml");
         return Ok(EXIT_OK);
     }
 
@@ -3105,6 +3137,7 @@ mod tests {
             "version",
             "in-place",
             "dump-schema",
+            "init",
             "lsp",
         ];
 

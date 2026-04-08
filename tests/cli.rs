@@ -2025,6 +2025,40 @@ fn dump_schema_appears_in_help() {
     assert!(stdout.contains("--dump-schema"));
 }
 
+// ── --init ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn init_creates_config_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = cmakefmt()
+        .args(["--init"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert!(dir.path().join(".cmakefmt.yaml").exists());
+    let content = std::fs::read_to_string(dir.path().join(".cmakefmt.yaml")).unwrap();
+    assert!(content.contains("line_width"));
+}
+
+#[test]
+fn init_refuses_to_overwrite_existing_config() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join(".cmakefmt.yaml"), "line_width: 100\n").unwrap();
+
+    let output = cmakefmt()
+        .args(["--init"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    // Original file should be unchanged
+    let content = std::fs::read_to_string(dir.path().join(".cmakefmt.yaml")).unwrap();
+    assert_eq!(content, "line_width: 100\n");
+}
+
 // ── --lsp ───────────────────────────────────────────────────────────────────
 
 #[test]
