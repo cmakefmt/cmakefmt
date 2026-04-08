@@ -3,6 +3,12 @@
 `packaging/scoop/cmakefmt.json` is the Scoop manifest for the
 [ScoopInstaller/Extras](https://github.com/ScoopInstaller/Extras) bucket.
 
+## Before submitting
+
+Read the [Scoop bucket contribution guidelines](https://github.com/ScoopInstaller/.github/blob/main/.github/CONTRIBUTING.md#for-scoop-buckets)
+before opening a PR. Key points: PR title must be `cmakefmt: Add version {version}`,
+indentation must be 4 spaces, and add a `/verify` comment after the PR is raised.
+
 ## Submitting to Extras
 
 1. Fork [ScoopInstaller/Extras](https://github.com/ScoopInstaller/Extras)

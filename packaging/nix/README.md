@@ -7,6 +7,12 @@ The derivation uses pre-built musl binaries for Linux (static, no patching
 needed) and universal binaries for macOS. The aarch64-linux build uses the
 glibc binary since a musl build is not available for that target.
 
+## Before submitting
+
+Read the [nixpkgs contribution guidelines](https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md)
+before opening a PR. Key points: follow the `pkgs/by-name` conventions, ensure
+`nix build` passes locally, and follow the PR template.
+
 ## Submitting to nixpkgs
 
 1. Fork [NixOS/nixpkgs](https://github.com/NixOS/nixpkgs)
