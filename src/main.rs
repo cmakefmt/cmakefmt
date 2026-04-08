@@ -743,6 +743,25 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         if cli.in_place {
             write_in_place_updates(&results)?;
         }
+        // Emit the unified diff for report formats that don't embed it in
+        // their structured output. GitHub annotations are line-prefixed and
+        // coexist safely with diff text; JSON/Checkstyle/JUnit/SARIF would
+        // be corrupted by raw text prepended to the structured output.
+        if cli.diff && cli.report_format == ReportFormat::Github {
+            for result in &results {
+                if result.would_change {
+                    let diff_output = result.unified_diff.as_deref().unwrap_or_default();
+                    let display_output = if colorize_stdout {
+                        colorize_unified_diff(diff_output)
+                    } else {
+                        diff_output.to_owned()
+                    };
+                    io::stdout()
+                        .write_all(display_output.as_bytes())
+                        .map_err(cmakefmt::Error::Io)?;
+                }
+            }
+        }
         print_non_human_report(cli, &results, &failures, &summary)?;
         return machine_mode_exit_code(&results, &failures, &summary, cli);
     }
