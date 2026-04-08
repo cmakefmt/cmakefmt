@@ -1510,4 +1510,370 @@ markup:
         assert!(converted.contains("explicit_trailing_pattern"));
         assert!(converted.contains("#<"));
     }
+
+    // ── as_line_ending: auto variant ─────────────────────────────────────────
+
+    #[test]
+    fn converts_format_line_ending_auto() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  line_ending: auto\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("line_ending = \"auto\""));
+    }
+
+    #[test]
+    fn as_line_ending_unknown_returns_none() {
+        assert_eq!(
+            as_line_ending(&LegacyValue::String("bogus".to_owned())),
+            None
+        );
+        // Non-string input also returns None
+        assert_eq!(as_line_ending(&LegacyValue::Integer(1)), None);
+    }
+
+    // ── as_fractional_tab_policy: non-string input ───────────────────────────
+
+    #[test]
+    fn as_fractional_tab_policy_non_string_returns_none() {
+        assert_eq!(as_fractional_tab_policy(&LegacyValue::Integer(42)), None);
+        assert_eq!(as_fractional_tab_policy(&LegacyValue::Bool(true)), None);
+        assert_eq!(
+            as_fractional_tab_policy(&LegacyValue::String("bogus".to_owned())),
+            None
+        );
+    }
+
+    // ── as_dangle_align variants ─────────────────────────────────────────────
+
+    #[test]
+    fn converts_dangle_align_prefix() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  dangle_align: prefix\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("dangle_align = \"prefix\""));
+    }
+
+    #[test]
+    fn converts_dangle_align_open() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  dangle_align: open\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("dangle_align = \"open\""));
+    }
+
+    #[test]
+    fn converts_dangle_align_close() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  dangle_align: close\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("dangle_align = \"close\""));
+    }
+
+    #[test]
+    fn as_dangle_align_unknown_returns_none() {
+        assert_eq!(
+            as_dangle_align(&LegacyValue::String("unknown_align".to_owned())),
+            None
+        );
+    }
+
+    // ── as_string_list: non-array input ──────────────────────────────────────
+
+    #[test]
+    fn as_string_list_non_array_returns_none() {
+        assert_eq!(as_string_list(&LegacyValue::String("foo".to_owned())), None);
+        assert_eq!(as_string_list(&LegacyValue::Integer(1)), None);
+        assert_eq!(as_string_list(&LegacyValue::Bool(false)), None);
+    }
+
+    // ── convert_case_style via format section ────────────────────────────────
+
+    #[test]
+    fn converts_case_style_lower() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  command_case: lower\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("command_case = \"lower\""));
+    }
+
+    #[test]
+    fn converts_case_style_upper() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  keyword_case: upper\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("keyword_case = \"upper\""));
+    }
+
+    #[test]
+    fn converts_case_style_unchanged() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  command_case: unchanged\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("command_case = \"unchanged\""));
+    }
+
+    #[test]
+    fn converts_unknown_case_style_records_no_value() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  command_case: totally_bogus\n").unwrap();
+
+        // An unknown case style should not emit command_case in the output
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(!converted.contains("command_case"));
+    }
+
+    // ── Merging error paths: non-table section values ────────────────────────
+
+    #[test]
+    fn format_section_non_table_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"format": "oops"}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[format] (expected a table)"));
+    }
+
+    #[test]
+    fn markup_section_non_table_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"markup": 42}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[markup] (expected a table)"));
+    }
+
+    #[test]
+    fn misc_section_non_table_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"misc": true}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[misc] (expected a table)"));
+    }
+
+    #[test]
+    fn parse_section_non_table_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"parse": "nope"}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[parse] (expected a table)"));
+    }
+
+    #[test]
+    fn misc_per_command_non_table_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"misc": {"per_command": "not_a_table"}}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[misc].per_command (expected a table)"));
+    }
+
+    #[test]
+    fn misc_per_command_entry_non_table_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"misc": {"per_command": {"my_cmd": "oops"}}}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[misc].per_command.my_cmd (expected a table)"));
+    }
+
+    // ── convert_command_spec: forms key path ─────────────────────────────────
+
+    #[test]
+    fn convert_command_spec_with_forms_table() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            r#"
+parse:
+  additional_commands:
+    my_target:
+      forms:
+        default:
+          pargs: 1
+          flags:
+            - QUIET
+        extra:
+          pargs: 2
+      fallback:
+        pargs: 0
+"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        // Discriminated commands serialize with forms sub-tables
+        assert!(converted.contains("my_target"));
+        assert!(converted.contains("forms"));
+    }
+
+    #[test]
+    fn convert_command_spec_non_table_records_warning() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            r#"
+parse:
+  additional_commands:
+    bad_cmd: "not_a_table"
+"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("bad_cmd"));
+    }
+
+    // ── convert_layout_overrides: non-table returns None ─────────────────────
+
+    #[test]
+    fn convert_layout_overrides_non_table_returns_none() {
+        let result = convert_layout_overrides(&LegacyValue::Bool(true));
+        assert!(result.is_none());
+
+        let result = convert_layout_overrides(&LegacyValue::String("oops".to_owned()));
+        assert!(result.is_none());
+    }
+
+    // ── Unsupported keys in markup, misc, parse ───────────────────────────────
+
+    #[test]
+    fn markup_unknown_key_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "markup:\n  unknown_markup_key: true\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[markup].unknown_markup_key"));
+    }
+
+    #[test]
+    fn misc_unknown_key_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"misc": {"unknown_misc_key": 1}}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[misc].unknown_misc_key"));
+    }
+
+    #[test]
+    fn parse_unknown_key_records_note() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.json");
+        std::fs::write(&path, r#"{"parse": {"unknown_parse_key": 1}}"#).unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[parse].unknown_parse_key"));
+    }
+
+    // ── Python config edge cases ──────────────────────────────────────────────
+
+    #[test]
+    fn python_section_non_table_value_is_overwritten() {
+        // In the Python parser, a section is always created as a Table, so
+        // subsequent assignment will insert into that table. This test verifies
+        // a simple format section in Python is parsed and converted correctly.
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.py");
+        std::fs::write(
+            &path,
+            r#"
+with section("format"):
+  line_width = 88
+"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("line_width = 88"));
+    }
+
+    // ── Legacy YAML per_command with line_width override ─────────────────────
+
+    #[test]
+    fn converts_per_command_line_width_override() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            r#"
+misc:
+  per_command:
+    target_sources:
+      line_width: 120
+"#,
+        )
+        .unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("[per_command_overrides.target_sources]"));
+        assert!(converted.contains("line_width = 120"));
+    }
+
+    // ── Additional format options ─────────────────────────────────────────────
+
+    #[test]
+    fn converts_min_prefix_chars() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  min_prefix_chars: 4\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("min_prefix_length = 4"));
+    }
+
+    #[test]
+    fn converts_max_prefix_chars() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  max_prefix_chars: 10\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("max_prefix_length = 10"));
+    }
+
+    #[test]
+    fn converts_separate_ctrl_name_with_space() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  separate_ctrl_name_with_space: true\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("space_before_control_paren = true"));
+    }
+
+    #[test]
+    fn converts_separate_fn_name_with_space() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  separate_fn_name_with_space: false\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("space_before_definition_paren = false"));
+    }
 }
