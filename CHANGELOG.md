@@ -8,6 +8,40 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `cmakefmt config` subcommand group — `dump`, `schema`, `check`, `show`,
+  `path`, `explain`, `convert`, and `init` sub-subcommands for config
+  inspection and conversion
+- `cmakefmt lsp` subcommand (replaces `--lsp` flag, which is now deprecated)
+- `cmakefmt completions <SHELL>` subcommand (replaces `--generate-completion`
+  flag, which is now deprecated)
+- `cmakefmt install-hook` subcommand — one-command git pre-commit hook setup
+- LSP: `workspace/didChangeConfiguration` support — live config reload when
+  `.cmakefmt.yaml` changes without restarting the server
+- LSP: `textDocument/codeAction` — "Disable cmakefmt for selection" action
+  that inserts `# cmakefmt: off/on` barriers
+- LSP: 10-second timeout on formatting requests to prevent pathological inputs
+  from freezing the editor
+- Colored CLI help output (green headers, cyan flags)
+- Cargo-fuzz targets for parser and formatter (`fuzz/`)
+- Cross-platform output consistency CI workflow
+- Real-world regression suite CI workflow (CMake, LLVM, Qt Base)
+- SBOM generation (`cargo-cyclonedx`) in the release workflow
+- WASM API documentation page
+
+### Changed
+
+- Unrecognized config keys now produce an error instead of being silently
+  ignored (`deny_unknown_fields` on all config sections)
+- `require_valid_layout` error now suggests the specific `line_width` value
+  needed to accommodate the offending line
+
+### Deprecated
+
+- `--lsp` flag — use `cmakefmt lsp` instead
+- `--generate-completion` flag — use `cmakefmt completions <SHELL>` instead
+
 ## 0.4.0 — 2026-04-09
 
 ### Added
