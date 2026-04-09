@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: Real-World Regression Suite
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'Cargo.toml', 'Cargo.lock']
+  schedule:
+    - cron: '0 6 * * 1'  # weekly on Monday at 06:00 UTC
+
+permissions: read-all
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: CMake
+            repo: Kitware/CMake
+            ref: master
+          - name: LLVM
+            repo: llvm/llvm-project
+            ref: main
+            sparse: llvm/cmake
+          - name: Qt Base
+            repo: niccokunzmann/qt-base
+            ref: dev
+    steps:
+      - name: Check out cmakefmt
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+
+      - name: Build cmakefmt
+        run: cargo build --release
+
+      - name: Clone ${{ matrix.project.name }}
+        run: |
+          if [ -n "${{ matrix.project.sparse }}" ]; then
+            git clone --depth=1 --filter=blob:none --sparse \
+              "https://github.com/${{ matrix.project.repo }}.git" \
+              --branch "${{ matrix.project.ref }}" project
+            cd project && git sparse-checkout set "${{ matrix.project.sparse }}"
+          else
+            git clone --depth=1 \
+              "https://github.com/${{ matrix.project.repo }}.git" \
+              --branch "${{ matrix.project.ref }}" project
+          fi
+
+      - name: Format ${{ matrix.project.name }}
+        run: |
+          echo "=== Formatting ${{ matrix.project.name }} ==="
+          ./target/release/cmakefmt --keep-going --diff project/ 2>&1 | tail -20
+          echo "=== cmakefmt completed successfully ==="
