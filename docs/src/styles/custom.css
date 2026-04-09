@@ -276,24 +276,10 @@ body {
   text-align: center;
   position: relative;
   padding: 3rem 0 2rem;
-  overflow: hidden;
 }
 
-/* Dot grid background */
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: -4rem -6rem;
-  background-image: radial-gradient(
-    color-mix(in srgb, var(--sl-color-gray-3) 35%, transparent) 1px,
-    transparent 1px
-  );
-  background-size: 24px 24px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 70%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 70%);
-  z-index: -2;
-  pointer-events: none;
-}
+/* Dot grid is rendered by DotGrid.astro canvas — no CSS fallback needed. */
+
 
 /* Animated gradient orbs */
 .hero::after {
@@ -338,7 +324,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.04em;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  background: linear-gradient(135deg, var(--sl-color-white) 40%, var(--sl-color-accent) 100%);
+  background: linear-gradient(135deg, var(--sl-color-white) 20%, var(--sl-color-accent) 85%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
