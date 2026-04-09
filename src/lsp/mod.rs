@@ -44,7 +44,8 @@ pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
     // Main message loop.
     // Use String keys to avoid clippy::mutable_key_type (Uri has interior mutability).
     let mut documents: HashMap<String, String> = HashMap::new();
-    main_loop(&connection, &mut documents)?;
+    let mut config = Config::default();
+    main_loop(&connection, &mut documents, &mut config)?;
 
     io_threads.join()?;
     Ok(())
@@ -53,6 +54,7 @@ pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
 fn main_loop(
     connection: &Connection,
     documents: &mut HashMap<String, String>,
+    config: &mut Config,
 ) -> Result<(), Box<dyn Error + Sync + Send>> {
     for msg in &connection.receiver {
         match msg {
@@ -61,13 +63,13 @@ fn main_loop(
                     return Ok(());
                 }
 
-                let resp = handle_request(req, documents);
+                let resp = handle_request(req, documents, config);
                 if let Some(resp) = resp {
                     connection.sender.send(Message::Response(resp))?;
                 }
             }
             Message::Notification(notif) => {
-                handle_notification(notif, documents);
+                handle_notification(notif, documents, config);
             }
             Message::Response(_) => {}
         }
@@ -75,14 +77,18 @@ fn main_loop(
     Ok(())
 }
 
-fn handle_request(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
+fn handle_request(
+    req: Request,
+    documents: &HashMap<String, String>,
+    config: &Config,
+) -> Option<Response> {
     use lsp_types::request::{CodeActionRequest, Formatting, RangeFormatting};
 
     if req.method == Formatting::METHOD {
-        return handle_formatting(req, documents);
+        return handle_formatting(req, documents, config);
     }
     if req.method == RangeFormatting::METHOD {
-        return handle_range_formatting(req, documents);
+        return handle_range_formatting(req, documents, config);
     }
     if req.method == CodeActionRequest::METHOD {
         return handle_code_action(req);
@@ -96,12 +102,26 @@ fn handle_request(req: Request, documents: &HashMap<String, String>) -> Option<R
     ))
 }
 
-fn handle_notification(notif: lsp_server::Notification, documents: &mut HashMap<String, String>) {
+fn handle_notification(
+    notif: lsp_server::Notification,
+    documents: &mut HashMap<String, String>,
+    config: &mut Config,
+) {
     use lsp_types::notification::{
-        DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument,
+        DidChangeConfiguration, DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument,
     };
 
     match notif.method.as_str() {
+        m if m == DidChangeConfiguration::METHOD => {
+            // Reload config from the working directory. The LSP client
+            // sends this notification when the user's settings change.
+            *config = Config::default();
+            if let Ok(loaded) =
+                Config::from_files(&Config::config_sources_for(std::path::Path::new(".")))
+            {
+                *config = loaded;
+            }
+        }
         m if m == DidOpenTextDocument::METHOD => {
             if let Ok(params) =
                 serde_json::from_value::<lsp_types::DidOpenTextDocumentParams>(notif.params)
@@ -146,18 +166,26 @@ fn format_with_timeout(source: &str, config: &Config) -> Option<String> {
     rx.recv_timeout(FORMAT_TIMEOUT).ok().flatten()
 }
 
-fn handle_formatting(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
+fn handle_formatting(
+    req: Request,
+    documents: &HashMap<String, String>,
+    config: &Config,
+) -> Option<Response> {
     let (id, params): (_, lsp_types::DocumentFormattingParams) =
         req.extract(lsp_types::request::Formatting::METHOD).ok()?;
     let text = documents.get(params.text_document.uri.as_str())?;
-    let formatted = format_with_timeout(text, &Config::default())?;
+    let formatted = format_with_timeout(text, config)?;
 
     let edit = full_document_edit(text, formatted);
     let result = serde_json::to_value(vec![edit]).ok()?;
     Some(Response::new_ok(id, result))
 }
 
-fn handle_range_formatting(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
+fn handle_range_formatting(
+    req: Request,
+    documents: &HashMap<String, String>,
+    config: &Config,
+) -> Option<Response> {
     let (id, params): (_, lsp_types::DocumentRangeFormattingParams) = req
         .extract(lsp_types::request::RangeFormatting::METHOD)
         .ok()?;
@@ -173,7 +201,7 @@ fn handle_range_formatting(req: Request, documents: &HashMap<String, String>) ->
     let slice_lines = &all_lines[start_line..=clamped_end];
     let slice_text = slice_lines.join("\n") + "\n";
 
-    let formatted = format_with_timeout(&slice_text, &Config::default())?;
+    let formatted = format_with_timeout(&slice_text, config)?;
 
     // Compute the end character position within the range.
     let last_char = slice_lines.last().map(|l: &&str| l.len()).unwrap_or(0) as u32;
@@ -368,7 +396,12 @@ mod tests {
     fn handle_formatting_returns_formatted_edit() {
         let uri = "file:///test.cmake";
         let text = "MESSAGE(hello)\n";
-        let resp = handle_formatting(formatting_request(uri), &docs(uri, text)).unwrap();
+        let resp = handle_formatting(
+            formatting_request(uri),
+            &docs(uri, text),
+            &Config::default(),
+        )
+        .unwrap();
         assert!(resp.error.is_none());
         let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
         assert_eq!(edits.len(), 1);
@@ -378,7 +411,11 @@ mod tests {
 
     #[test]
     fn handle_formatting_returns_none_for_unknown_uri() {
-        let resp = handle_formatting(formatting_request("file:///missing.cmake"), &HashMap::new());
+        let resp = handle_formatting(
+            formatting_request("file:///missing.cmake"),
+            &HashMap::new(),
+            &Config::default(),
+        );
         assert!(resp.is_none());
     }
 
@@ -389,8 +426,12 @@ mod tests {
         let uri = "file:///test.cmake";
         // Three-line document; format only line 1 (0-based)
         let text = "message(a)\nMESSAGE(b)\nmessage(c)\n";
-        let resp =
-            handle_range_formatting(range_formatting_request(uri, 1, 1), &docs(uri, text)).unwrap();
+        let resp = handle_range_formatting(
+            range_formatting_request(uri, 1, 1),
+            &docs(uri, text),
+            &Config::default(),
+        )
+        .unwrap();
         assert!(resp.error.is_none());
         let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
         assert_eq!(edits.len(), 1);
@@ -405,6 +446,7 @@ mod tests {
         let resp = handle_range_formatting(
             range_formatting_request("file:///missing.cmake", 0, 0),
             &HashMap::new(),
+            &Config::default(),
         );
         assert!(resp.is_none());
     }
@@ -418,7 +460,7 @@ mod tests {
             method: "unknown/method".to_string(),
             params: serde_json::Value::Null,
         };
-        let resp = handle_request(req, &HashMap::new()).unwrap();
+        let resp = handle_request(req, &HashMap::new(), &Config::default()).unwrap();
         assert!(resp.error.is_some());
         assert_eq!(
             resp.error.unwrap().code,
@@ -485,7 +527,7 @@ mod tests {
             params: serde_json::to_value(params).unwrap(),
         };
         let mut docs = HashMap::new();
-        handle_notification(notif, &mut docs);
+        handle_notification(notif, &mut docs, &mut Config::default());
         assert_eq!(docs.get(uri).map(String::as_str), Some(text));
     }
 
@@ -510,7 +552,7 @@ mod tests {
             method: lsp_types::notification::DidChangeTextDocument::METHOD.to_string(),
             params: serde_json::to_value(params).unwrap(),
         };
-        handle_notification(notif, &mut docs);
+        handle_notification(notif, &mut docs, &mut Config::default());
         assert_eq!(docs.get(uri).map(String::as_str), Some("new\n"));
     }
 
@@ -529,7 +571,7 @@ mod tests {
             method: lsp_types::notification::DidCloseTextDocument::METHOD.to_string(),
             params: serde_json::to_value(params).unwrap(),
         };
-        handle_notification(notif, &mut docs);
+        handle_notification(notif, &mut docs, &mut Config::default());
         assert!(!docs.contains_key(uri));
     }
 
@@ -540,6 +582,6 @@ mod tests {
             method: "unknown/notification".to_string(),
             params: serde_json::Value::Null,
         };
-        handle_notification(notif, &mut docs); // should not panic
+        handle_notification(notif, &mut docs, &mut Config::default()); // should not panic
     }
 }
