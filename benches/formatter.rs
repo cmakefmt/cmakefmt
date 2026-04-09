@@ -374,11 +374,13 @@ fn batch_scaling_benchmarks(c: &mut Criterion) {
 }
 
 fn config_pattern_benchmarks(c: &mut Criterion) {
-    let mut config = cmakefmt::Config::default();
-    config.literal_comment_pattern = r"^#\s*NOLINT".to_string();
-    config.explicit_trailing_pattern = "#<".to_string();
-    config.fence_pattern = r"^\s*[`~]{3}[^`\n]*$".to_string();
-    config.ruler_pattern = r"^[^\w\s]{3}.*[^\w\s]{3}$".to_string();
+    let config = cmakefmt::Config {
+        literal_comment_pattern: r"^#\s*NOLINT".to_string(),
+        explicit_trailing_pattern: "#<".to_string(),
+        fence_pattern: r"^\s*[`~]{3}[^`\n]*$".to_string(),
+        ruler_pattern: r"^[^\w\s]{3}.*[^\w\s]{3}$".to_string(),
+        ..cmakefmt::Config::default()
+    };
 
     let mut group = c.benchmark_group("config_patterns");
     group.warm_up_time(Duration::from_secs(1));
@@ -413,7 +415,7 @@ fn legacy_conversion_benchmark(c: &mut Criterion) {
     group.bench_function(BenchmarkId::from_parameter("convert_yaml"), |b| {
         b.iter(|| {
             cmakefmt::convert_legacy_config_files(
-                black_box(&[legacy_path.clone()]),
+                black_box(std::slice::from_ref(&legacy_path)),
                 cmakefmt::DumpConfigFormat::Yaml,
             )
             .expect("convert")
