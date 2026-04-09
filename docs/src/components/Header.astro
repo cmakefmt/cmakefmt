@@ -100,17 +100,39 @@ const currentPath = Astro.url.pathname;
       text-decoration: none;
       padding: 0.25rem 0.625rem;
       border-radius: 0.375rem;
-      transition: color 0.15s ease, background-color 0.15s ease;
+      position: relative;
+      transition: color 0.2s ease;
+    }
+
+    .header-nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: var(--sl-color-accent);
+      border-radius: 1px;
+      transition: width 0.25s ease, left 0.25s ease;
     }
 
     .header-nav-link:hover {
       color: var(--sl-color-white);
-      background-color: var(--sl-color-gray-6);
+    }
+
+    .header-nav-link:hover::after {
+      width: 60%;
+      left: 20%;
     }
 
     .header-nav-link.active {
       color: var(--sl-color-text-accent);
-      background-color: color-mix(in srgb, var(--sl-color-accent) 12%, transparent);
+    }
+
+    .header-nav-link.active::after {
+      width: 60%;
+      left: 20%;
+      background: var(--sl-color-accent);
     }
 
     .header-nav::after {
