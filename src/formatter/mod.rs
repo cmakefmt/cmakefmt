@@ -10,7 +10,7 @@
 pub(crate) mod comment;
 pub(crate) mod node;
 
-use crate::config::{CompiledPatterns, Config, LineEnding};
+use crate::config::{Config, LineEnding};
 use crate::error::{Error, Result};
 use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
@@ -247,7 +247,6 @@ fn format_source_impl(
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
 ) -> Result<(String, usize)> {
-    let patterns = config.compiled_patterns();
     let mut output = String::new();
     let mut enabled_chunk = String::new();
     let mut total_statements = 0usize;

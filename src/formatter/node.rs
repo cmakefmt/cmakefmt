@@ -83,7 +83,6 @@ pub(crate) fn format_command(
         command,
         &sections,
         &cmd_config,
-        patterns,
         block_depth,
         config.line_width,
     ) {
@@ -270,7 +269,6 @@ fn try_format_inline(
     command: &CommandInvocation,
     sections: &[Section<'_>],
     cmd_config: &CommandConfig<'_>,
-    patterns: &CompiledPatterns,
     block_depth: usize,
     line_width: usize,
 ) -> Option<String> {
