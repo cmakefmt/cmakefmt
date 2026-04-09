@@ -256,6 +256,12 @@ jobs:
           cd dist
           sha256sum * > SHA256SUMS
 
+      - name: Generate SBOM
+        shell: bash
+        run: |
+          cargo install cargo-cyclonedx --quiet
+          cargo cyclonedx --format json --output-cdx > dist/cmakefmt.cdx.json
+
       - name: Generate Homebrew formula
         shell: bash
         run: |
