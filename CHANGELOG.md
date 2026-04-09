@@ -41,6 +41,14 @@ This project follows a simple changelog discipline:
 
 - `--lsp` flag — use `cmakefmt lsp` instead
 - `--generate-completion` flag — use `cmakefmt completions <SHELL>` instead
+- `--dump-config` flag — use `cmakefmt config dump` instead
+- `--dump-schema` flag — use `cmakefmt config schema` instead
+- `--check-config` flag — use `cmakefmt config check` instead
+- `--show-config` flag — use `cmakefmt config show` instead
+- `--show-config-path` flag — use `cmakefmt config path` instead
+- `--explain-config` flag — use `cmakefmt config explain` instead
+- `--convert-legacy-config` flag — use `cmakefmt config convert` instead
+- `cmakefmt init` (top-level) — use `cmakefmt config init` instead
 
 ## 0.4.0 — 2026-04-09
 
