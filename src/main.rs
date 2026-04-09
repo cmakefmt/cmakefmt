@@ -56,6 +56,34 @@ to inspect the effective config after CLI overrides, and --explain-config for
 a fuller human-readable explanation of config resolution for a target or the
 current working directory.";
 
+fn cli_styles() -> clap::builder::Styles {
+    use clap::builder::styling::{AnsiColor, Effects, Style};
+    clap::builder::Styles::styled()
+        .header(
+            Style::new()
+                .fg_color(Some(AnsiColor::Green.into()))
+                .effects(Effects::BOLD),
+        )
+        .usage(
+            Style::new()
+                .fg_color(Some(AnsiColor::Green.into()))
+                .effects(Effects::BOLD),
+        )
+        .literal(Style::new().fg_color(Some(AnsiColor::Cyan.into())))
+        .placeholder(Style::new().fg_color(Some(AnsiColor::Cyan.into())))
+        .valid(Style::new().fg_color(Some(AnsiColor::Green.into())))
+        .invalid(
+            Style::new()
+                .fg_color(Some(AnsiColor::Red.into()))
+                .effects(Effects::BOLD),
+        )
+        .error(
+            Style::new()
+                .fg_color(Some(AnsiColor::Red.into()))
+                .effects(Effects::BOLD),
+        )
+}
+
 /// A fast, correct CMake formatter.
 #[derive(Parser, Debug)]
 #[command(
@@ -63,7 +91,8 @@ current working directory.";
     version,
     long_version = env!("CMAKEFMT_CLI_LONG_VERSION"),
     about = "Parse CMake listfiles and format them nicely.",
-    long_about = LONG_ABOUT
+    long_about = LONG_ABOUT,
+    styles = cli_styles(),
 )]
 struct Cli {
     /// Files or directories to format. Use `-` for stdin.
