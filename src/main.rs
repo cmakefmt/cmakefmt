@@ -568,6 +568,48 @@ enum CliCommand {
     /// Install a git pre-commit hook that runs `cmakefmt --check` on staged
     /// CMake files.
     InstallHook,
+    /// Config inspection, generation, and conversion.
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
+}
+
+#[derive(Clone, Debug, Subcommand)]
+enum ConfigAction {
+    /// Print the default config template.
+    Dump {
+        /// Output format.
+        #[arg(value_enum, default_value = "yaml")]
+        format: DumpConfigFormat,
+    },
+    /// Print the JSON Schema for the config file.
+    Schema,
+    /// Validate a config file without formatting.
+    Check {
+        /// Config file to validate (discovers automatically if omitted).
+        path: Option<String>,
+    },
+    /// Print the effective config for a target.
+    Show {
+        /// Output format.
+        #[arg(value_enum, default_value = "yaml")]
+        format: DumpConfigFormat,
+    },
+    /// Print the config file path selected for a target.
+    Path,
+    /// Explain config resolution for a target or the current directory.
+    Explain,
+    /// Convert legacy cmake-format config files.
+    Convert {
+        /// Legacy config file(s) to convert.
+        paths: Vec<PathBuf>,
+        /// Output format.
+        #[arg(long, value_enum, default_value = "yaml")]
+        format: DumpConfigFormat,
+    },
+    /// Write a starter `.cmakefmt.yaml` to the current directory.
+    Init,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -738,6 +780,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         Some(CliCommand::InstallHook) => {
             return install_git_hook();
+        }
+        Some(CliCommand::Config { action }) => {
+            return run_config_subcommand(cli, action);
         }
         None => {}
     }
@@ -1097,6 +1142,66 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
 
 fn is_config_introspection_mode(cli: &Cli) -> bool {
     cli.show_config.is_some() || cli.show_config_path || cli.explain_config
+}
+
+fn run_config_subcommand(cli: &Cli, action: &ConfigAction) -> Result<u8, cmakefmt::Error> {
+    match action {
+        ConfigAction::Dump { format } => {
+            print!("{}", default_config_template_for(*format));
+            Ok(EXIT_OK)
+        }
+        ConfigAction::Schema => {
+            println!("{}", generate_json_schema());
+            Ok(EXIT_OK)
+        }
+        ConfigAction::Check { path } => {
+            let path_arg = path.as_deref().unwrap_or("");
+            run_check_config(cli, path_arg)
+        }
+        ConfigAction::Show { format } => {
+            let target = resolve_config_probe_target(cli)?;
+            let (config, _, _) = build_context(cli, target.as_deref())?;
+            let rendered = render_effective_config(&config, *format)?;
+            print!("{rendered}");
+            if !rendered.ends_with('\n') {
+                println!();
+            }
+            Ok(EXIT_OK)
+        }
+        ConfigAction::Path => {
+            let target = resolve_config_probe_target(cli)?;
+            let config_context = resolve_config_context(cli, target.as_deref());
+            for path in &config_context.sources {
+                println!("{}", path.display());
+            }
+            Ok(EXIT_OK)
+        }
+        ConfigAction::Explain => {
+            let target = resolve_config_probe_target(cli)?;
+            explain_config(cli, target.as_deref().unwrap_or(Path::new(".")))
+        }
+        ConfigAction::Convert { paths, format } => {
+            if paths.is_empty() {
+                return Err(cmakefmt::Error::Formatter(
+                    "cmakefmt config convert requires at least one config file path".to_owned(),
+                ));
+            }
+            let output = convert_legacy_config_files(paths, *format)?;
+            print!("{output}");
+            Ok(EXIT_OK)
+        }
+        ConfigAction::Init => {
+            let path = Path::new(".cmakefmt.yaml");
+            if path.exists() {
+                eprintln!(".cmakefmt.yaml already exists");
+                return Ok(EXIT_ERROR);
+            }
+            std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
+                .map_err(cmakefmt::Error::Io)?;
+            eprintln!("created .cmakefmt.yaml");
+            Ok(EXIT_OK)
+        }
+    }
 }
 
 fn install_git_hook() -> Result<u8, cmakefmt::Error> {
