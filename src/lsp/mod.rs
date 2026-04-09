@@ -17,7 +17,12 @@ use lsp_types::{
     InitializeParams, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
 };
 
+use std::time::Duration;
+
 use crate::Config;
+
+/// Maximum time allowed for a single formatting request before it is aborted.
+const FORMAT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Start the LSP server loop, reading from stdin and writing to stdout.
 pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
@@ -124,11 +129,24 @@ fn handle_notification(notif: lsp_server::Notification, documents: &mut HashMap<
     }
 }
 
+/// Run `format_source` with a timeout to prevent pathological inputs from
+/// freezing the editor.
+fn format_with_timeout(source: &str, config: &Config) -> Option<String> {
+    let source = source.to_owned();
+    let config = config.clone();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let result = crate::format_source(&source, &config).ok();
+        let _ = tx.send(result);
+    });
+    rx.recv_timeout(FORMAT_TIMEOUT).ok().flatten()
+}
+
 fn handle_formatting(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
     let (id, params): (_, lsp_types::DocumentFormattingParams) =
         req.extract(lsp_types::request::Formatting::METHOD).ok()?;
     let text = documents.get(params.text_document.uri.as_str())?;
-    let formatted = crate::format_source(text, &Config::default()).ok()?;
+    let formatted = format_with_timeout(text, &Config::default())?;
 
     let edit = full_document_edit(text, formatted);
     let result = serde_json::to_value(vec![edit]).ok()?;
@@ -151,7 +169,7 @@ fn handle_range_formatting(req: Request, documents: &HashMap<String, String>) ->
     let slice_lines = &all_lines[start_line..=clamped_end];
     let slice_text = slice_lines.join("\n") + "\n";
 
-    let formatted = crate::format_source(&slice_text, &Config::default()).ok()?;
+    let formatted = format_with_timeout(&slice_text, &Config::default())?;
 
     // Compute the end character position within the range.
     let last_char = slice_lines.last().map(|l: &&str| l.len()).unwrap_or(0) as u32;
