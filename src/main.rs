@@ -773,33 +773,32 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     if let Some(format) = cli.dump_config {
         eprintln!("warning: --dump-config is deprecated, use `cmakefmt config dump` instead");
-        print!("{}", default_config_template_for(format));
-        return Ok(EXIT_OK);
+        return run_config_subcommand(cli, &ConfigAction::Dump { format });
     }
 
     if cli.dump_schema {
         eprintln!("warning: --dump-schema is deprecated, use `cmakefmt config schema` instead");
-        println!("{}", generate_json_schema());
-        return Ok(EXIT_OK);
+        return run_config_subcommand(cli, &ConfigAction::Schema);
     }
 
     if let Some(ref path_arg) = cli.check_config {
         eprintln!("warning: --check-config is deprecated, use `cmakefmt config check` instead");
-        return run_check_config(cli, path_arg);
+        return run_config_subcommand(
+            cli,
+            &ConfigAction::Check {
+                path: if path_arg.is_empty() {
+                    None
+                } else {
+                    Some(path_arg.clone())
+                },
+            },
+        );
     }
 
     match &cli.command {
         Some(CliCommand::Init) => {
             eprintln!("warning: `cmakefmt init` is deprecated, use `cmakefmt config init` instead");
-            let path = Path::new(".cmakefmt.yaml");
-            if path.exists() {
-                eprintln!(".cmakefmt.yaml already exists");
-                return Ok(EXIT_ERROR);
-            }
-            std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
-                .map_err(cmakefmt::Error::Io)?;
-            eprintln!("created .cmakefmt.yaml");
-            return Ok(EXIT_OK);
+            return run_config_subcommand(cli, &ConfigAction::Init);
         }
         #[cfg(feature = "lsp")]
         Some(CliCommand::Lsp) => {
@@ -844,17 +843,28 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 "--convert-legacy-config does not accept formatting input paths".to_owned(),
             ));
         }
-        print!(
-            "{}",
-            convert_legacy_config_files(&cli.convert_config_paths, cli.convert_config_format)?
+        return run_config_subcommand(
+            cli,
+            &ConfigAction::Convert {
+                paths: cli.convert_config_paths.clone(),
+                format: cli.convert_config_format,
+            },
         );
-        return Ok(EXIT_OK);
     }
 
     validate_cli(cli)?;
 
-    if cli.show_config.is_some() || cli.show_config_path || cli.explain_config {
-        return run_config_introspection(cli);
+    if cli.explain_config {
+        eprintln!("warning: --explain-config is deprecated, use `cmakefmt config explain` instead");
+        return run_config_subcommand(cli, &ConfigAction::Explain);
+    }
+    if cli.show_config_path {
+        eprintln!("warning: --show-config-path is deprecated, use `cmakefmt config path` instead");
+        return run_config_subcommand(cli, &ConfigAction::Path);
+    }
+    if let Some(format) = cli.show_config {
+        eprintln!("warning: --show-config is deprecated, use `cmakefmt config show` instead");
+        return run_config_subcommand(cli, &ConfigAction::Show { format });
     }
 
     let stdout_mode =
@@ -1304,39 +1314,6 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
             }
         }
     }
-}
-
-fn run_config_introspection(cli: &Cli) -> Result<u8, cmakefmt::Error> {
-    if cli.explain_config {
-        eprintln!("warning: --explain-config is deprecated, use `cmakefmt config explain` instead");
-        let target = resolve_config_probe_target(cli)?;
-        return explain_config(cli, target.as_deref().unwrap_or(Path::new(".")));
-    }
-
-    let target = resolve_config_probe_target(cli)?;
-    let target_path = target.as_deref();
-    let config_context = resolve_config_context(cli, target_path);
-
-    if cli.show_config_path {
-        eprintln!("warning: --show-config-path is deprecated, use `cmakefmt config path` instead");
-        for path in &config_context.sources {
-            println!("{}", path.display());
-        }
-        return Ok(EXIT_OK);
-    }
-
-    if let Some(format) = cli.show_config {
-        eprintln!("warning: --show-config is deprecated, use `cmakefmt config show` instead");
-        let (config, _, _) = build_context(cli, target_path)?;
-        let rendered = render_effective_config(&config, format)?;
-        print!("{rendered}");
-        if !rendered.ends_with('\n') {
-            println!();
-        }
-        return Ok(EXIT_OK);
-    }
-
-    Ok(EXIT_OK)
 }
 
 fn explain_config(cli: &Cli, path: &Path) -> Result<u8, cmakefmt::Error> {
