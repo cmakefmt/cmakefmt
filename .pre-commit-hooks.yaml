@@ -4,7 +4,14 @@
 
 - id: cmakefmt
   name: cmakefmt
-  description: Format CMake files with cmakefmt
+  description: Check CMake file formatting with cmakefmt
   entry: cmakefmt --check
+  language: rust
+  types: [cmake]
+
+- id: cmakefmt-fix
+  name: cmakefmt (fix)
+  description: Format CMake files in place with cmakefmt
+  entry: cmakefmt --in-place
   language: rust
   types: [cmake]
