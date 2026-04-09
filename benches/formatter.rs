@@ -373,6 +373,81 @@ fn batch_scaling_benchmarks(c: &mut Criterion) {
     group.finish();
 }
 
+fn config_pattern_benchmarks(c: &mut Criterion) {
+    let mut config = cmakefmt::Config::default();
+    config.literal_comment_pattern = r"^#\s*NOLINT".to_string();
+    config.explicit_trailing_pattern = "#<".to_string();
+    config.fence_pattern = r"^\s*[`~]{3}[^`\n]*$".to_string();
+    config.ruler_pattern = r"^[^\w\s]{3}.*[^\w\s]{3}$".to_string();
+
+    let mut group = c.benchmark_group("config_patterns");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(5));
+    group.sample_size(100);
+
+    group.bench_function(BenchmarkId::from_parameter("validate_patterns"), |b| {
+        b.iter(|| black_box(&config).validate_patterns().expect("valid"))
+    });
+    group.bench_function(BenchmarkId::from_parameter("compiled_patterns"), |b| {
+        b.iter(|| black_box(&config).compiled_patterns())
+    });
+    group.finish();
+}
+
+fn legacy_conversion_benchmark(c: &mut Criterion) {
+    let dir = tempdir().expect("tempdir");
+    let legacy_path = dir.path().join(".cmake-format.yaml");
+    std::fs::write(
+        &legacy_path,
+        "format:\n  line_width: 100\n  tab_size: 4\n  use_tabchars: false\n  \
+         max_lines_hwrap: 3\n  dangle_parens: true\n\
+         markup:\n  enable_markup: true\n  reflow_comments: true\n",
+    )
+    .expect("write legacy config");
+
+    let mut group = c.benchmark_group("legacy_conversion");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(5));
+    group.sample_size(80);
+
+    group.bench_function(BenchmarkId::from_parameter("convert_yaml"), |b| {
+        b.iter(|| {
+            cmakefmt::convert_legacy_config_files(
+                black_box(&[legacy_path.clone()]),
+                cmakefmt::DumpConfigFormat::Yaml,
+            )
+            .expect("convert")
+        })
+    });
+    group.finish();
+}
+
+fn atomic_write_benchmark(c: &mut Criterion) {
+    let dir = tempdir().expect("tempdir");
+    let target = dir.path().join("CMakeLists.txt");
+    let content = "set(FOO bar)\n".repeat(100);
+
+    let mut group = c.benchmark_group("io_atomic");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(5));
+    group.sample_size(80);
+
+    group.bench_function(BenchmarkId::from_parameter("direct_write"), |b| {
+        b.iter(|| {
+            std::fs::write(black_box(&target), black_box(&content)).expect("write");
+        })
+    });
+
+    group.bench_function(BenchmarkId::from_parameter("atomic_write"), |b| {
+        b.iter(|| {
+            let mut tmp = tempfile::NamedTempFile::new_in(black_box(dir.path())).expect("tempfile");
+            std::io::Write::write_all(&mut tmp, black_box(content.as_bytes())).expect("write");
+            tmp.persist(black_box(&target)).expect("persist");
+        })
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     parse_benchmarks,
@@ -384,6 +459,9 @@ criterion_group!(
     config_benchmark,
     workflow_diff_benchmark,
     check_and_write_benchmarks,
-    batch_scaling_benchmarks
+    batch_scaling_benchmarks,
+    config_pattern_benchmarks,
+    legacy_conversion_benchmark,
+    atomic_write_benchmark
 );
 criterion_main!(benches);
