@@ -16,6 +16,25 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `cmakefmt init` subcommand — generates a starter `.cmakefmt.yaml` in the
+  current directory
+- `--check-config` flag — validates a config file and exits without formatting
+- `--stat` flag — prints a git-style summary (`3 files changed, 12 lines
+  reformatted`)
+- Elapsed time shown in the formatting summary (e.g. `in 0.42s`)
+- Fix hint printed when `--check` fails (`hint: run cmakefmt --in-place .`)
+- User-friendly panic handler with structured bug report template
+- `.pre-commit-hooks.yaml` for pre-commit integration
+- `Dockerfile` for CI usage
+- GitHub issue templates for bug reports and feature requests
+- Architecture guide for contributors
+- FAQ docs page
+- LSP-mode editor configs for Neovim, Helix, and Zed
+- Azure Pipelines and Bitbucket Pipelines examples in CI docs
+- Migration guide expanded with key differences and unsupported options tables
+
 ### Fixed
 
 - `--diff` now works with `--check` and non-human `--report-format` modes;
