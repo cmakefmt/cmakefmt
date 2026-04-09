@@ -11,7 +11,7 @@ use std::process::ExitCode;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
@@ -528,6 +528,16 @@ struct Cli {
     #[cfg(feature = "lsp")]
     #[arg(long = "lsp", help_heading = "Config And Conversion")]
     lsp: bool,
+
+    /// Subcommand (e.g. `cmakefmt init`).
+    #[command(subcommand)]
+    command: Option<CliCommand>,
+}
+
+#[derive(Clone, Debug, Subcommand)]
+enum CliCommand {
+    /// Write a starter `.cmakefmt.yaml` config file to the current directory.
+    Init,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -666,6 +676,18 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     if cli.dump_schema {
         println!("{}", generate_json_schema());
+        return Ok(EXIT_OK);
+    }
+
+    if let Some(CliCommand::Init) = cli.command {
+        let path = Path::new(".cmakefmt.yaml");
+        if path.exists() {
+            eprintln!(".cmakefmt.yaml already exists");
+            return Ok(EXIT_ERROR);
+        }
+        std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
+            .map_err(cmakefmt::Error::Io)?;
+        eprintln!("created .cmakefmt.yaml");
         return Ok(EXIT_OK);
     }
 
