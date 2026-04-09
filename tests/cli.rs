@@ -2025,6 +2025,48 @@ fn dump_schema_appears_in_help() {
     assert!(stdout.contains("--dump-schema"));
 }
 
+// ── --stat ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn stat_prints_summary() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "MESSAGE(hello)\n");
+
+    let output = cmakefmt()
+        .args(["--stat", "--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("file changed") || stderr.contains("files changed"));
+}
+
+#[test]
+fn stat_shows_zero_when_nothing_changes() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "message(hello)\n");
+
+    let output = cmakefmt()
+        .args(["--stat", "--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("0 files changed"),
+        "expected '0 files changed' in stderr: {stderr}"
+    );
+}
+
+#[test]
+fn stat_appears_in_help() {
+    let output = cmakefmt().arg("--help").output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("--stat"));
+}
+
 // ── --lsp ───────────────────────────────────────────────────────────────────
 
 #[test]
