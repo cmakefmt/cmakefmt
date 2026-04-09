@@ -20,8 +20,16 @@ use crate::error::{Error, FileParseError, Result};
 /// All fields are optional — only specified values override the defaults.
 #[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
 #[schemars(title = "cmakefmt configuration")]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 struct FileConfig {
+    /// JSON Schema reference (ignored at runtime, used by editors for
+    /// autocomplete and validation).
+    #[serde(rename = "$schema")]
+    #[schemars(skip)]
+    _schema: Option<String>,
+    /// Command spec overrides (parsed separately by the spec registry).
+    #[schemars(skip)]
+    commands: Option<serde_yaml::Value>,
     /// Formatting options controlling line width, indentation, and layout.
     format: FormatSection,
     /// Style options controlling command and keyword casing.

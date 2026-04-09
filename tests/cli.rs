@@ -2107,7 +2107,11 @@ fn init_creates_config_file() {
 #[test]
 fn init_refuses_to_overwrite_existing_config() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join(".cmakefmt.yaml"), "line_width: 100\n").unwrap();
+    std::fs::write(
+        dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 100\n",
+    )
+    .unwrap();
 
     let output = cmakefmt()
         .args(["init"])
@@ -2117,7 +2121,7 @@ fn init_refuses_to_overwrite_existing_config() {
 
     assert!(!output.status.success());
     let content = std::fs::read_to_string(dir.path().join(".cmakefmt.yaml")).unwrap();
-    assert_eq!(content, "line_width: 100\n");
+    assert_eq!(content, "format:\n  line_width: 100\n");
 }
 
 // ── --check-config ─────────────────────────────────────────────────────────
@@ -2125,7 +2129,11 @@ fn init_refuses_to_overwrite_existing_config() {
 #[test]
 fn check_config_validates_good_config() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join(".cmakefmt.yaml"), "line_width: 100\n").unwrap();
+    std::fs::write(
+        dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 100\n",
+    )
+    .unwrap();
 
     let output = cmakefmt()
         .args(["--check-config"])
@@ -2156,7 +2164,7 @@ fn check_config_rejects_bad_config() {
 fn check_config_with_explicit_path() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join("my-config.yaml");
-    std::fs::write(&config, "line_width: 120\n").unwrap();
+    std::fs::write(&config, "format:\n  line_width: 120\n").unwrap();
 
     let output = cmakefmt()
         .args(["--check-config", config.to_str().unwrap()])
