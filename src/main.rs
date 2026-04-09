@@ -565,6 +565,9 @@ enum CliCommand {
         #[arg(value_enum)]
         shell: Shell,
     },
+    /// Install a git pre-commit hook that runs `cmakefmt --check` on staged
+    /// CMake files.
+    InstallHook,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -732,6 +735,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
             let mut command = Cli::command();
             generate(*shell, &mut command, "cmakefmt", &mut io::stdout());
             return Ok(EXIT_OK);
+        }
+        Some(CliCommand::InstallHook) => {
+            return install_git_hook();
         }
         None => {}
     }
@@ -1091,6 +1097,34 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
 
 fn is_config_introspection_mode(cli: &Cli) -> bool {
     cli.show_config.is_some() || cli.show_config_path || cli.explain_config
+}
+
+fn install_git_hook() -> Result<u8, cmakefmt::Error> {
+    let hooks_dir = Path::new(".git/hooks");
+    if !hooks_dir.exists() {
+        eprintln!("error: not a git repository (no .git/hooks directory)");
+        return Ok(EXIT_ERROR);
+    }
+    let hook_path = hooks_dir.join("pre-commit");
+    if hook_path.exists() {
+        eprintln!(
+            "error: {} already exists; remove it first or add cmakefmt manually",
+            hook_path.display()
+        );
+        return Ok(EXIT_ERROR);
+    }
+    let hook_content = "#!/bin/sh\n\
+        # Installed by cmakefmt install-hook\n\
+        cmakefmt --check --staged\n";
+    std::fs::write(&hook_path, hook_content).map_err(cmakefmt::Error::Io)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&hook_path, std::fs::Permissions::from_mode(0o755))
+            .map_err(cmakefmt::Error::Io)?;
+    }
+    eprintln!("installed pre-commit hook: {}", hook_path.display());
+    Ok(EXIT_OK)
 }
 
 fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
