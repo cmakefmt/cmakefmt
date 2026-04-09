@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: Cross-Platform Output Consistency
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'Cargo.toml', 'Cargo.lock']
+  pull_request:
+    paths: ['src/**', 'Cargo.toml', 'Cargo.lock']
+
+permissions: read-all
+
+jobs:
+  format-output:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        with:
+          toolchain: stable
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Format fixtures and capture output
+        shell: bash
+        run: |
+          for f in tests/fixtures/**/*.cmake tests/fixtures/**/*.txt; do
+            [ -f "$f" ] || continue
+            ./target/release/cmakefmt "$f" 2>/dev/null || true
+          done > cross-platform-output.txt
+
+      - name: Upload output
+        uses: actions/upload-artifact@ea165f8d65b6db9b8a4d0d969e902c97a56e3fd3  # v4.6.2
+        with:
+          name: output-${{ matrix.os }}
+          path: cross-platform-output.txt
+
+  compare:
+    needs: format-output
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all outputs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+
+      - name: Compare outputs
+        run: |
+          diff output-ubuntu-latest/cross-platform-output.txt \
+               output-macos-latest/cross-platform-output.txt \
+            || { echo "::error::Linux and macOS outputs differ"; exit 1; }
+          diff output-ubuntu-latest/cross-platform-output.txt \
+               output-windows-latest/cross-platform-output.txt \
+            || { echo "::error::Linux and Windows outputs differ"; exit 1; }
+          echo "All platforms produce identical output"
