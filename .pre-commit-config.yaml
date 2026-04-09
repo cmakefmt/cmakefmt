@@ -11,9 +11,12 @@ repos:
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: check-added-large-files
+      - id: check-json
       - id: check-yaml
         exclude: ^packaging/conda-forge/meta\.yaml$
       - id: check-toml
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
 
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.8
