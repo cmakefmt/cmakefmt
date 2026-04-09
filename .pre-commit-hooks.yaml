@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+- id: cmakefmt
+  name: cmakefmt
+  description: Format CMake files with cmakefmt
+  entry: cmakefmt --check
+  language: rust
+  types: [cmake]
