@@ -40,6 +40,16 @@ This project follows a simple changelog discipline:
 - `--diff` now works with `--check` and non-human `--report-format` modes;
   previously both suppressed the unified diff output
 
+### Security
+
+- Config regex patterns (`literal_comment_pattern`, `explicit_trailing_pattern`,
+  `fence_pattern`, `ruler_pattern`) are now validated at config load time;
+  previously invalid or pathological regexes were silently accepted and could
+  cause CPU exhaustion (ReDoS)
+- `--in-place` writes are now atomic (write to temp file, then rename);
+  previously a TOCTOU race could cause unintended overwrites if the target
+  file was replaced with a symlink between read and write
+
 ## 0.3.0 — 2026-04-08
 
 ### Added
