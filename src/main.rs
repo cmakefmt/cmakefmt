@@ -605,6 +605,40 @@ const EXIT_CHECK_FAILED: u8 = 1;
 const EXIT_ERROR: u8 = 2;
 
 fn main() -> ExitCode {
+    std::panic::set_hook(Box::new(|info| {
+        let message = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            (*s).to_string()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "unknown".to_string()
+        };
+
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}", l.file(), l.line()))
+            .unwrap_or_else(|| "unknown".to_string());
+
+        eprintln!(
+            "\
+cmakefmt encountered an internal error and crashed.
+
+This is a bug. Please report it at:
+  https://github.com/cmakefmt/cmakefmt/issues/new
+
+Include the following in your report:
+  cmakefmt version: {}
+  OS: {} ({})
+  panic: {}
+  location: {}",
+            env!("CARGO_PKG_VERSION"),
+            std::env::consts::OS,
+            std::env::consts::ARCH,
+            message,
+            location,
+        );
+    }));
+
     let cli = Cli::parse();
 
     match run(&cli) {
