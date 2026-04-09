@@ -27,9 +27,10 @@ jobs:
             repo: llvm/llvm-project
             ref: main
             sparse: llvm/cmake
-          - name: Qt Base
-            repo: niccokunzmann/qt-base
-            ref: dev
+          - name: OpenCV
+            repo: opencv/opencv
+            ref: master
+            sparse: cmake
     steps:
       - name: Check out cmakefmt
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
