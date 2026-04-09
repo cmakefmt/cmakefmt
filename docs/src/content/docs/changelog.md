@@ -42,6 +42,9 @@ This project follows a simple changelog discipline:
 - SBOM generation (`cargo-cyclonedx`) in the release workflow
 - Docker build CI workflow
 - WASM API documentation page
+- Docs site redesign: Plus Jakarta Sans headings, gradient hero with animated
+  dot grid, animated link underlines, card lift-on-hover, sidebar active
+  indicator, page load fade-in
 - Benchmarks for config pattern validation, legacy conversion, and atomic
   writes
 
