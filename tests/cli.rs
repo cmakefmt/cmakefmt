@@ -2025,13 +2025,13 @@ fn dump_schema_appears_in_help() {
     assert!(stdout.contains("--dump-schema"));
 }
 
-// ── --init ─────────────────────────────────────────────────────────────────
+// ── init subcommand ────────────────────────────────────────────────────────
 
 #[test]
 fn init_creates_config_file() {
     let dir = tempfile::tempdir().unwrap();
     let output = cmakefmt()
-        .args(["--init"])
+        .args(["init"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -2048,7 +2048,7 @@ fn init_refuses_to_overwrite_existing_config() {
     std::fs::write(dir.path().join(".cmakefmt.yaml"), "line_width: 100\n").unwrap();
 
     let output = cmakefmt()
-        .args(["--init"])
+        .args(["init"])
         .current_dir(dir.path())
         .output()
         .unwrap();

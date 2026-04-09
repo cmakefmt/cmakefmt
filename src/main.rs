@@ -11,7 +11,7 @@ use std::process::ExitCode;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
@@ -187,25 +187,9 @@ struct Cli {
     #[arg(long = "dump-schema", help_heading = "Config And Conversion")]
     dump_schema: bool,
 
-    /// Write a starter `.cmakefmt.yaml` config file to the current directory and exit.
-    #[arg(
-        long = "init",
-        help_heading = "Config And Conversion",
-        conflicts_with = "dump_config",
-        conflicts_with = "dump_schema",
-        conflicts_with = "convert_config_paths",
-        conflicts_with = "check",
-        conflicts_with = "diff",
-        conflicts_with = "in_place",
-        conflicts_with = "list_changed_files",
-        conflicts_with = "list_input_files",
-        conflicts_with = "show_config",
-        conflicts_with = "show_config_path",
-        conflicts_with = "explain_config",
-        conflicts_with = "generate_completion",
-        conflicts_with = "generate_man_page"
-    )]
-    init: bool,
+    /// Subcommand (e.g. `cmakefmt init`).
+    #[command(subcommand)]
+    command: Option<CliCommand>,
 
     /// Generate shell completion scripts and print them to stdout.
     #[arg(
@@ -538,6 +522,12 @@ struct Cli {
     lsp: bool,
 }
 
+#[derive(Clone, Debug, Subcommand)]
+enum CliCommand {
+    /// Write a starter `.cmakefmt.yaml` config file to the current directory.
+    Init,
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 enum ColorChoice {
     /// Use colour only when stdout looks like an interactive terminal.
@@ -643,7 +633,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return Ok(EXIT_OK);
     }
 
-    if cli.init {
+    if let Some(CliCommand::Init) = cli.command {
         let path = Path::new(".cmakefmt.yaml");
         if path.exists() {
             eprintln!(".cmakefmt.yaml already exists");
@@ -3137,7 +3127,6 @@ mod tests {
             "version",
             "in-place",
             "dump-schema",
-            "init",
             "lsp",
         ];
 
