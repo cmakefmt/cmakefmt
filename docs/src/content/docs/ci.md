@@ -155,26 +155,29 @@ pipelines:
 
 ## Docker
 
-Build the image locally from the repository root:
+Pre-built images are published to GitHub Container Registry on every release:
 
 ```bash
-docker build -t cmakefmt .
-```
-
-Then use it to check formatting:
-
-```bash
-docker run --rm -v "$(pwd):/work" -w /work cmakefmt --check .
+docker run --rm -v "$(pwd):/work" -w /work ghcr.io/cmakefmt/cmakefmt --check .
 ```
 
 Or format a single file via stdin:
 
 ```bash
-cat CMakeLists.txt | docker run --rm -i cmakefmt -
+cat CMakeLists.txt | docker run --rm -i ghcr.io/cmakefmt/cmakefmt -
 ```
 
-This works in any CI system that supports Docker without installing Rust or
-downloading binaries.
+Pin a specific version:
+
+```bash
+docker run --rm -v "$(pwd):/work" -w /work ghcr.io/cmakefmt/cmakefmt:0.4.0 --check .
+```
+
+You can also build the image locally from the repository root:
+
+```bash
+docker build -t cmakefmt .
+```
 
 ## pre-commit
 
