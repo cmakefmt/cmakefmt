@@ -21,8 +21,8 @@ commit_args = ""
 
 [[tool.bumpversion.files]]
 filename = "Cargo.toml"
-search = 'version = "{current_version}"'
-replace = 'version = "{new_version}"'
+search = 'name = "cmakefmt-rust"\nversion = "{current_version}"'
+replace = 'name = "cmakefmt-rust"\nversion = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename = "README.md"
