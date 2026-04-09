@@ -33,10 +33,17 @@ This project follows a simple changelog discipline:
   from freezing the editor
 - Colored CLI help output (green headers, cyan flags)
 - Cargo-fuzz targets for parser and formatter (`fuzz/`)
+- `cmakefmt-fix` pre-commit hook for auto-formatting (in addition to the
+  existing check-only `cmakefmt` hook)
+- Docker image published to GHCR (`ghcr.io/cmakefmt/cmakefmt`) on every
+  release
 - Cross-platform output consistency CI workflow
-- Real-world regression suite CI workflow (CMake, LLVM, Qt Base)
+- Real-world regression suite CI workflow (CMake, LLVM, OpenCV)
 - SBOM generation (`cargo-cyclonedx`) in the release workflow
+- Docker build CI workflow
 - WASM API documentation page
+- Benchmarks for config pattern validation, legacy conversion, and atomic
+  writes
 
 ### Changed
 
@@ -44,6 +51,9 @@ This project follows a simple changelog discipline:
   ignored (`deny_unknown_fields` on all config sections)
 - `require_valid_layout` error now suggests the specific `line_width` value
   needed to accommodate the offending line
+- Config regex patterns (`literal_comment_pattern`, `explicit_trailing_pattern`,
+  etc.) are now compiled once per formatting run instead of once per comment
+  or command, improving performance on comment-heavy files
 
 ### Deprecated
 
