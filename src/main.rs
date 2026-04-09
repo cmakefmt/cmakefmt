@@ -964,15 +964,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         if cli.diff && cli.report_format == ReportFormat::Github {
             for result in &results {
                 if result.would_change {
-                    let diff_output = result.unified_diff.as_deref().unwrap_or_default();
-                    let display_output = if colorize_stdout {
-                        colorize_unified_diff(diff_output)
-                    } else {
-                        diff_output.to_owned()
-                    };
-                    io::stdout()
-                        .write_all(display_output.as_bytes())
-                        .map_err(cmakefmt::Error::Io)?;
+                    write_diff_to_stdout(result, colorize_stdout)?;
                 }
             }
         }
@@ -1009,15 +1001,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         } else if cli.check {
             if result.would_change {
                 if cli.diff {
-                    let diff_output = result.unified_diff.as_deref().unwrap_or_default();
-                    let display_output = if colorize_stdout {
-                        colorize_unified_diff(diff_output)
-                    } else {
-                        diff_output.to_owned()
-                    };
-                    io::stdout()
-                        .write_all(display_output.as_bytes())
-                        .map_err(cmakefmt::Error::Io)?;
+                    write_diff_to_stdout(result, colorize_stdout)?;
                 }
                 if !cli.quiet {
                     eprintln!("{} would be reformatted", result.display_name);
@@ -1032,15 +1016,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         } else {
             if cli.diff {
                 if result.would_change {
-                    let diff_output = result.unified_diff.as_deref().unwrap_or_default();
-                    let display_output = if colorize_stdout {
-                        colorize_unified_diff(diff_output)
-                    } else {
-                        diff_output.to_owned()
-                    };
-                    io::stdout()
-                        .write_all(display_output.as_bytes())
-                        .map_err(cmakefmt::Error::Io)?;
+                    write_diff_to_stdout(result, colorize_stdout)?;
                 }
             } else {
                 if multi_target_stdout {
@@ -2777,6 +2753,18 @@ fn write_in_place_updates(results: &[ProcessedTarget]) -> Result<(), cmakefmt::E
 /// same directory and then renaming. This prevents partial writes and avoids
 /// TOCTOU races where the target could be replaced with a symlink between read
 /// and write.
+fn write_diff_to_stdout(result: &ProcessedTarget, colorize: bool) -> Result<(), cmakefmt::Error> {
+    let diff_output = result.unified_diff.as_deref().unwrap_or_default();
+    let display_output = if colorize {
+        colorize_unified_diff(diff_output)
+    } else {
+        diff_output.to_owned()
+    };
+    io::stdout()
+        .write_all(display_output.as_bytes())
+        .map_err(cmakefmt::Error::Io)
+}
+
 fn atomic_write(path: &Path, contents: &str) -> Result<(), cmakefmt::Error> {
     let dir = path.parent().unwrap_or(Path::new("."));
     let mut tmp = tempfile::NamedTempFile::new_in(dir).map_err(cmakefmt::Error::Io)?;
