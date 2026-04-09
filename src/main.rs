@@ -2797,7 +2797,7 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
             limit,
         } => format!(
             "error: line {line_no} is {width} characters wide, exceeding the limit of {limit}\n\
-             hint: raise line_width, shorten the line, or disable require_valid_layout"
+             hint: set line_width = {width} (or higher), add the command to always_wrap, or disable require_valid_layout"
         ),
     }
 }
