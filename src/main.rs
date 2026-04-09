@@ -743,9 +743,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     if let Some(shell) = cli.generate_completion {
-        eprintln!("warning: --generate-completion is deprecated, use `cmakefmt completions {shell}` instead");
         let mut command = Cli::command();
         generate(shell, &mut command, "cmakefmt", &mut io::stdout());
+        eprintln!("warning: --generate-completion is deprecated, use `cmakefmt completions {shell}` instead");
         return Ok(EXIT_OK);
     }
 
