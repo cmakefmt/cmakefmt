@@ -51,7 +51,6 @@ fn init_git_repo(dir: &std::path::Path) {
     git(dir, &["init"]);
     git(dir, &["config", "user.email", "cmakefmt@example.invalid"]);
     git(dir, &["config", "user.name", "cmakefmt tests"]);
-    git(dir, &["config", "commit.gpgsign", "false"]);
 }
 
 // ── Basic formatting ────────────────────────────────────────────────────────
