@@ -2067,6 +2067,26 @@ fn stat_appears_in_help() {
     assert!(stdout.contains("--stat"));
 }
 
+// ── check fix hint ─────────────────────────────────────────────────────────
+
+#[test]
+fn check_failure_prints_fix_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "MESSAGE(hello)\n");
+
+    let output = cmakefmt()
+        .args(["--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("cmakefmt --in-place"),
+        "check failure should print fix hint"
+    );
+}
+
 // ── --lsp ───────────────────────────────────────────────────────────────────
 
 #[test]
