@@ -112,6 +112,47 @@ cmakefmt:
     - cmakefmt --check .
 ```
 
+## Azure Pipelines
+
+```yaml
+steps:
+  - script: |
+      LATEST=$(curl -sI https://github.com/cmakefmt/cmakefmt/releases/latest \
+        | grep -i '^location:' \
+        | sed 's|.*/tag/v||;s/[[:space:]]//g')
+      curl -sSL \
+        "https://github.com/cmakefmt/cmakefmt/releases/download/v${LATEST}/cmakefmt-${LATEST}-x86_64-unknown-linux-musl.tar.gz" \
+        | tar -xz --strip-components=1 -C /usr/local/bin
+    displayName: Install cmakefmt
+  - script: cmakefmt --check .
+    displayName: Check CMake formatting
+```
+
+Or with Cargo:
+
+```yaml
+steps:
+  - script: cargo install cmakefmt-rust --quiet
+    displayName: Install cmakefmt
+  - script: cmakefmt --check .
+    displayName: Check CMake formatting
+```
+
+## Bitbucket Pipelines
+
+```yaml
+pipelines:
+  default:
+    - step:
+        name: Check CMake formatting
+        image: rust:latest
+        caches:
+          - cargo
+        script:
+          - cargo install cmakefmt-rust --quiet
+          - cmakefmt --check .
+```
+
 ## pre-commit
 
 Add a local hook to your `.pre-commit-config.yaml`. This runs `cmakefmt --check`
