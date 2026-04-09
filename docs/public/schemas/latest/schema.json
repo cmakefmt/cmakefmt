@@ -25,6 +25,7 @@
       "$ref": "#/$defs/StyleSection"
     }
   },
+  "additionalProperties": false,
   "$defs": {
     "CaseStyle": {
       "description": "How to normalise command/keyword casing.",
