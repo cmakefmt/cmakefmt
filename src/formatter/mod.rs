@@ -10,7 +10,7 @@
 pub(crate) mod comment;
 pub(crate) mod node;
 
-use crate::config::{Config, LineEnding};
+use crate::config::{CompiledPatterns, Config, LineEnding};
 use crate::error::{Error, Result};
 use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
@@ -112,6 +112,7 @@ fn format_file_with_debug(
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
 ) -> Result<String> {
+    let patterns = config.compiled_patterns();
     let mut output = String::new();
     let mut previous_was_content = false;
     let mut block_depth = 0usize;
@@ -128,14 +129,20 @@ fn format_file_with_debug(
                 output.push_str(&node::format_command(
                     command,
                     config,
+                    &patterns,
                     registry,
                     block_depth,
                     debug,
                 )?);
 
                 if let Some(trailing) = &command.trailing_comment {
-                    let comment_lines =
-                        comment::format_comment_lines(trailing, config, 0, config.line_width);
+                    let comment_lines = comment::format_comment_lines(
+                        trailing,
+                        config,
+                        &patterns,
+                        0,
+                        config.line_width,
+                    );
                     if let Some(first) = comment_lines.first() {
                         output.push(' ');
                         output.push_str(first);
@@ -174,6 +181,7 @@ fn format_file_with_debug(
                 let comment_lines = comment::format_comment_lines(
                     c,
                     config,
+                    &patterns,
                     indent.chars().count(),
                     config.line_width,
                 );
@@ -239,6 +247,7 @@ fn format_source_impl(
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
 ) -> Result<(String, usize)> {
+    let patterns = config.compiled_patterns();
     let mut output = String::new();
     let mut enabled_chunk = String::new();
     let mut total_statements = 0usize;

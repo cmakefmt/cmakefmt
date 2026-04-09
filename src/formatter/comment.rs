@@ -4,9 +4,7 @@
 
 //! Comment formatting helpers.
 
-use regex::Regex;
-
-use crate::config::Config;
+use crate::config::{CompiledPatterns, Config};
 use crate::parser::ast::Comment;
 
 /// Format a single comment node into one or more rendered output lines.
@@ -16,6 +14,7 @@ use crate::parser::ast::Comment;
 pub fn format_comment_lines(
     comment: &Comment,
     config: &Config,
+    patterns: &CompiledPatterns,
     indent_width: usize,
     line_width: usize,
 ) -> Vec<String> {
@@ -25,19 +24,22 @@ pub fn format_comment_lines(
             .split('\n')
             .map(str::to_owned)
             .collect(),
-        Comment::Line(text) => format_line_comment(text, config, indent_width, line_width),
+        Comment::Line(text) => {
+            format_line_comment(text, config, patterns, indent_width, line_width)
+        }
     }
 }
 
 fn format_line_comment(
     text: &str,
     config: &Config,
+    patterns: &CompiledPatterns,
     indent_width: usize,
     line_width: usize,
 ) -> Vec<String> {
     if !config.enable_markup
         || !config.reflow_comments
-        || should_preserve_comment_verbatim(text, config)
+        || should_preserve_comment_verbatim(text, patterns)
     {
         return vec![text.to_owned()];
     }
@@ -93,7 +95,7 @@ fn format_line_comment(
     lines
 }
 
-fn should_preserve_comment_verbatim(text: &str, config: &Config) -> bool {
+fn should_preserve_comment_verbatim(text: &str, patterns: &CompiledPatterns) -> bool {
     let trimmed = text.trim();
 
     if trimmed == "#" || trimmed.starts_with("#[[") || trimmed.starts_with("#[=[") {
@@ -107,12 +109,10 @@ fn should_preserve_comment_verbatim(text: &str, config: &Config) -> bool {
         return true;
     }
 
-    if !config.literal_comment_pattern.is_empty()
-        && Regex::new(&config.literal_comment_pattern)
-            .ok()
-            .is_some_and(|pattern| pattern.is_match(text))
-    {
-        return true;
+    if let Some(re) = &patterns.literal_comment {
+        if re.is_match(text) {
+            return true;
+        }
     }
 
     false
@@ -132,26 +132,32 @@ mod tests {
 
     #[test]
     fn bracket_comments_preserve_newlines() {
+        let config = Config::default();
+        let patterns = config.compiled_patterns();
         let comment = Comment::Bracket("#[[a\r\nb]]".to_owned());
-        let lines = format_comment_lines(&comment, &Config::default(), 0, 80);
+        let lines = format_comment_lines(&comment, &config, &patterns, 0, 80);
         assert_eq!(lines, vec!["#[[a".to_owned(), "b]]".to_owned()]);
     }
 
     #[test]
     fn line_comment_reflows_when_enabled() {
+        let config = reflow_config();
+        let patterns = config.compiled_patterns();
         let comment = Comment::Line(
             "# this is a long comment that should wrap when line width is small".to_owned(),
         );
-        let lines = format_comment_lines(&comment, &reflow_config(), 2, 24);
+        let lines = format_comment_lines(&comment, &config, &patterns, 2, 24);
         assert!(lines.len() > 1);
         assert!(lines.iter().all(|line| line.starts_with("# ")));
     }
 
     #[test]
     fn line_comment_preserves_for_barrier_directive() {
+        let config = reflow_config();
+        let patterns = config.compiled_patterns();
         let original = "# cmake-format: off".to_owned();
         let comment = Comment::Line(original.clone());
-        let lines = format_comment_lines(&comment, &reflow_config(), 0, 8);
+        let lines = format_comment_lines(&comment, &config, &patterns, 0, 8);
         assert_eq!(lines, vec![original]);
     }
 
@@ -159,9 +165,10 @@ mod tests {
     fn line_comment_preserves_when_matching_literal_pattern() {
         let mut config = reflow_config();
         config.literal_comment_pattern = r"^#\s*DO_NOT_WRAP".to_owned();
+        let patterns = config.compiled_patterns();
         let original = "# DO_NOT_WRAP this must stay as-is".to_owned();
         let comment = Comment::Line(original.clone());
-        let lines = format_comment_lines(&comment, &config, 0, 8);
+        let lines = format_comment_lines(&comment, &config, &patterns, 0, 8);
         assert_eq!(lines, vec![original]);
     }
 }

@@ -4,9 +4,9 @@
 
 //! Command-invocation formatting logic.
 
-use regex::Regex;
-
-use crate::config::{CaseStyle, CommandConfig, Config, DangleAlign, FractionalTabPolicy};
+use crate::config::{
+    CaseStyle, CommandConfig, CompiledPatterns, Config, DangleAlign, FractionalTabPolicy,
+};
 use crate::error::Result;
 use crate::formatter::comment;
 use crate::parser::ast::{Argument, CommandInvocation};
@@ -36,6 +36,7 @@ struct Section<'a> {
 pub(crate) fn format_command(
     command: &CommandInvocation,
     config: &Config,
+    patterns: &CompiledPatterns,
     registry: &CommandRegistry,
     block_depth: usize,
     debug: &mut DebugLog<'_>,
@@ -77,11 +78,12 @@ pub(crate) fn format_command(
             "formatter: command {} layout=vertical (always_wrap)",
             command.name
         ));
-        format_command_vertical(command, &sections, &cmd_config, block_depth)?
+        format_command_vertical(command, &sections, &cmd_config, patterns, block_depth)?
     } else if let Some(inline) = try_format_inline(
         command,
         &sections,
         &cmd_config,
+        patterns,
         block_depth,
         config.line_width,
     ) {
@@ -99,6 +101,7 @@ pub(crate) fn format_command(
         command,
         &sections,
         &cmd_config,
+        patterns,
         block_depth,
         config.line_width,
     ) {
@@ -119,7 +122,7 @@ pub(crate) fn format_command(
             cmd_config.max_pargs_hwrap(),
             cmd_config.max_subgroups_hwrap()
         ));
-        format_command_vertical(command, &sections, &cmd_config, block_depth)?
+        format_command_vertical(command, &sections, &cmd_config, patterns, block_depth)?
     };
 
     if config.use_tabchars {
@@ -267,6 +270,7 @@ fn try_format_inline(
     command: &CommandInvocation,
     sections: &[Section<'_>],
     cmd_config: &CommandConfig<'_>,
+    patterns: &CompiledPatterns,
     block_depth: usize,
     line_width: usize,
 ) -> Option<String> {
@@ -313,6 +317,7 @@ fn try_format_hanging(
     command: &CommandInvocation,
     sections: &[Section<'_>],
     cmd_config: &CommandConfig<'_>,
+    _patterns: &CompiledPatterns,
     block_depth: usize,
     line_width: usize,
 ) -> Option<String> {
@@ -372,6 +377,7 @@ fn format_command_vertical(
     command: &CommandInvocation,
     sections: &[Section<'_>],
     cmd_config: &CommandConfig<'_>,
+    patterns: &CompiledPatterns,
     block_depth: usize,
 ) -> Result<String> {
     let base_indent = cmd_config.indent_str().repeat(block_depth);
@@ -393,6 +399,7 @@ fn format_command_vertical(
                         &section.arguments,
                         &indent,
                         cmd_config.global,
+                        patterns,
                     );
                 } else {
                     write_packed_arguments(
@@ -400,6 +407,7 @@ fn format_command_vertical(
                         &section.arguments,
                         &indent,
                         cmd_config.global,
+                        patterns,
                         cmd_config.line_width(),
                     );
                 }
@@ -422,6 +430,7 @@ fn format_command_vertical(
                         &section.arguments,
                         &nested_indent,
                         cmd_config.global,
+                        patterns,
                     );
                 } else {
                     if let Some(line) = format_section_inline(
@@ -430,6 +439,7 @@ fn format_command_vertical(
                         &section.arguments,
                         &indent,
                         cmd_config.global,
+                        patterns,
                         cmd_config.line_width(),
                     ) {
                         output.truncate(output.len() - header.len());
@@ -442,6 +452,7 @@ fn format_command_vertical(
                             &section.arguments,
                             &nested_indent,
                             cmd_config.global,
+                            patterns,
                             cmd_config.line_width(),
                         );
                     }
@@ -481,6 +492,7 @@ fn format_section_inline(
     arguments: &[&Argument],
     indent: &str,
     config: &Config,
+    patterns: &CompiledPatterns,
     line_width: usize,
 ) -> Option<String> {
     if arguments
@@ -501,8 +513,13 @@ fn format_section_inline(
                 if index + 1 != arguments.len() {
                     return None;
                 }
-                let comment_lines =
-                    comment::format_comment_lines(comment, config, comment_indent + 1, line_width);
+                let comment_lines = comment::format_comment_lines(
+                    comment,
+                    config,
+                    patterns,
+                    comment_indent + 1,
+                    line_width,
+                );
                 if comment_lines.len() != 1 {
                     return None;
                 }
@@ -551,6 +568,7 @@ fn write_packed_arguments(
     arguments: &[&Argument],
     indent: &str,
     config: &Config,
+    patterns: &CompiledPatterns,
     line_width: usize,
 ) {
     let mut current = String::new();
@@ -563,6 +581,7 @@ fn write_packed_arguments(
                 let comment_lines = comment::format_comment_lines(
                     comment,
                     config,
+                    patterns,
                     indent.chars().count(),
                     line_width,
                 );
@@ -628,13 +647,9 @@ fn write_vertical_arguments(
     arguments: &[&Argument],
     indent: &str,
     config: &Config,
+    patterns: &CompiledPatterns,
 ) {
-    // Pre-compile the explicit trailing pattern once for this call.
-    let trailing_re = if !config.explicit_trailing_pattern.is_empty() {
-        Regex::new(&config.explicit_trailing_pattern).ok()
-    } else {
-        None
-    };
+    let trailing_re = patterns.explicit_trailing.as_ref();
 
     for argument in arguments {
         match argument {
@@ -653,6 +668,7 @@ fn write_vertical_arguments(
                 for line in comment::format_comment_lines(
                     comment,
                     config,
+                    patterns,
                     indent.chars().count(),
                     config.line_width,
                 ) {
