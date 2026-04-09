@@ -729,6 +729,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ));
     }
 
+    let start_time = std::time::Instant::now();
     let target_results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
         process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout, &progress)?
     } else {
@@ -784,6 +785,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
             }
         }
     }
+    summary.elapsed = start_time.elapsed();
     let multi_target_stdout = stdout_mode && results.len() > 1;
 
     if cli.report_format != ReportFormat::Human {
@@ -1466,6 +1468,8 @@ struct RunSummary {
     skipped: usize,
     failed: usize,
     total_changed_lines: usize,
+    #[serde(skip)]
+    elapsed: std::time::Duration,
 }
 
 fn process_targets_serial(
@@ -2242,6 +2246,7 @@ fn build_json_report(
             skipped: summary.skipped,
             failed: summary.failed,
             total_changed_lines: summary.total_changed_lines,
+            ..RunSummary::default()
         },
         files: results
             .iter()
@@ -2587,6 +2592,9 @@ fn render_human_summary(summary: &RunSummary) -> String {
         let _ = write!(rendered, ", skipped={}", summary.skipped);
     }
     let _ = write!(rendered, ", failed={}", summary.failed);
+    if summary.elapsed.as_millis() > 0 {
+        let _ = write!(rendered, " in {:.2}s", summary.elapsed.as_secs_f64());
+    }
     rendered
 }
 
