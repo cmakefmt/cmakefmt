@@ -1,5 +1,6 @@
 ---
 title: Architecture
+description: How cmakefmt works — a guide for contributors.
 ---
 
 <!--
@@ -8,137 +9,132 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-A user-facing overview of how `cmakefmt` works and why it is built the way it
-is.
+## Overview
 
-## Mental Model
-
-`cmakefmt` is not a regex-based text rewriter. It is a structured pipeline:
+cmakefmt is a structured formatting pipeline:
 
 ```text
-discover files
-  -> resolve config
-  -> parse CMake source
-  -> classify commands using the command registry
-  -> build formatted layout decisions
-  -> emit text / diff / check result / in-place rewrite
+source text -> parser -> AST -> formatter -> formatted output
 ```
 
-That structure is what makes the tool safe and predictable — and what
-separates it from a simple line-by-line formatter.
+Four independent modules drive this pipeline:
 
-## Main Layers
+| Module | Path | Purpose |
+|---|---|---|
+| Parser | `src/parser/` | CMake source to AST |
+| Config | `src/config/` | Formatting options and config-file loading |
+| Spec Registry | `src/spec/` | Command argument structure definitions |
+| Formatter | `src/formatter/` | AST + config + specs to formatted text |
 
-### Parser
+Each module has a clean boundary. The parser knows nothing about formatting, the
+spec registry knows nothing about config, and the formatter consumes all three.
 
-The parser is built on a `pest` PEG grammar. It understands:
+## Parser (`src/parser/`)
 
-- command invocations
-- quoted, unquoted, and bracket arguments
-- comments
-- variable references
-- generator expressions
-- continuation lines
+The parser uses [pest](https://pest.rs/) with a PEG grammar defined in
+`src/parser/cmake.pest`. It turns CMake source text into an AST with this
+structure:
 
-Comments are preserved as real syntax nodes throughout — they are never
-stripped and guessed at later.
-
-### Command Registry
-
-The registry is what gives `cmakefmt` its semantic awareness.
-
-Without it, every argument in:
-
-```cmake
-target_link_libraries(foo PUBLIC bar PRIVATE baz)
+```text
+File -> Statement* -> CommandInvocation -> Argument*
 ```
 
-looks like a generic positional token. With it, the registry recognizes that
-`PUBLIC` and `PRIVATE` are semantic keywords that start new argument groups.
-That knowledge is what lets the formatter produce keyword-aware, correctly
-grouped output instead of flattened token streams.
+`Argument` nodes cover unquoted args, quoted strings, bracket arguments, and
+inline comments. Comments are preserved as `InlineComment` arguments so they
+survive round-tripping through the formatter.
 
-The registry is populated from two sources:
+The entry point is `parser::parse()` in `src/parser/mod.rs`, which returns a
+`File` AST node.
 
-- built-in specs for CMake commands and supported module commands (audited through CMake 4.3.1)
-- optional user config under `commands:`
+## Command Spec Registry (`src/spec/`)
 
-### Formatter
+The registry defines how each CMake command's arguments are structured:
+positional arguments, keyword groups, and flags. This is what lets the formatter
+distinguish semantic keywords like `PUBLIC` and `PRIVATE` from ordinary
+arguments.
 
-Once the source is parsed and command shapes are known, the formatter converts
-the AST into layout decisions using a document model inspired by Wadler and
-Lindig's pretty-printing algorithm.
+Built-in specs live in `src/spec/builtins.toml`. Each command maps to a
+`CommandSpec`, which is either a single `CommandForm` or a discriminated set of
+forms keyed by the first argument (e.g. `install(TARGETS ...)` vs
+`install(FILES ...)`).
 
-In practice, this means it can ask:
+A `CommandForm` describes:
 
-- can this stay on one line?
-- if not, should it hang-wrap?
-- if not, should it go fully vertical?
+- positional argument slots with `NArgs` counts
+- keyword groups and their expected argument counts
+- flags (zero-argument keywords)
 
-That is how `cmakefmt` gets stable, principled wrapping behavior instead of
-ad-hoc line splitting that changes every time you touch a file.
+Users can override or extend the built-in registry via the `commands:` section
+in their config file. The registry resolves each command invocation to the
+appropriate `CommandForm`, which then guides formatting decisions.
 
-### Config
+## Formatter (`src/formatter/`)
 
-Config resolution is layered — later layers only apply when earlier ones are
-absent:
+The formatter takes the AST, config, and command registry and produces formatted
+output. The key files are:
 
-1. CLI overrides
-2. explicit `--config-file` files, if any
-3. nearest discovered `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`
-4. home-directory fallback config
-5. built-in defaults
+- **`mod.rs`** -- `format_source_impl` handles the full file: it walks
+  statements, manages indentation for block commands (`if`/`endif`, etc.), and
+  handles barrier regions.
+- **`node.rs`** -- `format_command` handles individual command invocations. It
+  splits arguments into sections using the command's `CommandForm`, then tries
+  three layouts in order:
 
-Make the resolution process visible with:
+  1. **Inline** -- everything on a single line.
+  2. **Hanging** -- continuation lines aligned to the opening parenthesis.
+  3. **Vertical** -- one argument (or keyword group) per line.
 
-```bash
-cmakefmt --show-config-path src/CMakeLists.txt
-cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --explain-config
-```
+  The first layout that fits within `line_width` wins. This gives stable,
+  predictable wrapping without ad-hoc heuristics.
 
-### CLI Workflow Layer
+- **`comment.rs`** -- comment formatting helpers.
 
-The CLI is far more than a thin wrapper around `format_source`. It handles:
+## Config (`src/config/`)
 
-- recursive file discovery
-- ignore files and Git-aware selection
-- `--check`, `--diff`, and JSON reporting
-- in-place rewrites
-- partial and range formatting
-- progress bars and parallel execution
-- diagnostics and summary reporting
+The `Config` struct holds all formatting options: `line_width`, `tab_size`,
+`command_case`, `dangle_parens`, and more. It is loaded from
+`.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml` with automatic
+discovery up the directory tree (and a home-directory fallback).
 
-That workflow layer is a large part of what makes `cmakefmt` useful in real
-repositories rather than just in toy examples.
+Per-command overrides allow different settings for specific commands via the
+`per_command:` config section, resolved at format time by
+`config.for_command()`.
 
-## Diagnostics
+Legacy cmake-format config conversion lives in `src/config/legacy.rs`.
 
-When something goes wrong, `cmakefmt` tries hard to explain:
+Key files:
 
-- which file failed
-- where it failed
-- what source text was involved
-- what config was active
-- what likely caused the failure
+- **`mod.rs`** -- `Config` struct, `CaseStyle`, `LineEnding`, and related types.
+- **`file.rs`** -- config file discovery, deserialization, merge logic, and the
+  default config template.
+- **`legacy.rs`** -- `--convert-legacy-config` support.
 
-This is possible because the architecture keeps spans, config provenance, and
-formatter decision context around long enough to report them meaningfully —
-rather than discarding context as soon as each stage completes.
+## LSP Server (`src/lsp/`)
 
-## Design Priorities
+The LSP server is a thin wrapper around `format_source()` that speaks JSON-RPC
+on stdio. It is compiled only when the `lsp` feature is enabled.
 
-The codebase is intentionally optimized around:
+It handles `textDocument/formatting` and `textDocument/rangeFormatting` requests.
+The entry point is `lsp::run()`, which uses the `lsp-server` crate for the
+connection lifecycle.
 
-- **correctness over cleverness** — no surprising heuristics
-- **speed that is visible in day-to-day workflows** — 20× faster than `cmake-format` on real corpora
-- **strong diagnostics** — failures explain themselves
-- **configurability without scriptable config files** — powerful without being dangerous
-- **maintainability of the grammar/registry/formatter pipeline** — easy to extend correctly
+## Barrier Regions
 
-## Related Pages
+`# cmakefmt: off` and `# cmakefmt: on` comments create regions that are passed
+through verbatim. This is handled in `format_source_impl` (in
+`src/formatter/mod.rs`) before the formatter processes individual commands --
+statements inside a barrier region are emitted as-is.
 
-- [Formatter Behavior](/behavior/)
-- [Config Reference](/config/)
-- [Library API](/api/)
-- [Troubleshooting](/troubleshooting/)
+## Where to Start
+
+| Task | Start here |
+|---|---|
+| Change formatting behavior | `src/formatter/node.rs` |
+| Add a new config option | `src/config/mod.rs` |
+| Change the parser or grammar | `src/parser/cmake.pest` |
+| Add or update a built-in command spec | `src/spec/builtins.toml` |
+| Add a new CLI flag | `src/main.rs` |
+| Modify LSP behavior | `src/lsp/mod.rs` |
+
+See also [CONTRIBUTING.md](/contributing/) for the full checklist of files to
+update when making changes.
