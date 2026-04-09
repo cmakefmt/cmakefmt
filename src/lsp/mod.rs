@@ -33,6 +33,7 @@ pub fn run() -> Result<(), Box<dyn Error + Sync + Send>> {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         document_formatting_provider: Some(lsp_types::OneOf::Left(true)),
         document_range_formatting_provider: Some(lsp_types::OneOf::Left(true)),
+        code_action_provider: Some(lsp_types::CodeActionProviderCapability::Simple(true)),
         ..Default::default()
     };
 
@@ -75,13 +76,16 @@ fn main_loop(
 }
 
 fn handle_request(req: Request, documents: &HashMap<String, String>) -> Option<Response> {
-    use lsp_types::request::{Formatting, RangeFormatting};
+    use lsp_types::request::{CodeActionRequest, Formatting, RangeFormatting};
 
     if req.method == Formatting::METHOD {
         return handle_formatting(req, documents);
     }
     if req.method == RangeFormatting::METHOD {
         return handle_range_formatting(req, documents);
+    }
+    if req.method == CodeActionRequest::METHOD {
+        return handle_code_action(req);
     }
 
     // Return a MethodNotFound error for unhandled requests.
@@ -189,6 +193,63 @@ fn handle_range_formatting(req: Request, documents: &HashMap<String, String>) ->
     };
 
     let result = serde_json::to_value(vec![edit]).ok()?;
+    Some(Response::new_ok(id, result))
+}
+
+fn handle_code_action(req: Request) -> Option<Response> {
+    let (id, params): (_, lsp_types::CodeActionParams) = req
+        .extract(lsp_types::request::CodeActionRequest::METHOD)
+        .ok()?;
+
+    let range = params.range;
+    let uri = params.text_document.uri;
+
+    // Offer a code action to wrap the selection with cmakefmt: off/on.
+    let off_edit = lsp_types::TextEdit {
+        range: lsp_types::Range {
+            start: lsp_types::Position {
+                line: range.start.line,
+                character: 0,
+            },
+            end: lsp_types::Position {
+                line: range.start.line,
+                character: 0,
+            },
+        },
+        new_text: "# cmakefmt: off\n".to_string(),
+    };
+
+    let on_edit = lsp_types::TextEdit {
+        range: lsp_types::Range {
+            start: lsp_types::Position {
+                line: range.end.line + 1,
+                character: 0,
+            },
+            end: lsp_types::Position {
+                line: range.end.line + 1,
+                character: 0,
+            },
+        },
+        new_text: "# cmakefmt: on\n".to_string(),
+    };
+
+    // Uri has interior mutability; suppress the clippy lint (same as main_loop).
+    #[allow(clippy::mutable_key_type)]
+    let mut changes = std::collections::HashMap::new();
+    changes.insert(uri, vec![off_edit, on_edit]);
+
+    let action = lsp_types::CodeAction {
+        title: "Disable cmakefmt for selection".to_string(),
+        kind: Some(lsp_types::CodeActionKind::QUICKFIX),
+        edit: Some(lsp_types::WorkspaceEdit {
+            changes: Some(changes),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let actions = vec![lsp_types::CodeActionOrCommand::CodeAction(action)];
+    let result = serde_json::to_value(actions).ok()?;
     Some(Response::new_ok(id, result))
 }
 
@@ -363,6 +424,46 @@ mod tests {
             resp.error.unwrap().code,
             lsp_server::ErrorCode::MethodNotFound as i32
         );
+    }
+
+    // ── handle_code_action ────────────────────────────────────────────────
+
+    #[test]
+    fn handle_code_action_returns_disable_action() {
+        let params = lsp_types::CodeActionParams {
+            text_document: lsp_types::TextDocumentIdentifier {
+                uri: "file:///test.cmake".parse().unwrap(),
+            },
+            range: lsp_types::Range {
+                start: lsp_types::Position {
+                    line: 2,
+                    character: 0,
+                },
+                end: lsp_types::Position {
+                    line: 4,
+                    character: 0,
+                },
+            },
+            context: lsp_types::CodeActionContext::default(),
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+        };
+        let req = Request {
+            id: RequestId::from(3),
+            method: lsp_types::request::CodeActionRequest::METHOD.to_string(),
+            params: serde_json::to_value(params).unwrap(),
+        };
+        let resp = handle_code_action(req).unwrap();
+        assert!(resp.error.is_none());
+        let actions: Vec<lsp_types::CodeActionOrCommand> =
+            serde_json::from_value(resp.result.unwrap()).unwrap();
+        assert_eq!(actions.len(), 1);
+        match &actions[0] {
+            lsp_types::CodeActionOrCommand::CodeAction(action) => {
+                assert!(action.title.contains("Disable"));
+            }
+            _ => panic!("expected CodeAction"),
+        }
     }
 
     // ── handle_notification ───────────────────────────────────────────────
