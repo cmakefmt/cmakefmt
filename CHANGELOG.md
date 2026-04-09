@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.4.0 — 2026-04-09
+
 ### Added
 
 - `cmakefmt init` subcommand — generates a starter `.cmakefmt.yaml` in the
