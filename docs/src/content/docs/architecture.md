@@ -107,7 +107,7 @@ Key files:
 - **`mod.rs`** -- `Config` struct, `CaseStyle`, `LineEnding`, and related types.
 - **`file.rs`** -- config file discovery, deserialization, merge logic, and the
   default config template.
-- **`legacy.rs`** -- `--convert-legacy-config` support.
+- **`legacy.rs`** -- legacy cmake-format config conversion (`cmakefmt config convert`).
 
 ## LSP Server (`src/lsp/`)
 

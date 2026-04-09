@@ -34,9 +34,9 @@ preferred over TOML.
 When you want to see exactly what happened:
 
 ```bash
-cmakefmt --show-config-path src/CMakeLists.txt
-cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --explain-config
+cmakefmt config path src/CMakeLists.txt
+cmakefmt config show src/CMakeLists.txt
+cmakefmt config explain
 ```
 
 ## Recommended Starter File

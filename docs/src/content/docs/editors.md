@@ -11,7 +11,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 `cmakefmt` works with every editor in two ways:
 
-1. **LSP server** (`cmakefmt --lsp`) — the recommended approach for editors
+1. **LSP server** (`cmakefmt lsp`) — the recommended approach for editors
    with LSP client support. Provides format-on-save and range formatting with
    no extra plugins.
 2. **Stdin pipe** (`cmakefmt --stdin-path <file> -`) — works with any editor
@@ -57,7 +57,7 @@ vim.api.nvim_create_autocmd("FileType", {
   callback = function()
     vim.lsp.start({
       name = "cmakefmt",
-      cmd = { "cmakefmt", "--lsp" },
+      cmd = { "cmakefmt", "lsp" },
     })
   end,
 })
@@ -108,7 +108,7 @@ Add `cmakefmt` as a language server in `~/.config/helix/languages.toml`:
 ```toml
 [language-server.cmakefmt]
 command = "cmakefmt"
-args = ["--lsp"]
+args = ["lsp"]
 
 [[language]]
 name = "cmake"
@@ -139,7 +139,7 @@ Add `cmakefmt` as a language server in `~/.config/zed/settings.json`:
 {
   "lsp": {
     "cmakefmt": {
-      "binary": { "path": "cmakefmt", "arguments": ["--lsp"] }
+      "binary": { "path": "cmakefmt", "arguments": ["lsp"] }
     }
   },
   "languages": {
@@ -195,7 +195,7 @@ Apheleia replaces `filepath` with the path of the buffer being formatted.
 If your editor has an LSP client, point it at:
 
 ```
-cmakefmt --lsp
+cmakefmt lsp
 ```
 
 This provides format-on-save and range formatting over the standard Language

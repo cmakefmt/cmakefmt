@@ -86,17 +86,33 @@ Ignore rules only affect:
 | `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
-## Config And Conversion Flags
+## Subcommands
+
+| Subcommand | Meaning |
+| --- | --- |
+| `cmakefmt init` | Write a starter `.cmakefmt.yaml` to the current directory. |
+| `cmakefmt lsp` | Start the LSP server (JSON-RPC on stdio). |
+| `cmakefmt completions <SHELL>` | Print shell completions for bash, zsh, or fish. |
+| `cmakefmt install-hook` | Install a git pre-commit hook that runs `cmakefmt --check --staged`. |
+| `cmakefmt config dump [FORMAT]` | Print a starter config template. Defaults to YAML; pass `toml` for TOML. |
+| `cmakefmt config schema` | Print the JSON Schema for the config file. |
+| `cmakefmt config check [PATH]` | Validate a config file without formatting. |
+| `cmakefmt config show [FORMAT]` | Print the effective config for a target. |
+| `cmakefmt config path` | Print the selected config file path for a target. |
+| `cmakefmt config explain` | Explain config resolution for a target or the current directory. |
+| `cmakefmt config convert <PATH>...` | Convert legacy cmake-format config files. |
+| `cmakefmt config init` | Same as `cmakefmt init`. |
+
+> **Deprecated flags:** The following flags still work but print a deprecation
+> warning: `--dump-config`, `--dump-schema`, `--check-config`, `--show-config`,
+> `--show-config-path`, `--explain-config`, `--convert-legacy-config`, `--lsp`,
+> `--generate-completion`. Use the subcommands above instead.
+
+## Other Flags
 
 | Flag | Meaning |
 | --- | --- |
-| `--dump-config [FORMAT]` | Print a starter config template and exit. Defaults to YAML; pass `toml` for TOML. |
-| `--generate-completion <SHELL>` | Print shell completions for packaging or local shell setup. |
 | `--generate-man-page` | Print a roff man page for packagers and Unix-like installs. |
-| `--show-config [FORMAT]` | Print the effective config for a single target and exit. Defaults to YAML; pass `toml` for TOML. |
-| `--show-config-path` | Print the selected config file path for a single target and exit. `--find-config-path` is an alias. |
-| `--explain-config` | Explain config resolution for a single target, or for the current working directory when no explicit file is given. |
-| `--convert-legacy-config <PATH>` | Convert a legacy `cmake-format` JSON/YAML/Python config file to `.cmakefmt.toml` on stdout. |
 
 ## Config Override Flags
 
@@ -342,7 +358,7 @@ rewriting the whole buffer.
 ### See Which Config Was Selected
 
 ```bash
-cmakefmt --show-config-path src/CMakeLists.txt
+cmakefmt config path src/CMakeLists.txt
 ```
 
 Typical output:
@@ -354,8 +370,8 @@ Typical output:
 ### Inspect The Effective Config
 
 ```bash
-cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --show-config=toml src/CMakeLists.txt
+cmakefmt config show src/CMakeLists.txt
+cmakefmt config show toml src/CMakeLists.txt
 ```
 
 Prints the fully resolved config after discovery plus any CLI overrides.
@@ -364,7 +380,7 @@ No more guessing what the formatter is actually using.
 ### Explain Config Resolution
 
 ```bash
-cmakefmt --explain-config
+cmakefmt config explain
 ```
 
 Typical output includes:
@@ -377,8 +393,14 @@ Typical output includes:
 ### Generate A Starter Config
 
 ```bash
-cmakefmt --dump-config > .cmakefmt.yaml
-cmakefmt --dump-config toml > .cmakefmt.toml
+cmakefmt init
+```
+
+Or dump the full template to stdout:
+
+```bash
+cmakefmt config dump > .cmakefmt.yaml
+cmakefmt config dump toml > .cmakefmt.toml
 ```
 
 YAML is the default because it is easier to maintain once you start defining
@@ -387,7 +409,7 @@ larger custom command specs.
 ### Convert An Old `cmake-format` Config
 
 ```bash
-cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
+cmakefmt config convert .cmake-format.py
 ```
 
 The fastest path through a legacy config migration.

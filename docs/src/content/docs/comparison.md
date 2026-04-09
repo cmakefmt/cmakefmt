@@ -20,7 +20,7 @@ There are three CMake formatters in active use: `cmakefmt`, `cmake-format`, and
 | Install | Homebrew, cargo, binary | pip | pip |
 | Config file | YAML or TOML | Python, YAML, or JSON | None |
 | Config discovery | Walks up the directory tree | Directory-based | None |
-| Migrate existing config | `--convert-legacy-config` | — | — |
+| Migrate existing config | `cmakefmt config convert` | — | — |
 | Check mode | `--check` | `--check-only` | `--check` |
 | Diff output | `--diff` | — | — |
 | Stdin formatting | `--stdin-path <path> -` | via `--` | via stdin |
@@ -84,7 +84,7 @@ active development with frequent releases.
 `cmakefmt` can convert your existing `cmake-format` config automatically:
 
 ```bash
-cmakefmt --convert-legacy-config .cmake-format.yaml > .cmakefmt.yaml
+cmakefmt config convert .cmake-format.yaml > .cmakefmt.yaml
 ```
 
 See the [Migration Guide](/migration/) for a full walkthrough.

@@ -24,17 +24,17 @@ output at each step, and commit to full migration once you are satisfied.
 2. Generate a starter config. YAML is the recommended default:
 
    ```bash
-   cmakefmt --dump-config > .cmakefmt.yaml
+   cmakefmt init
    ```
 
 3. If you already have a `cmake-format` config file, convert it automatically:
 
    ```bash
-   cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.yaml
+   cmakefmt config convert .cmake-format.py > .cmakefmt.yaml
    ```
 
    YAML is the default output format. For TOML instead, pass
-   `--convert-legacy-config-format toml` to the same command.
+   `--format toml` to the same command.
 
 4. Compare output on a representative sample. Use `--diff` to see exactly what
    would change without touching any files:
@@ -64,7 +64,7 @@ See [Formatter Behavior](/behavior/) for the pragma syntax.
 | in-place format | `cmakefmt -i FILE` |
 | CI check | `cmakefmt --check PATH` |
 | recursive target filtering | `cmakefmt --path-regex REGEX PATH` |
-| convert old config file | `cmakefmt --convert-legacy-config OLD.py > .cmakefmt.yaml` |
+| convert old config file | `cmakefmt config convert OLD.py > .cmakefmt.yaml` |
 | disable formatting regions | supports both `cmake-format` and `cmakefmt` spellings |
 
 ## Key Differences

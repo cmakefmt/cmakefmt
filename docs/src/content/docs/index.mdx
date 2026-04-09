@@ -45,7 +45,7 @@ Then:
 
 ```bash
 cmakefmt --version
-cmakefmt --dump-config > .cmakefmt.yaml   # generate a starter config
+cmakefmt init                             # generate a starter config
 cmakefmt --check .                        # dry-run: show what would change
 cmakefmt --in-place .                     # apply formatting
 cmakefmt --staged --check                 # pre-commit: format only staged files

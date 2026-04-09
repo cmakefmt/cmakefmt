@@ -40,10 +40,16 @@ For shell completions, editor setup, and more install options see the full [Inst
 
 ## Generate a Config
 
-Dump a starter config to your repository root:
+Generate a starter config in your repository root:
 
 ```bash
-cmakefmt --dump-config > .cmakefmt.yaml
+cmakefmt init
+```
+
+Or dump the full default config to stdout:
+
+```bash
+cmakefmt config dump > .cmakefmt.yaml
 ```
 
 YAML is the recommended format. Open the file and adjust options like
