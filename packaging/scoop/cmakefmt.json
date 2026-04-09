@@ -1,13 +1,13 @@
 {
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "A fast, correct CMake formatter",
     "homepage": "https://cmakefmt.dev",
     "license": "MIT OR Apache-2.0",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/cmakefmt/cmakefmt/releases/download/v0.3.0/cmakefmt-0.3.0-x86_64-pc-windows-msvc.zip",
-            "hash": "6710f5a11644f682dcf3835b87dca7c5fa152fe634ad8fefb6defd64a25ed584",
-            "extract_dir": "cmakefmt-0.3.0-x86_64-pc-windows-msvc"
+            "url": "https://github.com/cmakefmt/cmakefmt/releases/download/v0.4.0/cmakefmt-0.4.0-x86_64-pc-windows-msvc.zip",
+            "hash": "cd9d0f7a24797b6490aea1caddd5860b5fb40fdd7ee4435ddbe8a20b27bca294",
+            "extract_dir": "cmakefmt-0.4.0-x86_64-pc-windows-msvc"
         }
     },
     "bin": "cmakefmt.exe",

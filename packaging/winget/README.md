@@ -16,7 +16,7 @@ Windows before submitting.
 ## Submitting to winget-pkgs
 
 1. Fork [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)
-2. Create the directory `manifests/c/cmakefmt/cmakefmt/0.3.0/`
+2. Create the directory `manifests/c/cmakefmt/cmakefmt/0.4.0/`
 3. Copy the three YAML files from this directory into it
 4. Open a PR — the winget bot will validate the manifest automatically
 

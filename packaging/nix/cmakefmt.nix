@@ -8,28 +8,28 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "cmakefmt";
-  version = "0.3.0";
+  version = "0.4.0";
 
   src =
     if stdenv.hostPlatform.system == "x86_64-linux" then
       fetchurl {
         url = "https://github.com/cmakefmt/cmakefmt/releases/download/v${finalAttrs.version}/cmakefmt-${finalAttrs.version}-x86_64-unknown-linux-musl.tar.gz";
-        hash = "sha256-uEIHVzgyvxlDxN742rojQ4dqFibTQTYNnrCbwwJUY8Y=";
+        hash = "sha256-cc8YVemAq4b0LElI5DBk0N3/pbFWDItRK4/ASS8XUZo=";
       }
     else if stdenv.hostPlatform.system == "aarch64-linux" then
       fetchurl {
         url = "https://github.com/cmakefmt/cmakefmt/releases/download/v${finalAttrs.version}/cmakefmt-${finalAttrs.version}-aarch64-unknown-linux-gnu.tar.gz";
-        hash = "sha256-ezWjOov9G67UIFCkF/2RkSuGKidw2A7gAKTJbBszCNA=";
+        hash = "sha256-vAghoE+IO0oq4Z/rZWCiRu15mJQ0uCxBW5lLAyid358=";
       }
     else if stdenv.hostPlatform.system == "x86_64-darwin" then
       fetchurl {
         url = "https://github.com/cmakefmt/cmakefmt/releases/download/v${finalAttrs.version}/cmakefmt-${finalAttrs.version}-x86_64-apple-darwin.tar.gz";
-        hash = "sha256-Nc7ZOfJNW/qRlfPseg1ZPYSRSKg4ynnkJ8u/Jd40RCA=";
+        hash = "sha256-FwWm/qiBYlysUhpn+v0LHTpvl2AaSu0A5CZ2ZZl8yCw=";
       }
     else if stdenv.hostPlatform.system == "aarch64-darwin" then
       fetchurl {
         url = "https://github.com/cmakefmt/cmakefmt/releases/download/v${finalAttrs.version}/cmakefmt-${finalAttrs.version}-aarch64-apple-darwin.tar.gz";
-        hash = "sha256-4qpTmVX8JzsJwWJVkWiUGRS3aoWVZuvzHiIPltJhTJg=";
+        hash = "sha256-btwya1xugGjwfX8XvyZgq5Ao5ozUUlOzWKqN+D+kpIU=";
       }
     else
       throw "cmakefmt: unsupported system ${stdenv.hostPlatform.system}";
