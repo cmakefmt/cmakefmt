@@ -557,6 +557,14 @@ struct Cli {
 enum CliCommand {
     /// Write a starter `.cmakefmt.yaml` config file to the current directory.
     Init,
+    /// Start the cmakefmt LSP server (reads/writes JSON-RPC on stdio).
+    Lsp,
+    /// Generate shell completion scripts and print them to stdout.
+    Completions {
+        /// The shell to generate completions for.
+        #[arg(value_enum)]
+        shell: Shell,
+    },
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -684,6 +692,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     #[cfg(feature = "lsp")]
     if cli.lsp {
+        eprintln!("warning: --lsp is deprecated, use `cmakefmt lsp` instead");
         cmakefmt::lsp::run().map_err(|e| cmakefmt::Error::Formatter(e.to_string()))?;
         return Ok(EXIT_OK);
     }
@@ -702,19 +711,33 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return run_check_config(cli, path_arg);
     }
 
-    if let Some(CliCommand::Init) = cli.command {
-        let path = Path::new(".cmakefmt.yaml");
-        if path.exists() {
-            eprintln!(".cmakefmt.yaml already exists");
-            return Ok(EXIT_ERROR);
+    match &cli.command {
+        Some(CliCommand::Init) => {
+            let path = Path::new(".cmakefmt.yaml");
+            if path.exists() {
+                eprintln!(".cmakefmt.yaml already exists");
+                return Ok(EXIT_ERROR);
+            }
+            std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
+                .map_err(cmakefmt::Error::Io)?;
+            eprintln!("created .cmakefmt.yaml");
+            return Ok(EXIT_OK);
         }
-        std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
-            .map_err(cmakefmt::Error::Io)?;
-        eprintln!("created .cmakefmt.yaml");
-        return Ok(EXIT_OK);
+        #[cfg(feature = "lsp")]
+        Some(CliCommand::Lsp) => {
+            cmakefmt::lsp::run().map_err(|e| cmakefmt::Error::Formatter(e.to_string()))?;
+            return Ok(EXIT_OK);
+        }
+        Some(CliCommand::Completions { shell }) => {
+            let mut command = Cli::command();
+            generate(*shell, &mut command, "cmakefmt", &mut io::stdout());
+            return Ok(EXIT_OK);
+        }
+        None => {}
     }
 
     if let Some(shell) = cli.generate_completion {
+        eprintln!("warning: --generate-completion is deprecated, use `cmakefmt completions {shell}` instead");
         let mut command = Cli::command();
         generate(shell, &mut command, "cmakefmt", &mut io::stdout());
         return Ok(EXIT_OK);
