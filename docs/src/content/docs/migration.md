@@ -67,6 +67,30 @@ See [Formatter Behavior](/behavior/) for the pragma syntax.
 | convert old config file | `cmakefmt --convert-legacy-config OLD.py > .cmakefmt.yaml` |
 | disable formatting regions | supports both `cmake-format` and `cmakefmt` spellings |
 
+## Key Differences
+
+| Area | cmake-format | cmakefmt |
+| --- | --- | --- |
+| Default command casing | Preserves source casing | Lowercases commands |
+| Indentation key | `tab_width` | `tab_size` |
+| Config format | YAML, JSON, or Python | YAML or TOML |
+| Disable regions | `# cmake-format: off/on` | `# cmakefmt: off/on` (also accepts `cmake-format` and `fmt` spellings) |
+| Custom commands | `[parse].additional_commands` | `commands:` section in config |
+
+## Unsupported Legacy Options
+
+These cmake-format options are intentionally not carried forward:
+
+| Option / Section | Reason |
+| --- | --- |
+| `[lint]` (all 17 options) | cmakefmt is a formatter only; linting is a separate concern |
+| `[encode]` (`emit_byteorder_mark`, `input_encoding`, `output_encoding`) | UTF-8 is the modern default |
+| `[parse].vartags` / `[parse].proptags` | Used only for linting |
+| `[format].layout_passes` | Covered by `always_wrap` and per-command overrides |
+
+When converting a legacy config, unsupported options are noted in comments
+in the output so you can see exactly what was skipped and why.
+
 ## Compatibility Notes
 
 - the goal is easy adoption, not output identity
