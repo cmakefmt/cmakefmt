@@ -187,6 +187,25 @@ struct Cli {
     #[arg(long = "dump-schema", help_heading = "Config And Conversion")]
     dump_schema: bool,
 
+    /// Validate a config file and exit.
+    ///
+    /// If a path is given, validates that file directly. If omitted,
+    /// discovers the config using the normal discovery mechanism.
+    #[arg(
+        long = "check-config",
+        value_name = "PATH",
+        num_args = 0..=1,
+        default_missing_value = "",
+        help_heading = "Config And Conversion",
+        conflicts_with = "dump_config",
+        conflicts_with = "dump_schema",
+        conflicts_with = "convert_config_paths",
+        conflicts_with = "check",
+        conflicts_with = "diff",
+        conflicts_with = "in_place"
+    )]
+    check_config: Option<String>,
+
     /// Generate shell completion scripts and print them to stdout.
     #[arg(
         long = "generate-completion",
@@ -679,6 +698,10 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return Ok(EXIT_OK);
     }
 
+    if let Some(ref path_arg) = cli.check_config {
+        return run_check_config(cli, path_arg);
+    }
+
     if let Some(CliCommand::Init) = cli.command {
         let path = Path::new(".cmakefmt.yaml");
         if path.exists() {
@@ -1045,6 +1068,44 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
 
 fn is_config_introspection_mode(cli: &Cli) -> bool {
     cli.show_config.is_some() || cli.show_config_path || cli.explain_config
+}
+
+fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
+    if !path_arg.is_empty() {
+        let path = Path::new(path_arg);
+        if !path.exists() {
+            eprintln!("config file not found: {}", path.display());
+            return Ok(EXIT_ERROR);
+        }
+        match Config::from_files(&[path.to_path_buf()]) {
+            Ok(_) => {
+                println!("config is valid: {}", path.display());
+                Ok(EXIT_OK)
+            }
+            Err(err) => {
+                eprintln!("{err}");
+                Ok(EXIT_ERROR)
+            }
+        }
+    } else {
+        let context = resolve_config_context(cli, Some(Path::new(".")));
+        if context.sources.is_empty() {
+            eprintln!("no config file found");
+            return Ok(EXIT_ERROR);
+        }
+        match Config::from_files(&context.sources) {
+            Ok(_) => {
+                for source in &context.sources {
+                    println!("config is valid: {}", source.display());
+                }
+                Ok(EXIT_OK)
+            }
+            Err(err) => {
+                eprintln!("{err}");
+                Ok(EXIT_ERROR)
+            }
+        }
+    }
 }
 
 fn run_config_introspection(cli: &Cli) -> Result<u8, cmakefmt::Error> {
@@ -3211,6 +3272,7 @@ mod tests {
             "version",
             "in-place",
             "dump-schema",
+            "check-config",
             "lsp",
         ];
 

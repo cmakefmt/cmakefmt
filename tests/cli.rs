@@ -2120,6 +2120,69 @@ fn init_refuses_to_overwrite_existing_config() {
     assert_eq!(content, "line_width: 100\n");
 }
 
+// ── --check-config ─────────────────────────────────────────────────────────
+
+#[test]
+fn check_config_validates_good_config() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join(".cmakefmt.yaml"), "line_width: 100\n").unwrap();
+
+    let output = cmakefmt()
+        .args(["--check-config"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("valid"));
+}
+
+#[test]
+fn check_config_rejects_bad_config() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join(".cmakefmt.yaml"), "{{invalid yaml\n").unwrap();
+
+    let output = cmakefmt()
+        .args(["--check-config"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+}
+
+#[test]
+fn check_config_with_explicit_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = dir.path().join("my-config.yaml");
+    std::fs::write(&config, "line_width: 120\n").unwrap();
+
+    let output = cmakefmt()
+        .args(["--check-config", config.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("valid"));
+}
+
+#[test]
+fn check_config_no_config_exits_2() {
+    let dir = tempfile::tempdir().unwrap();
+
+    let output = cmakefmt()
+        .args(["--check-config"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("no config file found"));
+}
+
 // ── --lsp ───────────────────────────────────────────────────────────────────
 
 #[test]
