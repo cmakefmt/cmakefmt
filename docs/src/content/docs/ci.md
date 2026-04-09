@@ -153,6 +153,29 @@ pipelines:
           - cmakefmt --check .
 ```
 
+## Docker
+
+Build the image locally from the repository root:
+
+```bash
+docker build -t cmakefmt .
+```
+
+Then use it to check formatting:
+
+```bash
+docker run --rm -v "$(pwd):/work" -w /work cmakefmt --check .
+```
+
+Or format a single file via stdin:
+
+```bash
+cat CMakeLists.txt | docker run --rm -i cmakefmt -
+```
+
+This works in any CI system that supports Docker without installing Rust or
+downloading binaries.
+
 ## pre-commit
 
 Add a local hook to your `.pre-commit-config.yaml`. This runs `cmakefmt --check`
