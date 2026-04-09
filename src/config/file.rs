@@ -601,6 +601,7 @@ impl Config {
             let file_config = load_config_file(path)?;
             config.apply(file_config);
         }
+        config.validate_patterns().map_err(Error::Formatter)?;
         Ok(config)
     }
 

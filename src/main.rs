@@ -906,7 +906,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         } else if cli.in_place {
             if let Some(path) = &result.path {
                 if result.would_change {
-                    std::fs::write(path, &result.formatted).map_err(cmakefmt::Error::Io)?;
+                    atomic_write(path, &result.formatted)?;
                 }
             }
         } else {
@@ -2588,10 +2588,24 @@ fn write_in_place_updates(results: &[ProcessedTarget]) -> Result<(), cmakefmt::E
     for result in results {
         if let Some(path) = &result.path {
             if result.would_change {
-                std::fs::write(path, &result.formatted).map_err(cmakefmt::Error::Io)?;
+                atomic_write(path, &result.formatted)?;
             }
         }
     }
+    Ok(())
+}
+
+/// Write `contents` to `path` atomically by writing to a temporary file in the
+/// same directory and then renaming. This prevents partial writes and avoids
+/// TOCTOU races where the target could be replaced with a symlink between read
+/// and write.
+fn atomic_write(path: &Path, contents: &str) -> Result<(), cmakefmt::Error> {
+    let dir = path.parent().unwrap_or(Path::new("."));
+    let mut tmp = tempfile::NamedTempFile::new_in(dir).map_err(cmakefmt::Error::Io)?;
+    tmp.write_all(contents.as_bytes())
+        .map_err(cmakefmt::Error::Io)?;
+    tmp.persist(path)
+        .map_err(|e| cmakefmt::Error::Io(e.error))?;
     Ok(())
 }
 
