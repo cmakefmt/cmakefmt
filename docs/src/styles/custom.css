@@ -276,18 +276,53 @@ body {
   text-align: center;
   position: relative;
   padding: 3rem 0 2rem;
+  overflow: hidden;
 }
 
+/* Dot grid background */
 .hero::before {
   content: '';
   position: absolute;
-  inset: -2rem -4rem;
+  inset: -4rem -6rem;
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--sl-color-gray-3) 35%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 70%);
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* Animated gradient orbs */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: -4rem -6rem;
   background:
-    radial-gradient(ellipse 60% 50% at 20% 40%, color-mix(in srgb, var(--sl-color-accent-low) 60%, transparent), transparent),
-    radial-gradient(ellipse 50% 60% at 80% 30%, color-mix(in srgb, var(--sl-color-accent) 8%, transparent), transparent);
-  border-radius: 1.5rem;
+    radial-gradient(circle 220px at 20% 40%, color-mix(in srgb, var(--sl-color-accent) 35%, transparent), transparent 70%),
+    radial-gradient(circle 180px at 75% 30%, color-mix(in srgb, var(--sl-color-accent) 25%, transparent), transparent 70%),
+    radial-gradient(circle 200px at 50% 70%, color-mix(in srgb, var(--sl-color-accent-low) 80%, transparent), transparent 70%);
+  filter: blur(30px);
   z-index: -1;
   pointer-events: none;
+  animation: orbDrift 12s ease-in-out infinite alternate;
+}
+
+@keyframes orbDrift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(15px, -10px) scale(1.03);
+  }
+  66% {
+    transform: translate(-10px, 8px) scale(0.97);
+  }
+  100% {
+    transform: translate(5px, -5px) scale(1.01);
+  }
 }
 
 .hero .stack,
