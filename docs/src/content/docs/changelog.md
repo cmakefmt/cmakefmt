@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.6.0 — 2026-04-10
+
 ### Removed
 
 - `--lsp` flag — use `cmakefmt lsp` instead
