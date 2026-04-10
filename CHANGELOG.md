@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.5.0 — 2026-04-10
+
 ### Added
 
 - `cmakefmt config` subcommand group — `dump`, `schema`, `check`, `show`,
