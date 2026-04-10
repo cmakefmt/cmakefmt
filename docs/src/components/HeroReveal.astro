@@ -1,0 +1,62 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Staggered hero reveal: typing title, then fade-in tagline and buttons.
+---
+
+<script>
+  const hero = document.querySelector(".hero");
+  if (hero) {
+    const h1 = hero.querySelector("h1");
+    const tagline = hero.querySelector(".tagline");
+    const actions = hero.querySelector(".actions");
+
+    if (h1 && tagline && actions) {
+      const fullText = h1.textContent || "";
+
+      // Hide elements initially
+      h1.textContent = "";
+      h1.style.borderRight = "2px solid var(--sl-color-accent)";
+      (tagline as HTMLElement).style.opacity = "0";
+      (tagline as HTMLElement).style.transform = "translateY(8px)";
+      (actions as HTMLElement).style.opacity = "0";
+      (actions as HTMLElement).style.transform = "translateY(8px)";
+
+      // Typing animation
+      let i = 0;
+      const typingSpeed = 90;
+
+      function typeChar() {
+        if (i < fullText.length) {
+          h1!.textContent = fullText.slice(0, i + 1);
+          i++;
+          setTimeout(typeChar, typingSpeed);
+        } else {
+          // Blink cursor briefly then remove
+          setTimeout(() => {
+            h1!.style.borderRight = "2px solid transparent";
+          }, 400);
+
+          // Reveal tagline
+          setTimeout(() => {
+            (tagline as HTMLElement).style.transition = "opacity 0.5s ease, transform 0.5s ease";
+            (tagline as HTMLElement).style.opacity = "1";
+            (tagline as HTMLElement).style.transform = "translateY(0)";
+          }, 200);
+
+          // Reveal buttons
+          setTimeout(() => {
+            (actions as HTMLElement).style.transition = "opacity 0.5s ease, transform 0.5s ease";
+            (actions as HTMLElement).style.opacity = "1";
+            (actions as HTMLElement).style.transform = "translateY(0)";
+          }, 500);
+        }
+      }
+
+      // Small delay before starting to let the page settle
+      setTimeout(typeChar, 300);
+    }
+  }
+</script>

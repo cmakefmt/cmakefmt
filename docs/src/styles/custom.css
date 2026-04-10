@@ -665,9 +665,7 @@ nav.sidebar a[aria-current="true"] {
   animation: fadeInUp 0.4s ease-out;
 }
 
-.hero {
-  animation: fadeInUp 0.5s ease-out;
-}
+/* Hero animation is handled by HeroReveal.astro JS */
 
 /* ─── Scrollbar — thin and subtle ───────────────────────────────────────── */
 
