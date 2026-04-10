@@ -385,17 +385,33 @@ nav.sidebar a[aria-current="true"] {
   margin-bottom: 0.5em;
 }
 
-/* ─── Cards — lift-on-hover with accent glow ───────────────────────────── */
+/* ─── Cards — glassmorphic with accent glow on hover ───────────────────── */
 
 .card {
   border-radius: 0.75rem;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 30%, transparent);
+  background: color-mix(in srgb, var(--sl-color-gray-6) 60%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease,
+    background 0.3s ease;
 }
 
 .card:hover {
-  border-color: var(--sl-color-accent);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
-  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--sl-color-accent) 50%, transparent);
+  box-shadow:
+    0 4px 20px color-mix(in srgb, var(--sl-color-accent) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--sl-color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--sl-color-accent-low) 15%, var(--sl-color-gray-6));
+  transform: translateY(-3px);
+}
+
+.card .card-title {
+  transition: color 0.3s ease;
+}
+
+.card:hover .card-title {
+  color: var(--sl-color-text-accent);
 }
 
 /* ─── Pagination links — compact, subtle ───────────────────────────────── */
@@ -474,11 +490,14 @@ nav.sidebar a[aria-current="true"] {
 /* ─── Reading-path section headings ──────────────────────────────────────── */
 
 .reading-path-heading {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--sl-color-gray-3);
+  font-family: var(--sl-font-heading);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--sl-color-text-accent);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--sl-color-accent);
   margin: 2rem 0 0.75rem;
 }
 
@@ -602,19 +621,6 @@ nav.sidebar a[aria-current="true"] {
 }
 
 /* ─── Section visual hierarchy ─────────────────────────────────────────── */
-
-.reading-path-heading + .card-grid {
-  position: relative;
-}
-
-.reading-path-heading + .card-grid::before {
-  content: '';
-  position: absolute;
-  inset: -0.75rem -1rem;
-  background: color-mix(in srgb, var(--sl-color-accent-low) 20%, transparent);
-  border-radius: 0.75rem;
-  z-index: -1;
-}
 
 /* ─── Pagination links — animated arrow ────────────────────────────────── */
 
