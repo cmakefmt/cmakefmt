@@ -152,7 +152,7 @@ body {
 
 /* ─── Links — sky accent with animated underline ───────────────────────── */
 
-.sl-markdown-content a:not(:where(.not-content *)) {
+.sl-markdown-content a:not(:where(.not-content *, .sl-link-card *)) {
   color: var(--sl-color-text-accent);
   text-decoration: none;
   background-image: linear-gradient(currentColor, currentColor);
@@ -162,7 +162,7 @@ body {
   transition: color 0.2s ease, background-size 0.3s ease;
 }
 
-.sl-markdown-content a:hover:not(:where(.not-content *)) {
+.sl-markdown-content a:hover:not(:where(.not-content *, .sl-link-card *)) {
   color: var(--sl-color-accent);
   background-size: 100% 1px;
 }
@@ -385,9 +385,9 @@ nav.sidebar a[aria-current="true"] {
   margin-bottom: 0.5em;
 }
 
-/* ─── Cards — glassmorphic with accent glow on hover ───────────────────── */
+/* ─── Link cards — glow border + scale on hover ────────────────────────── */
 
-.card {
+.sl-link-card {
   border-radius: 0.75rem;
   border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 30%, transparent);
   background: color-mix(in srgb, var(--sl-color-gray-6) 60%, transparent);
@@ -397,20 +397,18 @@ nav.sidebar a[aria-current="true"] {
     background 0.3s ease;
 }
 
-.card:hover {
-  border-color: color-mix(in srgb, var(--sl-color-accent) 50%, transparent);
-  box-shadow:
-    0 4px 20px color-mix(in srgb, var(--sl-color-accent) 12%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--sl-color-accent) 8%, transparent);
-  background: color-mix(in srgb, var(--sl-color-accent-low) 15%, var(--sl-color-gray-6));
-  transform: translateY(-3px);
+.sl-link-card:hover {
+  border-color: color-mix(in srgb, var(--sl-color-accent) 45%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
+  background: color-mix(in srgb, var(--sl-color-accent-low) 10%, var(--sl-color-gray-6));
+  transform: scale(1.02);
 }
 
-.card .card-title {
+.sl-link-card .title {
   transition: color 0.3s ease;
 }
 
-.card:hover .card-title {
+.sl-link-card:hover .title {
   color: var(--sl-color-text-accent);
 }
 
