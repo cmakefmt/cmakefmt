@@ -48,7 +48,7 @@ fn git_stdout(dir: &std::path::Path, args: &[&str]) -> String {
 }
 
 fn init_git_repo(dir: &std::path::Path) {
-    git(dir, &["init"]);
+    git(dir, &["config", "init"]);
     git(dir, &["config", "user.email", "cmakefmt@example.invalid"]);
     git(dir, &["config", "user.name", "cmakefmt tests"]);
     git(dir, &["config", "commit.gpgsign", "false"]);
@@ -1312,7 +1312,7 @@ fn convert_legacy_json_config_to_stdout() {
     .unwrap();
 
     let output = cmakefmt()
-        .args(["--convert-legacy-config", legacy.to_str().unwrap()])
+        .args(["config", "convert", legacy.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -1342,9 +1342,10 @@ fn convert_config_toml_prints_toml_when_requested() {
 
     let output = cmakefmt()
         .args([
-            "--convert-legacy-config",
+            "config",
+            "convert",
             legacy.to_str().unwrap(),
-            "--convert-legacy-config-format",
+            "--format",
             "toml",
         ])
         .output()
@@ -1357,29 +1358,6 @@ fn convert_config_toml_prints_toml_when_requested() {
     assert!(stdout.contains("line_width = 100"));
     assert!(stdout.contains("[style]"));
     assert!(stdout.contains("command_case = \"lower\""));
-}
-
-#[test]
-fn convert_config_conflicts_with_input_paths() {
-    let dir = tempfile::tempdir().unwrap();
-    let legacy = dir.path().join("cmake-format.json");
-    std::fs::write(&legacy, "{}").unwrap();
-    let file = dir.path().join("CMakeLists.txt");
-    write_file(&file, "set(FOO bar)\n");
-
-    let output = cmakefmt()
-        .args([
-            "--convert-legacy-config",
-            legacy.to_str().unwrap(),
-            file.to_str().unwrap(),
-        ])
-        .output()
-        .unwrap();
-
-    assert_eq!(output.status.code(), Some(2));
-    assert!(
-        String::from_utf8_lossy(&output.stderr).contains("does not accept formatting input paths")
-    );
 }
 
 #[test]
@@ -1445,7 +1423,7 @@ fn config_file_can_define_custom_command_specs() {
 
 #[test]
 fn dump_config_prints_template() {
-    let output = cmakefmt().arg("--dump-config").output().unwrap();
+    let output = cmakefmt().args(["config", "dump"]).output().unwrap();
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1461,7 +1439,10 @@ fn dump_config_prints_template() {
 
 #[test]
 fn dump_config_toml_prints_template() {
-    let output = cmakefmt().args(["--dump-config", "toml"]).output().unwrap();
+    let output = cmakefmt()
+        .args(["config", "dump", "--format", "toml"])
+        .output()
+        .unwrap();
     assert!(output.status.success());
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1485,7 +1466,7 @@ fn show_config_prints_effective_yaml_config() {
     write_file(&file, "set(FOO bar)\n");
 
     let output = cmakefmt()
-        .args(["--show-config", file.to_str().unwrap()])
+        .args(["config", "show", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -1509,9 +1490,10 @@ fn show_config_applies_cli_overrides() {
 
     let output = cmakefmt()
         .args([
-            "--show-config",
             "--line-width",
             "120",
+            "config",
+            "show",
             file.to_str().unwrap(),
         ])
         .output()
@@ -1539,7 +1521,7 @@ fn show_config_path_prints_nearest_config() {
     write_file(&file, "set(FOO bar)\n");
 
     let output = cmakefmt()
-        .args(["--show-config-path", file.to_str().unwrap()])
+        .args(["config", "path", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -1559,7 +1541,7 @@ fn show_config_path_accepts_file_before_flag() {
     write_file(&file, "set(FOO bar)\n");
 
     let output = cmakefmt()
-        .args([file.to_str().unwrap(), "--show-config-path"])
+        .args(["config", "path", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -1579,7 +1561,7 @@ fn find_config_path_alias_works() {
     write_file(&file, "set(FOO bar)\n");
 
     let output = cmakefmt()
-        .args(["--find-config-path", file.to_str().unwrap()])
+        .args(["config", "path", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -1601,7 +1583,7 @@ fn no_config_ignores_discovered_config_for_show_config() {
     write_file(&file, "set(FOO bar)\n");
 
     let output = cmakefmt()
-        .args(["--no-config", "--show-config", file.to_str().unwrap()])
+        .args(["--no-config", "config", "show", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -1619,10 +1601,11 @@ fn explain_config_reports_sources_and_overrides() {
 
     let output = cmakefmt()
         .args([
-            "--explain-config",
-            file.to_str().unwrap(),
             "--line-width",
             "120",
+            "config",
+            "explain",
+            file.to_str().unwrap(),
         ])
         .output()
         .unwrap();
@@ -1646,7 +1629,7 @@ fn explain_config_uses_explicit_file_argument() {
     write_file(&file, "set(FOO bar)\n");
 
     let output = cmakefmt()
-        .args([file.to_str().unwrap(), "--explain-config"])
+        .args(["config", "explain", file.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -1663,7 +1646,7 @@ fn explain_config_defaults_to_current_directory() {
     write_file(&config, "format:\n  line_width: 99\n");
 
     let output = cmakefmt()
-        .arg("--explain-config")
+        .args(["config", "explain"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -1684,13 +1667,11 @@ fn show_config_rejects_multiple_paths() {
     write_file(&b, "set(B value)\n");
 
     let output = cmakefmt()
-        .args(["--show-config", a.to_str().unwrap(), b.to_str().unwrap()])
+        .args(["config", "show", a.to_str().unwrap(), b.to_str().unwrap()])
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("config introspection expects exactly one explicit path"));
+    assert!(!output.status.success());
 }
 
 #[test]
@@ -1917,10 +1898,7 @@ fn fast_and_verify_conflict() {
 
 #[test]
 fn generate_completion_outputs_bash_script() {
-    let output = cmakefmt()
-        .args(["--generate-completion", "bash"])
-        .output()
-        .unwrap();
+    let output = cmakefmt().args(["completions", "bash"]).output().unwrap();
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1948,28 +1926,25 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains(".cmakefmt.yml"));
     assert!(stdout.contains(".cmakefmt.toml"));
     assert!(stdout.contains("--colour <COLOUR>"));
-    assert!(stdout.contains("--dump-config [<FORMAT>]"));
-    assert!(stdout.contains("--generate-completion <SHELL>"));
     assert!(stdout.contains("--generate-man-page"));
     assert!(stdout.contains("--required-version <VERSION>"));
     assert!(stdout.contains("--verify"));
     assert!(stdout.contains("--fast"));
     assert!(stdout.contains("--require-pragma"));
-    assert!(stdout.contains("--show-config[=<FORMAT>]"));
-    assert!(stdout.contains("--show-config-path"));
-    assert!(stdout.contains("--find-config-path"));
-    assert!(stdout.contains("--explain-config"));
     assert!(stdout.contains("--in-place"));
     assert!(stdout.contains("-c, --config-file <PATH>"));
-    assert!(stdout.contains("--config-file <PATH>"));
     assert!(stdout.contains("--no-config"));
-    assert!(stdout.contains("--convert-legacy-config <PATH>"));
     assert!(stdout.contains("-l, --line-width <LINE_WIDTH>"));
     assert!(stdout.contains("--list-changed-files"));
     assert!(stdout.contains("--list-input-files"));
     assert!(stdout.contains("--path-regex <REGEX>"));
     assert!(stdout.contains("--ignore-path <PATH>"));
     assert!(stdout.contains("--no-gitignore"));
+    // Subcommands
+    assert!(stdout.contains("config"));
+    assert!(stdout.contains("completions"));
+    assert!(stdout.contains("lsp"));
+    assert!(stdout.contains("install-hook"));
     assert!(stdout.contains("--files-from <PATH>"));
     assert!(stdout.contains("--diff"));
     assert!(stdout.contains("--quiet"));
@@ -1991,16 +1966,16 @@ fn help_mentions_config_discovery_and_primary_flags() {
 
 #[test]
 fn dump_schema_exits_zero() {
-    let output = cmakefmt().arg("--dump-schema").output().unwrap();
+    let output = cmakefmt().args(["config", "schema"]).output().unwrap();
     assert!(output.status.success());
 }
 
 #[test]
 fn dump_schema_prints_valid_json() {
-    let output = cmakefmt().arg("--dump-schema").output().unwrap();
+    let output = cmakefmt().args(["config", "schema"]).output().unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     let parsed: Value =
-        serde_json::from_str(&stdout).expect("--dump-schema output should be valid JSON");
+        serde_json::from_str(&stdout).expect("config schema output should be valid JSON");
     // Verify it is a JSON Schema object with expected top-level keys
     assert!(parsed.get("$schema").is_some(), "should have $schema key");
     assert!(parsed.get("title").is_some(), "should have title key");
@@ -2012,10 +1987,10 @@ fn dump_schema_prints_valid_json() {
 
 #[test]
 fn dump_schema_output_ends_with_newline() {
-    let output = cmakefmt().arg("--dump-schema").output().unwrap();
+    let output = cmakefmt().args(["config", "schema"]).output().unwrap();
     assert!(
         output.stdout.ends_with(b"\n"),
-        "--dump-schema output should end with a newline"
+        "config schema output should end with a newline"
     );
 }
 
@@ -2023,7 +1998,7 @@ fn dump_schema_output_ends_with_newline() {
 fn dump_schema_appears_in_help() {
     let output = cmakefmt().arg("--help").output().unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("--dump-schema"));
+    assert!(stdout.contains("config"));
 }
 
 // ── --stat ──────────────────────────────────────────────────────────────────
@@ -2094,7 +2069,7 @@ fn check_failure_prints_fix_hint() {
 fn init_creates_config_file() {
     let dir = tempfile::tempdir().unwrap();
     let output = cmakefmt()
-        .args(["init"])
+        .args(["config", "init"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -2115,7 +2090,7 @@ fn init_refuses_to_overwrite_existing_config() {
     .unwrap();
 
     let output = cmakefmt()
-        .args(["init"])
+        .args(["config", "init"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -2125,7 +2100,7 @@ fn init_refuses_to_overwrite_existing_config() {
     assert_eq!(content, "format:\n  line_width: 100\n");
 }
 
-// ── --check-config ─────────────────────────────────────────────────────────
+// ── config check ───────────────────────────────────────────────────────────
 
 #[test]
 fn check_config_validates_good_config() {
@@ -2137,7 +2112,7 @@ fn check_config_validates_good_config() {
     .unwrap();
 
     let output = cmakefmt()
-        .args(["--check-config"])
+        .args(["config", "check"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -2153,7 +2128,7 @@ fn check_config_rejects_bad_config() {
     std::fs::write(dir.path().join(".cmakefmt.yaml"), "{{invalid yaml\n").unwrap();
 
     let output = cmakefmt()
-        .args(["--check-config"])
+        .args(["config", "check"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -2168,7 +2143,7 @@ fn check_config_with_explicit_path() {
     std::fs::write(&config, "format:\n  line_width: 120\n").unwrap();
 
     let output = cmakefmt()
-        .args(["--check-config", config.to_str().unwrap()])
+        .args(["config", "check", config.to_str().unwrap()])
         .output()
         .unwrap();
 
@@ -2182,7 +2157,7 @@ fn check_config_no_config_exits_2() {
     let dir = tempfile::tempdir().unwrap();
 
     let output = cmakefmt()
-        .args(["--check-config"])
+        .args(["config", "check"])
         .current_dir(dir.path())
         .output()
         .unwrap();
@@ -2198,5 +2173,5 @@ fn check_config_no_config_exits_2() {
 fn lsp_appears_in_help() {
     let output = cmakefmt().arg("--help").output().unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("--lsp"));
+    assert!(stdout.contains("lsp"));
 }

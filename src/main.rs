@@ -109,9 +109,7 @@ struct Cli {
     #[arg(
         long = "files-from",
         value_name = "PATH",
-        help_heading = "Input Selection",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
+        help_heading = "Input Selection"
     )]
     files_from: Vec<String>,
 
@@ -121,9 +119,7 @@ struct Cli {
         long = "in-place",
         help_heading = "Output Modes",
         conflicts_with = "list_changed_files",
-        conflicts_with = "list_input_files",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
+        conflicts_with = "list_input_files"
     )]
     in_place: bool,
 
@@ -131,9 +127,7 @@ struct Cli {
     #[arg(
         long,
         help_heading = "Output Modes",
-        conflicts_with = "list_input_files",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
+        conflicts_with = "list_input_files"
     )]
     check: bool,
 
@@ -143,9 +137,7 @@ struct Cli {
         alias = "list-files",
         help_heading = "Output Modes",
         conflicts_with = "quiet",
-        conflicts_with = "list_input_files",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
+        conflicts_with = "list_input_files"
     )]
     list_changed_files: bool,
 
@@ -157,9 +149,7 @@ struct Cli {
         conflicts_with = "list_changed_files",
         conflicts_with = "in_place",
         conflicts_with = "diff",
-        conflicts_with = "quiet",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
+        conflicts_with = "quiet"
     )]
     list_input_files: bool,
 
@@ -170,9 +160,7 @@ struct Cli {
     #[arg(
         long = "path-regex",
         value_name = "REGEX",
-        help_heading = "Input Selection",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
+        help_heading = "Input Selection"
     )]
     file_regex: Option<String>,
 
@@ -182,216 +170,44 @@ struct Cli {
     #[arg(
         long = "ignore-path",
         value_name = "PATH",
-        help_heading = "Input Selection",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
+        help_heading = "Input Selection"
     )]
     ignore_paths: Vec<PathBuf>,
 
     /// Ignore `.gitignore` files during recursive discovery.
-    #[arg(
-        long = "no-gitignore",
-        help_heading = "Input Selection",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long = "no-gitignore", help_heading = "Input Selection")]
     no_gitignore: bool,
 
-    /// Print the default config template and exit.
-    ///
-    /// By default this emits YAML. Pass `toml` to print TOML instead.
-    #[arg(
-        long = "dump-config",
-        value_name = "FORMAT",
-        help_heading = "Config And Conversion",
-        num_args = 0..=1,
-        default_missing_value = "yaml"
-    )]
-    dump_config: Option<DumpConfigFormat>,
-
-    /// Print the JSON Schema for the cmakefmt config file and exit.
-    ///
-    /// The schema describes every option in `.cmakefmt.yaml` / `.cmakefmt.toml`
-    /// and is used by editor language servers for autocomplete and validation.
-    #[arg(long = "dump-schema", help_heading = "Config And Conversion")]
-    dump_schema: bool,
-
-    /// Validate a config file and exit.
-    ///
-    /// If a path is given, validates that file directly. If omitted,
-    /// discovers the config using the normal discovery mechanism.
-    #[arg(
-        long = "check-config",
-        value_name = "PATH",
-        num_args = 0..=1,
-        default_missing_value = "",
-        help_heading = "Config And Conversion",
-        conflicts_with = "dump_config",
-        conflicts_with = "dump_schema",
-        conflicts_with = "convert_config_paths",
-        conflicts_with = "check",
-        conflicts_with = "diff",
-        conflicts_with = "in_place"
-    )]
-    check_config: Option<String>,
-
-    /// Generate shell completion scripts and print them to stdout.
-    #[arg(
-        long = "generate-completion",
-        value_enum,
-        value_name = "SHELL",
-        help_heading = "Release And Packaging",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths",
-        conflicts_with = "show_config",
-        conflicts_with = "show_config_path",
-        conflicts_with = "explain_config"
-    )]
-    generate_completion: Option<Shell>,
-
     /// Generate a roff man page and print it to stdout.
-    #[arg(
-        long = "generate-man-page",
-        help_heading = "Release And Packaging",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths",
-        conflicts_with = "generate_completion",
-        conflicts_with = "show_config",
-        conflicts_with = "show_config_path",
-        conflicts_with = "explain_config"
-    )]
+    #[arg(long = "generate-man-page", help_heading = "Release And Packaging")]
     generate_man_page: bool,
 
-    /// Print the effective config for a single target and exit.
-    ///
-    /// By default this emits YAML. Pass `toml` to print TOML instead.
-    #[arg(
-        long = "show-config",
-        value_name = "FORMAT",
-        help_heading = "Config And Conversion",
-        num_args = 0..=1,
-        default_missing_value = "yaml",
-        require_equals = true,
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths",
-        conflicts_with = "show_config_path",
-        conflicts_with = "explain_config"
-    )]
-    show_config: Option<DumpConfigFormat>,
-
-    /// Print the config file path selected for a single target and exit.
-    #[arg(
-        long = "show-config-path",
-        visible_alias = "find-config-path",
-        help_heading = "Config And Conversion",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths",
-        conflicts_with = "show_config",
-        conflicts_with = "explain_config"
-    )]
-    show_config_path: bool,
-
-    /// Explain config resolution for a single target or the current directory and exit.
-    #[arg(
-        long = "explain-config",
-        help_heading = "Config And Conversion",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths",
-        conflicts_with = "show_config",
-        conflicts_with = "show_config_path"
-    )]
-    explain_config: bool,
-
-    /// Convert legacy cmake-format JSON, YAML, or Python config files.
-    ///
-    /// By default this emits YAML. Use `--convert-legacy-config-format toml`
-    /// to print TOML instead.
-    #[arg(
-        long = "convert-legacy-config",
-        value_name = "PATH",
-        help_heading = "Config And Conversion",
-        conflicts_with = "dump_config",
-        conflicts_with = "check",
-        conflicts_with = "list_changed_files",
-        conflicts_with = "list_input_files",
-        conflicts_with = "in_place",
-        conflicts_with = "debug",
-        conflicts_with = "parallel",
-        conflicts_with = "config_paths",
-        conflicts_with = "line_width",
-        conflicts_with = "tab_size",
-        conflicts_with = "command_case",
-        conflicts_with = "keyword_case",
-        conflicts_with = "dangle_parens"
-    )]
-    convert_config_paths: Vec<PathBuf>,
-
-    /// Choose the output format used by `--convert-legacy-config`.
-    #[arg(
-        long = "convert-legacy-config-format",
-        value_name = "FORMAT",
-        default_value = "yaml",
-        help_heading = "Config And Conversion",
-        requires = "convert_config_paths",
-        conflicts_with = "dump_config",
-        conflicts_with = "show_config",
-        conflicts_with = "show_config_path",
-        conflicts_with = "explain_config"
-    )]
-    convert_config_format: DumpConfigFormat,
-
     /// Print detailed discovery, config, and formatter diagnostics to stderr.
-    #[arg(
-        long,
-        help_heading = "Execution",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long, help_heading = "Execution")]
     debug: bool,
 
     /// Suppress per-file human output and emit only end-of-run summaries.
     ///
     /// This is intended for quieter `--check` and `--in-place` automation
     /// workflows. It does not suppress actual errors.
-    #[arg(
-        long,
-        help_heading = "Execution",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long, help_heading = "Execution")]
     quiet: bool,
 
     /// Print a git-style summary after formatting (e.g. "3 files changed, 12 lines reformatted").
     ///
     /// This works with all output modes (`--check`, `--diff`, `--in-place`, and
     /// stdout). When combined with `--quiet`, the stat line is still printed.
-    #[arg(
-        long,
-        help_heading = "Execution",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long, help_heading = "Execution")]
     stat: bool,
 
     /// Continue processing other files after a file-level parse or format error.
     ///
     /// Without this flag, human runs still fail at the first file error.
-    #[arg(
-        long = "keep-going",
-        help_heading = "Execution",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long = "keep-going", help_heading = "Execution")]
     keep_going: bool,
 
     /// Print a unified diff instead of full formatted output.
-    #[arg(
-        long,
-        help_heading = "Output Modes",
-        conflicts_with = "in_place",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long, help_heading = "Output Modes", conflicts_with = "in_place")]
     diff: bool,
 
     /// Cache formatted results for repeated runs on the same files.
@@ -421,23 +237,11 @@ struct Cli {
     ///
     /// Use `--since` to compare against a specific base ref; otherwise
     /// `cmakefmt` compares the working tree against `HEAD`.
-    #[arg(
-        long,
-        help_heading = "Input Selection",
-        conflicts_with = "staged",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long, help_heading = "Input Selection", conflicts_with = "staged")]
     changed: bool,
 
     /// Select staged Git-tracked files instead of explicit input paths.
-    #[arg(
-        long,
-        help_heading = "Input Selection",
-        conflicts_with = "changed",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
-    )]
+    #[arg(long, help_heading = "Input Selection", conflicts_with = "changed")]
     staged: bool,
 
     /// Git base ref used together with `--changed`.
@@ -501,8 +305,6 @@ struct Cli {
         help_heading = "Execution",
         num_args = 0..=1,
         default_missing_value = "0",
-        conflicts_with = "dump_config",
-        conflicts_with = "convert_config_paths"
     )]
     parallel: Option<usize>,
 
@@ -572,20 +374,13 @@ struct Cli {
     #[arg(long, help_heading = "Execution")]
     require_pragma: bool,
 
-    /// Start the cmakefmt LSP server (reads/writes JSON-RPC on stdio).
-    #[cfg(feature = "lsp")]
-    #[arg(long = "lsp", help_heading = "Config And Conversion")]
-    lsp: bool,
-
-    /// Subcommand (e.g. `cmakefmt init`).
+    /// Subcommand (e.g. `cmakefmt config dump`).
     #[command(subcommand)]
     command: Option<CliCommand>,
 }
 
 #[derive(Clone, Debug, Subcommand)]
 enum CliCommand {
-    /// Write a starter `.cmakefmt.yaml` config file to the current directory.
-    Init,
     /// Start the cmakefmt LSP server (reads/writes JSON-RPC on stdio).
     Lsp,
     /// Generate shell completion scripts and print them to stdout.
@@ -609,7 +404,7 @@ enum ConfigAction {
     /// Print the default config template.
     Dump {
         /// Output format.
-        #[arg(value_enum, default_value = "yaml")]
+        #[arg(long, value_enum, default_value = "yaml")]
         format: DumpConfigFormat,
     },
     /// Print the JSON Schema for the config file.
@@ -621,14 +416,22 @@ enum ConfigAction {
     },
     /// Print the effective config for a target.
     Show {
+        /// Target file for config resolution.
+        path: Option<String>,
         /// Output format.
-        #[arg(value_enum, default_value = "yaml")]
+        #[arg(long, value_enum, default_value = "yaml")]
         format: DumpConfigFormat,
     },
     /// Print the config file path selected for a target.
-    Path,
+    Path {
+        /// Target file for config resolution.
+        path: Option<String>,
+    },
     /// Explain config resolution for a target or the current directory.
-    Explain,
+    Explain {
+        /// Target file for config resolution.
+        path: Option<String>,
+    },
     /// Convert legacy cmake-format config files.
     Convert {
         /// Legacy config file(s) to convert.
@@ -764,42 +567,7 @@ Include the following in your report:
 fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     check_required_version(cli)?;
 
-    #[cfg(feature = "lsp")]
-    if cli.lsp {
-        eprintln!("warning: --lsp is deprecated, use `cmakefmt lsp` instead");
-        cmakefmt::lsp::run().map_err(|e| cmakefmt::Error::Formatter(e.to_string()))?;
-        return Ok(EXIT_OK);
-    }
-
-    if let Some(format) = cli.dump_config {
-        eprintln!("warning: --dump-config is deprecated, use `cmakefmt config dump` instead");
-        return run_config_subcommand(cli, &ConfigAction::Dump { format });
-    }
-
-    if cli.dump_schema {
-        eprintln!("warning: --dump-schema is deprecated, use `cmakefmt config schema` instead");
-        return run_config_subcommand(cli, &ConfigAction::Schema);
-    }
-
-    if let Some(ref path_arg) = cli.check_config {
-        eprintln!("warning: --check-config is deprecated, use `cmakefmt config check` instead");
-        return run_config_subcommand(
-            cli,
-            &ConfigAction::Check {
-                path: if path_arg.is_empty() {
-                    None
-                } else {
-                    Some(path_arg.clone())
-                },
-            },
-        );
-    }
-
     match &cli.command {
-        Some(CliCommand::Init) => {
-            eprintln!("warning: `cmakefmt init` is deprecated, use `cmakefmt config init` instead");
-            return run_config_subcommand(cli, &ConfigAction::Init);
-        }
         #[cfg(feature = "lsp")]
         Some(CliCommand::Lsp) => {
             cmakefmt::lsp::run().map_err(|e| cmakefmt::Error::Formatter(e.to_string()))?;
@@ -819,13 +587,6 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         None => {}
     }
 
-    if let Some(shell) = cli.generate_completion {
-        let mut command = Cli::command();
-        generate(shell, &mut command, "cmakefmt", &mut io::stdout());
-        eprintln!("warning: --generate-completion is deprecated, use `cmakefmt completions {shell}` instead");
-        return Ok(EXIT_OK);
-    }
-
     if cli.generate_man_page {
         let command = Cli::command();
         clap_mangen::Man::new(command)
@@ -834,38 +595,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return Ok(EXIT_OK);
     }
 
-    if !cli.convert_config_paths.is_empty() {
-        eprintln!(
-            "warning: --convert-legacy-config is deprecated, use `cmakefmt config convert` instead"
-        );
-        if !cli.files.is_empty() {
-            return Err(cmakefmt::Error::Formatter(
-                "--convert-legacy-config does not accept formatting input paths".to_owned(),
-            ));
-        }
-        return run_config_subcommand(
-            cli,
-            &ConfigAction::Convert {
-                paths: cli.convert_config_paths.clone(),
-                format: cli.convert_config_format,
-            },
-        );
-    }
-
     validate_cli(cli)?;
-
-    if cli.explain_config {
-        eprintln!("warning: --explain-config is deprecated, use `cmakefmt config explain` instead");
-        return run_config_subcommand(cli, &ConfigAction::Explain);
-    }
-    if cli.show_config_path {
-        eprintln!("warning: --show-config-path is deprecated, use `cmakefmt config path` instead");
-        return run_config_subcommand(cli, &ConfigAction::Path);
-    }
-    if let Some(format) = cli.show_config {
-        eprintln!("warning: --show-config is deprecated, use `cmakefmt config show` instead");
-        return run_config_subcommand(cli, &ConfigAction::Show { format });
-    }
 
     let stdout_mode =
         !cli.list_changed_files && !cli.list_input_files && !cli.check && !cli.in_place;
@@ -1099,7 +829,7 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
         ));
     }
 
-    if (cli.generate_completion.is_some() || cli.generate_man_page)
+    if cli.generate_man_page
         && (!cli.files.is_empty()
             || !cli.files_from.is_empty()
             || !cli.config_paths.is_empty()
@@ -1140,30 +870,7 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
         ));
     }
 
-    if is_config_introspection_mode(cli) {
-        if cli.check || cli.list_changed_files || cli.list_input_files || cli.in_place || cli.diff {
-            return Err(cmakefmt::Error::Formatter(
-                "config introspection flags cannot be combined with formatting output modes"
-                    .to_owned(),
-            ));
-        }
-        if cli.report_format != ReportFormat::Human {
-            return Err(cmakefmt::Error::Formatter(
-                "config introspection flags only support human output".to_owned(),
-            ));
-        }
-        if cli.staged || cli.changed || !cli.files_from.is_empty() {
-            return Err(cmakefmt::Error::Formatter(
-                "config introspection expects a single explicit path or stdin context".to_owned(),
-            ));
-        }
-    }
-
     Ok(())
-}
-
-fn is_config_introspection_mode(cli: &Cli) -> bool {
-    cli.show_config.is_some() || cli.show_config_path || cli.explain_config
 }
 
 fn run_config_subcommand(cli: &Cli, action: &ConfigAction) -> Result<u8, cmakefmt::Error> {
@@ -1180,8 +887,17 @@ fn run_config_subcommand(cli: &Cli, action: &ConfigAction) -> Result<u8, cmakefm
             let path_arg = path.as_deref().unwrap_or("");
             run_check_config(cli, path_arg)
         }
-        ConfigAction::Show { format } => {
-            let target = resolve_config_probe_target(cli)?;
+        ConfigAction::Show { format, path } => {
+            if let Some(p) = path {
+                if !Path::new(p).exists() {
+                    eprintln!("error: file not found: {p}");
+                    return Ok(EXIT_ERROR);
+                }
+            }
+            let target = path
+                .as_ref()
+                .map(PathBuf::from)
+                .or_else(|| resolve_config_probe_target(cli).ok().flatten());
             let (config, _, _) = build_context(cli, target.as_deref())?;
             let rendered = render_effective_config(&config, *format)?;
             print!("{rendered}");
@@ -1190,17 +906,32 @@ fn run_config_subcommand(cli: &Cli, action: &ConfigAction) -> Result<u8, cmakefm
             }
             Ok(EXIT_OK)
         }
-        ConfigAction::Path => {
-            let target = resolve_config_probe_target(cli)?;
+        ConfigAction::Path { path } => {
+            if let Some(p) = path {
+                if !Path::new(p).exists() {
+                    eprintln!("error: file not found: {p}");
+                    return Ok(EXIT_ERROR);
+                }
+            }
+            let target = path
+                .as_ref()
+                .map(PathBuf::from)
+                .or_else(|| resolve_config_probe_target(cli).ok().flatten());
             let config_context = resolve_config_context(cli, target.as_deref());
-            for path in &config_context.sources {
-                println!("{}", path.display());
+            for p in &config_context.sources {
+                println!("{}", p.display());
             }
             Ok(EXIT_OK)
         }
-        ConfigAction::Explain => {
-            let target = resolve_config_probe_target(cli)?;
-            explain_config(cli, target.as_deref().unwrap_or(Path::new(".")))
+        ConfigAction::Explain { path } => {
+            if let Some(p) = path {
+                if !Path::new(p).exists() {
+                    eprintln!("error: file not found: {p}");
+                    return Ok(EXIT_ERROR);
+                }
+            }
+            let target = path.as_deref().map(Path::new).unwrap_or(Path::new("."));
+            explain_config(cli, target)
         }
         ConfigAction::Convert { paths, format } => {
             if paths.is_empty() {
@@ -3412,19 +3143,14 @@ mod tests {
         let non_config_flags = [
             "check",
             "config-file",
-            "convert-legacy-config",
-            "convert-legacy-config-format",
             "colour",
             "changed",
             "debug",
             "diff",
             "path-regex",
             "files-from",
-            "generate-completion",
             "generate-man-page",
             "help",
-            "dump-config",
-            "explain-config",
             "ignore-path",
             "keep-going",
             "cache",
@@ -3440,8 +3166,6 @@ mod tests {
             "quiet",
             "stat",
             "report-format",
-            "show-config",
-            "show-config-path",
             "required-version",
             "verify",
             "fast",
@@ -3451,9 +3175,6 @@ mod tests {
             "stdin-path",
             "version",
             "in-place",
-            "dump-schema",
-            "check-config",
-            "lsp",
         ];
 
         for arg in Cli::command().get_arguments() {
