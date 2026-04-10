@@ -32,7 +32,7 @@ use crate::spec::{
 pub fn convert_legacy_config_files(paths: &[PathBuf], format: DumpConfigFormat) -> Result<String> {
     if paths.is_empty() {
         return Err(Error::Formatter(
-            "--convert-legacy-config requires at least one input path".to_owned(),
+            "cmakefmt config convert requires at least one input path".to_owned(),
         ));
     }
 
@@ -1238,7 +1238,7 @@ mod tests {
         let err = convert_legacy_config_files(&[], DumpConfigFormat::Yaml).unwrap_err();
         assert!(err
             .to_string()
-            .contains("--convert-legacy-config requires at least one input path"));
+            .contains("cmakefmt config convert requires at least one input path"));
     }
 
     #[test]

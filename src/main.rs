@@ -2775,7 +2775,7 @@ fn render_file_parse_error(
     if let Some((field, expected)) = extract_unknown_field_hint(detail) {
         if let Some(updated) = renamed_config_key(&field) {
             hints.push(format!(
-                "`{field}` is not a valid cmakefmt key; use `{updated}` or run --convert-legacy-config"
+                "`{field}` is not a valid cmakefmt key; use `{updated}` or run `cmakefmt config convert`"
             ));
         } else if let Some(suggestion) = best_match(&field, &expected) {
             hints.push(format!(

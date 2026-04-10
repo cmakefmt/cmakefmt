@@ -150,7 +150,7 @@ impl ConfigFileFormat {
     }
 }
 
-/// Supported `--dump-config` output formats.
+/// Supported `cmakefmt config dump` output formats.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum DumpConfigFormat {
     /// Emit YAML.
@@ -174,7 +174,7 @@ pub fn default_config_template_for(format: DumpConfigFormat) -> String {
 /// Render a resolved runtime config back into the user-facing config schema.
 ///
 /// This is primarily used by CLI introspection commands such as
-/// `cmakefmt --show-config`.
+/// `cmakefmt config show`.
 pub fn render_effective_config(config: &Config, format: DumpConfigFormat) -> Result<String> {
     let view = EffectiveConfigFile::from(config);
     match format {

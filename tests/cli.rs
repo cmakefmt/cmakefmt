@@ -1962,7 +1962,7 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("formatting stays single-threaded"));
 }
 
-// ── --dump-schema ───────────────────────────────────────────────────────────
+// ── config schema ───────────────────────────────────────────────────────────
 
 #[test]
 fn dump_schema_exits_zero() {
@@ -2167,7 +2167,7 @@ fn check_config_no_config_exits_2() {
     assert!(stderr.contains("no config file found"));
 }
 
-// ── --lsp ───────────────────────────────────────────────────────────────────
+// ── lsp subcommand ───────────────────────────────────────────────────────────────────
 
 #[test]
 fn lsp_appears_in_help() {

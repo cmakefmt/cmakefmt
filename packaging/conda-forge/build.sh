@@ -15,9 +15,9 @@ cargo-bundle-licenses --format yaml --output THIRDPARTY.yml
 cargo install --no-track --locked --root "${PREFIX}" --path .
 
 # Shell completions
-"${PREFIX}/bin/cmakefmt" --generate-completion bash > cmakefmt.bash
-"${PREFIX}/bin/cmakefmt" --generate-completion zsh > _cmakefmt
-"${PREFIX}/bin/cmakefmt" --generate-completion fish > cmakefmt.fish
+"${PREFIX}/bin/cmakefmt" completions bash > cmakefmt.bash
+"${PREFIX}/bin/cmakefmt" completions zsh > _cmakefmt
+"${PREFIX}/bin/cmakefmt" completions fish > cmakefmt.fish
 
 mkdir -p "${PREFIX}/share/bash-completion/completions"
 mkdir -p "${PREFIX}/share/zsh/site-functions"
