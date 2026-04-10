@@ -103,11 +103,6 @@ Ignore rules only affect:
 | `cmakefmt config convert <PATH>...` | Convert legacy cmake-format config files. |
 | `cmakefmt config init` | Same as `cmakefmt init`. |
 
-> **Deprecated flags:** The following flags still work but print a deprecation
-> warning: `--dump-config`, `--dump-schema`, `--check-config`, `--show-config`,
-> `--show-config-path`, `--explain-config`, `--convert-legacy-config`, `--lsp`,
-> `--generate-completion`. Use the subcommands above instead.
-
 ## Other Flags
 
 | Flag | Meaning |

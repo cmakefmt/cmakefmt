@@ -42,19 +42,15 @@ Direct file arguments are always processed, even if ignore files would skip
 them during recursive discovery. Ignore rules only affect files discovered
 from directories, --files-from, or Git-aware selection modes.
 
-cmakefmt can print a commented starter configuration for you as a customization
-starting point with --dump-config. By default this emits YAML; pass
---dump-config toml for TOML output.
+Use `cmakefmt init` to generate a starter .cmakefmt.yaml, or
+`cmakefmt config dump` to print the full default template.
 
-Legacy cmake-format JSON, YAML, and Python config files can be converted with
---convert-legacy-config. By default this emits YAML; use
---convert-legacy-config-format toml to print TOML instead. YAML is the
-recommended user config format for larger custom-command specs.
+Legacy cmake-format config files can be converted with
+`cmakefmt config convert <path>`.
 
-Use --show-config-path to inspect which config file was selected, --show-config
-to inspect the effective config after CLI overrides, and --explain-config for
-a fuller human-readable explanation of config resolution for a target or the
-current working directory.";
+Use `cmakefmt config path` to inspect which config file was selected,
+`cmakefmt config show` for the effective config, and `cmakefmt config explain`
+for a human-readable explanation of config resolution.";
 
 fn cli_styles() -> clap::builder::Styles {
     use clap::builder::styling::{AnsiColor, Effects, Style};
