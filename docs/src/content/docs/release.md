@@ -56,8 +56,8 @@ Each tagged release is expected to ship:
 You can preview the packaging helper outputs from a local build:
 
 ```bash
-cmakefmt --generate-completion bash > cmakefmt.bash
-cmakefmt --generate-completion zsh > _cmakefmt
+cmakefmt completions bash > cmakefmt.bash
+cmakefmt completions zsh > _cmakefmt
 cmakefmt --generate-man-page > cmakefmt.1
 ```
 

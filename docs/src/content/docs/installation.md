@@ -90,9 +90,9 @@ The Zsh file intentionally uses the conventional completion-function name
 You can also generate the completion files yourself from any installed binary:
 
 ```bash
-cmakefmt --generate-completion bash > cmakefmt.bash
-cmakefmt --generate-completion zsh > _cmakefmt
-cmakefmt --generate-completion fish > cmakefmt.fish
+cmakefmt completions bash > cmakefmt.bash
+cmakefmt completions zsh > _cmakefmt
+cmakefmt completions fish > cmakefmt.fish
 ```
 
 ### Bash
@@ -100,13 +100,13 @@ cmakefmt --generate-completion fish > cmakefmt.fish
 Source the file from your `.bashrc` or `.bash_profile`:
 
 ```bash
-cmakefmt --generate-completion bash > ~/.local/share/bash-completion/completions/cmakefmt
+cmakefmt completions bash > ~/.local/share/bash-completion/completions/cmakefmt
 ```
 
 Or for a system-wide install (requires write access):
 
 ```bash
-cmakefmt --generate-completion bash | sudo tee /etc/bash_completion.d/cmakefmt > /dev/null
+cmakefmt completions bash | sudo tee /etc/bash_completion.d/cmakefmt > /dev/null
 ```
 
 ### Zsh
@@ -114,7 +114,7 @@ cmakefmt --generate-completion bash | sudo tee /etc/bash_completion.d/cmakefmt >
 Place the file somewhere on your `fpath` and reload completions:
 
 ```bash
-cmakefmt --generate-completion zsh > ~/.zfunc/_cmakefmt
+cmakefmt completions zsh > ~/.zfunc/_cmakefmt
 ```
 
 Then add the following to your `.zshrc` if `~/.zfunc` is not already on `fpath`:
@@ -129,7 +129,7 @@ autoload -Uz compinit && compinit
 Fish looks for completions in a fixed directory — just drop the file there:
 
 ```bash
-cmakefmt --generate-completion fish > ~/.config/fish/completions/cmakefmt.fish
+cmakefmt completions fish > ~/.config/fish/completions/cmakefmt.fish
 ```
 
 Fish picks up the new file automatically without a shell restart.
@@ -139,12 +139,12 @@ Fish picks up the new file automatically without a shell restart.
 Dump a starter config into your repo root:
 
 ```bash
-cmakefmt --dump-config > .cmakefmt.yaml
+cmakefmt config dump > .cmakefmt.yaml
 ```
 
 Why YAML by default? For larger configs, YAML requires less punctuation and is
 more readable with nested custom-command specs. TOML is still available via
-`--dump-config toml` if you prefer it.
+`config dump --format toml` if you prefer it.
 
 Do a dry run — check your whole project without rewriting a single file:
 
@@ -218,7 +218,7 @@ This is also the right pattern for ad-hoc scripts and custom editor commands.
 
 If your project uses many custom CMake functions or macros:
 
-- start from `--dump-config`
+- start from `config dump`
 - keep the file as `.cmakefmt.yaml`
 - define command syntax under `commands:`
 - use `per_command_overrides:` only for layout and style tweaks
@@ -226,9 +226,9 @@ If your project uses many custom CMake functions or macros:
 If you are debugging config discovery:
 
 ```bash
-cmakefmt --show-config-path src/CMakeLists.txt
-cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --explain-config
+cmakefmt config path src/CMakeLists.txt
+cmakefmt config show src/CMakeLists.txt
+cmakefmt config explain
 ```
 
 ## Upgrade And Uninstall
@@ -280,8 +280,8 @@ Make sure Cargo's install bin directory is on your `PATH`.
 ### The formatter is using the wrong config
 
 ```bash
-cmakefmt --show-config-path path/to/CMakeLists.txt
-cmakefmt --explain-config
+cmakefmt config path path/to/CMakeLists.txt
+cmakefmt config explain
 ```
 
 ### A hook or script only sees stdin and ignores my project config
@@ -291,7 +291,7 @@ Pass `--stdin-path` with the buffer's real project-relative path.
 ### I want TOML instead of YAML
 
 ```bash
-cmakefmt --dump-config toml > .cmakefmt.toml
+cmakefmt config dump --format toml > .cmakefmt.toml
 ```
 
 YAML is the recommended default because it is more readable for larger configurations with nested custom command specs.

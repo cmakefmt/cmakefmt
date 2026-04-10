@@ -34,9 +34,9 @@ Find out exactly what config was selected and what the formatter is actually
 running with:
 
 ```bash
-cmakefmt --show-config-path path/to/CMakeLists.txt
-cmakefmt --show-config path/to/CMakeLists.txt
-cmakefmt --explain-config
+cmakefmt config path path/to/CMakeLists.txt
+cmakefmt config show path/to/CMakeLists.txt
+cmakefmt config explain
 ```
 
 These commands tell you:
@@ -60,7 +60,7 @@ Common causes:
 If you are migrating from legacy `cmake-format`:
 
 ```bash
-cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.toml
+cmakefmt config convert .cmake-format.py > .cmakefmt.toml
 ```
 
 Then adapt the result to `.cmakefmt.yaml` if you want YAML as your final

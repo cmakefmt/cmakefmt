@@ -13,7 +13,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 cmakefmt is a from-scratch rewrite in Rust. It is faster (10–100x on large
 codebases), actively maintained, and supports the same config format with
-full conversion via `--convert-config`. It also includes an LSP server,
+full conversion via `cmakefmt config convert`. It also includes an LSP server,
 JSON Schema for config autocomplete, and a browser playground.
 
 ## How is cmakefmt different from gersemi?
@@ -25,7 +25,7 @@ extension, pre-commit hook).
 
 ## Can I use my existing cmake-format config?
 
-Yes. Run `cmakefmt --convert-config .cmake-format.yaml` to convert it.
+Yes. Run `cmakefmt config convert .cmake-format.yaml` to convert it.
 Most options are carried forward; lint and encode options are intentionally
 excluded because cmakefmt is a formatter, not a linter.
 
@@ -59,7 +59,7 @@ the official [GitHub Action](https://github.com/marketplace/actions/cmakefmt)
 
 ## Is there an LSP server?
 
-Yes. Run `cmakefmt --lsp` to start a stdio LSP server that provides
+Yes. Run `cmakefmt lsp` to start a stdio LSP server that provides
 format-on-save and range formatting in any editor with LSP support. See the
 [editor integration](/guide/editors/) page for setup instructions.
 

@@ -415,7 +415,7 @@ The fastest path through a legacy config migration.
 - Recursive discovery honors `.cmakefmtignore` and, by default, `.gitignore`.
 - `--ignore-path` adds more ignore files for discovered directories only.
 - `--files-from`, `--staged`, and `--changed` still pass through normal discovery filters when they produce directories or paths that need filtering.
-- `--show-config-path`, `--show-config`, and `--explain-config` resolve a single target context and make the selected config path(s) visible.
+- `cmakefmt config path`, `cmakefmt config show`, and `cmakefmt config explain` resolve a single target context and make the selected config path(s) visible.
 - `--no-config` disables config discovery entirely.
 
 ## Diagnostic Quality

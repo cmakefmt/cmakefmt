@@ -56,13 +56,13 @@ style:
 Generate the full starter template with:
 
 ```bash
-cmakefmt --dump-config > .cmakefmt.yaml
+cmakefmt config dump > .cmakefmt.yaml
 ```
 
 If you prefer TOML:
 
 ```bash
-cmakefmt --dump-config toml > .cmakefmt.toml
+cmakefmt config dump --format toml > .cmakefmt.toml
 ```
 
 ## Table Of Contents
