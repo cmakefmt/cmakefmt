@@ -115,7 +115,7 @@ jobs:
           BIN="target/${{ matrix.target }}/release/cmakefmt"
           "${BIN}" --version
           "${BIN}" --help >/dev/null
-          "${BIN}" --generate-completion bash >/dev/null
+          "${BIN}" completions bash >/dev/null
           "${BIN}" --generate-man-page >/dev/null
           printf '%s\n' 'project(foo  )' > /tmp/CMakeLists.txt
           "${BIN}" /tmp/CMakeLists.txt >/tmp/CMakeLists.formatted
@@ -128,7 +128,7 @@ jobs:
           $Bin = "target/${{ matrix.target }}/release/cmakefmt.exe"
           & $Bin --version
           & $Bin --help | Out-Null
-          & $Bin --generate-completion bash | Out-Null
+          & $Bin completions bash | Out-Null
           & $Bin --generate-man-page | Out-Null
           Set-Content -Path CMakeLists.txt -Value "project(foo  )`n"
           & $Bin CMakeLists.txt | Out-File -Encoding utf8 CMakeLists.formatted
@@ -161,9 +161,9 @@ jobs:
           cp README.md "${STAGE}/"
           cp LICENSE "${STAGE}/"
           cp -r LICENSES "${STAGE}/"
-          "target/${{ matrix.target }}/release/cmakefmt" --generate-completion bash > "${STAGE}/cmakefmt.bash"
-          "target/${{ matrix.target }}/release/cmakefmt" --generate-completion zsh > "${STAGE}/_cmakefmt"
-          "target/${{ matrix.target }}/release/cmakefmt" --generate-completion fish > "${STAGE}/cmakefmt.fish"
+          "target/${{ matrix.target }}/release/cmakefmt" completions bash > "${STAGE}/cmakefmt.bash"
+          "target/${{ matrix.target }}/release/cmakefmt" completions zsh > "${STAGE}/_cmakefmt"
+          "target/${{ matrix.target }}/release/cmakefmt" completions fish > "${STAGE}/cmakefmt.fish"
           "target/${{ matrix.target }}/release/cmakefmt" --generate-man-page > "${STAGE}/cmakefmt.1"
           tar -czf "${STAGE}.tar.gz" "${STAGE}"
 
@@ -178,9 +178,9 @@ jobs:
           Copy-Item "README.md" "$Stage/README.md"
           Copy-Item "LICENSE" "$Stage/LICENSE"
           Copy-Item "LICENSES" "$Stage/LICENSES" -Recurse
-          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-completion bash | Out-File -Encoding utf8 "$Stage/cmakefmt.bash"
-          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-completion zsh | Out-File -Encoding utf8 "$Stage/_cmakefmt"
-          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-completion fish | Out-File -Encoding utf8 "$Stage/cmakefmt.fish"
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" completions bash | Out-File -Encoding utf8 "$Stage/cmakefmt.bash"
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" completions zsh | Out-File -Encoding utf8 "$Stage/_cmakefmt"
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" completions fish | Out-File -Encoding utf8 "$Stage/cmakefmt.fish"
           & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-man-page | Out-File -Encoding utf8 "$Stage/cmakefmt.1"
           Compress-Archive -Path $Stage -DestinationPath "$Stage.zip"
 

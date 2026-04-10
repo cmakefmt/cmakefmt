@@ -74,9 +74,9 @@ jobs:
       - name: Check JSON schema is up to date
         if: matrix.os == 'ubuntu-latest'
         run: |
-          cargo run --quiet -- --dump-schema > /tmp/schema.json
+          cargo run --quiet -- config schema > /tmp/schema.json
           diff docs/public/schemas/latest/schema.json /tmp/schema.json || \
-            (echo "Schema is out of date — run 'cmakefmt --dump-schema' and commit the result" && exit 1)
+            (echo "Schema is out of date — run 'cmakefmt config schema' and commit the result" && exit 1)
 
   sarif:
     name: sarif
