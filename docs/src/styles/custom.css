@@ -78,25 +78,25 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 [data-theme="dark"] {
   --sl-color-white: hsl(0, 0%, 100%);
-  --sl-color-gray-1: hsl(240, 5%, 91%);           /* zinc-200 */
-  --sl-color-gray-2: hsl(240, 5%, 65%);           /* zinc-400 */
-  --sl-color-gray-3: hsl(240, 4%, 46%);           /* zinc-500 */
-  --sl-color-gray-4: hsl(240, 5%, 34%);           /* zinc-600 */
-  --sl-color-gray-5: hsl(240, 4%, 16%);           /* zinc-800 */
-  --sl-color-gray-6: hsl(240, 6%, 10%);           /* zinc-900 */
-  --sl-color-black: hsl(240, 6%, 10%);            /* zinc-900 */
+  --sl-color-gray-1: hsl(220, 8%, 88%);
+  --sl-color-gray-2: hsl(220, 6%, 62%);
+  --sl-color-gray-3: hsl(220, 5%, 44%);
+  --sl-color-gray-4: hsl(220, 6%, 30%);
+  --sl-color-gray-5: hsl(222, 12%, 10%);
+  --sl-color-gray-6: hsl(225, 20%, 3%);
+  --sl-color-black: hsl(225, 20%, 3%);
 
-  --sl-color-accent-low: hsl(204, 80%, 16%);      /* sky-950ish */
+  --sl-color-accent-low: hsl(204, 80%, 14%);
   --sl-color-accent: hsl(198, 93%, 60%);           /* sky-400 */
   --sl-color-accent-high: hsl(204, 94%, 94%);      /* sky-100 */
-  --sl-color-text-accent: hsl(199, 89%, 48%);      /* sky-500 */
+  --sl-color-text-accent: hsl(199, 95%, 55%);      /* brighter sky */
 
-  --sl-color-bg: hsl(240, 6%, 10%);               /* zinc-900 */
-  --sl-color-bg-sidebar: hsl(240, 6%, 10%);
-  --sl-color-bg-nav: hsl(240, 6%, 10%);
-  --sl-color-bg-inline-code: hsl(240, 4%, 16%);   /* zinc-800 */
-  --sl-color-hairline-light: hsl(240, 4%, 16%);
-  --sl-color-hairline: hsl(240, 4%, 16%);
+  --sl-color-bg: hsl(225, 20%, 3%);
+  --sl-color-bg-sidebar: hsl(225, 20%, 3%);
+  --sl-color-bg-nav: hsl(225, 20%, 3%);
+  --sl-color-bg-inline-code: hsl(222, 12%, 12%);
+  --sl-color-hairline-light: hsl(222, 12%, 12%);
+  --sl-color-hairline: hsl(222, 12%, 12%);
 
   --sw-color-primary: hsl(199, 89%, 48%);
 }
@@ -285,15 +285,22 @@ body {
 .hero::after {
   content: '';
   position: absolute;
-  inset: -4rem -6rem;
+  inset: -6rem -8rem;
   background:
-    radial-gradient(circle 220px at 20% 40%, color-mix(in srgb, var(--sl-color-accent) 35%, transparent), transparent 70%),
-    radial-gradient(circle 180px at 75% 30%, color-mix(in srgb, var(--sl-color-accent) 25%, transparent), transparent 70%),
-    radial-gradient(circle 200px at 50% 70%, color-mix(in srgb, var(--sl-color-accent-low) 80%, transparent), transparent 70%);
-  filter: blur(30px);
+    radial-gradient(circle 280px at 15% 35%, hsl(200, 90%, 50%, 0.25), transparent 70%),
+    radial-gradient(circle 220px at 80% 25%, hsl(210, 100%, 60%, 0.18), transparent 70%),
+    radial-gradient(circle 250px at 45% 75%, hsl(195, 85%, 45%, 0.15), transparent 70%);
+  filter: blur(25px);
   z-index: -1;
   pointer-events: none;
   animation: orbDrift 12s ease-in-out infinite alternate;
+}
+
+[data-theme="dark"] .hero::after {
+  background:
+    radial-gradient(circle 300px at 15% 35%, hsl(200, 90%, 50%, 0.35), transparent 70%),
+    radial-gradient(circle 240px at 80% 25%, hsl(210, 100%, 55%, 0.25), transparent 70%),
+    radial-gradient(circle 260px at 45% 75%, hsl(195, 85%, 40%, 0.2), transparent 70%);
 }
 
 @keyframes orbDrift {
@@ -323,8 +330,13 @@ body {
   font-family: var(--sl-font-heading);
   font-weight: 800;
   letter-spacing: -0.04em;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  background: linear-gradient(135deg, var(--sl-color-white) 20%, var(--sl-color-accent) 85%);
+  font-size: clamp(2.5rem, 7vw, 4rem);
+  background: linear-gradient(
+    135deg,
+    var(--sl-color-white) 0%,
+    hsl(199, 95%, 65%) 50%,
+    hsl(210, 100%, 55%) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

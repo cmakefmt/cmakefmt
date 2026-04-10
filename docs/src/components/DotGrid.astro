@@ -7,14 +7,18 @@
 ---
 
 <script>
-  // Create the canvas and inject it into the .hero element
-  const hero = document.querySelector('.hero');
-  if (hero) {
+  // Create the canvas and inject it as a full-page background on the splash page
+  const container = document.querySelector('.hero')?.closest('main') || document.querySelector('.hero');
+  if (container) {
+    // Ensure the container is positioned for the canvas to anchor against
+    if (getComputedStyle(container).position === 'static') {
+      (container as HTMLElement).style.position = 'relative';
+    }
     const canvas = document.createElement('canvas');
     canvas.id = 'dot-grid-canvas';
     canvas.setAttribute('aria-hidden', 'true');
     canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none;';
-    hero.prepend(canvas);
+    container.prepend(canvas);
 
     const ctx = canvas.getContext('2d')!;
     const gap = 24;
@@ -41,26 +45,27 @@
       const h = canvas.clientHeight;
       ctx.clearRect(0, 0, w, h);
 
-      // Centre of the wave pulse
+      // Centre of the wave pulse — hero area
       const cx = w / 2;
-      const cy = h * 0.4;
+      const cy = h * 0.15;
 
-      // Wave ring expands outward from centre
-      const waveRadius = ((time * waveSpeed) % 1) * Math.max(w, h) * 1.2;
+      // Wave ring expands outward from hero across the full page
+      const waveRadius = ((time * waveSpeed) % 1) * Math.max(w, h) * 1.6;
 
       const isDark = document.documentElement.dataset.theme === 'dark';
-      const dotColor = isDark ? 'rgba(255,255,255,' : 'rgba(120,120,130,';
+      const dotColor = isDark ? 'rgba(200,220,255,' : 'rgba(120,120,130,';
 
-      // Fade mask: dots fade out toward edges
-      const maxDist = Math.hypot(w / 2, h / 2);
+      // Fade mask: dots fade vertically (strongest near hero, fading downward)
+      const maxDist = Math.max(w, h);
 
       for (let x = gap / 2; x < w; x += gap) {
         for (let y = gap / 2; y < h; y += gap) {
           const dist = Math.hypot(x - cx, y - cy);
 
-          // Radial fade — dots near edges are dimmer
-          const fadeFactor = 1 - Math.min(dist / maxDist, 1);
-          const fade = fadeFactor * fadeFactor; // quadratic falloff
+          // Vertical fade — strongest near hero, fading downward and at edges
+          const verticalFade = 1 - Math.min(y / (h * 0.8), 1);
+          const edgeFade = 1 - Math.pow(Math.abs(x - w / 2) / (w / 2), 3);
+          const fade = verticalFade * verticalFade * edgeFade;
 
           // Wave: dots near the wave ring get bigger — double smoothstep
           // for a gentle ramp up and down with no harsh edges
