@@ -260,7 +260,8 @@ jobs:
         shell: bash
         run: |
           cargo install cargo-cyclonedx --quiet
-          cargo cyclonedx --format json --output-cdx > dist/cmakefmt.cdx.json
+          cargo cyclonedx --format json
+          cp cmakefmt-rust.cdx.json dist/cmakefmt.cdx.json
 
       - name: Generate Homebrew formula
         shell: bash

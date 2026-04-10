@@ -5,3 +5,4 @@
 .cmakefmt-cache/
 *.pending-snap
 .claude/
+*.cdx.json
