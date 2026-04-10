@@ -16,6 +16,37 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Removed
+
+- `--lsp` flag — use `cmakefmt lsp` instead
+- `--generate-completion` flag — use `cmakefmt completions <SHELL>` instead
+- `--dump-config` flag — use `cmakefmt config dump` instead
+- `--dump-schema` flag — use `cmakefmt config schema` instead
+- `--check-config` flag — use `cmakefmt config check` instead
+- `--show-config` flag — use `cmakefmt config show` instead
+- `--show-config-path` / `--find-config-path` flag — use `cmakefmt config path`
+  instead
+- `--explain-config` flag — use `cmakefmt config explain` instead
+- `--convert-legacy-config` / `--convert-legacy-config-format` flags — use
+  `cmakefmt config convert` instead
+- `cmakefmt init` (top-level subcommand) — use `cmakefmt config init` instead
+
+### Added
+
+- `cmakefmt config show`, `cmakefmt config path`, and `cmakefmt config explain`
+  now accept an optional file path argument directly (e.g.
+  `cmakefmt config show src/CMakeLists.txt`)
+- File-not-found validation for `config show`, `config path`, and
+  `config explain` — clear error message when the target file does not exist
+
+### Changed
+
+- `cmakefmt config dump` and `cmakefmt config show` format is now specified
+  via `--format` flag (e.g. `cmakefmt config dump --format toml`) instead of
+  a positional argument
+- 78 `conflicts_with` annotations removed from the CLI definition — subcommand
+  structure now handles mutual exclusivity
+
 ## 0.5.0 — 2026-04-10
 
 ## 0.5.0 — 2026-04-10
