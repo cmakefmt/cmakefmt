@@ -23,25 +23,22 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 import BenchmarkComparisonChart from '../../components/BenchmarkComparisonChart.astro';
 import DotGrid from '../../components/DotGrid.astro';
 import HeroReveal from '../../components/HeroReveal.astro';
+import BeforeAfterAnim from '../../components/BeforeAfterAnim.astro';
+import SpeedCounter from '../../components/SpeedCounter.astro';
+import FeatureShowcase from '../../components/FeatureShowcase.astro';
+import InstallCmd from '../../components/InstallCmd.astro';
+import ScrollReveal from '../../components/ScrollReveal.astro';
 
 <DotGrid />
 <HeroReveal />
+<ScrollReveal />
 
 ## Quick Start
 
-**macOS** — no Rust toolchain needed:
+<InstallCmd label="macOS" cmd="brew install cmakefmt/cmakefmt/cmakefmt" />
+<InstallCmd label="Cargo" cmd="cargo install cmakefmt-rust" />
 
-```bash
-brew install cmakefmt/cmakefmt/cmakefmt
-```
-
-**Any platform** — if you already have Rust:
-
-```bash
-cargo install cmakefmt-rust
-```
-
-**Linux, macOS, and Windows** — download the pre-built binary from [GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest).
+Or download a pre-built binary from [GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest).
 
 Then:
 
@@ -55,60 +52,19 @@ cmakefmt --staged --check                 # pre-commit: format only staged files
 
 ## Before and After
 
-<div class="before-after">
-<div class="before-after-col">
-
-**Before**
-
-```cmake
-CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
-Project(myproject LANGUAGES CXX)
-
-set(SOURCES src/main.cpp
-src/utils.cpp
-  src/parser.cpp)
-
-target_link_libraries(mylib PUBLIC
-Boost::filesystem Boost::system    fmt::fmt
-  PRIVATE
-    spdlog::spdlog)
-
-IF(WIN32)
-MESSAGE(STATUS "building on Windows")
-ENDIF()
-```
-
-</div>
-<div class="before-after-col">
-
-**After**
-
-```cmake
-cmake_minimum_required(VERSION 3.20)
-project(myproject LANGUAGES CXX)
-
-set(SOURCES src/main.cpp src/utils.cpp src/parser.cpp)
-
-target_link_libraries(
-  mylib
-  PUBLIC Boost::filesystem Boost::system fmt::fmt
-  PRIVATE spdlog::spdlog)
-
-if(WIN32)
-  message(STATUS "building on Windows")
-endif()
-```
-
-</div>
-</div>
+<BeforeAfterAnim />
 
 ## Performance
 
-**`25.33×` geometric-mean speedup** over `cmake-format` across 15 real-world fixtures. On a 612-file repository ([oomph-lib](https://github.com/oomph-lib/oomph-lib)): `~97×` faster sequentially, `~240×` faster with `--parallel 8`.
+<SpeedCounter target={25.33} label="geometric-mean speedup over cmake-format across 15 real-world fixtures. On a 612-file repository: ~97× faster sequentially, ~240× faster with --parallel 8." />
 
 <BenchmarkComparisonChart />
 
 See [Performance](/performance/) for the full methodology and benchmark environment.
+
+## Features
+
+<FeatureShowcase />
 
 ## Where to Go Next
 

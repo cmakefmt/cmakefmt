@@ -1,0 +1,82 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Horizontal feature highlights with icons.
+---
+
+<div class="feature-showcase">
+  <div class="feature-item">
+    <span class="feature-icon">⚡</span>
+    <span class="feature-title">LSP Server</span>
+    <span class="feature-desc">Format-on-save in any editor via <code>cmakefmt lsp</code></span>
+  </div>
+  <div class="feature-item">
+    <span class="feature-icon">🔧</span>
+    <span class="feature-title">Pre-commit</span>
+    <span class="feature-desc">One-line hook for CI and local workflows</span>
+  </div>
+  <div class="feature-item">
+    <span class="feature-icon">🔄</span>
+    <span class="feature-title">Legacy Migration</span>
+    <span class="feature-desc">Convert cmake-format configs in one command</span>
+  </div>
+  <div class="feature-item">
+    <span class="feature-icon">✨</span>
+    <span class="feature-title">Config Autocomplete</span>
+    <span class="feature-desc">JSON Schema registered with SchemaStore</span>
+  </div>
+</div>
+
+<style>
+  .feature-showcase {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  .feature-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 25%, transparent);
+    background: color-mix(in srgb, var(--sl-color-gray-6) 50%, transparent);
+    backdrop-filter: blur(8px);
+    transition: border-color 0.3s ease, transform 0.3s ease;
+  }
+
+  .feature-item:hover {
+    border-color: color-mix(in srgb, var(--sl-color-accent) 40%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .feature-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .feature-title {
+    font-family: var(--sl-font-heading);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--sl-color-white);
+  }
+
+  .feature-desc {
+    font-size: 0.8125rem;
+    color: var(--sl-color-gray-2);
+    line-height: 1.5;
+  }
+
+  .feature-desc code {
+    font-size: 0.75rem;
+    background: color-mix(in srgb, var(--sl-color-accent-low) 40%, transparent);
+    color: var(--sl-color-text-accent);
+    padding: 0.1em 0.3em;
+    border-radius: 0.25em;
+  }
+</style>

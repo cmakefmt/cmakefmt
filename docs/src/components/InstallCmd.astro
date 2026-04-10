@@ -1,0 +1,120 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Install command with one-click copy button.
+interface Props {
+  cmd: string;
+  label?: string;
+}
+
+const { cmd, label } = Astro.props;
+---
+
+<div class="install-cmd">
+  {label && <span class="install-cmd-label">{label}</span>}
+  <div class="install-cmd-box">
+    <code class="install-cmd-text"><span class="install-cmd-prompt">❯ </span>{cmd}</code>
+    <button class="install-cmd-copy" aria-label="Copy to clipboard" data-cmd={cmd}>
+      <svg class="install-cmd-icon install-cmd-icon-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <svg class="install-cmd-icon install-cmd-icon-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  .install-cmd {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0.75rem 0;
+  }
+
+  .install-cmd-label {
+    font-family: var(--sl-font-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--sl-color-text-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .install-cmd-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 30%, transparent);
+    background: color-mix(in srgb, var(--sl-color-gray-6) 70%, transparent);
+    backdrop-filter: blur(8px);
+    font-family: var(--sl-font-mono);
+    font-size: 0.8125rem;
+  }
+
+  .install-cmd-prompt {
+    color: var(--sl-color-gray-3);
+    user-select: none;
+  }
+
+  .install-cmd-text {
+    flex: 1;
+    color: var(--sl-color-white);
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    box-shadow: none;
+  }
+
+  .install-cmd-copy {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+
+  .install-cmd-copy:hover {
+    color: var(--sl-color-text-accent);
+    background: color-mix(in srgb, var(--sl-color-accent) 10%, transparent);
+  }
+
+  .install-cmd-icon-check {
+    color: hsl(142, 71%, 45%);
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.install-cmd-copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const cmd = (btn as HTMLElement).dataset.cmd || '';
+      await navigator.clipboard.writeText(cmd);
+
+      const copyIcon = btn.querySelector('.install-cmd-icon-copy') as HTMLElement;
+      const checkIcon = btn.querySelector('.install-cmd-icon-check') as HTMLElement;
+
+      copyIcon.style.display = 'none';
+      checkIcon.style.display = 'block';
+
+      setTimeout(() => {
+        copyIcon.style.display = 'block';
+        checkIcon.style.display = 'none';
+      }, 2000);
+    });
+  });
+</script>

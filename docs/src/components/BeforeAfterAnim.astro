@@ -1,0 +1,147 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Animated before/after code transformation — shows the formatter in action.
+---
+
+<div class="ba-anim" id="ba-anim">
+  <div class="ba-anim-header">
+    <span class="ba-anim-label" id="ba-anim-label">Before</span>
+    <button class="ba-anim-btn" id="ba-anim-replay">Replay</button>
+  </div>
+  <pre class="ba-anim-code"><code id="ba-anim-code"></code></pre>
+</div>
+
+<style>
+  .ba-anim {
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 30%, transparent);
+    background: color-mix(in srgb, var(--sl-color-gray-6) 80%, transparent);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+
+  .ba-anim-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 20%, transparent);
+  }
+
+  .ba-anim-label {
+    font-family: var(--sl-font-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sl-color-gray-3);
+    transition: color 0.3s ease;
+  }
+
+  .ba-anim-label.formatted {
+    color: var(--sl-color-text-accent);
+  }
+
+  .ba-anim-btn {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--sl-color-gray-3);
+    background: none;
+    border: 1px solid var(--sl-color-gray-4);
+    border-radius: 9999px;
+    padding: 0.2rem 0.625rem;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .ba-anim-btn:hover {
+    color: var(--sl-color-text-accent);
+    border-color: var(--sl-color-accent);
+  }
+
+  .ba-anim-code {
+    font-family: var(--sl-font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    padding: 1rem 1.25rem;
+    margin: 0;
+    white-space: pre;
+    overflow-x: auto;
+    min-height: 14em;
+    transition: opacity 0.3s ease;
+  }
+</style>
+
+<script>
+  const before = `CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
+Project(myproject LANGUAGES CXX)
+
+set(SOURCES src/main.cpp
+src/utils.cpp
+  src/parser.cpp)
+
+target_link_libraries(mylib PUBLIC
+Boost::filesystem Boost::system    fmt::fmt
+  PRIVATE
+    spdlog::spdlog)
+
+IF(WIN32)
+MESSAGE(STATUS "building on Windows")
+ENDIF()`;
+
+  const after = `cmake_minimum_required(VERSION 3.20)
+project(myproject LANGUAGES CXX)
+
+set(SOURCES src/main.cpp src/utils.cpp src/parser.cpp)
+
+target_link_libraries(
+  mylib
+  PUBLIC Boost::filesystem Boost::system fmt::fmt
+  PRIVATE spdlog::spdlog)
+
+if(WIN32)
+  message(STATUS "building on Windows")
+endif()`;
+
+  const codeEl = document.getElementById('ba-anim-code');
+  const labelEl = document.getElementById('ba-anim-label');
+  const replayBtn = document.getElementById('ba-anim-replay');
+  const container = document.getElementById('ba-anim');
+
+  function run() {
+    if (!codeEl || !labelEl) return;
+    codeEl.textContent = before;
+    labelEl.textContent = 'Before';
+    labelEl.classList.remove('formatted');
+
+    // Wait, then transition
+    setTimeout(() => {
+      codeEl.style.opacity = '0.3';
+      labelEl.textContent = 'Formatting…';
+
+      setTimeout(() => {
+        codeEl.textContent = after;
+        codeEl.style.opacity = '1';
+        labelEl.textContent = 'After';
+        labelEl.classList.add('formatted');
+      }, 600);
+    }, 2500);
+  }
+
+  replayBtn?.addEventListener('click', run);
+
+  // Trigger on scroll into view
+  if (container) {
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        run();
+        obs.disconnect();
+      }
+    }, { threshold: 0.3 });
+    obs.observe(container);
+  }
+</script>

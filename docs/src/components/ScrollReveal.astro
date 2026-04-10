@@ -1,0 +1,46 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Adds scroll-triggered fade-in to sections on the splash page.
+---
+
+<script>
+  // Target headings and major content blocks below the hero
+  const selectors = [
+    '.sl-markdown-content > h2',
+    '.sl-markdown-content > .ba-anim',
+    '.sl-markdown-content > .speed-counter',
+    '.sl-markdown-content > .feature-showcase',
+    '.sl-markdown-content > .card-grid',
+    '.sl-markdown-content > .reading-path-heading',
+    '.sl-markdown-content > .expressive-code',
+    '.sl-markdown-content > .install-cmd',
+  ];
+
+  const targets = document.querySelectorAll(selectors.join(','));
+
+  targets.forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    htmlEl.style.opacity = '0';
+    htmlEl.style.transform = 'translateY(16px)';
+    htmlEl.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+  });
+
+  const obs = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const el = entry.target as HTMLElement;
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+          obs.unobserve(el);
+        }
+      });
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+  );
+
+  targets.forEach((el) => obs.observe(el));
+</script>

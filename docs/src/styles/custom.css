@@ -287,9 +287,9 @@ body {
   position: absolute;
   inset: -6rem -8rem;
   background:
-    radial-gradient(circle 280px at 15% 35%, hsl(200, 90%, 50%, 0.25), transparent 70%),
-    radial-gradient(circle 220px at 80% 25%, hsl(210, 100%, 60%, 0.18), transparent 70%),
-    radial-gradient(circle 250px at 45% 75%, hsl(195, 85%, 45%, 0.15), transparent 70%);
+    radial-gradient(circle 280px at 15% 35%, hsl(200, 80%, 60%, 0.35), transparent 70%),
+    radial-gradient(circle 220px at 80% 25%, hsl(210, 90%, 65%, 0.28), transparent 70%),
+    radial-gradient(circle 250px at 45% 75%, hsl(195, 75%, 55%, 0.22), transparent 70%);
   filter: blur(25px);
   z-index: -1;
   pointer-events: none;

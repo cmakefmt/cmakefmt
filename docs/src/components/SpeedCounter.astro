@@ -1,0 +1,78 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Animated counter that ticks up to the speedup factor on scroll.
+interface Props {
+  target: number;
+  suffix?: string;
+  label: string;
+}
+
+const { target, suffix = '×', label } = Astro.props;
+---
+
+<div class="speed-counter" id="speed-counter">
+  <span class="speed-counter-number" data-target={target} data-suffix={suffix}>
+    1{suffix}
+  </span>
+  <span class="speed-counter-label">{label}</span>
+</div>
+
+<style>
+  .speed-counter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem 1.5rem;
+    padding: 1.5rem 0;
+  }
+
+  .speed-counter-number {
+    font-family: var(--sl-font-heading);
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    font-weight: 800;
+    color: var(--sl-color-text-accent);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+
+  .speed-counter-label {
+    font-size: 0.9375rem;
+    color: var(--sl-color-gray-2);
+    line-height: 1.5;
+    max-width: 36rem;
+  }
+</style>
+
+<script>
+  const el = document.getElementById('speed-counter');
+  if (el) {
+    const numEl = el.querySelector('.speed-counter-number') as HTMLElement;
+    const target = parseFloat(numEl.dataset.target || '1');
+    const suffix = numEl.dataset.suffix || '×';
+
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        obs.disconnect();
+        const duration = 1200;
+        const start = performance.now();
+
+        function tick(now: number) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease-out cubic
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = 1 + (target - 1) * eased;
+          numEl.textContent = current.toFixed(1) + suffix;
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: 0.3 });
+    obs.observe(el);
+  }
+</script>
