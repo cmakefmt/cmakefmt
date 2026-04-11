@@ -14,9 +14,9 @@ class Cmakefmt < Formula
   def install
     system "cargo", "install", *std_cargo_args(path: ".")
 
-    (buildpath/"cmakefmt.bash").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "bash")
-    (buildpath/"_cmakefmt").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "zsh")
-    (buildpath/"cmakefmt.fish").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-completion", "fish")
+    (buildpath/"cmakefmt.bash").write Utils.safe_popen_read(bin/"cmakefmt", "completions", "bash")
+    (buildpath/"_cmakefmt").write Utils.safe_popen_read(bin/"cmakefmt", "completions", "zsh")
+    (buildpath/"cmakefmt.fish").write Utils.safe_popen_read(bin/"cmakefmt", "completions", "fish")
     (buildpath/"cmakefmt.1").write Utils.safe_popen_read(bin/"cmakefmt", "--generate-man-page")
 
     bash_completion.install buildpath/"cmakefmt.bash"

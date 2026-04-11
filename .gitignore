@@ -6,3 +6,11 @@
 *.pending-snap
 .claude/
 *.cdx.json
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.so
+*.pyd
+*.egg-info/
+/dist/
