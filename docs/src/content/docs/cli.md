@@ -119,8 +119,8 @@ Ignore rules only affect:
 | `--no-config` | Ignore discovered config files and explicit `--config-file` entries. Only built-in defaults plus CLI overrides remain. |
 | `-l`, `--line-width <N>` | Override `format.line_width`. |
 | `--tab-size <N>` | Override `format.tab_size`. |
-| `--command-case <lower\|upper\|unchanged>` | Override `style.command_case`. |
-| `--keyword-case <lower\|upper\|unchanged>` | Override `style.keyword_case`. |
+| `--command-case <lower\|upper\|unchanged>` | Override `format.command_case`. |
+| `--keyword-case <lower\|upper\|unchanged>` | Override `format.keyword_case`. |
 | `--dangle-parens <true\|false>` | Override `format.dangle_parens`. |
 
 ## Exit Codes

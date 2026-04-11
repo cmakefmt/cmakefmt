@@ -47,8 +47,6 @@ YAML is the recommended user-facing format:
 format:
   line_width: 80
   tab_size: 2
-
-style:
   command_case: lower
   keyword_case: upper
 ```
@@ -91,7 +89,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`max_prefix_length`](#max_prefix_length)
   - [`space_before_control_paren`](#space_before_control_paren)
   - [`space_before_definition_paren`](#space_before_definition_paren)
-- [Style Options](#style-options)
+- [Casing Options](#casing-options)
   - [`command_case`](#command_case)
   - [`keyword_case`](#keyword_case)
 - [Markup Options](#markup-options)
@@ -143,8 +141,6 @@ format:
   max_prefix_length: 10
   space_before_control_paren: false
   space_before_definition_paren: false
-
-style:
   command_case: lower
   keyword_case: upper
 
@@ -430,7 +426,7 @@ function (my_helper arg)
 endfunction ()
 ```
 
-## Style Options
+## Casing Options
 
 ### `command_case`
 
@@ -443,7 +439,7 @@ Allowed values:
 - `unchanged`
 
 ```yaml
-style:
+format:
   command_case: lower
 ```
 
@@ -458,7 +454,7 @@ Allowed values:
 - `unchanged`
 
 ```yaml
-style:
+format:
   keyword_case: upper
 ```
 

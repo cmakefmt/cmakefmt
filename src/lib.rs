@@ -65,6 +65,10 @@ pub mod lsp;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
+// Python bindings via PyO3 — only compiled with the `pyo3` feature.
+#[cfg(feature = "pyo3")]
+pub mod python;
+
 // ── Configuration ────────────────────────────────────────────────────────────
 
 pub use config::{
@@ -72,10 +76,12 @@ pub use config::{
     PerCommandConfig,
 };
 
+pub use config::default_config_template;
+
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use config::{
-    convert_legacy_config_files, default_config_template, default_config_template_for,
-    generate_json_schema, render_effective_config, DumpConfigFormat,
+    convert_legacy_config_files, default_config_template_for, generate_json_schema,
+    render_effective_config, DumpConfigFormat,
 };
 
 // ── Errors ───────────────────────────────────────────────────────────────────

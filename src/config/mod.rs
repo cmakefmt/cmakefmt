@@ -9,15 +9,14 @@
 //! (`.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`), and CLI
 //! overrides.
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub mod file;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 mod legacy;
 /// Render a commented starter config template.
-#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+pub use file::default_config_template;
+#[cfg(feature = "cli")]
 pub use file::{
-    default_config_template, default_config_template_for, generate_json_schema,
-    render_effective_config, DumpConfigFormat,
+    default_config_template_for, generate_json_schema, render_effective_config, DumpConfigFormat,
 };
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 pub use legacy::convert_legacy_config_files;

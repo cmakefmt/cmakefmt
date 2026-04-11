@@ -7,7 +7,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+#[cfg(feature = "cli")]
+use serde::Serialize;
 
 use crate::config::{
     CaseStyle, Config, DangleAlign, FractionalTabPolicy, LineEnding, PerCommandConfig,
@@ -18,33 +20,33 @@ use crate::error::{Error, FileParseError, Result};
 /// `.cmakefmt.toml`.
 ///
 /// All fields are optional — only specified values override the defaults.
-#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
-#[schemars(title = "cmakefmt configuration")]
+#[derive(Debug, Clone, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "cli", schemars(title = "cmakefmt configuration"))]
 #[serde(default, deny_unknown_fields)]
 struct FileConfig {
     /// JSON Schema reference (ignored at runtime, used by editors for
     /// autocomplete and validation).
     #[serde(rename = "$schema")]
-    #[schemars(skip)]
+    #[cfg_attr(feature = "cli", schemars(skip))]
     _schema: Option<String>,
     /// Command spec overrides (parsed separately by the spec registry).
-    #[schemars(skip)]
+    #[cfg_attr(feature = "cli", schemars(skip))]
     commands: Option<serde_yaml::Value>,
-    /// Formatting options controlling line width, indentation, and layout.
+    /// Formatting options controlling line width, indentation, casing, and layout.
     format: FormatSection,
-    /// Style options controlling command and keyword casing.
-    style: StyleSection,
     /// Comment markup processing options.
     markup: MarkupSection,
     /// Per-command configuration overrides keyed by lowercase command name.
     #[serde(rename = "per_command_overrides")]
     per_command_overrides: HashMap<String, PerCommandConfig>,
     #[serde(rename = "per_command")]
-    #[schemars(skip)]
+    #[cfg_attr(feature = "cli", schemars(skip))]
     legacy_per_command: HashMap<String, PerCommandConfig>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 struct FormatSection {
@@ -86,19 +88,14 @@ struct FormatSection {
     space_before_control_paren: Option<bool>,
     /// Insert a space before `(` for `function()` and `macro()` definitions.
     space_before_definition_paren: Option<bool>,
-}
-
-#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
-#[serde(default)]
-#[serde(deny_unknown_fields)]
-struct StyleSection {
     /// Output casing for command names: `lower`, `upper`, or `unchanged`.
     command_case: Option<CaseStyle>,
     /// Output casing for recognized keywords and flags: `lower`, `upper`, or `unchanged`.
     keyword_case: Option<CaseStyle>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(default)]
 #[serde(deny_unknown_fields)]
 struct MarkupSection {
@@ -151,6 +148,7 @@ impl ConfigFileFormat {
 }
 
 /// Supported `cmakefmt config dump` output formats.
+#[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum DumpConfigFormat {
     /// Emit YAML.
@@ -159,6 +157,7 @@ pub enum DumpConfigFormat {
     Toml,
 }
 
+#[cfg(feature = "cli")]
 /// Render a commented starter config in the requested format.
 ///
 /// The template is intentionally verbose: every option is introduced by a
@@ -171,6 +170,7 @@ pub fn default_config_template_for(format: DumpConfigFormat) -> String {
     }
 }
 
+#[cfg(feature = "cli")]
 /// Render a resolved runtime config back into the user-facing config schema.
 ///
 /// This is primarily used by CLI introspection commands such as
@@ -189,9 +189,10 @@ pub fn render_effective_config(config: &Config, format: DumpConfigFormat) -> Res
 
 /// Render a commented starter config using the default user-facing dump format.
 pub fn default_config_template() -> String {
-    default_config_template_for(DumpConfigFormat::Yaml)
+    default_config_template_yaml()
 }
 
+#[cfg(feature = "cli")]
 /// Generate a JSON Schema for the cmakefmt config file format.
 ///
 /// The output is a pretty-printed JSON string suitable for publishing to
@@ -201,6 +202,7 @@ pub fn generate_json_schema() -> String {
     serde_json::to_string_pretty(&schema).expect("JSON schema serialization failed")
 }
 
+#[cfg(feature = "cli")]
 fn default_config_template_toml() -> String {
     format!(
         concat!(
@@ -246,7 +248,6 @@ fn default_config_template_toml() -> String {
             "# space_before_control_paren = true\n\n",
             "# Insert a space before '(' for function() and macro() definitions.\n",
             "# space_before_definition_paren = true\n\n",
-            "[style]\n",
             "# Output casing for command names: lower, upper, or unchanged.\n",
             "command_case = \"{command_case}\"\n\n",
             "# Output casing for recognized keywords and flags: lower, upper, or unchanged.\n",
@@ -334,15 +335,16 @@ fn default_config_template_toml() -> String {
     )
 }
 
+#[cfg(feature = "cli")]
 #[derive(Debug, Clone, Serialize)]
 struct EffectiveConfigFile {
     format: EffectiveFormatSection,
-    style: EffectiveStyleSection,
     markup: EffectiveMarkupSection,
     per_command_overrides: HashMap<String, PerCommandConfig>,
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[cfg(feature = "cli")]
 struct EffectiveFormatSection {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     disable: bool,
@@ -366,15 +368,12 @@ struct EffectiveFormatSection {
     max_prefix_length: usize,
     space_before_control_paren: bool,
     space_before_definition_paren: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct EffectiveStyleSection {
     command_case: CaseStyle,
     keyword_case: CaseStyle,
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[cfg(feature = "cli")]
 struct EffectiveMarkupSection {
     enable_markup: bool,
     reflow_comments: bool,
@@ -389,6 +388,7 @@ struct EffectiveMarkupSection {
     explicit_trailing_pattern: String,
 }
 
+#[cfg(feature = "cli")]
 impl From<&Config> for EffectiveConfigFile {
     fn from(config: &Config) -> Self {
         Self {
@@ -412,8 +412,6 @@ impl From<&Config> for EffectiveConfigFile {
                 max_prefix_length: config.max_prefix_chars,
                 space_before_control_paren: config.separate_ctrl_name_with_space,
                 space_before_definition_paren: config.separate_fn_name_with_space,
-            },
-            style: EffectiveStyleSection {
                 command_case: config.command_case,
                 keyword_case: config.keyword_case,
             },
@@ -482,7 +480,6 @@ fn default_config_template_yaml() -> String {
             "  # space_before_control_paren: true\n\n",
             "  # Insert a space before '(' for function() and macro() definitions.\n",
             "  # space_before_definition_paren: true\n\n",
-            "style:\n",
             "  # Output casing for command names: lower, upper, or unchanged.\n",
             "  command_case: {command_case}\n\n",
             "  # Output casing for recognized keywords and flags: lower, upper, or unchanged.\n",
@@ -613,6 +610,56 @@ impl Config {
         Ok(config)
     }
 
+    /// Parse a YAML config string through the same `FileConfig` schema used by
+    /// config files. Returns the resolved config and the extracted `commands:`
+    /// section (if present) for separate registry merging.
+    ///
+    /// This validates sections (`format:`, `markup:`) and rejects
+    /// unknown fields, matching the behavior of file-based config loading.
+    pub fn from_yaml_str(yaml: &str) -> Result<(Self, Option<serde_yaml::Value>)> {
+        let file_config: FileConfig =
+            serde_yaml::from_str(yaml).map_err(|source| Error::Config {
+                path: std::path::PathBuf::from("<yaml-string>"),
+                details: FileParseError {
+                    format: "yaml",
+                    message: source.to_string().into_boxed_str(),
+                    line: source.location().map(|loc| loc.line()),
+                    column: source.location().map(|loc| loc.column()),
+                },
+                source_message: source.to_string().into_boxed_str(),
+            })?;
+        if !file_config.legacy_per_command.is_empty() {
+            return Err(Error::Config {
+                path: std::path::PathBuf::from("<yaml-string>"),
+                details: FileParseError {
+                    format: "yaml",
+                    message: "`per_command` has been renamed to `per_command_overrides`"
+                        .to_owned()
+                        .into_boxed_str(),
+                    line: None,
+                    column: None,
+                },
+                source_message: "`per_command` has been renamed to `per_command_overrides`"
+                    .to_owned()
+                    .into_boxed_str(),
+            });
+        }
+        let commands = file_config.commands.clone();
+        let mut config = Config::default();
+        config.apply(file_config);
+        config.validate_patterns().map_err(|msg| Error::Config {
+            path: std::path::PathBuf::from("<yaml-string>"),
+            details: FileParseError {
+                format: "yaml",
+                message: msg.clone().into_boxed_str(),
+                line: None,
+                column: None,
+            },
+            source_message: msg.into_boxed_str(),
+        })?;
+        Ok((config, commands))
+    }
+
     /// Return the config files that would be applied for the given file.
     ///
     /// When config discovery is used, this is either the nearest
@@ -681,12 +728,10 @@ impl Config {
         if let Some(v) = fc.format.space_before_definition_paren {
             self.separate_fn_name_with_space = v;
         }
-
-        // Style section
-        if let Some(v) = fc.style.command_case {
+        if let Some(v) = fc.format.command_case {
             self.command_case = v;
         }
-        if let Some(v) = fc.style.keyword_case {
+        if let Some(v) = fc.format.keyword_case {
             self.keyword_case = v;
         }
 
@@ -899,8 +944,6 @@ space_before_control_paren = true
 space_before_definition_paren = true
 max_hanging_wrap_positional_args = 3
 max_hanging_wrap_groups = 1
-
-[style]
 command_case = "upper"
 keyword_case = "lower"
 
@@ -918,8 +961,8 @@ line_width = 100
         assert_eq!(config.format.use_tabs, Some(true));
         assert_eq!(config.format.dangle_parens, Some(true));
         assert_eq!(config.format.dangle_align, Some(DangleAlign::Open));
-        assert_eq!(config.style.command_case, Some(CaseStyle::Upper));
-        assert_eq!(config.style.keyword_case, Some(CaseStyle::Lower));
+        assert_eq!(config.format.command_case, Some(CaseStyle::Upper));
+        assert_eq!(config.format.keyword_case, Some(CaseStyle::Lower));
         assert_eq!(config.markup.enable_markup, Some(false));
 
         let msg = config.per_command_overrides.get("message").unwrap();
@@ -956,8 +999,6 @@ separate_fn_name_with_space = true
 [format]
 line_width = 100
 tab_size = 4
-
-[style]
 command_case = "upper"
 "#,
         )
@@ -978,7 +1019,7 @@ command_case = "upper"
         let parsed: FileConfig = serde_yaml::from_str(&template).unwrap();
         assert_eq!(parsed.format.line_width, Some(Config::default().line_width));
         assert_eq!(
-            parsed.style.command_case,
+            parsed.format.command_case,
             Some(Config::default().command_case)
         );
         assert_eq!(
@@ -993,7 +1034,7 @@ command_case = "upper"
         let parsed: FileConfig = toml::from_str(&template).unwrap();
         assert_eq!(parsed.format.line_width, Some(Config::default().line_width));
         assert_eq!(
-            parsed.style.command_case,
+            parsed.format.command_case,
             Some(Config::default().command_case)
         );
         assert_eq!(
@@ -1078,7 +1119,7 @@ command_case = "upper"
         let config_path = dir.path().join(CONFIG_FILE_NAME_YAML);
         fs::write(
             &config_path,
-            "format:\n  line_width: 100\n  tab_size: 4\nstyle:\n  command_case: upper\n",
+            "format:\n  line_width: 100\n  tab_size: 4\n  command_case: upper\n",
         )
         .unwrap();
 
@@ -1094,7 +1135,7 @@ command_case = "upper"
         let config_path = dir.path().join(CONFIG_FILE_NAME_YML);
         fs::write(
             &config_path,
-            "style:\n  keyword_case: lower\nformat:\n  line_width: 90\n",
+            "format:\n  keyword_case: lower\n  line_width: 90\n",
         )
         .unwrap();
 
@@ -1162,7 +1203,6 @@ format:
   max_prefix_length: 12
   space_before_control_paren: true
   space_before_definition_paren: true
-style:
   command_case: unchanged
   keyword_case: lower
 markup:
@@ -1279,5 +1319,78 @@ per_command_overrides:
     #[test]
     fn toml_line_col_returns_none_when_offset_is_missing() {
         assert_eq!(toml_line_col("line = true\n", None), (None, None));
+    }
+
+    // ── from_yaml_str tests ─────────────────────────────────────────────
+
+    #[test]
+    fn from_yaml_str_parses_format_section() {
+        let (config, commands) =
+            Config::from_yaml_str("format:\n  line_width: 120\n  tab_size: 4").unwrap();
+        assert_eq!(config.line_width, 120);
+        assert_eq!(config.tab_size, 4);
+        assert!(commands.is_none());
+    }
+
+    #[test]
+    fn from_yaml_str_parses_casing_in_format_section() {
+        let (config, _) = Config::from_yaml_str("format:\n  command_case: upper").unwrap();
+        assert_eq!(config.command_case, CaseStyle::Upper);
+    }
+
+    #[test]
+    fn from_yaml_str_parses_markup_section() {
+        let (config, _) = Config::from_yaml_str("markup:\n  enable_markup: false").unwrap();
+        assert!(!config.enable_markup);
+    }
+
+    #[test]
+    fn from_yaml_str_extracts_commands() {
+        let (_, commands) = Config::from_yaml_str("commands:\n  my_cmd:\n    pargs: 1").unwrap();
+        assert!(commands.is_some());
+    }
+
+    #[test]
+    fn from_yaml_str_rejects_unknown_top_level_field() {
+        let result = Config::from_yaml_str("bogus_section:\n  foo: bar");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn from_yaml_str_rejects_unknown_format_field() {
+        let result = Config::from_yaml_str("format:\n  nonexistent: 42");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn from_yaml_str_rejects_invalid_yaml() {
+        let result = Config::from_yaml_str("{{invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn from_yaml_str_empty_string_returns_defaults() {
+        let (config, commands) = Config::from_yaml_str("").unwrap();
+        assert_eq!(config.line_width, Config::default().line_width);
+        assert!(commands.is_none());
+    }
+
+    #[test]
+    fn from_yaml_str_multiple_sections() {
+        let (config, _) =
+            Config::from_yaml_str("format:\n  line_width: 100\n  command_case: upper").unwrap();
+        assert_eq!(config.line_width, 100);
+        assert_eq!(config.command_case, CaseStyle::Upper);
+    }
+
+    #[test]
+    fn from_yaml_str_rejects_legacy_per_command() {
+        let result = Config::from_yaml_str("per_command:\n  message:\n    line_width: 120");
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("per_command_overrides"),
+            "error should mention the new key name: {err}"
+        );
     }
 }
