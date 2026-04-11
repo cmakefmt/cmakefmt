@@ -2198,8 +2198,8 @@ fn summary_check_shows_changed_file_status() {
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[*]"),
-        "summary output should show [*] for changed file, got: {stderr}"
+        stderr.contains("[!]"),
+        "summary output should show [!] for changed file, got: {stderr}"
     );
     assert!(
         stderr.contains("lines changed"),
@@ -2231,8 +2231,8 @@ fn summary_check_shows_unchanged_file_status() {
     assert!(output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[ ]"),
-        "summary output should show [ ] for unchanged file, got: {stderr}"
+        stderr.contains("[ok]"),
+        "summary output should show [ok] for unchanged file, got: {stderr}"
     );
     assert!(
         stderr.contains("unchanged"),
@@ -2260,8 +2260,8 @@ fn summary_in_place_shows_file_status() {
     assert!(output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[*]"),
-        "summary output should show [*] for changed file, got: {stderr}"
+        stderr.contains("[!]"),
+        "summary output should show [!] for changed file, got: {stderr}"
     );
     // File should also be modified on disk
     let contents = std::fs::read_to_string(&file).unwrap();
@@ -2288,7 +2288,7 @@ fn summary_diff_shows_file_status() {
     assert!(output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[*]"),
+        stderr.contains("[!]"),
         "summary should show status on stderr, got: {stderr}"
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -2312,7 +2312,7 @@ fn summary_stdout_suppresses_formatted_output() {
     assert!(output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[*]"),
+        stderr.contains("[!]"),
         "summary status should appear on stderr, got: {stderr}"
     );
     // --summary in stdout mode suppresses formatted output
@@ -2343,7 +2343,7 @@ fn summary_list_changed_files_shows_file_status() {
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[*]"),
+        stderr.contains("[!]"),
         "summary status should be on stderr, got: {stderr}"
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -2374,8 +2374,8 @@ fn summary_with_require_pragma_shows_skipped() {
     assert!(output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[~]"),
-        "summary output should show [~] for skipped file, got: {stderr}"
+        stderr.contains("[-]"),
+        "summary output should show [-] for skipped file, got: {stderr}"
     );
     assert!(
         stderr.contains("skipped"),
@@ -2404,8 +2404,8 @@ fn summary_keep_going_shows_failed_file() {
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[!]"),
-        "summary output should show [!] for failed file, got: {stderr}"
+        stderr.contains("[!!]"),
+        "summary output should show [!!] for failed file, got: {stderr}"
     );
     assert!(
         stderr.contains("parse error"),
@@ -2446,10 +2446,10 @@ fn summary_with_color_uses_unicode_markers() {
         .unwrap();
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    // Green checkmark U+2714
+    // Yellow exclamation for changed file
     assert!(
-        stderr.contains('\u{2714}'),
-        "color mode should use checkmark, got: {stderr}"
+        stderr.contains('!'),
+        "color mode should use ! for changed file, got: {stderr}"
     );
     // Tree branch connector U+2514 U+2500
     assert!(
@@ -2589,11 +2589,11 @@ fn summary_with_multiple_files_shows_all() {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[*]"),
+        stderr.contains("[!]"),
         "should show changed marker for a.cmake, got: {stderr}"
     );
     assert!(
-        stderr.contains("[ ]"),
+        stderr.contains("[ok]"),
         "should show unchanged marker for b.cmake, got: {stderr}"
     );
 }
@@ -2620,7 +2620,7 @@ fn summary_json_with_stderr_output() {
     // Verbose lines should be on stderr
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[*]"),
+        stderr.contains("[!]"),
         "summary status should appear on stderr even with JSON report, got: {stderr}"
     );
 
@@ -2659,8 +2659,8 @@ fn summary_two_line_format_for_changed_file() {
     let summary_lines: Vec<&str> = stderr.lines().collect();
     let marker_line = summary_lines
         .iter()
-        .position(|l| l.starts_with("[*]"))
-        .expect("should have a [*] line");
+        .position(|l| l.starts_with("[!]"))
+        .expect("should have a [!] line");
     // Next line should be indented with details
     assert!(
         summary_lines[marker_line + 1].starts_with("    "),

@@ -2850,10 +2850,10 @@ fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
         let reason = skip_reason.unwrap_or("skipped");
         if colorize {
             return format!(
-                "\u{1b}[33m~\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[33mskipped ({reason})\u{1b}[0m"
+                "\u{1b}[2m-\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[2mskipped ({reason})\u{1b}[0m"
             );
         }
-        return format!("[~] {display_name}\n    skipped ({reason})");
+        return format!("[-] {display_name}\n    skipped ({reason})");
     }
 
     if would_change {
@@ -2864,29 +2864,27 @@ fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
         };
         let detail = format!("{changed_lines} lines changed, {line_counts}, {elapsed_str}");
         if colorize {
-            return format!(
-                "\u{1b}[32m\u{2714}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} {detail}"
-            );
+            return format!("\u{1b}[33m!\u{1b}[0m {display_name}\n  \u{2514}\u{2500} {detail}");
         }
-        return format!("[*] {display_name}\n    {detail}");
+        return format!("[!] {display_name}\n    {detail}");
     }
 
     // Unchanged
     let detail = format!("unchanged, {source_lines} lines, {elapsed_str}");
     if colorize {
-        format!("\u{1b}[2m-\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[2m{detail}\u{1b}[0m")
+        format!("\u{1b}[32m\u{2713}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[2m{detail}\u{1b}[0m")
     } else {
-        format!("[ ] {display_name}\n    {detail}")
+        format!("[ok] {display_name}\n     {detail}")
     }
 }
 
 fn render_summary_failed_line(display_name: &str, colorize: bool) -> String {
     if colorize {
         format!(
-            "\u{1b}[31m\u{2716}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[31mparse error\u{1b}[0m"
+            "\u{1b}[31m\u{2717}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[31mparse error\u{1b}[0m"
         )
     } else {
-        format!("[!] {display_name}\n    parse error")
+        format!("[!!] {display_name}\n     parse error")
     }
 }
 
@@ -3550,7 +3548,7 @@ mod tests {
             Duration::from_millis(2),
         );
         let line = render_summary_line(&target, false);
-        assert!(line.starts_with("[*] src/CMakeLists.txt"));
+        assert!(line.starts_with("[!] src/CMakeLists.txt"));
         assert!(line.contains("12 lines changed"));
         assert!(line.contains("84 \u{2192} 86 lines"));
         assert!(line.contains("2ms"));
@@ -3589,7 +3587,7 @@ mod tests {
             Duration::from_millis(1),
         );
         let line = render_summary_line(&target, false);
-        assert!(line.starts_with("[ ] tests/CMakeLists.txt"));
+        assert!(line.starts_with("[ok] tests/CMakeLists.txt"));
         assert!(line.contains("unchanged"));
         assert!(line.contains("42 lines"));
         assert!(line.contains("1ms"));
@@ -3608,14 +3606,14 @@ mod tests {
             Duration::ZERO,
         );
         let line = render_summary_line(&target, false);
-        assert!(line.starts_with("[~] docs/CMakeLists.txt"));
+        assert!(line.starts_with("[-] docs/CMakeLists.txt"));
         assert!(line.contains("skipped (missing format opt-in pragma)"));
     }
 
     #[test]
     fn summary_failed_file_no_color() {
         let line = render_summary_failed_line("lib/CMakeLists.txt", false);
-        assert!(line.starts_with("[!] lib/CMakeLists.txt"));
+        assert!(line.starts_with("[!!] lib/CMakeLists.txt"));
         assert!(line.contains("parse error"));
     }
 
@@ -3632,8 +3630,8 @@ mod tests {
             Duration::from_millis(3),
         );
         let line = render_summary_line(&target, true);
-        // Green checkmark
-        assert!(line.contains("\u{2714}"));
+        // Yellow exclamation mark
+        assert!(line.contains("\u{1b}[33m!\u{1b}[0m"));
         assert!(line.contains("src/CMakeLists.txt"));
         assert!(line.contains("5 lines changed"));
     }
@@ -3651,10 +3649,8 @@ mod tests {
             Duration::from_millis(1),
         );
         let line = render_summary_line(&target, true);
-        // Dim hyphen
-        assert!(line.contains("\u{1b}[2m-\u{1b}[0m"));
-        // Dim ANSI sequence
-        assert!(line.contains("\u{1b}[2m"));
+        // Green checkmark
+        assert!(line.contains("\u{1b}[32m\u{2713}\u{1b}[0m"));
         assert!(line.contains("unchanged"));
     }
 
@@ -3671,16 +3667,16 @@ mod tests {
             Duration::ZERO,
         );
         let line = render_summary_line(&target, true);
-        // Yellow tilde
-        assert!(line.contains("\u{1b}[33m~\u{1b}[0m"));
+        // Dim hyphen
+        assert!(line.contains("\u{1b}[2m-\u{1b}[0m"));
         assert!(line.contains("skipped (missing pragma)"));
     }
 
     #[test]
     fn summary_failed_file_with_color() {
         let line = render_summary_failed_line("lib/CMakeLists.txt", true);
-        // Red cross
-        assert!(line.contains("\u{2716}"));
+        // Red ballot x
+        assert!(line.contains("\u{2717}"));
         assert!(line.contains("\u{1b}[31m"));
         assert!(line.contains("parse error"));
     }
@@ -3723,7 +3719,7 @@ mod tests {
         let line = render_summary_line(&target, false);
         let lines: Vec<&str> = line.split('\n').collect();
         assert_eq!(lines.len(), 2);
-        assert!(lines[1].starts_with("    "));
+        assert!(lines[1].starts_with("     "));
     }
 
     #[test]
