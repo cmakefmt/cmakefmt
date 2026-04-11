@@ -20,6 +20,8 @@ This project follows a simple changelog discipline:
 
 - `--summary` flag — shows per-file status lines with change details, line
   counts, and formatting time; suppresses formatted output in stdout mode
+- Streaming output — per-file results now appear as each file completes
+  instead of batching until the end, including in parallel mode
 
 ## 0.6.0 — 2026-04-10
 

@@ -9,7 +9,8 @@ use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
@@ -22,7 +23,6 @@ use cmakefmt::{
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use pest::error::{ErrorVariant, LineColLocation};
-use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use similar::TextDiff;
@@ -601,8 +601,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
     validate_cli(cli)?;
 
-    let stdout_mode =
-        !cli.list_changed_files && !cli.list_input_files && !cli.check && !cli.in_place;
+    let stdout_mode = is_stdout_mode(cli);
     let colorize_stdout = stdout_mode && should_colorize_stdout(cli.colour);
     let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
     let targets = collect_targets(cli, file_filter.as_ref())?;
@@ -631,78 +630,46 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     let colorize_stderr = should_colorize_stderr(cli.colour);
 
     let start_time = std::time::Instant::now();
-    let target_results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
-        process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout, &progress)?
-    } else {
-        if cli.debug && parallel_jobs > 1 && targets.iter().any(|target| !target.is_path()) {
-            log_debug("parallel mode ignored because stdin input must run serially");
-        }
-        process_targets_serial(&targets, cli, colorize_stdout, &progress)
-    };
-    let mut results = Vec::new();
-    let mut failures = Vec::new();
-    let mut summary = RunSummary {
-        selected: targets.len(),
-        ..RunSummary::default()
+    let mut state = RunState {
+        results: Vec::new(),
+        failures: Vec::new(),
+        summary: RunSummary {
+            selected: targets.len(),
+            ..RunSummary::default()
+        },
+        human_output: HumanOutputState::new(stdout_mode && targets.len() > 1),
     };
 
-    for target_result in target_results {
-        match target_result {
-            Ok(result) => {
-                if result.skipped {
-                    summary.skipped += 1;
-                } else if result.would_change {
-                    summary.changed += 1;
-                    summary.total_changed_lines += result.changed_lines.len();
-                } else {
-                    summary.unchanged += 1;
-                }
-                // Emit summary line immediately so output streams as files complete.
-                if cli.summary {
-                    eprintln!("{}", render_summary_line(&result, colorize_stderr));
-                }
-                results.push(result);
-            }
-            Err(err) => {
-                if !cli.keep_going {
-                    return Err(err);
-                }
-                summary.failed += 1;
-                let rendered_error = render_cli_error(&err);
-                let display_name = match &err {
-                    cmakefmt::Error::ParseContext { display_name, .. } => display_name.clone(),
-                    cmakefmt::Error::Config { path, .. } => path.display().to_string(),
-                    cmakefmt::Error::Spec { path, .. } => path.display().to_string(),
-                    cmakefmt::Error::Formatter(message) => message
-                        .split(':')
-                        .next()
-                        .unwrap_or("<unknown>")
-                        .trim()
-                        .to_owned(),
-                    cmakefmt::Error::Io(_)
-                    | cmakefmt::Error::Parse(_)
-                    | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
-                };
-                if cli.summary {
-                    eprintln!(
-                        "{}",
-                        render_summary_failed_line(&display_name, colorize_stderr)
-                    );
-                }
-                failures.push(FailedTarget {
-                    display_name,
-                    rendered_error,
-                });
-            }
-        }
+    process_targets(
+        &targets,
+        cli,
+        parallel_jobs,
+        colorize_stdout,
+        &progress,
+        |target_result| {
+            handle_completed_target(
+                target_result,
+                cli,
+                colorize_stdout,
+                colorize_stderr,
+                &progress,
+                &mut state,
+            )
+        },
+    )?;
+    state.summary.elapsed = start_time.elapsed();
+    let RunState {
+        results,
+        failures,
+        summary,
+        ..
+    } = state;
+
+    if cli.in_place {
+        write_in_place_updates(&results)?;
     }
-    summary.elapsed = start_time.elapsed();
-    let multi_target_stdout = stdout_mode && results.len() > 1;
 
     if cli.report_format != ReportFormat::Human {
-        if cli.in_place {
-            write_in_place_updates(&results)?;
-        }
         // Emit the unified diff for report formats that don't embed it in
         // their structured output. GitHub annotations are line-prefixed and
         // coexist safely with diff text; JSON/Checkstyle/JUnit/SARIF would
@@ -718,87 +685,16 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return machine_mode_exit_code(&results, &failures, &summary, cli);
     }
 
-    for (index, result) in results.iter().enumerate() {
-        if cli.debug {
-            for line in &result.debug_lines {
-                log_debug(line);
-            }
-        }
-
-        if result.skipped {
-            if stdout_mode && !cli.quiet && !cli.summary {
-                if multi_target_stdout && index > 0 {
-                    io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
-                }
-                if multi_target_stdout {
-                    write_stdout_header(&result.display_name, colorize_stdout)?;
-                }
-                io::stdout()
-                    .write_all(result.formatted.as_bytes())
-                    .map_err(cmakefmt::Error::Io)?;
-            }
-            continue;
-        }
-
-        if cli.list_changed_files {
-            if result.would_change {
-                println!("{}", result.display_name);
-            }
-        } else if cli.check {
-            if result.would_change {
-                if cli.diff {
-                    write_diff_to_stdout(result, colorize_stdout)?;
-                }
-                if !cli.quiet {
-                    eprintln!("{} would be reformatted", result.display_name);
-                }
-            }
-        } else if cli.in_place {
-            if let Some(path) = &result.path {
-                if result.would_change {
-                    atomic_write(path, &result.formatted)?;
-                }
-            }
-        } else {
-            if cli.diff {
-                if result.would_change {
-                    write_diff_to_stdout(result, colorize_stdout)?;
-                }
-            } else if !cli.summary {
-                // Plain stdout mode: suppress formatted output when --summary is active.
-                if multi_target_stdout {
-                    if index > 0 {
-                        io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
-                    }
-                    write_stdout_header(&result.display_name, colorize_stdout)?;
-                }
-                let display_output = result
-                    .highlighted_output
-                    .as_deref()
-                    .unwrap_or(&result.formatted);
-                io::stdout()
-                    .write_all(display_output.as_bytes())
-                    .map_err(cmakefmt::Error::Io)?;
-            }
-        }
-    }
-
-    if !failures.is_empty() {
-        for failure in &failures {
-            eprintln!("{}", failure.rendered_error);
-        }
-    }
-
     if should_print_human_summary(cli, &summary, &failures, results.len()) {
-        eprintln!("{}", render_human_summary(&summary));
+        progress.eprintln(&render_human_summary(&summary))?;
     }
 
     if cli.stat {
-        eprintln!("{}", render_stat_summary(&summary));
+        progress.eprintln(&render_stat_summary(&summary))?;
     }
 
     if cli.check && !cli.quiet && summary.changed > 0 && cli.report_format == ReportFormat::Human {
-        eprintln!("hint: run `cmakefmt --in-place .` to fix formatting");
+        progress.eprintln("hint: run `cmakefmt --in-place .` to fix formatting")?;
     }
 
     if !failures.is_empty() {
@@ -807,6 +703,234 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         Ok(EXIT_CHECK_FAILED)
     } else {
         Ok(EXIT_OK)
+    }
+}
+
+fn is_stdout_mode(cli: &Cli) -> bool {
+    !cli.list_changed_files && !cli.list_input_files && !cli.check && !cli.in_place
+}
+
+struct RunState {
+    results: Vec<ProcessedTarget>,
+    failures: Vec<FailedTarget>,
+    summary: RunSummary,
+    human_output: HumanOutputState,
+}
+
+struct HumanOutputState {
+    multi_target_stdout: bool,
+    wrote_stdout_block: bool,
+}
+
+impl HumanOutputState {
+    fn new(multi_target_stdout: bool) -> Self {
+        Self {
+            multi_target_stdout,
+            wrote_stdout_block: false,
+        }
+    }
+}
+
+fn process_targets<F>(
+    targets: &[InputTarget],
+    cli: &Cli,
+    parallel_jobs: usize,
+    colorize_stdout: bool,
+    progress: &ProgressReporter,
+    mut on_result: F,
+) -> Result<(), cmakefmt::Error>
+where
+    F: FnMut(Result<ProcessedTarget, cmakefmt::Error>) -> Result<(), cmakefmt::Error>,
+{
+    if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
+        process_targets_parallel(
+            targets,
+            cli,
+            parallel_jobs,
+            colorize_stdout,
+            progress,
+            &mut on_result,
+        )
+    } else {
+        if cli.debug && parallel_jobs > 1 && targets.iter().any(|target| !target.is_path()) {
+            log_debug("parallel mode ignored because stdin input must run serially");
+        }
+        process_targets_serial(targets, cli, colorize_stdout, progress, &mut on_result)
+    }
+}
+
+fn handle_completed_target(
+    target_result: Result<ProcessedTarget, cmakefmt::Error>,
+    cli: &Cli,
+    colorize_stdout: bool,
+    colorize_stderr: bool,
+    progress: &ProgressReporter,
+    state: &mut RunState,
+) -> Result<(), cmakefmt::Error> {
+    match target_result {
+        Ok(result) => {
+            if result.skipped {
+                state.summary.skipped += 1;
+            } else if result.would_change {
+                state.summary.changed += 1;
+                state.summary.total_changed_lines += result.changed_lines.len();
+            } else {
+                state.summary.unchanged += 1;
+            }
+
+            if cli.summary {
+                progress.eprintln(&render_summary_line(&result, colorize_stderr))?;
+            }
+
+            if cli.report_format == ReportFormat::Human {
+                emit_human_result(
+                    &result,
+                    cli,
+                    colorize_stdout,
+                    progress,
+                    &mut state.human_output,
+                )?;
+            }
+
+            state.results.push(result);
+            Ok(())
+        }
+        Err(err) => {
+            if !cli.keep_going {
+                return Err(err);
+            }
+
+            state.summary.failed += 1;
+            let failure = FailedTarget {
+                display_name: error_display_name(&err),
+                rendered_error: render_cli_error(&err),
+            };
+
+            if cli.summary {
+                progress.eprintln(&render_summary_failed_line(
+                    &failure.display_name,
+                    colorize_stderr,
+                ))?;
+            }
+
+            if cli.report_format == ReportFormat::Human {
+                emit_human_failure(&failure, progress)?;
+            }
+
+            state.failures.push(failure);
+            Ok(())
+        }
+    }
+}
+
+fn emit_human_result(
+    result: &ProcessedTarget,
+    cli: &Cli,
+    colorize_stdout: bool,
+    progress: &ProgressReporter,
+    human_output: &mut HumanOutputState,
+) -> Result<(), cmakefmt::Error> {
+    if cli.debug {
+        for line in &result.debug_lines {
+            progress.eprintln(&format!("debug: {line}"))?;
+        }
+    }
+
+    if result.skipped {
+        if is_stdout_mode(cli) && !cli.quiet && !cli.summary {
+            write_stdout_result(result, colorize_stdout, human_output)?;
+        }
+        return Ok(());
+    }
+
+    if cli.list_changed_files {
+        if result.would_change {
+            writeln!(io::stdout(), "{}", result.display_name).map_err(cmakefmt::Error::Io)?;
+            flush_stdout()?;
+        }
+        return Ok(());
+    }
+
+    if cli.check {
+        if result.would_change {
+            if cli.diff {
+                write_diff_to_stdout(result, colorize_stdout)?;
+                flush_stdout()?;
+            }
+            if !cli.quiet {
+                progress.eprintln(&format!("{} would be reformatted", result.display_name))?;
+            }
+        }
+        return Ok(());
+    }
+
+    if cli.in_place {
+        return Ok(());
+    }
+
+    if cli.diff {
+        if result.would_change {
+            write_diff_to_stdout(result, colorize_stdout)?;
+            flush_stdout()?;
+        }
+        return Ok(());
+    }
+
+    if !cli.summary {
+        write_stdout_result(result, colorize_stdout, human_output)?;
+    }
+
+    Ok(())
+}
+
+fn emit_human_failure(
+    failure: &FailedTarget,
+    progress: &ProgressReporter,
+) -> Result<(), cmakefmt::Error> {
+    progress.eprintln(&failure.rendered_error)
+}
+
+fn write_stdout_result(
+    result: &ProcessedTarget,
+    colorize_stdout: bool,
+    human_output: &mut HumanOutputState,
+) -> Result<(), cmakefmt::Error> {
+    if human_output.multi_target_stdout {
+        if human_output.wrote_stdout_block {
+            io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
+        }
+        write_stdout_header(&result.display_name, colorize_stdout)?;
+    }
+    let display_output = result
+        .highlighted_output
+        .as_deref()
+        .unwrap_or(&result.formatted);
+    io::stdout()
+        .write_all(display_output.as_bytes())
+        .map_err(cmakefmt::Error::Io)?;
+    flush_stdout()?;
+    human_output.wrote_stdout_block = true;
+    Ok(())
+}
+
+fn flush_stdout() -> Result<(), cmakefmt::Error> {
+    io::stdout().flush().map_err(cmakefmt::Error::Io)
+}
+
+fn error_display_name(err: &cmakefmt::Error) -> String {
+    match err {
+        cmakefmt::Error::ParseContext { display_name, .. } => display_name.clone(),
+        cmakefmt::Error::Config { path, .. } => path.display().to_string(),
+        cmakefmt::Error::Spec { path, .. } => path.display().to_string(),
+        cmakefmt::Error::Formatter(message) => message
+            .split(':')
+            .next()
+            .unwrap_or("<unknown>")
+            .trim()
+            .to_owned(),
+        cmakefmt::Error::Io(_)
+        | cmakefmt::Error::Parse(_)
+        | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
     }
 }
 
@@ -1466,36 +1590,58 @@ struct RunSummary {
     elapsed: std::time::Duration,
 }
 
-fn process_targets_serial(
+fn process_targets_serial<F>(
     targets: &[InputTarget],
     cli: &Cli,
     colorize_stdout: bool,
     progress: &ProgressReporter,
-) -> Vec<Result<ProcessedTarget, cmakefmt::Error>> {
-    targets
-        .iter()
-        .map(|target| process_target(target, cli, colorize_stdout, progress))
-        .collect()
+    on_result: &mut F,
+) -> Result<(), cmakefmt::Error>
+where
+    F: FnMut(Result<ProcessedTarget, cmakefmt::Error>) -> Result<(), cmakefmt::Error>,
+{
+    for target in targets {
+        on_result(process_target(target, cli, colorize_stdout, progress))?;
+    }
+    Ok(())
 }
 
-fn process_targets_parallel(
+fn process_targets_parallel<F>(
     targets: &[InputTarget],
     cli: &Cli,
     parallel_jobs: usize,
     colorize_stdout: bool,
     progress: &ProgressReporter,
-) -> Result<Vec<Result<ProcessedTarget, cmakefmt::Error>>, cmakefmt::Error> {
-    let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(parallel_jobs)
-        .build()
-        .map_err(|err| cmakefmt::Error::Formatter(format!("failed to build thread pool: {err}")))?;
+    on_result: &mut F,
+) -> Result<(), cmakefmt::Error>
+where
+    F: FnMut(Result<ProcessedTarget, cmakefmt::Error>) -> Result<(), cmakefmt::Error>,
+{
+    let worker_count = parallel_jobs.min(targets.len().max(1));
+    let next_index = AtomicUsize::new(0);
 
-    Ok(pool.install(|| {
-        targets
-            .par_iter()
-            .map(|target| process_target(target, cli, colorize_stdout, progress))
-            .collect::<Vec<Result<ProcessedTarget, cmakefmt::Error>>>()
-    }))
+    std::thread::scope(|scope| {
+        let (tx, rx) = mpsc::channel();
+
+        for _ in 0..worker_count {
+            let tx = tx.clone();
+            let next_index = &next_index;
+            scope.spawn(move || loop {
+                let index = next_index.fetch_add(1, Ordering::Relaxed);
+                let Some(target) = targets.get(index) else {
+                    break;
+                };
+                let _ = tx.send(process_target(target, cli, colorize_stdout, progress));
+            });
+        }
+        drop(tx);
+
+        while let Ok(result) = rx.recv() {
+            on_result(result)?;
+        }
+
+        Ok(())
+    })
 }
 
 fn process_target(
@@ -2026,6 +2172,15 @@ impl ProgressReporter {
         if inner.position() == inner.length().unwrap_or(0) {
             inner.finish();
         }
+    }
+
+    fn eprintln(&self, message: &str) -> Result<(), cmakefmt::Error> {
+        if let Some(inner) = &self.inner {
+            inner.println(message);
+        } else {
+            eprintln!("{message}");
+        }
+        io::stderr().flush().map_err(cmakefmt::Error::Io)
     }
 }
 
