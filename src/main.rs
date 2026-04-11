@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::hash::{Hash, Hasher};
 use std::io::{self, IsTerminal, Read, Write};
@@ -1662,26 +1663,40 @@ where
         }
         drop(tx);
 
-        // Buffer out-of-order results and flush in input order.
+        // Buffer out-of-order results and flush in input order. Uses a
+        // HashMap so memory scales with the actual backlog, not total
+        // target count.
         let mut next_emit = 0;
-        let mut pending: Vec<Option<Result<ProcessedTarget, cmakefmt::Error>>> =
-            (0..targets.len()).map(|_| None).collect();
+        let mut pending: HashMap<usize, Result<ProcessedTarget, cmakefmt::Error>> = HashMap::new();
+        let mut first_error: Option<cmakefmt::Error> = None;
 
         while let Ok((index, result)) = rx.recv() {
-            pending[index] = Some(result);
+            // Cancel workers immediately on errors, even if we can't
+            // emit them yet due to ordering.
+            if first_error.is_none() && result.is_err() && !cli.keep_going {
+                cancelled.store(true, Ordering::Relaxed);
+            }
+
+            pending.insert(index, result);
 
             // Drain all contiguous results starting from next_emit.
-            while next_emit < pending.len() && pending[next_emit].is_some() {
-                let result = pending[next_emit].take().unwrap();
-                if let Err(err) = on_result(result) {
-                    cancelled.store(true, Ordering::Relaxed);
-                    return Err(err);
+            while pending.contains_key(&next_emit) {
+                let result = pending.remove(&next_emit).unwrap();
+                match on_result(result) {
+                    Ok(()) => {}
+                    Err(err) => {
+                        cancelled.store(true, Ordering::Relaxed);
+                        first_error = Some(err);
+                    }
                 }
                 next_emit += 1;
             }
         }
 
-        Ok(())
+        match first_error {
+            Some(err) => Err(err),
+            None => Ok(()),
+        }
     })
 }
 
