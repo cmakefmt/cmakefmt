@@ -2663,7 +2663,7 @@ fn summary_two_line_format_for_changed_file() {
         .expect("should have a [!] line");
     // Next line should be indented with details
     assert!(
-        summary_lines[marker_line + 1].starts_with("    "),
+        summary_lines[marker_line + 1].starts_with("     "),
         "detail line should be indented, got: '{}'",
         summary_lines[marker_line + 1]
     );

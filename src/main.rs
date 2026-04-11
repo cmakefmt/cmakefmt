@@ -2853,7 +2853,7 @@ fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
                 "\u{1b}[2m-\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[2mskipped ({reason})\u{1b}[0m"
             );
         }
-        return format!("[-] {display_name}\n    skipped ({reason})");
+        return format!("[-]  {display_name}\n     skipped ({reason})");
     }
 
     if would_change {
@@ -2866,7 +2866,7 @@ fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
         if colorize {
             return format!("\u{1b}[33m!\u{1b}[0m {display_name}\n  \u{2514}\u{2500} {detail}");
         }
-        return format!("[!] {display_name}\n    {detail}");
+        return format!("[!]  {display_name}\n     {detail}");
     }
 
     // Unchanged
@@ -3548,7 +3548,7 @@ mod tests {
             Duration::from_millis(2),
         );
         let line = render_summary_line(&target, false);
-        assert!(line.starts_with("[!] src/CMakeLists.txt"));
+        assert!(line.starts_with("[!]  src/CMakeLists.txt"));
         assert!(line.contains("12 lines changed"));
         assert!(line.contains("84 \u{2192} 86 lines"));
         assert!(line.contains("2ms"));
@@ -3606,7 +3606,7 @@ mod tests {
             Duration::ZERO,
         );
         let line = render_summary_line(&target, false);
-        assert!(line.starts_with("[-] docs/CMakeLists.txt"));
+        assert!(line.starts_with("[-]  docs/CMakeLists.txt"));
         assert!(line.contains("skipped (missing format opt-in pragma)"));
     }
 
