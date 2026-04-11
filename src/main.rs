@@ -9,7 +9,7 @@ use std::io::{self, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
@@ -1619,6 +1619,7 @@ where
 {
     let worker_count = parallel_jobs.min(targets.len().max(1));
     let next_index = AtomicUsize::new(0);
+    let cancelled = AtomicBool::new(false);
 
     std::thread::scope(|scope| {
         let (tx, rx) = mpsc::channel();
@@ -1626,18 +1627,30 @@ where
         for _ in 0..worker_count {
             let tx = tx.clone();
             let next_index = &next_index;
+            let cancelled = &cancelled;
             scope.spawn(move || loop {
+                if cancelled.load(Ordering::Relaxed) {
+                    break;
+                }
                 let index = next_index.fetch_add(1, Ordering::Relaxed);
                 let Some(target) = targets.get(index) else {
                     break;
                 };
-                let _ = tx.send(process_target(target, cli, colorize_stdout, progress));
+                if tx
+                    .send(process_target(target, cli, colorize_stdout, progress))
+                    .is_err()
+                {
+                    break;
+                }
             });
         }
         drop(tx);
 
         while let Ok(result) = rx.recv() {
-            on_result(result)?;
+            if let Err(err) = on_result(result) {
+                cancelled.store(true, Ordering::Relaxed);
+                return Err(err);
+            }
         }
 
         Ok(())
