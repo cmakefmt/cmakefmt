@@ -8,7 +8,7 @@
 
 <p align="center">
   <sup>CI</sup><br>
-  <a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml"><img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>&nbsp;<a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml"><img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg?branch=main" alt="Pages" /></a>&nbsp;<a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml"><img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg?branch=main" alt="Coverage" /></a>
+  <a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml"><img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>&nbsp;<a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml"><img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/pages.yml/badge.svg?branch=main" alt="Pages" /></a>&nbsp;<a href="https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml"><img src="https://github.com/cmakefmt/cmakefmt/actions/workflows/coverage.yml/badge.svg?branch=main" alt="Coverage" /></a>&nbsp;<a href="https://codspeed.io/cmakefmt/cmakefmt?utm_source=badge"><img src="https://img.shields.io/endpoint?url=https://codspeed.io/badge.json" alt="CodSpeed" /></a>
 </p>
 
 <p align="center">
