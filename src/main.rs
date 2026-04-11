@@ -3065,6 +3065,20 @@ fn render_parse_error(
         );
     }
 
+    // If the error is at or near the end of the file, look for an unmatched
+    // opening parenthesis and tell the user where it is.
+    let is_near_eof = local_line >= source_lines.len().saturating_sub(1);
+    if is_near_eof {
+        if let Some((open_line, open_col, context)) =
+            find_unmatched_open_paren(source_text, start_line)
+        {
+            hints.insert(
+                0,
+                format!("unclosed `(` opened at {display_name}:{open_line}:{open_col} — {context}"),
+            );
+        }
+    }
+
     let mut rendered = String::new();
     let _ = writeln!(
         rendered,
@@ -3183,6 +3197,84 @@ fn describe_pest_expectation(source: &pest::error::Error<cmakefmt::parser::Rule>
         ErrorVariant::CustomError { message } => message.clone(),
         _ => source.to_string(),
     }
+}
+
+/// Scan `source` for the last unmatched opening parenthesis, skipping
+/// characters inside strings and comments. Returns `(line, column, context)`
+/// where context is the trimmed source line containing the `(`.
+fn find_unmatched_open_paren(source: &str, start_line: usize) -> Option<(usize, usize, String)> {
+    // Stack of (line, column) for each unmatched '('.
+    let mut paren_stack: Vec<(usize, usize)> = Vec::new();
+    let mut line = 1usize;
+    let mut col = 1usize;
+    let chars: Vec<char> = source.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        let ch = chars[i];
+        match ch {
+            '\n' => {
+                line += 1;
+                col = 1;
+                i += 1;
+            }
+            '#' => {
+                // Skip comment to end of line.
+                i += 1;
+                col += 1;
+                while i < chars.len() && chars[i] != '\n' {
+                    i += 1;
+                    col += 1;
+                }
+            }
+            '"' => {
+                // Skip quoted string.
+                i += 1;
+                col += 1;
+                while i < chars.len() {
+                    if chars[i] == '\\' && i + 1 < chars.len() {
+                        i += 2;
+                        col += 2;
+                    } else if chars[i] == '"' {
+                        i += 1;
+                        col += 1;
+                        break;
+                    } else if chars[i] == '\n' {
+                        line += 1;
+                        col = 1;
+                        i += 1;
+                    } else {
+                        i += 1;
+                        col += 1;
+                    }
+                }
+            }
+            '(' => {
+                paren_stack.push((line, col));
+                i += 1;
+                col += 1;
+            }
+            ')' => {
+                paren_stack.pop();
+                i += 1;
+                col += 1;
+            }
+            _ => {
+                i += 1;
+                col += 1;
+            }
+        }
+    }
+
+    // The last unmatched '(' is the most likely culprit.
+    let (open_line, open_col) = paren_stack.last().copied()?;
+    let source_lines: Vec<&str> = source.lines().collect();
+    let context = source_lines
+        .get(open_line.saturating_sub(1))
+        .map(|l| l.trim().to_owned())
+        .unwrap_or_default();
+    let absolute_line = start_line + open_line.saturating_sub(1);
+    Some((absolute_line, open_col, context))
 }
 
 fn classify_parse_failure(
