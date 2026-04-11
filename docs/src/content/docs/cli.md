@@ -51,6 +51,7 @@ Ignore rules only affect:
 | `--path-regex <REGEX>` | Filter discovered CMake paths. Direct file arguments are not filtered out. |
 | `--ignore-path <PATH>` | Add extra ignore files during recursive discovery. Direct file arguments still win. |
 | `--no-gitignore` | Stop honoring `.gitignore` during recursive discovery. |
+| `--sorted` | Sort discovered files by path before processing. |
 | `--staged` | Use staged Git-tracked files instead of explicit input paths. |
 | `--changed` | Use modified Git-tracked files instead of explicit input paths. |
 | `--since <REF>` | Choose the Git base ref used by `--changed`. Without it, `HEAD` is the base. |

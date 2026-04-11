@@ -20,8 +20,12 @@ This project follows a simple changelog discipline:
 
 - `--summary` flag — shows per-file status lines with change details, line
   counts, and formatting time; suppresses formatted output in stdout mode
+- `--sorted` flag — sorts discovered files by path before processing for
+  deterministic alphabetical output order
 - Streaming output — per-file results now appear as each file completes
   instead of batching until the end, including in parallel mode
+- Deterministic output order — parallel results are buffered and flushed
+  in input order, so output is stable across runs
 
 ### Changed
 

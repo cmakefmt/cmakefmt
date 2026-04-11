@@ -174,6 +174,13 @@ struct Cli {
     #[arg(long = "no-gitignore", help_heading = "Input Selection")]
     no_gitignore: bool,
 
+    /// Sort discovered files by path before processing.
+    ///
+    /// Guarantees alphabetical output order regardless of filesystem
+    /// discovery order. Direct file arguments are sorted too.
+    #[arg(long, help_heading = "Input Selection")]
+    sorted: bool,
+
     /// Generate a roff man page and print it to stdout.
     #[arg(long = "generate-man-page", help_heading = "Release And Packaging")]
     generate_man_page: bool,
@@ -604,7 +611,13 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     let stdout_mode = is_stdout_mode(cli);
     let colorize_stdout = stdout_mode && should_colorize_stdout(cli.colour);
     let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
-    let targets = collect_targets(cli, file_filter.as_ref())?;
+    let mut targets = collect_targets(cli, file_filter.as_ref())?;
+    if cli.sorted {
+        targets.sort_by(|a, b| {
+            a.display_name(cli.stdin_path.as_deref())
+                .cmp(&b.display_name(cli.stdin_path.as_deref()))
+        });
+    }
     if cli.list_input_files {
         for target in &targets {
             println!("{}", target.display_name(cli.stdin_path.as_deref()));
@@ -1618,7 +1631,7 @@ where
     F: FnMut(Result<ProcessedTarget, cmakefmt::Error>) -> Result<(), cmakefmt::Error>,
 {
     let worker_count = parallel_jobs.min(targets.len().max(1));
-    let next_index = AtomicUsize::new(0);
+    let next_work = AtomicUsize::new(0);
     let cancelled = AtomicBool::new(false);
 
     std::thread::scope(|scope| {
@@ -1626,18 +1639,21 @@ where
 
         for _ in 0..worker_count {
             let tx = tx.clone();
-            let next_index = &next_index;
+            let next_work = &next_work;
             let cancelled = &cancelled;
             scope.spawn(move || loop {
                 if cancelled.load(Ordering::Relaxed) {
                     break;
                 }
-                let index = next_index.fetch_add(1, Ordering::Relaxed);
+                let index = next_work.fetch_add(1, Ordering::Relaxed);
                 let Some(target) = targets.get(index) else {
                     break;
                 };
                 if tx
-                    .send(process_target(target, cli, colorize_stdout, progress))
+                    .send((
+                        index,
+                        process_target(target, cli, colorize_stdout, progress),
+                    ))
                     .is_err()
                 {
                     break;
@@ -1646,10 +1662,22 @@ where
         }
         drop(tx);
 
-        while let Ok(result) = rx.recv() {
-            if let Err(err) = on_result(result) {
-                cancelled.store(true, Ordering::Relaxed);
-                return Err(err);
+        // Buffer out-of-order results and flush in input order.
+        let mut next_emit = 0;
+        let mut pending: Vec<Option<Result<ProcessedTarget, cmakefmt::Error>>> =
+            (0..targets.len()).map(|_| None).collect();
+
+        while let Ok((index, result)) = rx.recv() {
+            pending[index] = Some(result);
+
+            // Drain all contiguous results starting from next_emit.
+            while next_emit < pending.len() && pending[next_emit].is_some() {
+                let result = pending[next_emit].take().unwrap();
+                if let Err(err) = on_result(result) {
+                    cancelled.store(true, Ordering::Relaxed);
+                    return Err(err);
+                }
+                next_emit += 1;
             }
         }
 
@@ -3459,6 +3487,7 @@ mod tests {
             "list-input-files",
             "no-config",
             "no-gitignore",
+            "sorted",
             "parallel",
             "progress-bar",
             "quiet",
