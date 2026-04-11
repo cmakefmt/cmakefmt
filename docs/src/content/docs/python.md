@@ -44,9 +44,9 @@ Format CMake source code and return the formatted string.
 **Parameters:**
 
 - `source` (str) — CMake source code to format.
-- `config` (str, optional) — YAML config string using the same format
-  as `.cmakefmt.yaml` files. Supports `format:`, `markup:`,
-  `per_command_overrides:`, and `commands:` sections.
+- `config` (str or dict, optional) — Config as a YAML string or a Python
+  dict. Uses the same schema as `.cmakefmt.yaml` files with `format:`,
+  `markup:`, `per_command_overrides:`, and `commands:` sections.
 
 **Returns:** Formatted source code as a string.
 
@@ -56,7 +56,13 @@ Format CMake source code and return the formatted string.
 # With default config
 formatted = cmakefmt.format_source("set(  FOO  bar )\n")
 
-# With explicit config
+# With config as a dict
+formatted = cmakefmt.format_source(
+    "cmake_minimum_required(VERSION 3.20)\n",
+    config={"format": {"command_case": "upper"}},
+)
+
+# With config as a YAML string
 formatted = cmakefmt.format_source(
     "cmake_minimum_required(VERSION 3.20)\n",
     config="format:\n  command_case: upper",

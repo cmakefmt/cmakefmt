@@ -194,3 +194,63 @@ class TestFormatSourceConfig:
     def test_empty_config_uses_defaults(self):
         result = cmakefmt.format_source("set(  X  1 )\n", config="")
         assert result == "set(X 1)\n"
+
+
+class TestFormatSourceDictConfig:
+    """Formatting with config as a Python dict."""
+
+    def test_dict_command_case_upper(self):
+        result = cmakefmt.format_source(
+            "cmake_minimum_required(VERSION 3.20)\n",
+            config={"format": {"command_case": "upper"}},
+        )
+        assert "CMAKE_MINIMUM_REQUIRED" in result
+
+    def test_dict_line_width(self):
+        source = "set(FOO bar baz qux quux corge)\n"
+        narrow = cmakefmt.format_source(
+            source, config={"format": {"line_width": 20}}
+        )
+        wide = cmakefmt.format_source(
+            source, config={"format": {"line_width": 200}}
+        )
+        assert narrow.count("\n") > wide.count("\n")
+
+    def test_dict_multiple_options(self):
+        result = cmakefmt.format_source(
+            "CMAKE_MINIMUM_REQUIRED(VERSION 3.20)\n",
+            config={"format": {"line_width": 120, "command_case": "upper"}},
+        )
+        assert "CMAKE_MINIMUM_REQUIRED" in result
+
+    def test_dict_with_markup_section(self):
+        result = cmakefmt.format_source(
+            "# comment\nset(X 1)\n",
+            config={"markup": {"enable_markup": False}},
+        )
+        assert "# comment" in result
+
+    def test_dict_rejects_unknown_field(self):
+        with pytest.raises(cmakefmt.ConfigError):
+            cmakefmt.format_source(
+                "set(X 1)\n",
+                config={"format": {"nonexistent": 42}},
+            )
+
+    def test_dict_matches_yaml_string(self):
+        source = "cmake_minimum_required(VERSION 3.20)\n"
+        from_dict = cmakefmt.format_source(
+            source, config={"format": {"command_case": "upper"}}
+        )
+        from_yaml = cmakefmt.format_source(
+            source, config="format:\n  command_case: upper"
+        )
+        assert from_dict == from_yaml
+
+    def test_empty_dict_uses_defaults(self):
+        result = cmakefmt.format_source("set(  X  1 )\n", config={})
+        assert result == "set(X 1)\n"
+
+    def test_invalid_config_type_raises(self):
+        with pytest.raises(TypeError):
+            cmakefmt.format_source("set(X 1)\n", config=42)

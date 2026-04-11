@@ -31,6 +31,12 @@ class TestIsFormatted:
             config="format:\n  command_case: upper",
         )
 
+    def test_with_dict_config(self):
+        assert not cmakefmt.is_formatted(
+            "CMAKE_MINIMUM_REQUIRED(VERSION 3.20)\n",
+            config={"format": {"command_case": "lower"}},
+        )
+
     def test_returns_bool(self):
         result = cmakefmt.is_formatted("set(X 1)\n")
         assert isinstance(result, bool)
