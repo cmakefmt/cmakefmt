@@ -44,7 +44,7 @@ jobs:
         run: cargo install cargo-codspeed
 
       - name: Build benchmarks
-        run: cargo codspeed build
+        run: cargo codspeed build -m walltime
 
       - name: Run benchmarks
         uses: CodSpeedHQ/action@c79cfd49571e40b42b172bd0e91eabc0c949d9a7  # v4.13.1
