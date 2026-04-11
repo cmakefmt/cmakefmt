@@ -20,6 +20,8 @@ This project follows a simple changelog discipline:
   in input order, so output is stable across runs
 - Unclosed parenthesis diagnostics — parse errors now point to the
   unmatched `(` instead of the end of the file
+- CodSpeed CI benchmark tracking for automated performance regression
+  detection on every PR
 
 ### Changed
 
