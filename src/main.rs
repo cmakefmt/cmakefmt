@@ -3066,33 +3066,48 @@ fn render_parse_error(
     }
 
     // If the error is at or near the end of the file, look for an unmatched
-    // opening parenthesis and tell the user where it is.
+    // opening parenthesis. When found, show the error at the unclosed `(`
+    // instead of at EOF — that's where the user needs to look.
     let is_near_eof = local_line >= source_lines.len().saturating_sub(1);
-    if is_near_eof {
-        if let Some((open_line, open_col, context)) =
-            find_unmatched_open_paren(source_text, start_line)
-        {
-            hints.insert(
-                0,
-                format!("unclosed `(` opened at {display_name}:{open_line}:{open_col} — {context}"),
-            );
-        }
-    }
+    let unmatched = if is_near_eof {
+        find_unmatched_open_paren(source_text, start_line)
+    } else {
+        None
+    };
 
     let mut rendered = String::new();
-    let _ = writeln!(
-        rendered,
-        "error: {summary}\n  --> {display_name}:{absolute_line}:{local_column}"
-    );
-    if !source_text.is_empty() {
-        rendered.push('\n');
-        rendered.push_str(&render_source_snippet(
-            source_text,
-            start_line,
-            local_line,
-            local_column,
-        ));
-        rendered.push('\n');
+    if let Some((open_line, open_col, _)) = &unmatched {
+        let _ = writeln!(
+            rendered,
+            "error: {summary}\n  --> {display_name}:{open_line}:{open_col}"
+        );
+        if !source_text.is_empty() {
+            let open_local_line = open_line.saturating_sub(start_line) + 1;
+            rendered.push('\n');
+            rendered.push_str(&render_source_snippet(
+                source_text,
+                start_line,
+                open_local_line,
+                *open_col,
+            ));
+            rendered.push('\n');
+        }
+        hints.insert(0, "unclosed `(` — the closing `)` is missing".to_owned());
+    } else {
+        let _ = writeln!(
+            rendered,
+            "error: {summary}\n  --> {display_name}:{absolute_line}:{local_column}"
+        );
+        if !source_text.is_empty() {
+            rendered.push('\n');
+            rendered.push_str(&render_source_snippet(
+                source_text,
+                start_line,
+                local_line,
+                local_column,
+            ));
+            rendered.push('\n');
+        }
     }
     for hint in hints {
         let _ = writeln!(rendered, "hint: {hint}");
