@@ -1,4 +1,8 @@
-name: CodSpeed
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: Benchmarks
 
 on:
   push:
@@ -11,7 +15,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: codspeed-${{ github.workflow }}-${{ github.ref }}
+  group: benchmarks-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -19,16 +23,15 @@ permissions:
   id-token: write
 
 jobs:
-  codspeed:
-    name: Run benchmarks
+  benchmarks:
+    name: Performance benchmarks
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
         with:
           toolchain: stable
 
@@ -40,11 +43,11 @@ jobs:
       - name: Install cargo-codspeed
         run: cargo install cargo-codspeed
 
-      - name: Build the benchmark target(s)
+      - name: Build benchmarks
         run: cargo codspeed build
 
-      - name: Run the benchmarks
-        uses: CodSpeedHQ/action@db35df748deb45fdef0960669f57d627c1956c30  # v4.13.1
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@c79cfd49571e40b42b172bd0e91eabc0c949d9a7  # v4.13.1
         with:
           mode: simulation
           run: cargo codspeed run
