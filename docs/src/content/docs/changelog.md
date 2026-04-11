@@ -26,6 +26,8 @@ This project follows a simple changelog discipline:
   instead of batching until the end, including in parallel mode
 - Deterministic output order — parallel results are buffered and flushed
   in input order, so output is stable across runs
+- Unclosed parenthesis diagnostics — parse errors now point to the
+  unmatched `(` instead of the end of the file
 
 ### Changed
 

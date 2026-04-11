@@ -273,11 +273,11 @@ cmakefmt --summary .
 Typical output:
 
 ```text
-✔ src/CMakeLists.txt
+! src/CMakeLists.txt
   └─ 12 lines changed, 84 → 86 lines, 2ms
-· tests/CMakeLists.txt
+✔ tests/CMakeLists.txt
   └─ unchanged, 42 lines, 1ms
-✔ cmake/Toolchain.cmake
+! cmake/Toolchain.cmake
   └─ 3 lines changed, 60 → 61 lines, 4ms
 
 summary: selected=3, changed=2, unchanged=1, failed=0 in 0.01s
@@ -451,6 +451,19 @@ For parse and config failures, `cmakefmt` prints:
 - source context
 - likely-cause hints when possible
 - a repro hint using `--debug --check`
+
+For unclosed parentheses, the error points directly to the unmatched `(`
+instead of the end of the file where the parser gave up:
+
+```text
+error: failed to parse a command invocation
+  --> src/CMakeLists.txt:19:6
+
+  18 | find_package(oomphlib CONFIG REQUIRED PATHS "../install")
+> 19 | endif(
+     |      ^
+hint: unclosed `(` — the closing `)` is missing
+```
 
 When formatting results surprise you rather than hard-failing, reach for
 `--debug` first.
