@@ -298,10 +298,10 @@ struct Cli {
     )]
     colour: ColorChoice,
 
-    /// Format files in parallel when explicitly requested.
+    /// Set the number of parallel formatting jobs.
     ///
-    /// If omitted entirely, formatting stays single-threaded. If provided
-    /// without a value, cmakefmt uses the available CPU count.
+    /// Defaults to the available CPU count minus two (minimum 1). Pass an
+    /// explicit value to override, or `--parallel 1` to force serial.
     #[arg(
         short = 'j',
         long,
@@ -2132,7 +2132,13 @@ fn verify_semantics(
 
 fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, cmakefmt::Error> {
     match requested {
-        None => Ok(1),
+        None => {
+            // Default: available CPUs minus 2, minimum 1.
+            let cpus = std::thread::available_parallelism()
+                .map(|p| p.get())
+                .unwrap_or(1);
+            Ok(cpus.saturating_sub(2).max(1))
+        }
         Some(0) => std::thread::available_parallelism()
             .map(|parallelism| parallelism.get())
             .map_err(cmakefmt::Error::Io),

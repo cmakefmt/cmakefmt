@@ -1959,7 +1959,7 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--lines <START:END>"));
     assert!(stdout.contains("--report-format <REPORT_FORMAT>"));
     assert!(stdout.contains("--progress-bar"));
-    assert!(stdout.contains("formatting stays single-threaded"));
+    assert!(stdout.contains("parallel formatting jobs"));
 }
 
 // ── config schema ───────────────────────────────────────────────────────────

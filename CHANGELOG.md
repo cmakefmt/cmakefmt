@@ -15,6 +15,11 @@ This project follows a simple changelog discipline:
 - Streaming output — per-file results now appear as each file completes
   instead of batching until the end, including in parallel mode
 
+### Changed
+
+- Parallel formatting is now the default — uses available CPUs minus two
+  (minimum 1). Use `--parallel 1` to force serial processing.
+
 ## 0.6.0 — 2026-04-10
 
 ### Removed

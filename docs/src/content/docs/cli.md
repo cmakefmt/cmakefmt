@@ -84,7 +84,7 @@ Ignore rules only affect:
 | `--cache-location <PATH>` | Override the cache directory. Supplying it also enables caching. |
 | `--cache-strategy <metadata\|content>` | Choose whether cache invalidation tracks file metadata or file contents. |
 | `--require-pragma` | Format only files that opt in with a `# cmakefmt: enable` style pragma. |
-| `-j`, `--parallel [JOBS]` | Enable parallel file processing when explicitly requested. If no value is given, use the available CPU count. |
+| `-j`, `--parallel [JOBS]` | Set the number of parallel formatting jobs. Defaults to the available CPU count minus two. Pass `--parallel 1` to force serial. |
 | `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
 ## Subcommands
