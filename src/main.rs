@@ -575,6 +575,9 @@ Include the following in your report:
 
     match run(&cli) {
         Ok(code) => ExitCode::from(code),
+        Err(cmakefmt::Error::Io(ref e)) if e.kind() == std::io::ErrorKind::BrokenPipe => {
+            ExitCode::from(EXIT_OK)
+        }
         Err(err) => {
             eprintln!("{}", render_cli_error(&err));
             ExitCode::from(EXIT_ERROR)
