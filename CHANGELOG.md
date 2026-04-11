@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.7.0 — 2026-04-11
+
 ### Added
 
 - `--summary` flag — shows per-file status lines with change details, line
