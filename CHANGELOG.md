@@ -14,6 +14,7 @@ This project follows a simple changelog discipline:
   counts, and formatting time; suppresses formatted output in stdout mode
 - `--sorted` flag — sorts discovered files by path before processing for
   deterministic alphabetical output order
+- Short flags: `-s` (summary), `-q` (quiet), `-d` (diff), `-p` (progress-bar)
 - Streaming output — per-file results now appear as each file completes
   instead of batching until the end, including in parallel mode
 - Deterministic output order — parallel results are buffered and flushed

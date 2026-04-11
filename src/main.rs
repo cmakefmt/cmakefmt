@@ -195,14 +195,14 @@ struct Cli {
     /// Prints a status line for each file to stderr with change details,
     /// line counts, and elapsed time. In stdout mode (no `--check`,
     /// `--in-place`, or `--diff`), formatted output is suppressed.
-    #[arg(long, help_heading = "Output Modes", conflicts_with = "quiet")]
+    #[arg(short, long, help_heading = "Output Modes", conflicts_with = "quiet")]
     summary: bool,
 
     /// Suppress per-file human output and emit only end-of-run summaries.
     ///
     /// This is intended for quieter `--check` and `--in-place` automation
     /// workflows. It does not suppress actual errors.
-    #[arg(long, help_heading = "Execution")]
+    #[arg(short, long, help_heading = "Execution")]
     quiet: bool,
 
     /// Print a git-style summary after formatting (e.g. "3 files changed, 12 lines reformatted").
@@ -219,7 +219,12 @@ struct Cli {
     keep_going: bool,
 
     /// Print a unified diff instead of full formatted output.
-    #[arg(long, help_heading = "Output Modes", conflicts_with = "in_place")]
+    #[arg(
+        short,
+        long,
+        help_heading = "Output Modes",
+        conflicts_with = "in_place"
+    )]
     diff: bool,
 
     /// Cache formatted results for repeated runs on the same files.
@@ -325,6 +330,7 @@ struct Cli {
     /// The progress bar is intended for directory or multi-file runs and is
     /// only available together with `--in-place`.
     #[arg(
+        short,
         long = "progress-bar",
         requires = "in_place",
         help_heading = "Execution"
