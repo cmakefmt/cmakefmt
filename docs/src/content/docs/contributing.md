@@ -84,7 +84,8 @@ cargo test
 
 ## Pre-commit Hooks
 
-Hooks are installed automatically by `mise install`. To reinstall manually:
+Hooks are installed automatically by `mise install`. To reinstall manually
+with [`pre-commit`](https://pre-commit.com):
 
 ```bash
 pre-commit install

@@ -70,18 +70,32 @@ If the output looks right, apply formatting:
 cmakefmt --in-place .
 ```
 
-## Pre-commit Hook
+## Git Hook
 
-Format only the files you're about to commit:
+Install a pre-commit hook that checks formatting on every commit:
 
 ```bash
-cmakefmt --staged --check
+cmakefmt install-hook
 ```
 
-The repository ships a `pre-commit` configuration. Install it once:
+This adds a `git` `pre-commit` hook that runs `cmakefmt --check --staged`.
+Commits with unformatted CMake files will be rejected until you run
+`cmakefmt --in-place .`.
+
+For `pre-commit` framework integration, see the [CI page](/ci/#pre-commit).
+
+## Getting Help
+
+For a brief summary of all flags:
 
 ```bash
-pre-commit install
+cmakefmt -h
+```
+
+For an extended description of every flag with examples:
+
+```bash
+cmakefmt --help
 ```
 
 ## What's Next
