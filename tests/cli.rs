@@ -2175,3 +2175,501 @@ fn lsp_appears_in_help() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("lsp"));
 }
+
+// ── summary output ──────────────────────────────────────────────────────────
+
+#[test]
+fn summary_check_shows_changed_file_status() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[*]"),
+        "summary output should show [*] for changed file, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("lines changed"),
+        "summary output should show changed line count, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("would be reformatted"),
+        "check mode should still show reformatting message, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_check_shows_unchanged_file_status() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[ ]"),
+        "summary output should show [ ] for unchanged file, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("unchanged"),
+        "summary output should say unchanged, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_in_place_shows_file_status() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--in-place",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[*]"),
+        "summary output should show [*] for changed file, got: {stderr}"
+    );
+    // File should also be modified on disk
+    let contents = std::fs::read_to_string(&file).unwrap();
+    assert_eq!(contents, "set(FOO bar)\n");
+}
+
+#[test]
+fn summary_diff_shows_file_status() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--diff",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[*]"),
+        "summary should show status on stderr, got: {stderr}"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("---"),
+        "diff should still appear on stdout, got: {stdout}"
+    );
+}
+
+#[test]
+fn summary_stdout_suppresses_formatted_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--summary", "--colour", "never", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[*]"),
+        "summary status should appear on stderr, got: {stderr}"
+    );
+    // --summary in stdout mode suppresses formatted output
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.is_empty(),
+        "stdout should be empty with --summary, got: {stdout}"
+    );
+}
+
+#[test]
+fn summary_list_changed_files_shows_file_status() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--list-changed-files",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[*]"),
+        "summary status should be on stderr, got: {stderr}"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("CMakeLists.txt"),
+        "file list should be on stdout, got: {stdout}"
+    );
+}
+
+#[test]
+fn summary_with_require_pragma_shows_skipped() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--require-pragma",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[~]"),
+        "summary output should show [~] for skipped file, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("skipped"),
+        "summary output should say skipped, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_keep_going_shows_failed_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let bad_file = dir.path().join("bad.cmake");
+    write_file(&bad_file, "if(\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--keep-going",
+            "--check",
+            bad_file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[!]"),
+        "summary output should show [!] for failed file, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("parse error"),
+        "summary output should mention parse error, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_conflicts_with_quiet() {
+    let output = cmakefmt()
+        .args(["--summary", "--quiet", "."])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("cannot be used with"),
+        "should report conflict, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_with_color_uses_unicode_markers() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "always",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Green checkmark U+2714
+    assert!(
+        stderr.contains('\u{2714}'),
+        "color mode should use checkmark, got: {stderr}"
+    );
+    // Tree branch connector U+2514 U+2500
+    assert!(
+        stderr.contains("\u{2514}\u{2500}"),
+        "should use tree branch connector, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_shows_elapsed_time() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Should contain either "<1ms" or "Nms" or "N.NNs"
+    assert!(
+        stderr.contains("ms") || stderr.contains("s"),
+        "summary output should include elapsed time, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_shows_line_count() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("1 lines"),
+        "summary output should include line count, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_json_report_includes_elapsed_and_lines() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--report-format",
+            "json",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let report: Value = serde_json::from_str(&stdout).unwrap();
+    let files = report["files"].as_array().unwrap();
+    assert_eq!(files.len(), 1);
+    assert!(
+        files[0]["elapsed_ms"].is_number(),
+        "JSON report should include elapsed_ms with --summary"
+    );
+    assert!(
+        files[0]["source_lines"].is_number(),
+        "JSON report should include source_lines with --summary"
+    );
+    assert!(
+        files[0]["formatted_lines"].is_number(),
+        "JSON report should include formatted_lines with --summary"
+    );
+}
+
+#[test]
+fn json_report_omits_summary_fields_without_flag() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--report-format", "json", "--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let report: Value = serde_json::from_str(&stdout).unwrap();
+    let files = report["files"].as_array().unwrap();
+    assert_eq!(files.len(), 1);
+    assert!(
+        files[0].get("elapsed_ms").is_none(),
+        "JSON report should not include elapsed_ms without --summary"
+    );
+    assert!(
+        files[0].get("source_lines").is_none(),
+        "JSON report should not include source_lines without --summary"
+    );
+}
+
+#[test]
+fn summary_with_multiple_files_shows_all() {
+    let dir = tempfile::tempdir().unwrap();
+    let file1 = dir.path().join("a.cmake");
+    let file2 = dir.path().join("b.cmake");
+    write_file(&file1, "set(  FOO  bar )\n");
+    write_file(&file2, "set(BAZ qux)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--check",
+            file1.to_str().unwrap(),
+            file2.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[*]"),
+        "should show changed marker for a.cmake, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("[ ]"),
+        "should show unchanged marker for b.cmake, got: {stderr}"
+    );
+}
+
+#[test]
+fn summary_json_with_stderr_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--report-format",
+            "json",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    // Verbose lines should be on stderr
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[*]"),
+        "summary status should appear on stderr even with JSON report, got: {stderr}"
+    );
+
+    // JSON should still be valid on stdout
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let report: Value = serde_json::from_str(&stdout).unwrap();
+    assert!(report["summary"]["changed"].as_u64().unwrap() > 0);
+}
+
+#[test]
+fn summary_appears_in_help() {
+    let output = cmakefmt().arg("--help").output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("--summary"));
+}
+
+#[test]
+fn summary_two_line_format_for_changed_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args([
+            "--summary",
+            "--colour",
+            "never",
+            "--check",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // The summary output should be on two lines: marker+name, then indented details
+    let summary_lines: Vec<&str> = stderr.lines().collect();
+    let marker_line = summary_lines
+        .iter()
+        .position(|l| l.starts_with("[*]"))
+        .expect("should have a [*] line");
+    // Next line should be indented with details
+    assert!(
+        summary_lines[marker_line + 1].starts_with("    "),
+        "detail line should be indented, got: '{}'",
+        summary_lines[marker_line + 1]
+    );
+    assert!(
+        summary_lines[marker_line + 1].contains("lines changed"),
+        "detail line should contain change info, got: '{}'",
+        summary_lines[marker_line + 1]
+    );
+}

@@ -16,6 +16,11 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `--summary` flag — shows per-file status lines with change details, line
+  counts, and formatting time; suppresses formatted output in stdout mode
+
 ## 0.6.0 — 2026-04-10
 
 ### Removed

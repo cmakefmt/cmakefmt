@@ -67,6 +67,7 @@ Ignore rules only affect:
 | `--list-input-files` | Print the selected input files after discovery and filtering, without formatting them. |
 | `--diff` | Print a unified diff instead of the full formatted output. |
 | `--report-format <human\|json\|github\|checkstyle\|junit\|sarif>` | Switch between human output and CI/editor-friendly machine reporters. |
+| `--summary` | Show a per-file status summary instead of formatted output. In stdout mode, formatted output is suppressed. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 
 ## Execution Flags
@@ -261,6 +262,28 @@ summary: selected=48 changed=3 unchanged=45 failed=0
 ```
 
 A clean log with a reliable exit code — ideal for high-volume CI pipelines.
+
+### Per-File Summary
+
+```bash
+cmakefmt --summary .
+```
+
+Typical output:
+
+```text
+✔ src/CMakeLists.txt
+  └─ 12 lines changed, 84 → 86 lines, 2ms
+· tests/CMakeLists.txt
+  └─ unchanged, 42 lines, 1ms
+✔ cmake/Toolchain.cmake
+  └─ 3 lines changed, 60 → 61 lines, 4ms
+
+summary: selected=3, changed=2, unchanged=1, failed=0 in 0.01s
+```
+
+Shows at a glance what happened to each file — useful for large repositories,
+first-time adoption, and understanding the scope of formatting changes.
 
 ### Cache Repeated Runs
 

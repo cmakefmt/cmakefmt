@@ -182,6 +182,14 @@ struct Cli {
     #[arg(long, help_heading = "Execution")]
     debug: bool,
 
+    /// Show a per-file status summary instead of formatted output.
+    ///
+    /// Prints a status line for each file to stderr with change details,
+    /// line counts, and elapsed time. In stdout mode (no `--check`,
+    /// `--in-place`, or `--diff`), formatted output is suppressed.
+    #[arg(long, help_heading = "Output Modes", conflicts_with = "quiet")]
+    summary: bool,
+
     /// Suppress per-file human output and emit only end-of-run summaries.
     ///
     /// This is intended for quieter `--check` and `--in-place` automation
@@ -620,6 +628,8 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ));
     }
 
+    let colorize_stderr = should_colorize_stderr(cli.colour);
+
     let start_time = std::time::Instant::now();
     let target_results = if parallel_jobs > 1 && targets.iter().all(InputTarget::is_path) {
         process_targets_parallel(&targets, cli, parallel_jobs, colorize_stdout, &progress)?
@@ -647,6 +657,10 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 } else {
                     summary.unchanged += 1;
                 }
+                // Emit summary line immediately so output streams as files complete.
+                if cli.summary {
+                    eprintln!("{}", render_summary_line(&result, colorize_stderr));
+                }
                 results.push(result);
             }
             Err(err) => {
@@ -669,6 +683,12 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                     | cmakefmt::Error::Parse(_)
                     | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
                 };
+                if cli.summary {
+                    eprintln!(
+                        "{}",
+                        render_summary_failed_line(&display_name, colorize_stderr)
+                    );
+                }
                 failures.push(FailedTarget {
                     display_name,
                     rendered_error,
@@ -706,7 +726,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
 
         if result.skipped {
-            if stdout_mode && !cli.quiet {
+            if stdout_mode && !cli.quiet && !cli.summary {
                 if multi_target_stdout && index > 0 {
                     io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
                 }
@@ -744,7 +764,8 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
                 if result.would_change {
                     write_diff_to_stdout(result, colorize_stdout)?;
                 }
-            } else {
+            } else if !cli.summary {
+                // Plain stdout mode: suppress formatted output when --summary is active.
                 if multi_target_stdout {
                     if index > 0 {
                         io::stdout().write_all(b"\n").map_err(cmakefmt::Error::Io)?;
@@ -1368,6 +1389,9 @@ struct ProcessedTarget {
     skipped: bool,
     skip_reason: Option<String>,
     debug_lines: Vec<String>,
+    source_lines: usize,
+    formatted_lines: usize,
+    elapsed: std::time::Duration,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1422,6 +1446,12 @@ struct JsonFileReport {
     formatted: Option<String>,
     diff: Option<String>,
     debug_lines: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    elapsed_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_lines: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    formatted_lines: Option<usize>,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -1474,10 +1504,14 @@ fn process_target(
     colorize_stdout: bool,
     progress: &ProgressReporter,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
-    let result = match target {
+    let start = std::time::Instant::now();
+    let mut result = match target {
         InputTarget::Stdin => process_stdin(cli, colorize_stdout),
         InputTarget::Path(path) => process_path(path, cli, colorize_stdout),
     };
+    if let Ok(ref mut r) = result {
+        r.elapsed = start.elapsed();
+    }
     progress.finish_one();
     result
 }
@@ -1537,6 +1571,8 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
     let formatted = apply_line_ranges(&source, &formatted, &cli.line_ranges, &display_name)?;
 
     let would_change = formatted != source;
+    let source_lines = source.lines().count();
+    let formatted_lines = formatted.lines().count();
     let changed_lines = if needs_changed_lines(cli, colorize_stdout) {
         changed_formatted_line_numbers(
             &split_lines_with_endings(&source),
@@ -1570,6 +1606,9 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         skipped: false,
         skip_reason: None,
         debug_lines,
+        source_lines,
+        formatted_lines,
+        elapsed: std::time::Duration::ZERO,
     })
 }
 
@@ -1676,6 +1715,8 @@ fn process_path(
         &path.display().to_string(),
     )?;
     let would_change = formatted != source;
+    let source_lines = source.lines().count();
+    let formatted_lines = formatted.lines().count();
     let changed_lines = if needs_changed_lines(cli, colorize_stdout) {
         changed_formatted_line_numbers(
             &split_lines_with_endings(&source),
@@ -1726,6 +1767,9 @@ fn process_path(
         skipped: false,
         skip_reason: None,
         debug_lines,
+        source_lines,
+        formatted_lines,
+        elapsed: std::time::Duration::ZERO,
     })
 }
 
@@ -1733,6 +1777,7 @@ fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
     colorize_stdout
         || !cli.line_ranges.is_empty()
         || cli.debug
+        || cli.summary
         || cli.stat
         || cli.report_format != ReportFormat::Human
 }
@@ -1766,10 +1811,12 @@ fn skipped_target(
         debug_lines.push(format!("processing {display_name}"));
         debug_lines.push(format!("skipped {display_name}: {reason}"));
     }
+    let source_lines = source.lines().count();
 
     ProcessedTarget {
         path,
         display_name,
+        formatted_lines: source_lines,
         formatted: source,
         highlighted_output: None,
         unified_diff: None,
@@ -1778,6 +1825,8 @@ fn skipped_target(
         skipped: true,
         skip_reason: Some(reason),
         debug_lines,
+        source_lines,
+        elapsed: std::time::Duration::ZERO,
     }
 }
 
@@ -1984,6 +2033,18 @@ fn should_colorize_stdout(choice: ColorChoice) -> bool {
     match choice {
         ColorChoice::Auto => {
             io::stdout().is_terminal()
+                && std::env::var_os("NO_COLOR").is_none()
+                && std::env::var("TERM").map_or(true, |term| term != "dumb")
+        }
+        ColorChoice::Always => true,
+        ColorChoice::Never => false,
+    }
+}
+
+fn should_colorize_stderr(choice: ColorChoice) -> bool {
+    match choice {
+        ColorChoice::Auto => {
+            io::stderr().is_terminal()
                 && std::env::var_os("NO_COLOR").is_none()
                 && std::env::var("TERM").map_or(true, |term| term != "dumb")
         }
@@ -2235,6 +2296,9 @@ fn build_json_report(
                 } else {
                     Vec::new()
                 },
+                elapsed_ms: cli.summary.then_some(result.elapsed.as_millis() as u64),
+                source_lines: cli.summary.then_some(result.source_lines),
+                formatted_lines: cli.summary.then_some(result.formatted_lines),
             })
             .collect(),
         errors: failures
@@ -2562,7 +2626,7 @@ fn should_print_human_summary(
         && !cli.in_place
         && !cli.diff;
     if stdout_mode {
-        return cli.quiet || !failures.is_empty();
+        return cli.quiet || cli.summary || !failures.is_empty();
     }
 
     cli.quiet
@@ -2603,6 +2667,72 @@ fn render_stat_summary(summary: &RunSummary) -> String {
         "{} {}, {} {}",
         summary.changed, files_word, summary.total_changed_lines, lines_word
     )
+}
+
+fn format_elapsed(elapsed: std::time::Duration) -> String {
+    let ms = elapsed.as_millis();
+    if ms == 0 {
+        "<1ms".to_owned()
+    } else if ms < 1000 {
+        format!("{ms}ms")
+    } else {
+        format!("{:.2}s", elapsed.as_secs_f64())
+    }
+}
+
+fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
+    let display_name = &result.display_name;
+    let would_change = result.would_change;
+    let skipped = result.skipped;
+    let skip_reason = result.skip_reason.as_deref();
+    let changed_lines = result.changed_lines.len();
+    let source_lines = result.source_lines;
+    let formatted_lines = result.formatted_lines;
+    let elapsed = result.elapsed;
+    let elapsed_str = format_elapsed(elapsed);
+
+    if skipped {
+        let reason = skip_reason.unwrap_or("skipped");
+        if colorize {
+            return format!(
+                "\u{1b}[33m~\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[33mskipped ({reason})\u{1b}[0m"
+            );
+        }
+        return format!("[~] {display_name}\n    skipped ({reason})");
+    }
+
+    if would_change {
+        let line_counts = if source_lines == formatted_lines {
+            format!("{source_lines} lines")
+        } else {
+            format!("{source_lines} \u{2192} {formatted_lines} lines")
+        };
+        let detail = format!("{changed_lines} lines changed, {line_counts}, {elapsed_str}");
+        if colorize {
+            return format!(
+                "\u{1b}[32m\u{2714}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} {detail}"
+            );
+        }
+        return format!("[*] {display_name}\n    {detail}");
+    }
+
+    // Unchanged
+    let detail = format!("unchanged, {source_lines} lines, {elapsed_str}");
+    if colorize {
+        format!("\u{1b}[2m-\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[2m{detail}\u{1b}[0m")
+    } else {
+        format!("[ ] {display_name}\n    {detail}")
+    }
+}
+
+fn render_summary_failed_line(display_name: &str, colorize: bool) -> String {
+    if colorize {
+        format!(
+            "\u{1b}[31m\u{2716}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[31mparse error\u{1b}[0m"
+        )
+    } else {
+        format!("[!] {display_name}\n    parse error")
+    }
 }
 
 fn describe_config_context(config_context: &ConfigContext) -> String {
@@ -3160,6 +3290,7 @@ mod tests {
             "parallel",
             "progress-bar",
             "quiet",
+            "summary",
             "stat",
             "report-format",
             "required-version",
@@ -3216,5 +3347,246 @@ mod tests {
                 "TOML dump template is missing {key}"
             );
         }
+    }
+
+    // ── summary rendering ──────────────────────────────────────────────────
+
+    use super::{format_elapsed, render_summary_failed_line, render_summary_line, ProcessedTarget};
+    use std::time::Duration;
+
+    #[allow(clippy::too_many_arguments)]
+    fn test_target(
+        name: &str,
+        would_change: bool,
+        skipped: bool,
+        skip_reason: Option<&str>,
+        changed_lines: usize,
+        source_lines: usize,
+        formatted_lines: usize,
+        elapsed: Duration,
+    ) -> ProcessedTarget {
+        ProcessedTarget {
+            path: None,
+            display_name: name.to_owned(),
+            formatted: String::new(),
+            highlighted_output: None,
+            unified_diff: None,
+            changed_lines: vec![0; changed_lines],
+            would_change,
+            skipped,
+            skip_reason: skip_reason.map(str::to_owned),
+            debug_lines: Vec::new(),
+            source_lines,
+            formatted_lines,
+            elapsed,
+        }
+    }
+
+    #[test]
+    fn summary_changed_file_no_color() {
+        let target = test_target(
+            "src/CMakeLists.txt",
+            true,
+            false,
+            None,
+            12,
+            84,
+            86,
+            Duration::from_millis(2),
+        );
+        let line = render_summary_line(&target, false);
+        assert!(line.starts_with("[*] src/CMakeLists.txt"));
+        assert!(line.contains("12 lines changed"));
+        assert!(line.contains("84 \u{2192} 86 lines"));
+        assert!(line.contains("2ms"));
+        assert!(line.contains('\n'));
+    }
+
+    #[test]
+    fn summary_changed_file_same_line_count_no_color() {
+        let target = test_target(
+            "CMakeLists.txt",
+            true,
+            false,
+            None,
+            3,
+            42,
+            42,
+            Duration::from_millis(5),
+        );
+        let line = render_summary_line(&target, false);
+        assert!(line.contains("3 lines changed"));
+        assert!(line.contains("42 lines"));
+        // Should not contain an arrow when line count is unchanged
+        assert!(!line.contains('\u{2192}'));
+    }
+
+    #[test]
+    fn summary_unchanged_file_no_color() {
+        let target = test_target(
+            "tests/CMakeLists.txt",
+            false,
+            false,
+            None,
+            0,
+            42,
+            42,
+            Duration::from_millis(1),
+        );
+        let line = render_summary_line(&target, false);
+        assert!(line.starts_with("[ ] tests/CMakeLists.txt"));
+        assert!(line.contains("unchanged"));
+        assert!(line.contains("42 lines"));
+        assert!(line.contains("1ms"));
+    }
+
+    #[test]
+    fn summary_skipped_file_no_color() {
+        let target = test_target(
+            "docs/CMakeLists.txt",
+            false,
+            true,
+            Some("missing format opt-in pragma"),
+            0,
+            10,
+            10,
+            Duration::ZERO,
+        );
+        let line = render_summary_line(&target, false);
+        assert!(line.starts_with("[~] docs/CMakeLists.txt"));
+        assert!(line.contains("skipped (missing format opt-in pragma)"));
+    }
+
+    #[test]
+    fn summary_failed_file_no_color() {
+        let line = render_summary_failed_line("lib/CMakeLists.txt", false);
+        assert!(line.starts_with("[!] lib/CMakeLists.txt"));
+        assert!(line.contains("parse error"));
+    }
+
+    #[test]
+    fn summary_changed_file_with_color() {
+        let target = test_target(
+            "src/CMakeLists.txt",
+            true,
+            false,
+            None,
+            5,
+            50,
+            52,
+            Duration::from_millis(3),
+        );
+        let line = render_summary_line(&target, true);
+        // Green checkmark
+        assert!(line.contains("\u{2714}"));
+        assert!(line.contains("src/CMakeLists.txt"));
+        assert!(line.contains("5 lines changed"));
+    }
+
+    #[test]
+    fn summary_unchanged_file_with_color() {
+        let target = test_target(
+            "tests/CMakeLists.txt",
+            false,
+            false,
+            None,
+            0,
+            42,
+            42,
+            Duration::from_millis(1),
+        );
+        let line = render_summary_line(&target, true);
+        // Dim hyphen
+        assert!(line.contains("\u{1b}[2m-\u{1b}[0m"));
+        // Dim ANSI sequence
+        assert!(line.contains("\u{1b}[2m"));
+        assert!(line.contains("unchanged"));
+    }
+
+    #[test]
+    fn summary_skipped_file_with_color() {
+        let target = test_target(
+            "docs/CMakeLists.txt",
+            false,
+            true,
+            Some("missing pragma"),
+            0,
+            10,
+            10,
+            Duration::ZERO,
+        );
+        let line = render_summary_line(&target, true);
+        // Yellow tilde
+        assert!(line.contains("\u{1b}[33m~\u{1b}[0m"));
+        assert!(line.contains("skipped (missing pragma)"));
+    }
+
+    #[test]
+    fn summary_failed_file_with_color() {
+        let line = render_summary_failed_line("lib/CMakeLists.txt", true);
+        // Red cross
+        assert!(line.contains("\u{2716}"));
+        assert!(line.contains("\u{1b}[31m"));
+        assert!(line.contains("parse error"));
+    }
+
+    #[test]
+    fn summary_line_has_tree_branch() {
+        let target = test_target(
+            "CMakeLists.txt",
+            true,
+            false,
+            None,
+            1,
+            10,
+            10,
+            Duration::from_millis(1),
+        );
+        let line = render_summary_line(&target, true);
+        // Should contain the tree branch connector
+        assert!(line.contains("\u{2514}\u{2500}"));
+    }
+
+    #[test]
+    fn summary_failed_line_has_tree_branch() {
+        let line = render_summary_failed_line("CMakeLists.txt", true);
+        assert!(line.contains("\u{2514}\u{2500}"));
+    }
+
+    #[test]
+    fn summary_no_color_uses_indentation_not_branch() {
+        let target = test_target(
+            "CMakeLists.txt",
+            false,
+            false,
+            None,
+            0,
+            10,
+            10,
+            Duration::from_millis(1),
+        );
+        let line = render_summary_line(&target, false);
+        let lines: Vec<&str> = line.split('\n').collect();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[1].starts_with("    "));
+    }
+
+    #[test]
+    fn format_elapsed_sub_millisecond() {
+        assert_eq!(format_elapsed(Duration::ZERO), "<1ms");
+        assert_eq!(format_elapsed(Duration::from_micros(500)), "<1ms");
+    }
+
+    #[test]
+    fn format_elapsed_milliseconds() {
+        assert_eq!(format_elapsed(Duration::from_millis(1)), "1ms");
+        assert_eq!(format_elapsed(Duration::from_millis(42)), "42ms");
+        assert_eq!(format_elapsed(Duration::from_millis(999)), "999ms");
+    }
+
+    #[test]
+    fn format_elapsed_seconds() {
+        assert_eq!(format_elapsed(Duration::from_millis(1000)), "1.00s");
+        assert_eq!(format_elapsed(Duration::from_millis(2500)), "2.50s");
     }
 }
