@@ -308,7 +308,7 @@ struct Cli {
 
     /// Set the number of parallel formatting jobs.
     ///
-    /// Defaults to the available CPU count minus two (minimum 1). Pass an
+    /// Defaults to the available CPU count minus one (minimum 1). Pass an
     /// explicit value to override, or `--parallel 1` to force serial.
     #[arg(
         short = 'j',
@@ -2189,11 +2189,11 @@ fn verify_semantics(
 fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, cmakefmt::Error> {
     match requested {
         None => {
-            // Default: available CPUs minus 2, minimum 1.
+            // Default: available CPUs minus 1, minimum 1.
             let cpus = std::thread::available_parallelism()
                 .map(|p| p.get())
                 .unwrap_or(1);
-            Ok(cpus.saturating_sub(2).max(1))
+            Ok(cpus.saturating_sub(1).max(1))
         }
         Some(0) => std::thread::available_parallelism()
             .map(|parallelism| parallelism.get())
@@ -2926,7 +2926,7 @@ fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
         };
         let detail = format!("{changed_lines} lines changed, {line_counts}, {elapsed_str}");
         if colorize {
-            return format!("\u{1b}[33m!\u{1b}[0m {display_name}\n  \u{2514}\u{2500} {detail}");
+            return format!("\u{1b}[1;93m!\u{1b}[0m {display_name}\n  \u{2514}\u{2500} {detail}");
         }
         return format!("[!]  {display_name}\n     {detail}");
     }
@@ -2934,7 +2934,9 @@ fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
     // Unchanged
     let detail = format!("unchanged, {source_lines} lines, {elapsed_str}");
     if colorize {
-        format!("\u{1b}[32m\u{2713}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[2m{detail}\u{1b}[0m")
+        format!(
+            "\u{1b}[1;92m\u{2714}\u{1b}[0m \u{1b}[2m{display_name}\u{1b}[0m\n  \u{2514}\u{2500} \u{1b}[2m{detail}\u{1b}[0m"
+        )
     } else {
         format!("[ok] {display_name}\n     {detail}")
     }
@@ -2943,7 +2945,7 @@ fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
 fn render_summary_failed_line(display_name: &str, colorize: bool) -> String {
     if colorize {
         format!(
-            "\u{1b}[31m\u{2717}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[31mparse error\u{1b}[0m"
+            "\u{1b}[1;91m\u{2717}\u{1b}[0m {display_name}\n  \u{2514}\u{2500} \u{1b}[91mparse error\u{1b}[0m"
         )
     } else {
         format!("[!!] {display_name}\n     parse error")
@@ -3693,8 +3695,8 @@ mod tests {
             Duration::from_millis(3),
         );
         let line = render_summary_line(&target, true);
-        // Yellow exclamation mark
-        assert!(line.contains("\u{1b}[33m!\u{1b}[0m"));
+        // Bold bright yellow exclamation mark
+        assert!(line.contains("\u{1b}[1;93m!\u{1b}[0m"));
         assert!(line.contains("src/CMakeLists.txt"));
         assert!(line.contains("5 lines changed"));
     }
@@ -3712,8 +3714,8 @@ mod tests {
             Duration::from_millis(1),
         );
         let line = render_summary_line(&target, true);
-        // Green checkmark
-        assert!(line.contains("\u{1b}[32m\u{2713}\u{1b}[0m"));
+        // Bold bright green checkmark
+        assert!(line.contains("\u{1b}[1;92m\u{2714}\u{1b}[0m"));
         assert!(line.contains("unchanged"));
     }
 
@@ -3738,9 +3740,9 @@ mod tests {
     #[test]
     fn summary_failed_file_with_color() {
         let line = render_summary_failed_line("lib/CMakeLists.txt", true);
-        // Red ballot x
+        // Bold bright red ballot x
         assert!(line.contains("\u{2717}"));
-        assert!(line.contains("\u{1b}[31m"));
+        assert!(line.contains("\u{1b}[1;91m"));
         assert!(line.contains("parse error"));
     }
 

@@ -29,7 +29,7 @@ This project follows a simple changelog discipline:
 
 ### Changed
 
-- Parallel formatting is now the default — uses available CPUs minus two
+- Parallel formatting is now the default — uses available CPUs minus one
   (minimum 1). Use `--parallel 1` to force serial processing.
 
 ## 0.6.0 — 2026-04-10
