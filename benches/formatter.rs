@@ -9,7 +9,9 @@ use std::time::Duration;
 use cmakefmt::files::{discover_cmake_files_with_options, DiscoveryOptions};
 use cmakefmt::formatter;
 use cmakefmt::spec::registry::CommandRegistry;
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode};
+use codspeed_criterion_compat::{
+    criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode,
+};
 use rayon::prelude::*;
 use regex::Regex;
 use similar::TextDiff;
