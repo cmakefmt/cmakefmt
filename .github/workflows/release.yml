@@ -544,4 +544,4 @@ jobs:
           path: dist
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@6733eb7d741f0b11ec6a39b58540dab7590f9b7d  # v1.14.0
+        uses: pypa/gh-action-pypi-publish@release/v1  # Docker-based; SHA pinning causes manifest errors
