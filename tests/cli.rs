@@ -601,6 +601,71 @@ fn parse_errors_include_context_and_repro_hint() {
 }
 
 #[test]
+fn unclosed_paren_error_points_to_opening_paren() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "cmake_minimum_required(VERSION 3.20)\nset(FOO\n  bar\n  baz\n\nmessage(STATUS \"hello\")\n",
+    );
+
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Error location should point to the unclosed `(`, not EOF.
+    assert!(
+        stderr.contains(":2:4"),
+        "error should point to line 2, column 4 (the opening paren), got: {stderr}"
+    );
+    assert!(
+        stderr.contains("set(FOO"),
+        "snippet should show the line with the unclosed paren, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("unclosed `(`"),
+        "should include unclosed paren hint, got: {stderr}"
+    );
+}
+
+#[test]
+fn unclosed_paren_at_eof_points_to_opening_paren() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "add_subdirectory(foo\n");
+
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(":1:17"),
+        "error should point to column 17 (the opening paren), got: {stderr}"
+    );
+    assert!(
+        stderr.contains("unclosed `(`"),
+        "should include unclosed paren hint, got: {stderr}"
+    );
+}
+
+#[test]
+fn balanced_parens_error_does_not_show_unclosed_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    // Parse error mid-file (not at EOF) — parens are balanced.
+    write_file(&file, "set(FOO bar)\n)extra_close\nset(BAZ qux)\n");
+
+    let output = cmakefmt().arg(file.to_str().unwrap()).output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.contains("unclosed `(`"),
+        "should not show unclosed paren hint for a mid-file error, got: {stderr}"
+    );
+}
+
+#[test]
 fn keep_going_formats_other_files_and_reports_error_summary() {
     let dir = tempfile::tempdir().unwrap();
     let good = dir.path().join("good.cmake");
