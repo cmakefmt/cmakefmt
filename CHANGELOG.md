@@ -11,8 +11,9 @@ This project follows a simple changelog discipline:
 ### Added
 
 - Python bindings via PyO3 — `pip install cmakefmt` exposes
-  `format_source()`, `check()`, and `default_config()` as native
+  `format_source()`, `is_formatted()`, and `default_config()` as native
   Python functions with the same config schema as `.cmakefmt.yaml`
+- Python `config` parameter accepts both YAML strings and Python dicts
 - `Config::from_yaml_str()` public API for parsing config from YAML
   strings through the validated `FileConfig` schema
 
