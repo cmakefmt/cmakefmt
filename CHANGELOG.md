@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.8.0 — 2026-04-11
+
 ### Added
 
 - Python bindings via PyO3 — `pip install cmakefmt` exposes
