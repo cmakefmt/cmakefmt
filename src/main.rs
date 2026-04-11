@@ -792,7 +792,7 @@ fn handle_completed_target(
                 state.summary.unchanged += 1;
             }
 
-            if cli.summary {
+            if cli.summary && cli.report_format == ReportFormat::Human {
                 progress.eprintln(&render_summary_line(&result, colorize_stderr))?;
             }
 
@@ -820,7 +820,7 @@ fn handle_completed_target(
                 rendered_error: render_cli_error(&err),
             };
 
-            if cli.summary {
+            if cli.summary && cli.report_format == ReportFormat::Human {
                 progress.eprintln(&render_summary_failed_line(
                     &failure.display_name,
                     colorize_stderr,
@@ -871,7 +871,7 @@ fn emit_human_result(
                 write_diff_to_stdout(result, colorize_stdout)?;
                 flush_stdout()?;
             }
-            if !cli.quiet {
+            if !cli.quiet && !cli.summary {
                 progress.eprintln(&format!("{} would be reformatted", result.display_name))?;
             }
         }

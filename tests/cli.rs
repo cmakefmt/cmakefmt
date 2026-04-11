@@ -2270,9 +2270,11 @@ fn summary_check_shows_changed_file_status() {
         stderr.contains("lines changed"),
         "summary output should show changed line count, got: {stderr}"
     );
+    // --summary suppresses "would be reformatted" since the summary line
+    // already conveys that information.
     assert!(
-        stderr.contains("would be reformatted"),
-        "check mode should still show reformatting message, got: {stderr}"
+        !stderr.contains("would be reformatted"),
+        "summary mode should suppress 'would be reformatted', got: {stderr}"
     );
 }
 
@@ -2664,7 +2666,7 @@ fn summary_with_multiple_files_shows_all() {
 }
 
 #[test]
-fn summary_json_with_stderr_output() {
+fn summary_suppressed_with_non_human_report_format() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");
     write_file(&file, "set(  FOO  bar )\n");
@@ -2682,11 +2684,11 @@ fn summary_json_with_stderr_output() {
         .output()
         .unwrap();
 
-    // Verbose lines should be on stderr
+    // Summary lines should not appear on stderr with non-human report formats.
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("[!]"),
-        "summary status should appear on stderr even with JSON report, got: {stderr}"
+        !stderr.contains("[!]"),
+        "summary lines should be suppressed with --report-format json, got: {stderr}"
     );
 
     // JSON should still be valid on stdout
