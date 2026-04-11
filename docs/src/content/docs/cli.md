@@ -66,9 +66,9 @@ Ignore rules only affect:
 | `--check` | Exit with code `1` when any selected file would change. |
 | `--list-changed-files` | Print only the files that would change after formatting. |
 | `--list-input-files` | Print the selected input files after discovery and filtering, without formatting them. |
-| `--diff` | Print a unified diff instead of the full formatted output. |
+| `-d`, `--diff` | Print a unified diff instead of the full formatted output. |
 | `--report-format <human\|json\|github\|checkstyle\|junit\|sarif>` | Switch between human output and CI/editor-friendly machine reporters. |
-| `--summary` | Show a per-file status summary instead of formatted output. In stdout mode, formatted output is suppressed. |
+| `-s`, `--summary` | Show a per-file status summary instead of formatted output. In stdout mode, formatted output is suppressed. |
 | `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
 
 ## Execution Flags
@@ -76,7 +76,7 @@ Ignore rules only affect:
 | Flag | Meaning |
 | --- | --- |
 | `--debug` | Emit discovery, config, barrier, and formatter diagnostics to stderr. |
-| `--quiet` | Suppress per-file human output and keep only summaries plus actual errors. |
+| `-q`, `--quiet` | Suppress per-file human output and keep only summaries plus actual errors. |
 | `--keep-going` | Continue processing later files after a file-level parse/format error. |
 | `--required-version <VERSION>` | Refuse to run unless the current `cmakefmt` version matches exactly. Useful for pinned CI and editor wrappers. |
 | `--verify` | Parse the original and formatted output and reject the result if the CMake semantics change. |
@@ -86,7 +86,7 @@ Ignore rules only affect:
 | `--cache-strategy <metadata\|content>` | Choose whether cache invalidation tracks file metadata or file contents. |
 | `--require-pragma` | Format only files that opt in with a `# cmakefmt: enable` style pragma. |
 | `-j`, `--parallel [JOBS]` | Set the number of parallel formatting jobs. Defaults to the available CPU count minus one. Pass `--parallel 1` to force serial. |
-| `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
+| `-p`, `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
 
 ## Subcommands
 
