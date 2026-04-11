@@ -5,7 +5,7 @@
   "type": "object",
   "properties": {
     "format": {
-      "description": "Formatting options controlling line width, indentation, and layout.",
+      "description": "Formatting options controlling line width, indentation, casing, and layout.",
       "$ref": "#/$defs/FormatSection"
     },
     "markup": {
@@ -19,10 +19,6 @@
         "$ref": "#/$defs/PerCommandConfig"
       },
       "default": {}
-    },
-    "style": {
-      "description": "Style options controlling command and keyword casing.",
-      "$ref": "#/$defs/StyleSection"
     }
   },
   "additionalProperties": false,
@@ -81,6 +77,18 @@
             "type": "string"
           }
         },
+        "command_case": {
+          "description": "Output casing for command names: `lower`, `upper`, or `unchanged`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CaseStyle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "dangle_align": {
           "description": "Alignment strategy for a dangling `)`: `prefix`, `open`, or `close`.",
           "anyOf": [
@@ -114,6 +122,18 @@
           "anyOf": [
             {
               "$ref": "#/$defs/FractionalTabPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "keyword_case": {
+          "description": "Output casing for recognized keywords and flags: `lower`, `upper`, or `unchanged`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CaseStyle"
             },
             {
               "type": "null"
@@ -468,36 +488,6 @@
           ],
           "format": "uint",
           "minimum": 0
-        }
-      },
-      "additionalProperties": false
-    },
-    "StyleSection": {
-      "type": "object",
-      "properties": {
-        "command_case": {
-          "description": "Output casing for command names: `lower`, `upper`, or `unchanged`.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/CaseStyle"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "keyword_case": {
-          "description": "Output casing for recognized keywords and flags: `lower`, `upper`, or `unchanged`.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/CaseStyle"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
         }
       },
       "additionalProperties": false

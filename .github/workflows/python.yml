@@ -1,0 +1,110 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+name: Python
+
+on:
+  push:
+    branches: [main]
+    paths:
+      ["src/**", "Cargo.toml", "pyproject.toml", "python/**", "tests/python/**"]
+  pull_request:
+    paths:
+      ["src/**", "Cargo.toml", "pyproject.toml", "python/**", "tests/python/**"]
+
+concurrency:
+  group: python-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  build-wheel:
+    name: Build wheel (${{ matrix.os }} / ${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64 }
+          - { os: ubuntu-latest, target: aarch64 }
+          - { os: macos-15-intel, target: x86_64 }
+          - { os: macos-latest, target: aarch64 }
+          - { os: windows-latest, target: x64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Build release wheel
+        uses: PyO3/maturin-action@3e2bdf6ba6453a61e649744019b8a2d906c7eb38 # v1.51.0
+        with:
+          target: ${{ matrix.target }}
+          args: --release --features pyo3 --out dist
+
+      - name: Smoke-test wheel
+        if: matrix.target != 'aarch64'
+        run: |
+          pip install --find-links dist cmakefmt
+          python -c "import cmakefmt; print(cmakefmt.__version__); assert cmakefmt.is_formatted('set(X 1)\n')"
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: wheel-${{ matrix.os }}-${{ matrix.target }}
+          path: dist/*.whl
+
+  test:
+    name: Test / Python ${{ matrix.python }} / ${{ matrix.os }}
+    needs: [build-wheel]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.11", wheel: wheel-ubuntu-latest-x86_64 }
+          - { os: ubuntu-latest, python: "3.14", wheel: wheel-ubuntu-latest-x86_64 }
+          - { os: macos-latest, python: "3.11", wheel: wheel-macos-latest-aarch64 }
+          - { os: macos-latest, python: "3.14", wheel: wheel-macos-latest-aarch64 }
+          - { os: windows-latest, python: "3.11", wheel: wheel-windows-latest-x64 }
+          - { os: windows-latest, python: "3.14", wheel: wheel-windows-latest-x64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Download wheel
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ matrix.wheel }}
+          path: dist
+
+      - name: Install wheel and test dependencies
+        run: |
+          pip install --find-links dist cmakefmt
+          pip install pytest pyyaml
+
+      - name: Run Python tests
+        run: pytest tests/python/ -v
+
+  build-sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build sdist
+        uses: PyO3/maturin-action@3e2bdf6ba6453a61e649744019b8a2d906c7eb38 # v1.51.0
+        with:
+          command: sdist
+          args: --out dist

@@ -601,7 +601,6 @@ impl PythonLiteralParser<'_> {
 #[derive(Default)]
 struct ConvertedConfig {
     format: OutputFormatSection,
-    style: OutputStyleSection,
     markup: OutputMarkupSection,
     per_command_overrides: BTreeMap<String, OutputPerCommandConfig>,
     commands: BTreeMap<String, CommandSpecOverride>,
@@ -612,7 +611,6 @@ impl ConvertedConfig {
     fn as_config_file(&self) -> OutputConfigFile {
         OutputConfigFile {
             format: self.format.has_any().then_some(self.format.clone()),
-            style: self.style.has_any().then_some(self.style.clone()),
             markup: self.markup.has_any().then_some(self.markup.clone()),
             per_command_overrides: (!self.per_command_overrides.is_empty())
                 .then_some(self.per_command_overrides.clone()),
@@ -637,8 +635,6 @@ impl ConvertedConfig {
 struct OutputConfigFile {
     #[serde(skip_serializing_if = "Option::is_none")]
     format: Option<OutputFormatSection>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    style: Option<OutputStyleSection>,
     #[serde(skip_serializing_if = "Option::is_none")]
     markup: Option<OutputMarkupSection>,
     #[serde(
@@ -690,6 +686,10 @@ struct OutputFormatSection {
     space_before_control_paren: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     space_before_definition_paren: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    command_case: Option<CaseStyle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    keyword_case: Option<CaseStyle>,
 }
 
 impl OutputFormatSection {
@@ -713,20 +713,8 @@ impl OutputFormatSection {
             || self.max_prefix_length.is_some()
             || self.space_before_control_paren.is_some()
             || self.space_before_definition_paren.is_some()
-    }
-}
-
-#[derive(Debug, Clone, Default, Serialize)]
-struct OutputStyleSection {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    command_case: Option<CaseStyle>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    keyword_case: Option<CaseStyle>,
-}
-
-impl OutputStyleSection {
-    fn has_any(&self) -> bool {
-        self.command_case.is_some() || self.keyword_case.is_some()
+            || self.command_case.is_some()
+            || self.keyword_case.is_some()
     }
 }
 
@@ -869,10 +857,10 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
                 converted.format.space_before_definition_paren = as_bool(value)
             }
             "command_case" => {
-                converted.style.command_case = convert_case_style(path, converted, key, value)
+                converted.format.command_case = convert_case_style(path, converted, key, value)
             }
             "keyword_case" => {
-                converted.style.keyword_case = convert_case_style(path, converted, key, value)
+                converted.format.keyword_case = convert_case_style(path, converted, key, value)
             }
             unsupported => converted.note_unsupported(path, &format!("[format].{unsupported}")),
         }
@@ -1360,7 +1348,6 @@ format:
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("[format]"));
         assert!(converted.contains("line_width = 100"));
-        assert!(converted.contains("[style]"));
         assert!(converted.contains("command_case = \"lower\""));
         assert!(converted.contains("[per_command_overrides.message]"));
     }

@@ -147,7 +147,7 @@ fn stdin_path_uses_config_discovery() {
     std::fs::create_dir_all(&nested).unwrap();
     write_file(
         &nested.join(".cmakefmt.yaml"),
-        "style:\n  command_case: upper\n",
+        "format:\n  command_case: upper\n",
     );
 
     let mut child = cmakefmt()
@@ -1253,7 +1253,7 @@ fn changed_since_selects_only_changed_files() {
 fn explicit_config_file() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("custom.toml");
-    std::fs::write(&config_path, "[style]\ncommand_case = \"upper\"\n").unwrap();
+    std::fs::write(&config_path, "[format]\ncommand_case = \"upper\"\n").unwrap();
 
     let mut child = cmakefmt()
         .args(["--config-file", config_path.to_str().unwrap(), "-"])
@@ -1279,7 +1279,7 @@ fn explicit_config_file() {
 fn config_short_alias_works() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("custom.toml");
-    std::fs::write(&config_path, "[style]\ncommand_case = \"upper\"\n").unwrap();
+    std::fs::write(&config_path, "[format]\ncommand_case = \"upper\"\n").unwrap();
 
     let mut child = cmakefmt()
         .args(["-c", config_path.to_str().unwrap(), "-"])
@@ -1305,8 +1305,8 @@ fn multiple_explicit_config_files_merge_in_order() {
     let dir = tempfile::tempdir().unwrap();
     let first = dir.path().join("first.toml");
     let second = dir.path().join("second.toml");
-    std::fs::write(&first, "[style]\ncommand_case = \"upper\"\n").unwrap();
-    std::fs::write(&second, "[style]\nkeyword_case = \"lower\"\n").unwrap();
+    std::fs::write(&first, "[format]\ncommand_case = \"upper\"\n").unwrap();
+    std::fs::write(&second, "[format]\nkeyword_case = \"lower\"\n").unwrap();
 
     let mut child = cmakefmt()
         .args([
@@ -1340,7 +1340,7 @@ fn multiple_explicit_config_files_merge_in_order() {
 fn config_alias_still_works() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("custom.toml");
-    std::fs::write(&config_path, "[style]\ncommand_case = \"upper\"\n").unwrap();
+    std::fs::write(&config_path, "[format]\ncommand_case = \"upper\"\n").unwrap();
 
     let mut child = cmakefmt()
         .args(["--config", config_path.to_str().unwrap(), "-"])
@@ -1386,7 +1386,7 @@ fn convert_legacy_json_config_to_stdout() {
     assert!(stdout.contains("# Converted from legacy cmake-format configuration."));
     assert!(stdout.contains("format:"));
     assert!(stdout.contains("line_width: 100"));
-    assert!(stdout.contains("style:"));
+    assert!(stdout.contains("command_case:"));
     assert!(stdout.contains("command_case: lower"));
 }
 
@@ -1421,7 +1421,6 @@ fn convert_config_toml_prints_toml_when_requested() {
     assert!(stdout.contains("# Converted from legacy cmake-format configuration."));
     assert!(stdout.contains("[format]"));
     assert!(stdout.contains("line_width = 100"));
-    assert!(stdout.contains("[style]"));
     assert!(stdout.contains("command_case = \"lower\""));
 }
 
@@ -1431,7 +1430,7 @@ fn discovered_config_uses_nearest_file_only() {
     std::fs::create_dir(dir.path().join(".git")).unwrap();
     std::fs::write(
         dir.path().join(".cmakefmt.toml"),
-        "[style]\ncommand_case = \"upper\"\n",
+        "[format]\ncommand_case = \"upper\"\n",
     )
     .unwrap();
 
@@ -1439,7 +1438,7 @@ fn discovered_config_uses_nearest_file_only() {
     std::fs::create_dir(&subdir).unwrap();
     std::fs::write(
         subdir.join(".cmakefmt.yaml"),
-        "style:\n  keyword_case: lower\n",
+        "format:\n  keyword_case: lower\n",
     )
     .unwrap();
 
@@ -1526,7 +1525,7 @@ fn show_config_prints_effective_yaml_config() {
     let file = dir.path().join("CMakeLists.txt");
     write_file(
         &dir.path().join(".cmakefmt.yaml"),
-        "format:\n  line_width: 99\nstyle:\n  command_case: upper\n",
+        "format:\n  line_width: 99\n  command_case: upper\n",
     );
     write_file(&file, "set(FOO bar)\n");
 
@@ -1539,7 +1538,7 @@ fn show_config_prints_effective_yaml_config() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("format:"));
     assert!(stdout.contains("line_width: 99"));
-    assert!(stdout.contains("style:"));
+    assert!(stdout.contains("command_case:"));
     assert!(stdout.contains("command_case: upper"));
 }
 
@@ -1574,13 +1573,13 @@ fn show_config_path_prints_nearest_config() {
     std::fs::create_dir(dir.path().join(".git")).unwrap();
     write_file(
         &dir.path().join(".cmakefmt.toml"),
-        "[style]\ncommand_case = \"upper\"\n",
+        "[format]\ncommand_case = \"upper\"\n",
     );
     let nested = dir.path().join("nested");
     std::fs::create_dir_all(&nested).unwrap();
     write_file(
         &nested.join(".cmakefmt.yaml"),
-        "style:\n  command_case: lower\n",
+        "format:\n  command_case: lower\n",
     );
     let file = nested.join("CMakeLists.txt");
     write_file(&file, "set(FOO bar)\n");
@@ -1601,7 +1600,7 @@ fn show_config_path_prints_nearest_config() {
 fn show_config_path_accepts_file_before_flag() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join(".cmakefmt.yaml");
-    write_file(&config, "style:\n  command_case: upper\n");
+    write_file(&config, "format:\n  command_case: upper\n");
     let file = dir.path().join("CMakeLists.txt");
     write_file(&file, "set(FOO bar)\n");
 
@@ -1621,7 +1620,7 @@ fn show_config_path_accepts_file_before_flag() {
 fn find_config_path_alias_works() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join(".cmakefmt.yaml");
-    write_file(&config, "style:\n  command_case: upper\n");
+    write_file(&config, "format:\n  command_case: upper\n");
     let file = dir.path().join("CMakeLists.txt");
     write_file(&file, "set(FOO bar)\n");
 

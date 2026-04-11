@@ -8,6 +8,25 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- Python bindings via PyO3 — `pip install cmakefmt` exposes
+  `format_source()`, `check()`, and `default_config()` as native
+  Python functions with the same config schema as `.cmakefmt.yaml`
+- `Config::from_yaml_str()` public API for parsing config from YAML
+  strings through the validated `FileConfig` schema
+
+### Changed
+
+- **Breaking:** `command_case` and `keyword_case` moved from `style:` to
+  `format:` section in config files. The `style:` section is removed.
+
+### Fixed
+
+- Broken pipe error when piping output to `head` or `less`
+- WASM binding now validates config through `FileConfig` schema instead
+  of silently accepting invalid fields via the flat `Config` struct
+
 ## 0.7.0 — 2026-04-11
 
 ### Added
