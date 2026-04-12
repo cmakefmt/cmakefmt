@@ -235,6 +235,39 @@ struct Cli {
     )]
     diff: bool,
 
+    /// Show why each command was formatted the way it was.
+    ///
+    /// Prints a per-command explanation of the layout decision (inline,
+    /// hanging, or vertical) and the config values that influenced it.
+    /// Requires exactly one formatting target.
+    #[arg(
+        long,
+        help_heading = "Output Modes",
+        conflicts_with = "check",
+        conflicts_with = "in_place",
+        conflicts_with = "diff",
+        conflicts_with = "list_changed_files",
+        conflicts_with = "list_input_files",
+        conflicts_with = "quiet"
+    )]
+    explain: bool,
+
+    /// Watch for file changes and reformat automatically.
+    ///
+    /// Watches the specified files or directories for changes and reformats
+    /// them in-place. Press Ctrl+C to stop.
+    #[arg(
+        long,
+        help_heading = "Execution",
+        conflicts_with = "check",
+        conflicts_with = "diff",
+        conflicts_with = "list_changed_files",
+        conflicts_with = "list_input_files",
+        conflicts_with = "quiet",
+        conflicts_with = "explain"
+    )]
+    watch: bool,
+
     /// Cache formatted results for repeated runs on the same files.
     ///
     /// Speeds up large-repo checks by skipping files that haven't changed.
@@ -664,6 +697,14 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         return Ok(EXIT_OK);
     }
+    if cli.explain && targets.len() != 1 {
+        return Err(cmakefmt::Error::Formatter(
+            "--explain requires exactly one formatting target".to_owned(),
+        ));
+    }
+    if cli.watch {
+        return run_watch(cli, &targets, file_filter.as_ref());
+    }
     if !cli.line_ranges.is_empty() && targets.len() != 1 {
         return Err(cmakefmt::Error::Formatter(
             "--lines requires exactly one formatting target".to_owned(),
@@ -773,8 +814,136 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 }
 
+fn run_watch(
+    cli: &Cli,
+    initial_targets: &[InputTarget],
+    file_filter: Option<&Regex>,
+) -> Result<u8, cmakefmt::Error> {
+    use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    let colorize_stderr = should_colorize_stderr(cli.color);
+
+    // Collect directories to watch from the initial targets.
+    let mut watch_roots = Vec::new();
+    for target in initial_targets {
+        match target {
+            InputTarget::Path(path) => {
+                if path.is_dir() {
+                    watch_roots.push(path.clone());
+                } else if let Some(parent) = path.parent() {
+                    watch_roots.push(parent.to_path_buf());
+                }
+            }
+            InputTarget::Stdin => {}
+        }
+    }
+    if watch_roots.is_empty() {
+        watch_roots.push(std::env::current_dir().map_err(cmakefmt::Error::Io)?);
+    }
+
+    let shutdown = Arc::new(AtomicBool::new(false));
+    let shutdown_clone = shutdown.clone();
+    ctrlc::set_handler(move || {
+        shutdown_clone.store(true, Ordering::Relaxed);
+    })
+    .map_err(|e| cmakefmt::Error::Formatter(format!("failed to set Ctrl+C handler: {e}")))?;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let mut debouncer = new_debouncer(Duration::from_millis(300), tx)
+        .map_err(|e| cmakefmt::Error::Formatter(format!("failed to create file watcher: {e}")))?;
+
+    for root in &watch_roots {
+        debouncer
+            .watcher()
+            .watch(root, notify::RecursiveMode::Recursive)
+            .map_err(|e| {
+                cmakefmt::Error::Formatter(format!("failed to watch {}: {e}", root.display()))
+            })?;
+    }
+
+    eprintln!(
+        "watching {} for changes (Ctrl+C to stop)...",
+        watch_roots
+            .iter()
+            .map(|r| r.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+
+    while !shutdown.load(Ordering::Relaxed) {
+        let events = match rx.recv_timeout(Duration::from_millis(500)) {
+            Ok(Ok(events)) => events,
+            Ok(Err(err)) => {
+                eprintln!("watch error: {err}");
+                continue;
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+        };
+
+        let mut formatted_paths = BTreeSet::new();
+        for event in &events {
+            if !matches!(event.kind, DebouncedEventKind::Any) {
+                continue;
+            }
+            let path = &event.path;
+            if !path.is_file() || !cmakefmt::files::is_cmake_file(path) {
+                continue;
+            }
+            if let Some(filter) = file_filter {
+                if !filter.is_match(&path.display().to_string()) {
+                    continue;
+                }
+            }
+            if formatted_paths.contains(path) {
+                continue;
+            }
+            formatted_paths.insert(path.clone());
+
+            match watch_format_file(cli, path, colorize_stderr) {
+                Ok(msg) => eprintln!("{msg}"),
+                Err(e) => eprintln!("error: {}: {e}", path.display()),
+            }
+        }
+    }
+
+    eprintln!("stopped.");
+    Ok(EXIT_OK)
+}
+
+fn watch_format_file(cli: &Cli, path: &Path, colorize: bool) -> Result<String, cmakefmt::Error> {
+    let source = std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?;
+    let (config, registry, _) = build_context(cli, Some(path))?;
+    let formatted = format_source_with_registry(&source, &config, &registry)
+        .map_err(|e| e.with_display_name(path.display().to_string()))?;
+
+    let would_change = formatted != source;
+    if would_change {
+        atomic_write(path, &formatted)?;
+        if colorize {
+            Ok(format!("\x1b[1;93m!\x1b[0m {}", path.display()))
+        } else {
+            Ok(format!("[!] {}", path.display()))
+        }
+    } else if colorize {
+        Ok(format!(
+            "\x1b[1;32m✔\x1b[0m \x1b[2m{}\x1b[0m",
+            path.display()
+        ))
+    } else {
+        Ok(format!("[ok] {}", path.display()))
+    }
+}
+
 fn is_stdout_mode(cli: &Cli) -> bool {
     !cli.list_changed_files && !cli.list_input_files && !cli.check && !cli.in_place
+}
+
+fn needs_debug_lines(cli: &Cli) -> bool {
+    cli.debug || cli.explain
 }
 
 fn streams_stdout_during_run(cli: &Cli) -> bool {
@@ -949,6 +1118,11 @@ fn emit_human_result(
         }
     }
 
+    if cli.explain {
+        render_explain_output(result, &progress)?;
+        return Ok(());
+    }
+
     if result.skipped {
         if is_stdout_mode(cli) && !cli.quiet && !cli.summary {
             write_stdout_result(result, colorize_stdout, human_output)?;
@@ -1120,6 +1294,12 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
     if cli.list_input_files && !cli.line_ranges.is_empty() {
         return Err(cmakefmt::Error::Formatter(
             "--list-input-files cannot be combined with --lines".to_owned(),
+        ));
+    }
+
+    if cli.watch && cli.files.iter().any(|f| f == "-") {
+        return Err(cmakefmt::Error::Formatter(
+            "--watch cannot read from stdin".to_owned(),
         ));
     }
 
@@ -1910,7 +2090,8 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         ));
     }
     let (config, registry, config_context) = build_context(cli, stdin_path)?;
-    let mut debug_lines = if cli.debug {
+    let collect_debug = needs_debug_lines(cli);
+    let mut debug_lines = if collect_debug {
         vec![
             format!("processing {display_name}"),
             describe_config_context(&config_context),
@@ -1918,7 +2099,7 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
     } else {
         Vec::new()
     };
-    let (formatted, mut formatter_debug) = if cli.debug {
+    let (formatted, mut formatter_debug) = if collect_debug {
         match format_source_with_registry_debug(&source, &config, &registry) {
             Ok(result) => result,
             Err(err) => return Err(err.with_display_name(&display_name)),
@@ -1929,13 +2110,13 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
             Err(err) => return Err(err.with_display_name(&display_name)),
         }
     };
-    if cli.debug {
+    if collect_debug {
         debug_lines.append(&mut formatter_debug);
     }
 
     if verification_mode(cli) == VerificationMode::Enabled {
         verify_semantics(&source, &formatted, &registry, &display_name)?;
-        if cli.debug {
+        if collect_debug {
             debug_lines.push(format!(
                 "result {display_name}: semantic verification passed"
             ));
@@ -1955,7 +2136,7 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
     } else {
         Vec::new()
     };
-    if cli.debug {
+    if collect_debug {
         debug_lines.push(format!(
             "result {display_name}: would_change={would_change}"
         ));
@@ -2003,7 +2184,8 @@ fn process_path(
         ));
     }
     let (config, registry, config_context) = build_context(cli, Some(path))?;
-    let mut debug_lines = if cli.debug {
+    let collect_debug = needs_debug_lines(cli);
+    let mut debug_lines = if collect_debug {
         vec![
             format!("processing {}", path.display()),
             describe_config_context(&config_context),
@@ -2029,7 +2211,7 @@ fn process_path(
     let (formatted, mut formatter_debug) = if let Some(cache) = &cache_context {
         if let Some(cached) = read_cache_entry(cache)? {
             cache_hit = true;
-            if cli.debug {
+            if collect_debug {
                 debug_lines.push(format!(
                     "cache hit {} ({})",
                     path.display(),
@@ -2038,14 +2220,14 @@ fn process_path(
             }
             (cached.formatted, Vec::new())
         } else {
-            if cli.debug {
+            if collect_debug {
                 debug_lines.push(format!(
                     "cache miss {} ({})",
                     path.display(),
                     cache.cache_file.display()
                 ));
             }
-            if cli.debug {
+            if collect_debug {
                 match format_source_with_registry_debug(&source, &config, &registry) {
                     Ok(result) => result,
                     Err(err) => return Err(err.with_display_name(path.display().to_string())),
@@ -2057,7 +2239,7 @@ fn process_path(
                 }
             }
         }
-    } else if cli.debug {
+    } else if collect_debug {
         match format_source_with_registry_debug(&source, &config, &registry) {
             Ok(result) => result,
             Err(err) => return Err(err.with_display_name(path.display().to_string())),
@@ -2068,13 +2250,13 @@ fn process_path(
             Err(err) => return Err(err.with_display_name(path.display().to_string())),
         }
     };
-    if cli.debug {
+    if collect_debug {
         debug_lines.append(&mut formatter_debug);
     }
 
     if verification_mode(cli) == VerificationMode::Enabled {
         verify_semantics(&source, &formatted, &registry, &path.display().to_string())?;
-        if cli.debug {
+        if collect_debug {
             debug_lines.push(format!(
                 "result {}: semantic verification passed",
                 path.display()
@@ -2099,7 +2281,7 @@ fn process_path(
     } else {
         Vec::new()
     };
-    if cli.debug {
+    if collect_debug {
         debug_lines.push(format!(
             "result {}: would_change={would_change}",
             path.display()
@@ -3068,6 +3250,30 @@ fn format_elapsed(elapsed: std::time::Duration) -> String {
     }
 }
 
+fn render_explain_output(
+    result: &ProcessedTarget,
+    progress: &ProgressReporter,
+) -> Result<(), cmakefmt::Error> {
+    progress.eprintln(&format!(
+        "Formatting decisions for {}\n",
+        result.display_name
+    ))?;
+
+    let mut found_any = false;
+    for line in &result.debug_lines {
+        if let Some(rest) = line.strip_prefix("formatter: ") {
+            progress.eprintln(&format!("  {rest}"))?;
+            found_any = true;
+        }
+    }
+
+    if !found_any {
+        progress.eprintln("  (no formatting decisions — file may be empty or fully disabled)")?;
+    }
+    progress.eprintln("")?;
+    Ok(())
+}
+
 fn render_summary_line(result: &ProcessedTarget, colorize: bool) -> String {
     let display_name = &result.display_name;
     let would_change = result.would_change;
@@ -3725,6 +3931,7 @@ mod tests {
             "changed",
             "debug",
             "diff",
+            "explain",
             "path-regex",
             "files-from",
             "generate-man-page",
@@ -3755,6 +3962,7 @@ mod tests {
             "staged",
             "stdin-path",
             "version",
+            "watch",
             "in-place",
         ];
 
