@@ -489,6 +489,218 @@ fn quiet_stdout_suppresses_formatted_output() {
 }
 
 #[test]
+fn quiet_in_place_suppresses_per_file_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--quiet", "--in-place", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.is_empty(), "stdout should be empty, got: {stdout}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("summary:"),
+        "summary should still appear on stderr, got: {stderr}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&file).unwrap(),
+        "set(FOO bar)\n",
+        "file should still be modified on disk"
+    );
+}
+
+#[test]
+fn quiet_diff_suppresses_per_file_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--quiet", "--diff", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    // Diff output should still appear on stdout (--quiet doesn't suppress --diff)
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("---"),
+        "diff should still appear on stdout, got: {stdout}"
+    );
+}
+
+// ── --sorted ────────────────────────────────────────────────────────────────
+
+#[test]
+fn sorted_outputs_files_in_alphabetical_order() {
+    let dir = tempfile::tempdir().unwrap();
+    // Create files with names that would sort differently from filesystem order
+    write_file(&dir.path().join("z.cmake"), "set(Z 1)\n");
+    write_file(&dir.path().join("a.cmake"), "set(  A  1 )\n");
+    write_file(&dir.path().join("m.cmake"), "set(M 1)\n");
+
+    let output = cmakefmt()
+        .args([
+            "--sorted",
+            "--list-input-files",
+            dir.path().to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let files: Vec<&str> = stdout.lines().collect();
+    let mut sorted = files.clone();
+    sorted.sort();
+    assert_eq!(files, sorted, "files should be in alphabetical order");
+}
+
+// ── --cache-strategy ────────────────────────────────────────────────────────
+
+#[test]
+fn cache_strategy_content_invalidates_on_content_change() {
+    let dir = tempfile::tempdir().unwrap();
+    let cache_dir = dir.path().join("cache");
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    // First run: cache miss
+    let first = cmakefmt()
+        .args([
+            "--cache",
+            "--cache-location",
+            cache_dir.to_str().unwrap(),
+            "--cache-strategy",
+            "content",
+            "--debug",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(first.status.success());
+    let first_stderr = String::from_utf8_lossy(&first.stderr);
+    assert!(
+        first_stderr.contains("cache miss"),
+        "first run should be a cache miss, got: {first_stderr}"
+    );
+
+    // Second run without changes: cache hit
+    let second = cmakefmt()
+        .args([
+            "--cache",
+            "--cache-location",
+            cache_dir.to_str().unwrap(),
+            "--cache-strategy",
+            "content",
+            "--debug",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(second.status.success());
+    let second_stderr = String::from_utf8_lossy(&second.stderr);
+    assert!(
+        second_stderr.contains("cache hit"),
+        "second run should be a cache hit, got: {second_stderr}"
+    );
+}
+
+// ── Config override CLI flags ───────────────────────────────────────────────
+
+#[test]
+fn tab_size_override() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "if(TRUE)\nset(X 1)\nendif()\n");
+
+    let output = cmakefmt()
+        .args(["--tab-size", "4", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("    set(X 1)"),
+        "should indent with 4 spaces, got: {stdout}"
+    );
+}
+
+#[test]
+fn keyword_case_override() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar CACHE STRING \"\")\n");
+
+    let output = cmakefmt()
+        .args(["--keyword-case", "lower", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("cache"),
+        "keywords should be lowercase, got: {stdout}"
+    );
+}
+
+#[test]
+fn dangle_parens_override() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    // Long enough to wrap
+    write_file(
+        &file,
+        "set(VERY_LONG_VARIABLE_NAME value1 value2 value3 value4 value5 value6 value7 value8)\n",
+    );
+
+    let output = cmakefmt()
+        .args([
+            "--dangle-parens",
+            "true",
+            "--line-width",
+            "40",
+            file.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lines: Vec<&str> = stdout.trim().lines().collect();
+    assert_eq!(
+        lines.last().unwrap().trim(),
+        ")",
+        "closing paren should be on its own line, got: {stdout}"
+    );
+}
+
+// ── --no-verify / --verify ──────────────────────────────────────────────────
+
+#[test]
+fn no_verify_skips_semantic_check_for_in_place() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    // --no-verify with --in-place should succeed (same as --fast)
+    let output = cmakefmt()
+        .args(["--no-verify", "--in-place", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "set(FOO bar)\n");
+}
+
+#[test]
 fn cache_reports_hit_on_second_run() {
     let dir = tempfile::tempdir().unwrap();
     let cache_dir = dir.path().join("cache");
