@@ -71,6 +71,15 @@ pip install cmakefmt
 This installs the native `cmakefmt` binary via a pre-built wheel. See the
 [pip install guide](/python/) for details.
 
+### conda-forge
+
+```bash
+conda install -c conda-forge cmakefmt
+```
+
+Built from source by conda-forge. Future version bumps are handled
+automatically by the conda-forge autotick bot.
+
 ## Support Levels
 
 The release plan separates channels into explicit support levels so users know
@@ -81,6 +90,7 @@ what to trust:
 | Homebrew (`cmakefmt/cmakefmt`) | Officially maintained | Recommended for macOS users. Ships completions and man page. |
 | `cargo install cmakefmt-rust` | Officially maintained | Reference install path for developers already using Rust. |
 | `pip install cmakefmt` | Officially maintained | Native binary via pre-built wheel. |
+| `conda install -c conda-forge cmakefmt` | Community maintained | Built from source; autotick bot tracks releases. |
 | GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
 | Docs site / CLI reference | Officially maintained | Stays in lock-step with each tagged release. |
 | `winget` / Scoop | Officially maintained | Planned first-party Windows package-manager channels. |

@@ -17,6 +17,7 @@ include = [
   "/LICENSE",
   "/LICENSES/Apache-2.0.txt",
   "/LICENSES/MIT.txt",
+  "/pyproject.toml",
   "/README.md",
   "/src/**",
 ]

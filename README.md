@@ -117,6 +117,12 @@ cargo install cmakefmt-rust
 pip install cmakefmt
 ```
 
+**conda-forge:**
+
+```bash
+conda install -c conda-forge cmakefmt
+```
+
 **Pre-built binaries (Linux, macOS, and Windows):**
 
 Download the `.zip` / `.tar.gz` for your platform from
