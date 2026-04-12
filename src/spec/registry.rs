@@ -165,7 +165,7 @@ impl CommandRegistry {
                     source,
                     toml_err.span().map(|span| span.start),
                 );
-                Error::Spec {
+                Error::Spec(crate::error::SpecError {
                     path: path.clone(),
                     details: crate::error::FileParseError {
                         format: format.as_str(),
@@ -173,12 +173,11 @@ impl CommandRegistry {
                         line,
                         column,
                     },
-                    source_message: toml_err.to_string().into_boxed_str(),
-                }
+                })
             })?,
             ConfigFileFormat::Yaml => serde_yaml::from_str(source).map_err(|yaml_err| {
                 let location = yaml_err.location();
-                Error::Spec {
+                Error::Spec(crate::error::SpecError {
                     path: path.clone(),
                     details: crate::error::FileParseError {
                         format: format.as_str(),
@@ -186,8 +185,7 @@ impl CommandRegistry {
                         line: location.as_ref().map(|loc| loc.line()),
                         column: location.as_ref().map(|loc| loc.column()),
                     },
-                    source_message: yaml_err.to_string().into_boxed_str(),
-                }
+                })
             })?,
         };
         normalize_override_file(&mut overrides);
@@ -240,15 +238,16 @@ fn has_ascii_uppercase(s: &str) -> bool {
 }
 
 fn parse_builtins() -> Result<SpecFile> {
-    let mut spec: SpecFile = toml::from_str(BUILTINS_TOML).map_err(|source| Error::Spec {
-        path: PathBuf::from(BUILTINS_PATH),
-        details: crate::error::FileParseError {
-            format: "TOML",
-            message: source.to_string().into_boxed_str(),
-            line: None,
-            column: None,
-        },
-        source_message: source.to_string().into_boxed_str(),
+    let mut spec: SpecFile = toml::from_str(BUILTINS_TOML).map_err(|source| {
+        Error::Spec(crate::error::SpecError {
+            path: PathBuf::from(BUILTINS_PATH),
+            details: crate::error::FileParseError {
+                format: "TOML",
+                message: source.to_string().into_boxed_str(),
+                line: None,
+                column: None,
+            },
+        })
     })?;
     normalize_spec_file(&mut spec);
     Ok(spec)
@@ -1021,7 +1020,8 @@ commands:
 
         let err = registry.merge_override_file(&path).unwrap_err();
         match err {
-            Error::Spec { details, .. } => {
+            Error::Spec(spec_err) => {
+                let details = &spec_err.details;
                 assert_eq!(details.format, "TOML");
                 assert!(details.line.is_some());
                 assert!(details.column.is_some());
@@ -1039,7 +1039,8 @@ commands:
 
         let err = registry.merge_override_file(&path).unwrap_err();
         match err {
-            Error::Spec { details, .. } => {
+            Error::Spec(spec_err) => {
+                let details = &spec_err.details;
                 assert_eq!(details.format, "YAML");
                 assert!(details.line.is_some());
                 assert!(details.column.is_some());

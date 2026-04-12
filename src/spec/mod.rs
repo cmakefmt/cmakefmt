@@ -92,7 +92,7 @@ impl<'de> Deserialize<'de> for NArgs {
 
 // ── Fully specified command model ────────────────────────────────────────────
 
-/// Per-command-form layout hints that override global [`Config`] values.
+/// Per-command-form layout hints that override global [`crate::Config`] values.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutOverrides {

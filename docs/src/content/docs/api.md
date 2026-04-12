@@ -24,8 +24,18 @@ The crate is a strong fit when you want to:
 
 ## Crate Status
 
-The library API is usable today. The crate is still pre-`1.0`, so the public
-API surface may evolve before long-term compatibility is guaranteed.
+The Rust library API is intended to be stable for the `1.x` line.
+
+The stable contract is:
+
+- top-level formatting entry points such as `format_source` and `format_parsed_file`
+- configuration loading and merging through `Config`
+- the public AST returned by `cmakefmt::parser::parse`
+- command-registry loading and override APIs through `CommandRegistry`
+- crate-owned error diagnostics through `cmakefmt::Error`
+
+Internal implementation details are not part of that contract. That includes
+the parser engine, grammar-rule names, and other private helper types.
 
 ## Public Entry Points
 
@@ -216,19 +226,20 @@ loading, registry loading, and formatting:
 
 | Error kind | Meaning |
 | --- | --- |
-| `Error::Parse` | the input was not valid CMake under the current grammar |
+| `Error::Parse` | the input was not valid CMake under the current grammar, with crate-owned source and location diagnostics |
 | `Error::Config` | a user config file failed to parse or validate |
 | `Error::Spec` | a command-spec override or built-in spec failed to parse |
 | `Error::Io` | file I/O failed |
 | `Error::Formatter` | a formatter-layer invariant or unsupported case was hit |
+| `Error::LayoutTooWide` | the debug layout renderer exceeded the configured line width |
 
-For parse, config, and spec errors, the library retains file-path and location
-context so callers can surface useful diagnostics to users.
+For parse, config, and spec errors, the library retains crate-owned path and
+location context so callers can surface useful diagnostics without depending on
+parser-library or YAML-library internals.
 
 ## Current Limits
 
-- the public API is useful today, but still smaller than the CLI feature surface
-- library stability is not promised yet — the crate is still pre-`1.0`
+- the public API is smaller than the CLI feature surface
 - workflow features like Git-aware selection and ignore-file handling live in the CLI layer, not the formatting API itself
 
 For deeper implementation details, continue with [Architecture](/architecture/).

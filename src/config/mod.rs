@@ -417,13 +417,22 @@ pub(crate) struct CompiledPatterns {
 #[derive(Debug)]
 pub struct CommandConfig<'a> {
     /// The global configuration before per-command overrides are applied.
-    pub global: &'a Config,
+    global: &'a Config,
     per_cmd: Option<&'a PerCommandConfig>,
     /// Whether this command should render a space before `(`.
-    pub space_before_paren: bool,
+    space_before_paren: bool,
 }
 
 impl CommandConfig<'_> {
+    /// Whether this command should render a space before `(`.
+    pub fn space_before_paren(&self) -> bool {
+        self.space_before_paren
+    }
+
+    pub(crate) fn global(&self) -> &Config {
+        self.global
+    }
+
     /// Effective line width for the current command.
     pub fn line_width(&self) -> usize {
         self.per_cmd
@@ -514,7 +523,7 @@ mod tests {
         for cmd in ["if", "elseif", "foreach", "while", "return"] {
             let cc = config.for_command(cmd);
             assert!(
-                cc.space_before_paren,
+                cc.space_before_paren(),
                 "{cmd} should have space_before_paren=true"
             );
         }
@@ -529,7 +538,7 @@ mod tests {
         for cmd in ["function", "endfunction", "macro", "endmacro"] {
             let cc = config.for_command(cmd);
             assert!(
-                cc.space_before_paren,
+                cc.space_before_paren(),
                 "{cmd} should have space_before_paren=true"
             );
         }
@@ -544,7 +553,7 @@ mod tests {
         };
         let cc = config.for_command("message");
         assert!(
-            !cc.space_before_paren,
+            !cc.space_before_paren(),
             "message should not have space_before_paren"
         );
     }

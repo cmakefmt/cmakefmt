@@ -5,13 +5,15 @@
 //! Structured error types returned by parsing, config loading, and formatting.
 
 use std::fmt;
+use std::path::PathBuf;
 
 use pest::error::{ErrorVariant, LineColLocation};
 use thiserror::Error;
 
 /// Structured config/spec deserialization failure metadata used for
 /// user-facing diagnostics.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct FileParseError {
     /// Parser format name, such as `TOML` or `YAML`.
     pub format: &'static str,
@@ -23,9 +25,16 @@ pub struct FileParseError {
     pub column: Option<usize>,
 }
 
-/// Crate-owned parser diagnostics used by [`Error`] without exposing `pest`
+impl fmt::Display for FileParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+/// Crate-owned parser diagnostics used by [`enum@Error`] without exposing `pest`
 /// internals in the public API.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ParseDiagnostic {
     /// Human-readable parser detail.
     pub message: Box<str>,
@@ -36,7 +45,7 @@ pub struct ParseDiagnostic {
 }
 
 impl ParseDiagnostic {
-    pub(crate) fn from_pest(error: &pest::error::Error<crate::parser::Rule>) -> Self {
+    pub(crate) fn from_pest<R: pest::RuleType>(error: &pest::error::Error<R>) -> Self {
         let (line, column) = match error.line_col {
             LineColLocation::Pos((line, column)) => (line, column),
             LineColLocation::Span((line, column), _) => (line, column),
@@ -67,46 +76,66 @@ impl fmt::Display for ParseDiagnostic {
     }
 }
 
+/// Stable parse error returned by the public library API.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[error("parse error in {display_name}: {diagnostic}")]
+#[non_exhaustive]
+pub struct ParseError {
+    /// Human-facing source name, for example a path or `<stdin>`.
+    pub display_name: String,
+    /// The source text that failed to parse.
+    pub source_text: Box<str>,
+    /// The 1-based source line number where this parser chunk started.
+    pub start_line: usize,
+    /// Structured parser diagnostic.
+    pub diagnostic: ParseDiagnostic,
+}
+
+impl ParseError {
+    fn with_display_name(mut self, display_name: impl Into<String>) -> Self {
+        self.display_name = display_name.into();
+        self
+    }
+}
+
+/// Stable config-file parse error returned by the public library API.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[error("config error in {path}: {details}")]
+#[non_exhaustive]
+pub struct ConfigError {
+    /// The config file that failed to deserialize.
+    pub path: PathBuf,
+    /// Structured parser details for the failure.
+    pub details: FileParseError,
+}
+
+/// Stable command-spec parse error returned by the public library API.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[error("spec error in {path}: {details}")]
+#[non_exhaustive]
+pub struct SpecError {
+    /// The spec file that failed to deserialize.
+    pub path: PathBuf,
+    /// Structured parser details for the failure.
+    pub details: FileParseError,
+}
+
 /// Errors that can be returned by parsing, config loading, spec loading, or
 /// formatting operations.
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum Error {
     /// A parser error annotated with source text and line-offset context.
-    #[error("parse error in {display_name}: {diagnostic}")]
-    ParseContext {
-        /// Human-facing source name, for example a path or `<stdin>`.
-        display_name: String,
-        /// The source text that failed to parse.
-        source_text: Box<str>,
-        /// The 1-based source line number where this parser chunk started.
-        start_line: usize,
-        /// Whether earlier barrier/fence handling affected how this chunk was parsed.
-        barrier_context: bool,
-        /// Structured parser diagnostic.
-        diagnostic: ParseDiagnostic,
-    },
+    #[error("{0}")]
+    Parse(#[from] ParseError),
 
     /// A user config parse error.
-    #[error("config error in {path}: {source_message}")]
-    Config {
-        /// The config file that failed to deserialize.
-        path: std::path::PathBuf,
-        /// Structured parser details for the failure.
-        details: FileParseError,
-        /// Cached display string used by `thiserror`.
-        source_message: Box<str>,
-    },
+    #[error("{0}")]
+    Config(#[from] ConfigError),
 
     /// A built-in or user override spec parse error.
-    #[error("spec error in {path}: {source_message}")]
-    Spec {
-        /// The spec file that failed to deserialize.
-        path: std::path::PathBuf,
-        /// Structured parser details for the failure.
-        details: FileParseError,
-        /// Cached display string used by `thiserror`.
-        source_message: Box<str>,
-    },
+    #[error("{0}")]
+    Spec(#[from] SpecError),
 
     /// A filesystem or stream I/O failure.
     #[error("I/O error: {0}")]
@@ -127,7 +156,7 @@ pub enum Error {
         line_no: usize,
         /// Actual character width of the offending line.
         width: usize,
-        /// Configured [`Config::line_width`] limit.
+        /// Configured [`crate::Config::line_width`] limit.
         limit: usize,
     },
 }
@@ -139,19 +168,7 @@ impl Error {
     /// Attach a human-facing source name to a contextual parser error.
     pub fn with_display_name(self, display_name: impl Into<String>) -> Self {
         match self {
-            Self::ParseContext {
-                source_text,
-                start_line,
-                barrier_context,
-                diagnostic,
-                ..
-            } => Self::ParseContext {
-                display_name: display_name.into(),
-                source_text,
-                start_line,
-                barrier_context,
-                diagnostic,
-            },
+            Self::Parse(parse) => Self::Parse(parse.with_display_name(display_name)),
             other => other,
         }
     }
@@ -175,28 +192,27 @@ mod tests {
     fn parse_diagnostic_from_pest_parsing_error() {
         let source = "if(\n";
         let err = crate::parser::parse(source).unwrap_err();
-        if let Error::ParseContext { diagnostic, .. } = err {
+        if let Error::Parse(ParseError { diagnostic, .. }) = err {
             assert!(diagnostic.line >= 1);
             assert!(diagnostic.column >= 1);
             assert!(!diagnostic.message.is_empty());
         } else {
-            panic!("expected ParseContext, got {err:?}");
+            panic!("expected Parse, got {err:?}");
         }
     }
 
     #[test]
-    fn error_parse_context_display() {
-        let err = Error::ParseContext {
+    fn error_parse_display() {
+        let err = Error::Parse(ParseError {
             display_name: "test.cmake".to_owned(),
             source_text: "if(\n".into(),
             start_line: 1,
-            barrier_context: false,
             diagnostic: ParseDiagnostic {
                 message: "expected argument part".into(),
                 line: 1,
                 column: 4,
             },
-        };
+        });
         let msg = err.to_string();
         assert!(msg.contains("test.cmake"));
         assert!(msg.contains("expected argument part"));
@@ -204,7 +220,7 @@ mod tests {
 
     #[test]
     fn error_config_display() {
-        let err = Error::Config {
+        let err = Error::Config(ConfigError {
             path: std::path::PathBuf::from("bad.yaml"),
             details: FileParseError {
                 format: "YAML",
@@ -212,8 +228,7 @@ mod tests {
                 line: Some(3),
                 column: Some(1),
             },
-            source_message: "unexpected key".into(),
-        };
+        });
         let msg = err.to_string();
         assert!(msg.contains("bad.yaml"));
         assert!(msg.contains("unexpected key"));
@@ -221,7 +236,7 @@ mod tests {
 
     #[test]
     fn error_spec_display() {
-        let err = Error::Spec {
+        let err = Error::Spec(SpecError {
             path: std::path::PathBuf::from("commands.yaml"),
             details: FileParseError {
                 format: "YAML",
@@ -229,8 +244,7 @@ mod tests {
                 line: None,
                 column: None,
             },
-            source_message: "invalid nargs".into(),
-        };
+        });
         let msg = err.to_string();
         assert!(msg.contains("commands.yaml"));
         assert!(msg.contains("invalid nargs"));
@@ -265,24 +279,23 @@ mod tests {
     }
 
     #[test]
-    fn with_display_name_updates_parse_context() {
-        let err = Error::ParseContext {
+    fn with_display_name_updates_parse() {
+        let err = Error::Parse(ParseError {
             display_name: "original".to_owned(),
             source_text: "set(\n".into(),
             start_line: 1,
-            barrier_context: false,
             diagnostic: ParseDiagnostic {
                 message: "test".into(),
                 line: 1,
                 column: 5,
             },
-        };
+        });
         let renamed = err.with_display_name("renamed.cmake");
         match renamed {
-            Error::ParseContext { display_name, .. } => {
+            Error::Parse(ParseError { display_name, .. }) => {
                 assert_eq!(display_name, "renamed.cmake");
             }
-            _ => panic!("expected ParseContext"),
+            _ => panic!("expected Parse"),
         }
     }
 

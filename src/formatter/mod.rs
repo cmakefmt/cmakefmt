@@ -381,14 +381,14 @@ fn flush_enabled_chunk(
 
     let file = match parser::parse(enabled_chunk) {
         Ok(file) => file,
-        Err(Error::ParseContext { diagnostic, .. }) => {
-            return Err(Error::ParseContext {
+        Err(Error::Parse(parse_error)) => {
+            let _ = barrier_context;
+            return Err(Error::Parse(crate::error::ParseError {
                 display_name: "<source>".to_owned(),
                 source_text: enabled_chunk.clone().into_boxed_str(),
                 start_line: chunk_start_line,
-                barrier_context,
-                diagnostic,
-            });
+                diagnostic: parse_error.diagnostic,
+            }));
         }
         Err(err) => return Err(err),
     };
@@ -408,16 +408,15 @@ fn validate_runtime_config(config: &Config) -> Result<()> {
 }
 
 fn runtime_config_error(message: String) -> Error {
-    Error::Config {
+    Error::Config(crate::error::ConfigError {
         path: PathBuf::from("<programmatic-config>"),
         details: FileParseError {
             format: "runtime",
-            message: message.clone().into_boxed_str(),
+            message: message.into_boxed_str(),
             line: None,
             column: None,
         },
-        source_message: message.into_boxed_str(),
-    }
+    })
 }
 
 fn detect_barrier(line: &str) -> Option<BarrierEvent<'_>> {
@@ -571,14 +570,10 @@ mod tests {
 
         let err = format_source("set(X 1)\n", &config).unwrap_err();
         match err {
-            Error::Config {
-                path,
-                details,
-                source_message,
-            } => {
-                assert_eq!(path, PathBuf::from("<programmatic-config>"));
-                assert_eq!(details.format, "runtime");
-                assert!(source_message.contains("invalid regex"));
+            Error::Config(config_err) => {
+                assert_eq!(config_err.path, PathBuf::from("<programmatic-config>"));
+                assert_eq!(config_err.details.format, "runtime");
+                assert!(config_err.details.message.contains("invalid regex"));
             }
             other => panic!("expected config error, got {other:?}"),
         }

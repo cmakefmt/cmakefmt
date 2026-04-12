@@ -8,6 +8,12 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Changed
+
+- Stable Rust library API for embedding: parser internals are no longer part
+  of the public surface, parse/config/spec failures now use crate-owned error
+  types, and `CommandConfig` no longer exposes internal representation fields
+
 ## 0.9.0 — 2026-04-12
 
 ### Migration

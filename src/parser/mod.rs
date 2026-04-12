@@ -9,15 +9,19 @@
 //! [`crate::parser::parse()`].
 
 use pest::Parser;
-use pest_derive::Parser;
 
 pub mod ast;
 
-/// Internal pest parser generated from `cmake.pest`.
-#[doc(hidden)]
-#[derive(Parser)]
-#[grammar = "parser/cmake.pest"]
-pub struct CmakeParser;
+mod generated {
+    use pest_derive::Parser;
+
+    /// Internal pest parser generated from `cmake.pest`.
+    #[derive(Parser)]
+    #[grammar = "parser/cmake.pest"]
+    pub(super) struct CmakeParser;
+}
+
+use generated::{CmakeParser, Rule};
 
 use crate::error::{Error, Result};
 use ast::{Argument, BracketArgument, CommandInvocation, Comment, File, Statement};
@@ -27,12 +31,13 @@ use ast::{Argument, BracketArgument, CommandInvocation, Comment, File, Statement
 /// The returned AST preserves command structure, blank lines, and comments so
 /// the formatter can round-trip files with stable semantics.
 pub fn parse(source: &str) -> Result<File> {
-    let mut pairs = CmakeParser::parse(Rule::file, source).map_err(|e| Error::ParseContext {
-        display_name: "<source>".to_owned(),
-        source_text: source.to_owned().into_boxed_str(),
-        start_line: 1,
-        barrier_context: false,
-        diagnostic: crate::error::ParseDiagnostic::from_pest(&e),
+    let mut pairs = CmakeParser::parse(Rule::file, source).map_err(|e| {
+        Error::Parse(crate::error::ParseError {
+            display_name: "<source>".to_owned(),
+            source_text: source.to_owned().into_boxed_str(),
+            start_line: 1,
+            diagnostic: crate::error::ParseDiagnostic::from_pest(&e),
+        })
     })?;
     let file_pair = pairs
         .next()
@@ -380,29 +385,22 @@ mod tests {
     }
 
     #[test]
-    fn invalid_syntax_returns_parse_context_with_crate_owned_diagnostic() {
+    fn invalid_syntax_returns_parse_error_with_crate_owned_diagnostic() {
         let err = parse("message(\n").unwrap_err();
-        let Error::ParseContext {
-            display_name,
-            source_text,
-            start_line,
-            barrier_context,
-            diagnostic,
-        } = err
-        else {
-            panic!("expected parse context error");
+        let Error::Parse(parse_err) = err else {
+            panic!("expected parse error");
         };
 
-        assert_eq!(display_name, "<source>");
-        assert_eq!(source_text.as_ref(), "message(\n");
-        assert_eq!(start_line, 1);
-        assert!(!barrier_context);
+        assert_eq!(parse_err.display_name, "<source>");
+        assert_eq!(parse_err.source_text.as_ref(), "message(\n");
+        assert_eq!(parse_err.start_line, 1);
         assert!(
-            diagnostic.message.contains("expected"),
-            "unexpected parse diagnostic: {diagnostic:?}"
+            parse_err.diagnostic.message.contains("expected"),
+            "unexpected parse diagnostic: {:?}",
+            parse_err.diagnostic
         );
-        assert_eq!(diagnostic.line, 2);
-        assert_eq!(diagnostic.column, 1);
+        assert_eq!(parse_err.diagnostic.line, 2);
+        assert_eq!(parse_err.diagnostic.column, 1);
     }
 
     #[test]

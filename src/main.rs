@@ -1032,9 +1032,9 @@ fn flush_stdout() -> Result<(), cmakefmt::Error> {
 
 fn error_display_name(err: &cmakefmt::Error) -> String {
     match err {
-        cmakefmt::Error::ParseContext { display_name, .. } => display_name.clone(),
-        cmakefmt::Error::Config { path, .. } => path.display().to_string(),
-        cmakefmt::Error::Spec { path, .. } => path.display().to_string(),
+        cmakefmt::Error::Parse(parse) => parse.display_name.clone(),
+        cmakefmt::Error::Config(config) => config.path.display().to_string(),
+        cmakefmt::Error::Spec(spec) => spec.path.display().to_string(),
         cmakefmt::Error::Formatter(message) => message
             .split(':')
             .next()
@@ -1042,6 +1042,7 @@ fn error_display_name(err: &cmakefmt::Error) -> String {
             .trim()
             .to_owned(),
         cmakefmt::Error::Io(_) | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
+        _ => "<unknown>".to_owned(),
     }
 }
 
@@ -3177,24 +3178,17 @@ fn log_debug(message: impl AsRef<str>) {
 
 fn render_cli_error(err: &cmakefmt::Error) -> String {
     match err {
-        cmakefmt::Error::ParseContext {
-            display_name,
-            source_text,
-            start_line,
-            barrier_context,
-            diagnostic,
-        } => render_parse_error(
-            display_name,
-            source_text,
-            *start_line,
-            *barrier_context,
-            diagnostic,
+        cmakefmt::Error::Parse(parse) => render_parse_error(
+            &parse.display_name,
+            &parse.source_text,
+            parse.start_line,
+            &parse.diagnostic,
         ),
-        cmakefmt::Error::Config { path, details, .. } => {
-            render_file_parse_error("config", path, details)
+        cmakefmt::Error::Config(config) => {
+            render_file_parse_error("config", &config.path, &config.details)
         }
-        cmakefmt::Error::Spec { path, details, .. } => {
-            render_file_parse_error("spec", path, details)
+        cmakefmt::Error::Spec(spec) => {
+            render_file_parse_error("spec", &spec.path, &spec.details)
         }
         cmakefmt::Error::Formatter(message) => render_formatter_error(message),
         cmakefmt::Error::Io(source) => format!("error: I/O failure: {source}"),
@@ -3206,6 +3200,7 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
             "error: line {line_no} is {width} characters wide, exceeding the limit of {limit}\n\
              hint: set line_width = {width} (or higher), add the command to always_wrap, or disable require_valid_layout"
         ),
+        _ => format!("error: {err}"),
     }
 }
 
@@ -3213,7 +3208,6 @@ fn render_parse_error(
     display_name: &str,
     source_text: &str,
     start_line: usize,
-    barrier_context: bool,
     diagnostic: &cmakefmt::error::ParseDiagnostic,
 ) -> String {
     let local_line = diagnostic.line;
@@ -3226,12 +3220,6 @@ fn render_parse_error(
         .or_else(|| source_lines.last().copied())
         .unwrap_or_default();
     let (summary, mut hints) = classify_parse_failure(display_name, line_text, diagnostic);
-    if barrier_context {
-        hints.push(
-            "this file contains formatter barriers or fences; disabled regions are passed through verbatim"
-                .to_owned(),
-        );
-    }
 
     // If the error is at or near the end of the file, look for an unmatched
     // opening parenthesis. When found, show the error at the unclosed `(`

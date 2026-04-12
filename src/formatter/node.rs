@@ -55,7 +55,7 @@ pub(crate) fn format_command(
         cmd_config.line_width(),
         cmd_config.tab_size(),
         cmd_config.dangle_parens(),
-        cmd_config.global.max_lines_hwrap,
+        cmd_config.global().max_lines_hwrap,
         cmd_config.max_pargs_hwrap(),
         cmd_config.max_subgroups_hwrap(),
     ));
@@ -108,7 +108,7 @@ pub(crate) fn format_command(
             "formatter: command {} layout=hanging-wrap thresholds(line_width={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={})",
             command.name,
             cmd_config.line_width(),
-            cmd_config.global.max_lines_hwrap,
+            cmd_config.global().max_lines_hwrap,
             cmd_config.max_pargs_hwrap()
         ));
         hanging
@@ -117,7 +117,7 @@ pub(crate) fn format_command(
             "formatter: command {} layout=vertical thresholds(line_width={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={}, max_hanging_wrap_groups={})",
             command.name,
             cmd_config.line_width(),
-            cmd_config.global.max_lines_hwrap,
+            cmd_config.global().max_lines_hwrap,
             cmd_config.max_pargs_hwrap(),
             cmd_config.max_subgroups_hwrap()
         ));
@@ -165,7 +165,7 @@ fn first_argument(command: &CommandInvocation) -> Option<&Argument> {
 
 fn format_name(command: &CommandInvocation, cmd_config: &CommandConfig<'_>) -> String {
     let name = apply_case(cmd_config.command_case(), &command.name);
-    if cmd_config.space_before_paren {
+    if cmd_config.space_before_paren() {
         let mut spaced = String::with_capacity(name.len() + 1);
         spaced.push_str(&name);
         spaced.push(' ');
@@ -350,12 +350,12 @@ fn try_format_hanging(
         &continuation,
         &tokens,
         line_width,
-        cmd_config.global.max_lines_hwrap,
+        cmd_config.global().max_lines_hwrap,
         break_before,
     )?;
     // Reject the hanging layout if it produces more rows than the cmdline
     // threshold allows.
-    if lines.len() > cmd_config.global.max_rows_cmdline {
+    if lines.len() > cmd_config.global().max_rows_cmdline {
         return None;
     }
     if lines.len() == 1 {
@@ -396,7 +396,7 @@ fn format_command_vertical(
                         &mut output,
                         &section.arguments,
                         &indent,
-                        cmd_config.global,
+                        cmd_config.global(),
                         patterns,
                     );
                 } else {
@@ -404,7 +404,7 @@ fn format_command_vertical(
                         &mut output,
                         &section.arguments,
                         &indent,
-                        cmd_config.global,
+                        cmd_config.global(),
                         patterns,
                         cmd_config.line_width(),
                     );
@@ -427,7 +427,7 @@ fn format_command_vertical(
                         &mut output,
                         &section.arguments,
                         &nested_indent,
-                        cmd_config.global,
+                        cmd_config.global(),
                         patterns,
                     );
                 } else {
@@ -436,7 +436,7 @@ fn format_command_vertical(
                         section.header_kind,
                         &section.arguments,
                         &indent,
-                        cmd_config.global,
+                        cmd_config.global(),
                         patterns,
                         cmd_config.line_width(),
                     ) {
@@ -449,7 +449,7 @@ fn format_command_vertical(
                             &mut output,
                             &section.arguments,
                             &nested_indent,
-                            cmd_config.global,
+                            cmd_config.global(),
                             patterns,
                             cmd_config.line_width(),
                         );
