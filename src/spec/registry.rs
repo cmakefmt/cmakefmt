@@ -218,6 +218,16 @@ impl CommandRegistry {
             .unwrap_or(&self.fallback)
     }
 
+    /// Return `true` when the command has a known spec (built-in or
+    /// user-defined).
+    pub fn contains(&self, command_name: &str) -> bool {
+        self.commands.contains_key(command_name)
+            || (has_ascii_uppercase(command_name)
+                && self
+                    .commands
+                    .contains_key(&command_name.to_ascii_lowercase()))
+    }
+
     /// Return `true` when the command is present in the built-in registry.
     pub fn contains_builtin(&self, command_name: &str) -> bool {
         self.builtin_commands.contains(command_name)

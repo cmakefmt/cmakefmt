@@ -3172,3 +3172,71 @@ fn watch_reformats_changed_file() {
     let contents = std::fs::read_to_string(&file).unwrap();
     assert_eq!(contents, "set(FOO bar)\n");
 }
+
+// ── --list-unknown-commands ───────────────────────────────────────────
+
+#[test]
+fn list_unknown_commands_reports_unknown() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "cmake_minimum_required(VERSION 3.20)\nmy_thing(FOO bar)\nset(X y)\n",
+    );
+
+    let output = cmakefmt()
+        .args(["--list-unknown-commands", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("my_thing"),
+        "expected my_thing, got:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("cmake_minimum_required"),
+        "should not list known commands"
+    );
+    assert!(!stdout.contains("set"), "should not list known commands");
+}
+
+#[test]
+fn list_unknown_commands_no_unknowns() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "cmake_minimum_required(VERSION 3.20)\nset(X y)\n");
+
+    let output = cmakefmt()
+        .args(["--list-unknown-commands", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.is_empty(), "expected no output, got:\n{stdout}");
+}
+
+#[test]
+fn list_unknown_commands_respects_user_specs() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "commands:\n  my_thing:\n    pargs: 1\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "my_thing(FOO)\n");
+
+    let output = cmakefmt()
+        .args(["--list-unknown-commands", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.is_empty(),
+        "user-defined command should not be listed as unknown, got:\n{stdout}"
+    );
+}

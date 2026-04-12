@@ -154,6 +154,26 @@ struct Cli {
     )]
     list_input_files: bool,
 
+    /// List commands that don't match any built-in or user-defined spec.
+    ///
+    /// Parses the selected files and prints each unrecognized command name
+    /// with its file and line number. Useful for discovering project-specific
+    /// commands that should be added to the `commands:` config section.
+    #[arg(
+        long = "list-unknown-commands",
+        help_heading = "Output Modes",
+        conflicts_with = "check",
+        conflicts_with = "in_place",
+        conflicts_with = "diff",
+        conflicts_with = "list_changed_files",
+        conflicts_with = "list_input_files",
+        conflicts_with = "explain",
+        conflicts_with = "watch",
+        conflicts_with = "quiet",
+        conflicts_with = "progress_bar"
+    )]
+    list_unknown_commands: bool,
+
     /// Filter recursively discovered CMake paths with a regex.
     ///
     /// This only affects discovery from directories or Git/file-list driven
@@ -699,6 +719,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         return Ok(EXIT_OK);
     }
+    if cli.list_unknown_commands {
+        return run_list_unknown_commands(cli, &targets);
+    }
     if cli.explain && targets.len() != 1 {
         return Err(cmakefmt::Error::Formatter(
             "--explain requires exactly one formatting target".to_owned(),
@@ -814,6 +837,75 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     } else {
         Ok(EXIT_OK)
     }
+}
+
+fn run_list_unknown_commands(cli: &Cli, targets: &[InputTarget]) -> Result<u8, cmakefmt::Error> {
+    use cmakefmt::parser;
+    use std::collections::BTreeMap;
+
+    // command_name -> vec of (file, line)
+    let mut unknown: BTreeMap<String, Vec<(String, usize)>> = BTreeMap::new();
+
+    for target in targets {
+        let (display_name, source) = match target {
+            InputTarget::Stdin => {
+                let mut buf = String::new();
+                io::Read::read_to_string(&mut io::stdin(), &mut buf)
+                    .map_err(cmakefmt::Error::Io)?;
+                ("<stdin>".to_owned(), buf)
+            }
+            InputTarget::Path(path) => {
+                let source = std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?;
+                (path.display().to_string(), source)
+            }
+        };
+
+        let (_, registry, _) = build_context(
+            cli,
+            match target {
+                InputTarget::Path(p) => Some(p.as_path()),
+                InputTarget::Stdin => cli.stdin_path.as_deref().map(Path::new),
+            },
+        )?;
+
+        let file = match parser::parse(&source) {
+            Ok(f) => f,
+            Err(e) => {
+                eprintln!("warning: {display_name}: parse error, skipping ({e})");
+                continue;
+            }
+        };
+
+        for statement in &file.statements {
+            if let parser::ast::Statement::Command(command) = statement {
+                if !registry.contains(&command.name) {
+                    let line = source[..command.span.0]
+                        .chars()
+                        .filter(|&c| c == '\n')
+                        .count()
+                        + 1;
+                    unknown
+                        .entry(command.name.to_ascii_lowercase())
+                        .or_default()
+                        .push((display_name.clone(), line));
+                }
+            }
+        }
+    }
+
+    if unknown.is_empty() {
+        eprintln!("No unknown commands found.");
+        return Ok(EXIT_OK);
+    }
+
+    for (name, locations) in &unknown {
+        println!("{name}");
+        for (file, line) in locations {
+            println!("  {file}:{line}");
+        }
+    }
+
+    Ok(EXIT_OK)
 }
 
 fn run_watch(
@@ -3944,6 +4036,7 @@ mod tests {
             "lines",
             "list-changed-files",
             "list-input-files",
+            "list-unknown-commands",
             "no-config",
             "no-editorconfig",
             "no-gitignore",
