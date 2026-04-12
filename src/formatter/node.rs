@@ -262,7 +262,7 @@ fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: boo
             .kwargs
             .get(&header.to_ascii_uppercase())
             .or_else(|| form.kwargs.get(header))
-            .map_or(false, |kwarg| kwarg.sortable);
+            .is_some_and(|kwarg| kwarg.sortable);
 
         let should_sort = if spec_sortable {
             true
