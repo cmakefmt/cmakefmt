@@ -124,6 +124,15 @@ If the option has a CLI override flag, also update:
 - `src/main.rs`
 - `tests/cli.rs`
 
+Regenerate and commit the JSON schema so that editors with SchemaStore
+integration pick up the new option:
+
+```bash
+cmakefmt config schema > docs/public/schemas/latest/schema.json
+```
+
+The `check-docs` pre-commit hook will fail if the schema is out of date.
+
 The browser playground loads its default config from the WASM
 `default_config_yaml()` function at runtime, so config changes are
 picked up automatically after a WASM rebuild.

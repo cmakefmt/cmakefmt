@@ -4,6 +4,11 @@
   "description": "The user-config file structure for `.cmakefmt.yaml`, `.cmakefmt.yml`, and\n`.cmakefmt.toml`.\n\nAll fields are optional — only specified values override the defaults.",
   "type": "object",
   "properties": {
+    "experimental": {
+      "description": "Experimental formatting options (unstable, may change between releases).",
+      "$ref": "#/$defs/Experimental",
+      "default": {}
+    },
     "format": {
       "description": "Formatting options controlling line width, indentation, casing, and layout.",
       "$ref": "#/$defs/FormatSection"
@@ -62,6 +67,10 @@
           "const": "close"
         }
       ]
+    },
+    "Experimental": {
+      "description": "Experimental formatting options gated behind `--preview` or the\n`[experimental]` config section. All options default to `false`.\n\nThese may be promoted to stable defaults in a future release, changed\nincompatibly, or removed entirely.",
+      "type": "object"
     },
     "FormatSection": {
       "type": "object",
