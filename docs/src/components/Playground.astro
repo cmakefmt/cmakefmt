@@ -135,57 +135,9 @@ if(BUILD_TESTING)
 endif()
 `;
 
-  const DEFAULT_CONFIG = `\
-format:
-  line_width: 80
-  tab_size: 2
-  use_tabs: false
-  max_empty_lines: 1
-  max_hanging_wrap_lines: 2
-  max_hanging_wrap_positional_args: 6
-  max_hanging_wrap_groups: 2
-  dangle_parens: false
-  dangle_align: prefix
-  min_prefix_length: 4
-  max_prefix_length: 10
-  space_before_control_paren: false
-  space_before_definition_paren: false
-  command_case: lower
-  keyword_case: upper
-
-markup:
-  enable_markup: true
-  reflow_comments: false
-  first_comment_is_literal: true
-  literal_comment_pattern: ""
-  bullet_char: "*"
-  enum_char: "."
-  fence_pattern: "^\\\\s*[\`~]{3}[^\`\\\\n]*$"
-  ruler_pattern: "^[^\\\\w\\\\s]{3}.*[^\\\\w\\\\s]{3}$"
-  hashruler_min_length: 10
-  canonicalize_hashrulers: true
-
-# Per-command overrides
-per_command_overrides:
-  my_add_test:
-    command_case: lower
-    keyword_case: upper
-
-# Custom command specifications — teach cmakefmt the argument
-# structure of your project's commands.
-commands:
-  my_add_test:
-    pargs: 0
-    kwargs:
-      NAME:
-        nargs: 1
-      SOURCES:
-        nargs: "*"
-      LIBRARIES:
-        nargs: "*"
-      TIMEOUT:
-        nargs: 1
-`;
+  // Populated from WASM default_config_yaml() after init; fallback
+  // used only if WASM fails to load.
+  let DEFAULT_CONFIG = "format:\n  line_width: 80\n  tab_size: 2\n";
 
   // ── GitHub Dark Default theme for CodeMirror ────────────────────────
 
@@ -412,11 +364,20 @@ commands:
     try {
       const wasm = await loadWasmModule();
       wasmFormat = wasm.format;
+
+      // Use the same default config as `cmakefmt config dump`.
+      if (typeof wasm.default_config_yaml === 'function') {
+        DEFAULT_CONFIG = wasm.default_config_yaml();
+        configEditor.dispatch({
+          changes: { from: 0, to: configEditor.state.doc.length, insert: DEFAULT_CONFIG },
+        });
+      }
+
       statusEl.textContent = 'Ready';
       statusEl.classList.add('ready');
       formatBtn.disabled = false;
 
-      // Try restoring from URL hash
+      // Try restoring from URL hash (may override the default config).
       restoreFromHash();
 
       // Auto-format on load
