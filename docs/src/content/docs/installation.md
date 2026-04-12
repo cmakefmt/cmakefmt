@@ -29,17 +29,6 @@ Reference install path for developers already using Rust, works on any platform:
 cargo install cmakefmt-rust
 ```
 
-### PyPI (Python library)
-
-For Python projects that want to call `cmakefmt` from Python without
-shelling out to a binary:
-
-```bash
-pip install cmakefmt
-```
-
-This installs the Python module — see the [Python API](/python/) docs for usage.
-
 Verify the binary is on your path:
 
 ```bash
@@ -72,6 +61,18 @@ cargo build --release
 
 This is the right path if you are actively developing `cmakefmt`, reviewing
 changes, or benchmarking local modifications.
+
+### PyPI (Python library only)
+
+For Python projects that want to call `cmakefmt` from Python code without
+shelling out to a binary:
+
+```bash
+pip install cmakefmt
+```
+
+This installs the Python library module only — it does **not** provide the
+`cmakefmt` CLI binary. See the [Python API](/python/) docs for usage.
 
 ## Support Levels
 
