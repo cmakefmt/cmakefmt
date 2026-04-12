@@ -20,6 +20,7 @@ classifiers = [
 ]
 keywords = ["cmake", "formatter", "formatting"]
 description = "A fast, correct CMake formatter"
+readme = "README.md"
 
 [project.urls]
 Homepage = "https://cmakefmt.dev"
