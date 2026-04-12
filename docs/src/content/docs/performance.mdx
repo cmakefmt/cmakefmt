@@ -149,6 +149,31 @@ Compare a later run against that baseline:
 cargo bench --bench formatter -- --baseline before-change
 ```
 
+## Benchmark Governance
+
+Performance regressions are tracked automatically:
+
+- **Every push to `main`** and **every PR** runs the benchmark suite via
+  [CodSpeed](https://codspeed.io/cmakefmt/cmakefmt) in simulation mode.
+- **Weekly scheduled runs** (Monday 06:00 UTC) provide a consistent baseline
+  independent of PR activity.
+- CodSpeed flags regressions > 10% with a warning on the PR check. Regressions
+  that appear only across different runner environments are noise — check the
+  "different runtime environments" warning before investigating.
+
+**Regression review policy:**
+
+1. If CodSpeed flags a regression on a PR, investigate before merging.
+2. If the regression is real (same runner, same code path), either fix it or
+   document why the trade-off is acceptable in the PR description.
+3. If the regression appears only on a scheduled run (no code change), it is
+   likely runner variance — note it and move on.
+
+**Baselines:**
+
+CodSpeed tracks baselines automatically per branch. For local comparison,
+use Criterion baselines as described above.
+
 ## Related Reading
 
 - [CLI Reference](/cli/)
