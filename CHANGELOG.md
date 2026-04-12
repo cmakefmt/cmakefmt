@@ -8,11 +8,27 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `--explain` flag — show per-command formatting decisions (layout choice,
+  config values, thresholds) for a single file
+- `--watch` flag — watch directories for changes and reformat in-place
+  automatically; press Ctrl+C to stop
+- `.editorconfig` fallback — when no `.cmakefmt.yaml` is found, `indent_style`
+  and `indent_size` from `.editorconfig` are used as defaults. Disable with
+  `--no-editorconfig`
+- `--debug` now logs discovery context: active ignore sources, `--path-regex`
+  filter, `--staged`/`--changed` mode, and files filtered by `--path-regex`
+
 ### Changed
 
+- `--progress-bar` no longer requires `--in-place` — works with `--check`,
+  `--summary`, `--quiet`, and non-human report formats. Automatically
+  suppressed when stdout streams to the terminal, with a warning explaining why
 - Stable Rust library API for embedding: parser internals are no longer part
   of the public surface, parse/config/spec failures now use crate-owned error
   types, and `CommandConfig` no longer exposes internal representation fields
+- PyPI package now includes README as the long description on the project page
 
 ## 0.9.0 — 2026-04-12
 
