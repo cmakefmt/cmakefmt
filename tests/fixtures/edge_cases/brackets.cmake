@@ -1,7 +1,9 @@
-set(VAR [==[
+set(VAR
+    [==[
 multi-line value
 with ]= text inside
 ]==])
 
-message("continuation \
+message(
+  "continuation \
 line")

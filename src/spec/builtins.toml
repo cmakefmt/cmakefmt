@@ -29,6 +29,9 @@ flags = [
 pargs = "2+"
 flags = ["PARENT_SCOPE"]
 
+[commands.set.layout]
+wrap_after_first_arg = true
+
 [commands.set.kwargs.CACHE]
 nargs = "3+"
 

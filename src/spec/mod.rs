@@ -106,6 +106,11 @@ pub struct LayoutOverrides {
     pub always_wrap: Option<bool>,
     /// Override the positional-argument hanging-wrap threshold for this form.
     pub max_pargs_hwrap: Option<usize>,
+    /// Keep the first positional argument on the command line when wrapping.
+    /// When `true`, wrapping happens after the first argument with
+    /// continuation lines aligned to the open parenthesis. When `false`,
+    /// all arguments wrap to the next line at the base indent.
+    pub wrap_after_first_arg: Option<bool>,
 }
 
 /// Specification for a keyword section and any nested sub-keywords it accepts.
@@ -249,6 +254,9 @@ pub(crate) struct LayoutOverridesOverride {
     /// Override the positional-argument hanging-wrap threshold for this form.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_pargs_hwrap: Option<usize>,
+    /// Keep the first positional argument on the command line when wrapping.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wrap_after_first_arg: Option<bool>,
 }
 
 /// Partial override for a keyword specification.
@@ -384,6 +392,7 @@ impl LayoutOverridesOverride {
             dangle_parens: self.dangle_parens,
             always_wrap: self.always_wrap,
             max_pargs_hwrap: self.max_pargs_hwrap,
+            wrap_after_first_arg: self.wrap_after_first_arg,
         }
     }
 }

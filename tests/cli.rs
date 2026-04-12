@@ -3473,3 +3473,270 @@ fn sort_is_case_insensitive() {
         "expected case-insensitive sorted output, got:\n{stdout}"
     );
 }
+
+// ── wrap_after_first_arg (set formatting) ─────────────────────────────
+
+#[test]
+fn set_simple_stays_inline() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "set(FOO bar)");
+}
+
+#[test]
+fn set_short_list_stays_inline() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO a b c)\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "set(FOO a b c)");
+}
+
+#[test]
+fn set_long_list_wraps_with_name_attached() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "set(HEADERS header_a.h header_b.h header_c.h header_d.h header_e.h header_f.h)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let first_line = stdout.lines().next().unwrap();
+    assert!(
+        first_line.starts_with("set(HEADERS"),
+        "variable name should stay on set( line, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn set_cached_keeps_name_attached() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "if(TRUE)\n  set(CMAKE_BUILD_TYPE \"Release\" CACHE STRING \"Build mode.\" FORCE)\nendif()\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("set(CMAKE_BUILD_TYPE"),
+        "variable name should stay on set( line, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn set_cached_inline_keyword_args() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "if(TRUE)\n  set(CMAKE_BUILD_TYPE \"Release\" CACHE STRING \"Build mode.\" FORCE)\nendif()\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // CACHE STRING "Build mode." FORCE should fit on one line
+    assert!(
+        stdout.contains("CACHE STRING \"Build mode.\" FORCE"),
+        "CACHE args should be inline when they fit, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn set_long_cached_wraps_keyword_nested() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "if(TRUE)\n  set(CMAKE_BUILD_TYPE \"LONG LONG VALUE\" CACHE STRING \"THIS IS A REALLY REALLY REALLY REALLY REALLY LONG DESCRIPTION THAT OVERFLOWS\" FORCE)\nendif()\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // CACHE keyword should be on its own line with args nested
+    assert!(
+        stdout.lines().any(|l| l.trim() == "CACHE"),
+        "CACHE should get its own line when args don't fit inline, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn set_parent_scope_inline() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO \"value\" PARENT_SCOPE)\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "set(FOO \"value\" PARENT_SCOPE)");
+}
+
+#[test]
+fn set_env_stays_inline() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(ENV{FOO} \"value\")\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "set(ENV{FOO} \"value\")");
+}
+
+#[test]
+fn set_unset_stays_inline() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO)\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "set(FOO)");
+}
+
+#[test]
+fn set_comment_on_variable_name_stays_attached() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "set(foobarbaz # comment about foobarbaz\n    value_one value_two value_three)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("set(foobarbaz # comment about foobarbaz"),
+        "comment should stay attached to variable name, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn set_twenty_items_vertical_with_name_attached() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "set(SOURCES a.cpp b.cpp c.cpp d.cpp e.cpp f.cpp g.cpp h.cpp i.cpp j.cpp k.cpp l.cpp m.cpp n.cpp o.cpp p.cpp q.cpp r.cpp s.cpp t.cpp)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let first_line = stdout.lines().next().unwrap();
+    assert_eq!(first_line, "set(SOURCES");
+    // Each file should be on its own line (vertical layout)
+    assert!(
+        stdout.contains("    a.cpp"),
+        "expected indented args, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn set_deeply_nested_keeps_name_attached() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "if(A)\n  if(B)\n    if(C)\n      set(CMAKE_BUILD_TYPE \"Release\" CACHE STRING \"Build mode.\" FORCE)\n    endif()\n  endif()\nendif()\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("set(CMAKE_BUILD_TYPE"),
+        "variable name should stay attached even at deep nesting, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn wrap_after_first_arg_user_override() {
+    let dir = tempfile::tempdir().unwrap();
+    // Disable wrap_after_first_arg for set via per-command override
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "per_command_overrides:\n  set:\n    wrap_after_first_arg: false\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "set(HEADERS header_a.h header_b.h header_c.h header_d.h header_e.h header_f.h)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let first_line = stdout.lines().next().unwrap();
+    // With override=false, should use old behavior: set(\n  HEADERS...
+    assert_eq!(
+        first_line, "set(",
+        "user override should disable wrap_after_first_arg, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn wrap_after_first_arg_global_config() {
+    let dir = tempfile::tempdir().unwrap();
+    // Enable globally — should affect all commands
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  wrap_after_first_arg: true\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(mylib PUBLIC dep1 dep2 dep3 dep4 dep5 dep6 dep7 dep8 dep9)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let first_line = stdout.lines().next().unwrap();
+    assert!(
+        first_line.starts_with("target_link_libraries(mylib"),
+        "global wrap_after_first_arg should keep first arg attached, got:\n{stdout}"
+    );
+}
+
+// ── trailing comment handling ─────────────────────────────────────────
+
+#[test]
+fn trailing_comments_stay_attached_in_vertical_layout() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(mylib\n  PUBLIC\n    dep1 # first dep\n    dep2 # second dep\n    dep3 # third dep\n)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("dep1 # first dep"),
+        "dep1 comment should stay attached, got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("dep2 # second dep"),
+        "dep2 comment should stay attached, got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("dep3 # third dep"),
+        "dep3 comment should stay attached, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn trailing_comment_on_command_preserved() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar) # this is a trailing comment\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "set(FOO bar) # this is a trailing comment");
+}

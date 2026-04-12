@@ -172,6 +172,11 @@ pub struct Config {
     /// Return an error when any formatted output line exceeds
     /// [`Self::line_width`].
     pub require_valid_layout: bool,
+    /// When wrapping, keep the first positional argument on the command
+    /// line and align continuation to the open parenthesis. Can be
+    /// overridden per-command via `per_command_overrides` or the spec's
+    /// `layout.wrap_after_first_arg`.
+    pub wrap_after_first_arg: bool,
     /// Sort arguments in keyword sections marked `sortable` in the
     /// command spec. Sorting is lexicographic and case-insensitive.
     pub enable_sort: bool,
@@ -280,6 +285,8 @@ pub struct PerCommandConfig {
     /// Override the hanging-wrap subgroup threshold for this command only.
     #[serde(rename = "max_hanging_wrap_groups")]
     pub max_subgroups_hwrap: Option<usize>,
+    /// Keep the first positional argument on the command line when wrapping.
+    pub wrap_after_first_arg: Option<bool>,
 }
 
 impl Default for Config {
@@ -298,6 +305,7 @@ impl Default for Config {
             max_rows_cmdline: 2,
             always_wrap: Vec::new(),
             require_valid_layout: false,
+            wrap_after_first_arg: false,
             enable_sort: false,
             autosort: false,
             dangle_parens: false,
@@ -522,6 +530,17 @@ impl CommandConfig<'_> {
             .unwrap_or(self.global.max_subgroups_hwrap)
     }
 
+    /// Effective `wrap_after_first_arg` for the current command.
+    ///
+    /// Resolution order: per-command user override > `spec_value` (from
+    /// the command spec's layout overrides) > global config default.
+    pub fn wrap_after_first_arg(&self, spec_value: Option<bool>) -> bool {
+        self.per_cmd
+            .and_then(|p| p.wrap_after_first_arg)
+            .or(spec_value)
+            .unwrap_or(self.global.wrap_after_first_arg)
+    }
+
     /// Effective indentation unit for the current command.
     pub fn indent_str(&self) -> String {
         if self.global.use_tabchars {
@@ -637,6 +656,7 @@ mod tests {
                 keyword_case: Some(CaseStyle::Lower),
                 max_pargs_hwrap: Some(10),
                 max_subgroups_hwrap: Some(5),
+                wrap_after_first_arg: None,
             },
         );
         let config = Config {

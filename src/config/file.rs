@@ -79,6 +79,8 @@ struct FormatSection {
     always_wrap: Option<Vec<String>>,
     /// Return an error if any formatted output line exceeds `line_width`.
     require_valid_layout: Option<bool>,
+    /// Keep the first positional argument on the command line when wrapping.
+    wrap_after_first_arg: Option<bool>,
     /// Sort arguments in keyword sections marked `sortable` in the command spec.
     enable_sort: Option<bool>,
     /// Heuristically infer sortability for keyword sections without explicit annotation.
@@ -243,6 +245,8 @@ fn default_config_template_toml() -> String {
             "# always_wrap = [\"target_link_libraries\"]\n\n",
             "# Return an error if any formatted line exceeds line_width.\n",
             "# require_valid_layout = true\n\n",
+            "# Keep the first positional argument on the command line when wrapping.\n",
+            "# wrap_after_first_arg = true\n\n",
             "# Sort arguments in keyword sections marked sortable in the command spec.\n",
             "# enable_sort = true\n\n",
             "# Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
@@ -375,6 +379,8 @@ struct EffectiveFormatSection {
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     require_valid_layout: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
+    wrap_after_first_arg: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
     enable_sort: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     autosort: bool,
@@ -422,6 +428,7 @@ impl From<&Config> for EffectiveConfigFile {
                 max_rows_cmdline: config.max_rows_cmdline,
                 always_wrap: config.always_wrap.clone(),
                 require_valid_layout: config.require_valid_layout,
+                wrap_after_first_arg: config.wrap_after_first_arg,
                 enable_sort: config.enable_sort,
                 autosort: config.autosort,
                 dangle_parens: config.dangle_parens,
@@ -487,6 +494,8 @@ fn default_config_template_yaml() -> String {
             "  #   - target_link_libraries\n\n",
             "  # Return an error if any formatted line exceeds line_width.\n",
             "  # require_valid_layout: true\n\n",
+            "  # Keep the first positional argument on the command line when wrapping.\n",
+            "  # wrap_after_first_arg: true\n\n",
             "  # Sort arguments in keyword sections marked sortable in the command spec.\n",
             "  # enable_sort: true\n\n",
             "  # Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
@@ -703,6 +712,9 @@ impl Config {
         }
         if let Some(v) = fc.format.require_valid_layout {
             self.require_valid_layout = v;
+        }
+        if let Some(v) = fc.format.wrap_after_first_arg {
+            self.wrap_after_first_arg = v;
         }
         if let Some(v) = fc.format.enable_sort {
             self.enable_sort = v;

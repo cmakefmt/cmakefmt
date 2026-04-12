@@ -12,12 +12,12 @@ message(STATUS "hello") # trailing comment on command
 
 set(MY_VAR "value")
 
-target_sources(cmakefmt
+target_sources(
+  cmakefmt
   PRIVATE
     src/lib.rs # inline comment after arg
     #[[ bracket comment between args ]]
-    src/main.rs
-)
+    src/main.rs)
 
 #[[ standalone bracket comment ]]
 

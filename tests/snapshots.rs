@@ -75,9 +75,8 @@ fn bracket_argument_with_special_chars() {
 fn max_rows_cmdline_one_forces_vertical() {
     // max_rows_cmdline=1: hanging wrap that produces more than 1 row is rejected
     // → falls back to vertical layout.
-    // Use a command that doesn't fit inline but would normally use hanging wrap.
-    // Vertical layout opens the paren on the first line alone ("set(\n").
-    // Hanging wrap would put the first token right after "set(".
+    // set() has wrap_after_first_arg=true in the builtin spec, so the
+    // variable name stays on the set( line even in vertical mode.
     let src = "set(AVERYLONG_VAR_NAME_HERE B C D E F)\n";
     let config = Config {
         max_rows_cmdline: 1,
@@ -86,11 +85,9 @@ fn max_rows_cmdline_one_forces_vertical() {
     };
     let formatted = format_source(src, &config).unwrap();
     let first_line = formatted.lines().next().unwrap();
-    // With vertical layout the opening line is just "set(" — no args follow on
-    // the same line. With hanging wrap it would be "set(AVERYLONG_VAR_NAME_HERE".
     assert_eq!(
-        first_line, "set(",
-        "expected vertical layout (first line = 'set('), got:\n{formatted}"
+        first_line, "set(AVERYLONG_VAR_NAME_HERE",
+        "expected variable name on set( line, got:\n{formatted}"
     );
 }
 
@@ -286,8 +283,7 @@ fn inline_comment_between_arguments() {
     target_sources(
       foo
       PRIVATE
-        a.cc
-        # keep this
+        a.cc # keep this
         b.cc)
     ");
 }
@@ -298,8 +294,7 @@ fn inline_bracket_comment_between_arguments() {
     let formatted = format_source(src, &Config::default()).unwrap();
     insta::assert_snapshot!(formatted, @r#"
     message(
-      "First"
-      #[[inline comment]]
+      "First" #[[inline comment]]
       "Second")
     "#);
 }
@@ -984,9 +979,8 @@ fn bracket_arguments_force_multiline_layout() {
     let formatted = format_source(src, &Config::default()).unwrap();
 
     insta::assert_snapshot!(formatted, @"
-    set(
-      VAR
-      [==[
+    set(VAR
+        [==[
     line one
     line two
     ]==])

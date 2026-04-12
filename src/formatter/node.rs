@@ -77,12 +77,22 @@ pub(crate) fn format_command(
         .any(|n| n.eq_ignore_ascii_case(&command.name));
     let force_vertical = spec_always_wrap || config_always_wrap;
 
+    let spec_wrap_first = form.layout.as_ref().and_then(|l| l.wrap_after_first_arg);
+    let wrap_after_first_arg = cmd_config.wrap_after_first_arg(spec_wrap_first);
+
     let output = if force_vertical {
         debug.log(format!(
             "formatter: command {} layout=vertical (always_wrap)",
             command.name
         ));
-        format_command_vertical(command, &sections, &cmd_config, patterns, block_depth)?
+        format_command_vertical(
+            command,
+            &sections,
+            &cmd_config,
+            patterns,
+            block_depth,
+            wrap_after_first_arg,
+        )?
     } else if let Some(inline) = try_format_inline(
         command,
         &sections,
@@ -125,7 +135,14 @@ pub(crate) fn format_command(
             cmd_config.max_pargs_hwrap(),
             cmd_config.max_subgroups_hwrap()
         ));
-        format_command_vertical(command, &sections, &cmd_config, patterns, block_depth)?
+        format_command_vertical(
+            command,
+            &sections,
+            &cmd_config,
+            patterns,
+            block_depth,
+            wrap_after_first_arg,
+        )?
     };
 
     if config.use_tabchars {
@@ -439,6 +456,7 @@ fn format_command_vertical(
     cmd_config: &CommandConfig<'_>,
     patterns: &CompiledPatterns,
     block_depth: usize,
+    wrap_after_first_arg: bool,
 ) -> Result<String> {
     let base_indent = cmd_config.indent_str().repeat(block_depth);
     let indent = format!("{base_indent}{}", cmd_config.indent_str());
@@ -448,6 +466,163 @@ fn format_command_vertical(
     let name = format_name(command, cmd_config);
     output.push_str(&base_indent);
     output.push_str(&name);
+
+    // When wrap_after_first_arg is enabled and the first section is
+    // positional (no keyword header), keep the first argument on the
+    // command line and align the rest to the open parenthesis.
+    let first_is_positional = sections
+        .first()
+        .is_some_and(|s| s.header.is_none() && !s.arguments.is_empty());
+
+    if wrap_after_first_arg && first_is_positional {
+        let first_section = &sections[0];
+
+        // Find the first non-comment argument to keep on the command line.
+        let first_real_idx = first_section
+            .arguments
+            .iter()
+            .position(|a| !a.is_comment())
+            .unwrap_or(0);
+        let first_arg = first_section.arguments[first_real_idx];
+        let paren_indent = " ".repeat(base_indent.len() + name.len() + 1);
+
+        output.push('(');
+        output.push_str(first_arg.as_str());
+
+        // If the next argument is an inline comment, try to keep it attached.
+        let mut consumed = first_real_idx + 1;
+        if consumed < first_section.arguments.len()
+            && first_section.arguments[consumed].is_comment()
+        {
+            let comment = first_section.arguments[consumed].as_str();
+            let line_so_far = base_indent.len() + name.len() + 1 + first_arg.as_str().len();
+            if line_so_far + 1 + comment.len() <= cmd_config.line_width() {
+                output.push(' ');
+                output.push_str(comment);
+                consumed += 1;
+            }
+        }
+
+        // Remaining arguments in the first section.
+        let remaining = &first_section.arguments[consumed..];
+        if !remaining.is_empty() {
+            output.push('\n');
+            if remaining.len() > cmd_config.max_pargs_hwrap() {
+                write_vertical_arguments(
+                    &mut output,
+                    remaining,
+                    &paren_indent,
+                    cmd_config.global(),
+                    patterns,
+                );
+            } else {
+                write_packed_arguments(
+                    &mut output,
+                    remaining,
+                    &paren_indent,
+                    cmd_config.global(),
+                    patterns,
+                    cmd_config.line_width(),
+                );
+            }
+        } else if sections.len() > 1 {
+            output.push('\n');
+        }
+
+        // Remaining sections (keywords, flags).
+        for section in &sections[1..] {
+            match section.header {
+                None => {
+                    if section.arguments.len() > cmd_config.max_pargs_hwrap() {
+                        write_vertical_arguments(
+                            &mut output,
+                            &section.arguments,
+                            &paren_indent,
+                            cmd_config.global(),
+                            patterns,
+                        );
+                    } else {
+                        write_packed_arguments(
+                            &mut output,
+                            &section.arguments,
+                            &paren_indent,
+                            cmd_config.global(),
+                            patterns,
+                            cmd_config.line_width(),
+                        );
+                    }
+                }
+                Some(header) => {
+                    let header = apply_case(cmd_config.keyword_case(), header);
+                    let kw_nested = format!("{paren_indent}{}", cmd_config.indent_str());
+                    if section.arguments.is_empty() {
+                        output.push_str(&paren_indent);
+                        output.push_str(&header);
+                        output.push('\n');
+                        continue;
+                    }
+                    output.push_str(&paren_indent);
+                    output.push_str(&header);
+                    if section.arguments.len() > cmd_config.max_pargs_hwrap() {
+                        output.push('\n');
+                        write_vertical_arguments(
+                            &mut output,
+                            &section.arguments,
+                            &kw_nested,
+                            cmd_config.global(),
+                            patterns,
+                        );
+                    } else if let Some(line) = format_section_inline(
+                        &header,
+                        section.header_kind,
+                        &section.arguments,
+                        &paren_indent,
+                        cmd_config.global(),
+                        patterns,
+                        cmd_config.line_width(),
+                    ) {
+                        output.truncate(output.len() - header.len());
+                        output.push_str(&line);
+                        output.push('\n');
+                    } else {
+                        output.push('\n');
+                        write_packed_arguments(
+                            &mut output,
+                            &section.arguments,
+                            &kw_nested,
+                            cmd_config.global(),
+                            patterns,
+                            cmd_config.line_width(),
+                        );
+                    }
+                }
+            }
+        }
+
+        // Close the command.
+        if output.ends_with('\n') {
+            output.pop();
+        }
+        if cmd_config.dangle_parens() {
+            output.push('\n');
+            match cmd_config.dangle_align() {
+                DangleAlign::Prefix | DangleAlign::Close => output.push_str(&base_indent),
+                DangleAlign::Open => {
+                    output.push_str(&base_indent);
+                    output.push_str(&" ".repeat(name.len()));
+                }
+            }
+            output.push(')');
+        } else if last_output_line_has_comment(&output) {
+            output.push('\n');
+            output.push_str(&base_indent);
+            output.push(')');
+        } else {
+            output.push(')');
+        }
+        return Ok(output);
+    }
+
     output.push_str("(\n");
 
     for section in sections {
