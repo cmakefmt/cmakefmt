@@ -3240,3 +3240,126 @@ fn list_unknown_commands_respects_user_specs() {
         "user-defined command should not be listed as unknown, got:\n{stdout}"
     );
 }
+
+// ── LSP large-file test ───────────────────────────────────────────────
+
+#[test]
+fn lsp_formats_large_file_within_timeout() {
+    use std::io::{Read, Write};
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    // Generate a ~2000-line CMake file.
+    let mut source = String::from("cmake_minimum_required(VERSION 3.20)\nproject(big)\n\n");
+    for i in 0..500 {
+        source.push_str(&format!(
+            "add_library(lib_{i} STATIC src_{i}/a.cpp src_{i}/b.cpp src_{i}/c.cpp src_{i}/d.cpp)\n"
+        ));
+    }
+
+    let uri = "file:///tmp/big-CMakeLists.txt";
+    let init_params = serde_json::json!({
+        "processId": null,
+        "capabilities": {},
+        "rootUri": null
+    });
+    let format_params = serde_json::json!({
+        "textDocument": { "uri": uri },
+        "options": { "tabSize": 2, "insertSpaces": true }
+    });
+
+    fn lsp_message(method: &str, id: i64, params: &serde_json::Value) -> String {
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": method,
+            "params": params
+        });
+        let body_str = body.to_string();
+        format!("Content-Length: {}\r\n\r\n{}", body_str.len(), body_str)
+    }
+
+    fn lsp_notification(method: &str, params: &serde_json::Value) -> String {
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params
+        });
+        let body_str = body.to_string();
+        format!("Content-Length: {}\r\n\r\n{}", body_str.len(), body_str)
+    }
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
+        .args(["lsp"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+
+    let stdin = child.stdin.as_mut().unwrap();
+    let stdout = child.stdout.as_mut().unwrap();
+
+    // Initialize
+    let init = lsp_message("initialize", 1, &init_params);
+    stdin.write_all(init.as_bytes()).unwrap();
+    stdin.flush().unwrap();
+
+    // Read initialize response (we don't parse it, just drain it)
+    std::thread::sleep(Duration::from_millis(200));
+    let mut buf = vec![0u8; 4096];
+    let _ = stdout.read(&mut buf);
+
+    // Send initialized notification
+    let initialized = lsp_notification("initialized", &serde_json::json!({}));
+    stdin.write_all(initialized.as_bytes()).unwrap();
+
+    // Open the document
+    let open = lsp_notification(
+        "textDocument/didOpen",
+        &serde_json::json!({
+            "textDocument": {
+                "uri": uri,
+                "languageId": "cmake",
+                "version": 1,
+                "text": source
+            }
+        }),
+    );
+    stdin.write_all(open.as_bytes()).unwrap();
+    stdin.flush().unwrap();
+
+    // Send format request and time it
+    let format_msg = lsp_message("textDocument/formatting", 2, &format_params);
+    let start = Instant::now();
+    stdin.write_all(format_msg.as_bytes()).unwrap();
+    stdin.flush().unwrap();
+
+    // Read response — wait up to 10s
+    let mut response = vec![0u8; 1024 * 1024];
+    let timeout = Duration::from_secs(10);
+    loop {
+        if start.elapsed() > timeout {
+            child.kill().ok();
+            panic!(
+                "LSP formatting timed out after 10 seconds on a {}-line file",
+                source.lines().count()
+            );
+        }
+        match stdout.read(&mut response) {
+            Ok(n) if n > 0 => {
+                let elapsed = start.elapsed();
+                // Kill the LSP and verify timing
+                child.kill().ok();
+                child.wait().ok();
+                assert!(
+                    elapsed < timeout,
+                    "LSP formatting took {:?} — exceeds 10s timeout",
+                    elapsed
+                );
+                return;
+            }
+            _ => std::thread::sleep(Duration::from_millis(50)),
+        }
+    }
+}
