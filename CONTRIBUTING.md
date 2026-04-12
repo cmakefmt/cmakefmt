@@ -187,7 +187,7 @@ registry and tests were updated together.
 Keep these aligned:
 
 - `benches/`
-- `docs/PERFORMANCE.md`
+- `docs/src/content/docs/performance.md`
 - `.github/workflows/ci.yml` if CI should run it
 - `.pre-commit-config.yaml` if local hygiene should enforce it
 - `README.md` if users should know about it
@@ -281,7 +281,7 @@ If you changed CLI behavior, also check:
 
 ```bash
 cargo run -- --help
-cargo run -- --dump-config
+cargo run -- config dump
 ```
 
 If you added or changed a config option, also verify the legacy conversion
@@ -289,7 +289,7 @@ round-trip produces no new "unsupported" notes:
 
 ```bash
 cmake-format --dump-config > /tmp/cmf_dump.py
-cargo run -- --convert-legacy-config /tmp/cmf_dump.py
+cargo run -- config convert /tmp/cmf_dump.py
 ```
 
 If you changed docs, also check:
