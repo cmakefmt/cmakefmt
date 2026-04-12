@@ -23,6 +23,7 @@
     "@lezer/highlight": "^1.2.3",
     "@tailwindcss/vite": "^4.1.4",
     "astro": "^6.1.4",
+    "astro-magic-move": "^0.1.2",
     "chart.js": "^4.5.1",
     "codemirror": "^6.0.2",
     "daisyui": "^5.5.19",

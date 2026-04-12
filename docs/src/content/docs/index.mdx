@@ -22,6 +22,7 @@ hero:
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 import BenchmarkComparisonChart from '../../components/BenchmarkComparisonChart.astro';
 import DotGrid from '../../components/DotGrid.astro';
+import FormatMagicShowcase from '../../components/FormatMagicShowcase.astro';
 import HeroReveal from '../../components/HeroReveal.astro';
 import SpeedCounter from '../../components/SpeedCounter.astro';
 import FeatureShowcase from '../../components/FeatureShowcase.astro';
@@ -52,52 +53,7 @@ cmakefmt --staged --check                 # pre-commit: format only staged files
 
 ## Before and After
 
-<div class="before-after">
-<div class="before-after-col">
-
-**Before**
-
-```cmake
-CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
-Project(myproject LANGUAGES CXX)
-
-set(SOURCES src/main.cpp
-src/utils.cpp
-  src/parser.cpp)
-
-target_link_libraries(mylib PUBLIC
-Boost::filesystem Boost::system    fmt::fmt
-  PRIVATE
-    spdlog::spdlog)
-
-IF(WIN32)
-MESSAGE(STATUS "building on Windows")
-ENDIF()
-```
-
-</div>
-<div class="before-after-col">
-
-**After**
-
-```cmake
-cmake_minimum_required(VERSION 3.20)
-project(myproject LANGUAGES CXX)
-
-set(SOURCES src/main.cpp src/utils.cpp src/parser.cpp)
-
-target_link_libraries(
-  mylib
-  PUBLIC Boost::filesystem Boost::system fmt::fmt
-  PRIVATE spdlog::spdlog)
-
-if(WIN32)
-  message(STATUS "building on Windows")
-endif()
-```
-
-</div>
-</div>
+<FormatMagicShowcase />
 
 ## Performance
 

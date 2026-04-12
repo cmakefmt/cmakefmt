@@ -1,0 +1,630 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import { MagicMove } from "astro-magic-move";
+import "astro-magic-move/styles";
+
+const before = `CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
+Project(myproject LANGUAGES CXX)
+
+set(SOURCES src/main.cpp
+src/utils.cpp
+  src/parser.cpp)
+
+target_link_libraries(mylib PUBLIC
+Boost::filesystem Boost::system    fmt::fmt
+  PRIVATE
+    spdlog::spdlog)
+
+IF(WIN32)
+MESSAGE(STATUS "building on Windows")
+ENDIF()
+`;
+
+const after = `cmake_minimum_required(VERSION 3.20)
+project(myproject LANGUAGES CXX)
+
+set(SOURCES src/main.cpp src/utils.cpp src/parser.cpp)
+
+target_link_libraries(
+  mylib
+  PUBLIC Boost::filesystem Boost::system fmt::fmt
+  PRIVATE spdlog::spdlog)
+
+if(WIN32)
+  message(STATUS "building on Windows")
+endif()
+`;
+---
+
+<section
+  class="format-showcase not-content"
+  aria-labelledby="format-showcase-title"
+  data-format-showcase
+>
+  <div class="format-showcase-copy">
+    <p class="format-showcase-kicker">Formatter Demo</p>
+    <h3 id="format-showcase-title">Watch rough CMake settle into a stable layout.</h3>
+    <p>
+      The landing-page animation shows the kind of cleanup <code>cmakefmt</code> performs in one pass:
+      casing becomes consistent, simple lists collapse, and larger calls wrap into a readable structure.
+    </p>
+    <div class="format-showcase-tags" aria-hidden="true">
+      <span>normalises casing</span>
+      <span>collapses obvious lists</span>
+      <span>wraps complex calls</span>
+    </div>
+  </div>
+
+  <div class="format-showcase-frame">
+    <div class="format-showcase-toolbar">
+      <div class="format-showcase-tabs" role="tablist" aria-label="Formatter demo state">
+        <button
+          class="format-showcase-tab format-showcase-tab-input is-active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          tabindex="0"
+          data-format-showcase-tab
+          data-step="0"
+        >
+          messy input
+        </button>
+        <button
+          class="format-showcase-tab format-showcase-tab-output"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          tabindex="-1"
+          data-format-showcase-tab
+          data-step="1"
+        >
+          cmakefmt output
+        </button>
+      </div>
+      <button
+        class="format-showcase-replay"
+        type="button"
+        data-format-showcase-replay
+        data-action="play"
+        aria-label="Play formatter animation"
+      >
+        <span class="format-showcase-replay-icon-shell" aria-hidden="true">
+          <svg
+            class="format-showcase-icon format-showcase-icon-play"
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            focusable="false"
+          >
+            <path
+              d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.31-6.86a1 1 0 0 0 0-1.66L9.53 4.29A1 1 0 0 0 8 5.14Z"
+            ></path>
+          </svg>
+          <svg
+            class="format-showcase-icon format-showcase-icon-replay"
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            focusable="false"
+          >
+            <path d="M12 4a8 8 0 1 0 7.75 6h-2.1A6 6 0 1 1 12 6v3l4-4-4-4v3z"></path>
+          </svg>
+        </span>
+        <span class="format-showcase-replay-label format-showcase-replay-label-play"> Play </span>
+        <span class="format-showcase-replay-label format-showcase-replay-label-replay">
+          Replay
+        </span>
+      </button>
+    </div>
+
+    <MagicMove
+      before={before}
+      after={after}
+      lang="cmake"
+      trigger="click"
+      duration={2200}
+      stagger={0.18}
+      class="format-magic-move"
+    />
+  </div>
+</section>
+
+<script>
+  type MagicMovePanel = HTMLElement & {
+    animateToStep?: (step: number) => Promise<void> | void;
+    currentStep?: number;
+    renderer?: { replace: (step: unknown) => void };
+    steps?: unknown[];
+  };
+
+  const showcases = document.querySelectorAll("[data-format-showcase]");
+
+  for (const showcase of showcases) {
+    if (showcase instanceof HTMLElement && showcase.dataset.magicMoveReady === "true") {
+      continue;
+    }
+
+    const panel = showcase.querySelector("magic-move") as MagicMovePanel | null;
+    const replay = showcase.querySelector("[data-format-showcase-replay]");
+    const tabs = showcase.querySelectorAll("[data-format-showcase-tab]");
+    if (
+      !(panel instanceof HTMLElement) ||
+      !(replay instanceof HTMLButtonElement) ||
+      tabs.length === 0
+    ) {
+      continue;
+    }
+
+    if (showcase instanceof HTMLElement) {
+      showcase.dataset.magicMoveReady = "true";
+    }
+
+    let currentStep = 0;
+    let hasAutoPlayed = false;
+    let hasUserInteracted = false;
+    let isAnimating = false;
+    let autoPlayTimeout: number | null = null;
+
+    const clearAutoPlayTimeout = () => {
+      if (autoPlayTimeout !== null) {
+        window.clearTimeout(autoPlayTimeout);
+        autoPlayTimeout = null;
+      }
+    };
+
+    const updateControls = (step: number) => {
+      currentStep = step;
+
+      tabs.forEach((tab) => {
+        if (!(tab instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        const isActive = Number(tab.dataset.step) === step;
+        tab.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+        tab.tabIndex = isActive ? 0 : -1;
+      });
+
+      const action = step === 0 ? "play" : "replay";
+      replay.dataset.action = action;
+      replay.setAttribute(
+        "aria-label",
+        action === "play" ? "Play formatter animation" : "Replay formatter animation",
+      );
+    };
+
+    const setAnimating = (animating: boolean) => {
+      isAnimating = animating;
+
+      if (showcase instanceof HTMLElement) {
+        showcase.dataset.animating = String(animating);
+      }
+
+      tabs.forEach((tab) => {
+        if (tab instanceof HTMLButtonElement) {
+          tab.disabled = animating;
+        }
+      });
+
+      replay.disabled = animating;
+    };
+
+    panel.addEventListener("magic-move:step", ((event: CustomEvent) => {
+      updateControls(Number(event.detail?.step ?? 0));
+    }) as EventListener);
+
+    const jumpToStep = (step: number) => {
+      if (currentStep === step) {
+        return;
+      }
+
+      const steps = panel.steps;
+      const renderer = panel.renderer;
+      if (!steps || !renderer || step < 0 || step >= steps.length) {
+        return;
+      }
+
+      renderer.replace(steps[step]);
+      panel.currentStep = step;
+      updateControls(step);
+    };
+
+    const animateToStep = async (step: number) => {
+      if (currentStep === step || typeof panel.animateToStep !== "function") {
+        return;
+      }
+
+      await panel.animateToStep(step);
+    };
+
+    const animateForward = async () => {
+      if (isAnimating) {
+        return;
+      }
+
+      setAnimating(true);
+
+      try {
+        if (currentStep > 0) {
+          jumpToStep(0);
+          await new Promise((resolve) => window.setTimeout(resolve, 120));
+          await animateToStep(1);
+          return;
+        }
+
+        await animateToStep(1);
+      } finally {
+        setAnimating(false);
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting || hasAutoPlayed) {
+          return;
+        }
+
+        hasAutoPlayed = true;
+        autoPlayTimeout = window.setTimeout(() => {
+          autoPlayTimeout = null;
+
+          if (hasUserInteracted) {
+            return;
+          }
+
+          void animateForward();
+        }, 500);
+        observer.disconnect();
+      },
+      { threshold: 0.55 },
+    );
+
+    observer.observe(panel);
+    replay.addEventListener("click", () => {
+      hasUserInteracted = true;
+      clearAutoPlayTimeout();
+      void animateForward();
+    });
+    tabs.forEach((tab) => {
+      if (!(tab instanceof HTMLButtonElement)) {
+        return;
+      }
+
+      tab.addEventListener("click", () => {
+        if (isAnimating) {
+          return;
+        }
+
+        hasUserInteracted = true;
+        clearAutoPlayTimeout();
+        jumpToStep(Number(tab.dataset.step ?? "0"));
+      });
+    });
+    updateControls(0);
+    setAnimating(false);
+  }
+</script>
+
+<style>
+  .format-showcase {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 1.5rem;
+    align-items: center;
+    margin: 2rem 0 1rem;
+  }
+
+  .format-showcase-copy {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .format-showcase-kicker {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--sl-color-accent) 80%, white);
+  }
+
+  .format-showcase-copy h3 {
+    margin: 0;
+    font-size: clamp(1.35rem, 1.05rem + 1.2vw, 2.1rem);
+    line-height: 1.1;
+  }
+
+  .format-showcase-copy p {
+    margin: 0;
+    color: var(--sl-color-gray-2);
+    max-width: 34rem;
+  }
+
+  .format-showcase-copy :global(code) {
+    font-size: inherit;
+  }
+
+  .format-showcase-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .format-showcase-tags span {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.38rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    color: var(--sl-color-gray-2);
+    background: color-mix(in srgb, var(--sl-color-gray-6) 78%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 28%, transparent);
+  }
+
+  .format-showcase-frame {
+    position: relative;
+    padding: 0.9rem;
+    border-radius: 1.2rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 22%, transparent);
+    background:
+      radial-gradient(
+        circle at top right,
+        color-mix(in srgb, var(--sl-color-accent) 22%, transparent),
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--sl-color-gray-6) 88%, transparent),
+        color-mix(in srgb, var(--sl-color-black) 18%, transparent)
+      );
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
+      0 24px 60px color-mix(in srgb, black 28%, transparent);
+  }
+
+  .format-showcase-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .format-showcase-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 22%, transparent);
+    background: color-mix(in srgb, var(--sl-color-gray-6) 76%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+  }
+
+  .format-showcase-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.42rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-2);
+    border: 1px solid transparent;
+    background: transparent;
+    transition:
+      color 0.2s ease,
+      border-color 0.2s ease,
+      background 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .format-showcase-tab:hover {
+    color: var(--sl-color-white);
+  }
+
+  .format-showcase-tab:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--sl-color-accent) 78%, white);
+    outline-offset: 2px;
+  }
+
+  .format-showcase-tab.is-active {
+    color: var(--sl-color-white);
+    transform: translateY(-1px);
+  }
+
+  .format-showcase-tab:disabled {
+    cursor: default;
+  }
+
+  .format-showcase-tab-input.is-active {
+    background: color-mix(in srgb, hsl(14 75% 58%) 16%, transparent);
+    border-color: color-mix(in srgb, hsl(14 75% 58%) 34%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, hsl(14 75% 58%) 10%, white);
+  }
+
+  .format-showcase-tab-output.is-active {
+    background: color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
+    border-color: color-mix(in srgb, var(--sl-color-accent) 34%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sl-color-accent) 14%, white);
+  }
+
+  .format-showcase-replay {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.35rem;
+    padding: 0.22rem 0.42rem 0.22rem 0.3rem;
+    min-width: 0;
+    justify-content: flex-start;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-3) 20%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--sl-color-gray-6) 90%, transparent),
+      color-mix(in srgb, var(--sl-color-black) 16%, transparent)
+    );
+    color: var(--sl-color-white);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 6%, transparent),
+      0 8px 18px color-mix(in srgb, black 18%, transparent);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    transition:
+      border-color 0.2s ease,
+      transform 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .format-showcase-replay svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  .format-showcase-replay-icon-shell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, white 7%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+    flex: 0 0 auto;
+  }
+
+  .format-showcase-replay-label {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .format-showcase-replay[data-action="play"] .format-showcase-replay-label-replay {
+    display: none;
+  }
+
+  .format-showcase-replay[data-action="replay"] .format-showcase-replay-label-play {
+    display: none;
+  }
+
+  .format-showcase-replay[data-action="play"] .format-showcase-icon-replay {
+    display: none;
+  }
+
+  .format-showcase-replay[data-action="replay"] .format-showcase-icon-play {
+    display: none;
+  }
+
+  .format-showcase-replay[data-action="play"] .format-showcase-replay-icon-shell {
+    background: color-mix(in srgb, hsl(14 75% 58%) 18%, transparent);
+    color: hsl(14 83% 72%);
+  }
+
+  .format-showcase-replay[data-action="replay"] .format-showcase-replay-icon-shell {
+    background: color-mix(in srgb, var(--sl-color-accent) 18%, transparent);
+    color: color-mix(in srgb, var(--sl-color-accent) 88%, white);
+  }
+
+  .format-showcase-replay:hover {
+    border-color: color-mix(in srgb, var(--sl-color-accent) 40%, transparent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--sl-color-accent) 10%, var(--sl-color-gray-6)),
+      color-mix(in srgb, var(--sl-color-black) 12%, transparent)
+    );
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 10%, transparent),
+      0 12px 24px color-mix(in srgb, black 22%, transparent);
+  }
+
+  .format-showcase-replay:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--sl-color-accent) 78%, white);
+    outline-offset: 2px;
+  }
+
+  .format-showcase-replay:disabled {
+    cursor: default;
+  }
+
+  .format-showcase[data-animating="true"] .format-showcase-tab,
+  .format-showcase[data-animating="true"] .format-showcase-replay {
+    pointer-events: none;
+  }
+
+  .format-showcase[data-animating="true"] .format-showcase-tab:not(.is-active) {
+    opacity: 0.72;
+  }
+
+  .format-showcase[data-animating="true"] .format-showcase-replay {
+    opacity: 0.82;
+  }
+
+  .format-showcase :global(.format-magic-move) {
+    --shiki-background: hsl(220 20% 11%);
+    --shiki-foreground: hsl(220 18% 88%);
+    --shiki-token-keyword: hsl(348 81% 72%);
+    --shiki-token-string: hsl(43 82% 72%);
+    --shiki-token-function: hsl(198 86% 74%);
+    --shiki-token-comment: hsl(132 21% 52%);
+    --shiki-token-constant: hsl(263 82% 78%);
+    --shiki-token-parameter: hsl(199 77% 76%);
+    --shiki-token-punctuation: hsl(220 18% 88%);
+    display: block;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, white 7%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 5%, transparent),
+      0 14px 34px color-mix(in srgb, black 30%, transparent);
+    cursor: default !important;
+  }
+
+  .format-showcase :global(.format-magic-move .shiki-magic-move-container) {
+    min-height: 23.5rem;
+    padding: 1rem 1.2rem;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    background: var(--shiki-background);
+  }
+
+  @media (max-width: 900px) {
+    .format-showcase {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .format-showcase-frame {
+      padding: 0.75rem;
+    }
+
+    .format-showcase-toolbar {
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .format-showcase-replay {
+      margin-left: 0;
+    }
+
+    .format-showcase :global(.format-magic-move .shiki-magic-move-container) {
+      min-height: 20rem;
+      padding: 0.9rem 1rem;
+      font-size: 0.76rem;
+    }
+  }
+</style>
