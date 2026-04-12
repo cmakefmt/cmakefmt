@@ -11,6 +11,11 @@ on:
         required: true
         default: "main"
         type: string
+      expected_version:
+        description: "Optional Cargo.toml version to require during the dry run"
+        required: false
+        default: ""
+        type: string
 
 permissions: read-all
 
@@ -41,6 +46,11 @@ jobs:
               exit 1
             fi
           else
+            EXPECTED_VERSION="${{ inputs.expected_version }}"
+            if [[ -n "${EXPECTED_VERSION}" && "${EXPECTED_VERSION}" != "${CARGO_VERSION}" ]]; then
+              echo "Dry-run expected version (${EXPECTED_VERSION}) does not match Cargo.toml version (${CARGO_VERSION})."
+              exit 1
+            fi
             echo "Dry run for ref ${{ inputs.ref }} using Cargo.toml version ${CARGO_VERSION}."
           fi
 
@@ -229,19 +239,23 @@ jobs:
       - name: Run tests
         run: cargo test --locked
 
-  publish:
-    name: publish
+  assemble-release:
+    name: assemble-release
     runs-on: ubuntu-latest
     needs: [verify-version, build, test]
-    permissions:
-      contents: write
-    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-    environment: publish-crate
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9  # stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry and build artifacts
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
 
       - name: Download packaged artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
@@ -259,7 +273,7 @@ jobs:
       - name: Generate SBOM
         shell: bash
         run: |
-          cargo install cargo-cyclonedx --quiet
+          cargo install cargo-cyclonedx --locked --quiet
           cargo cyclonedx --format json
           cp cmakefmt-rust.cdx.json dist/cmakefmt.cdx.json
 
@@ -267,11 +281,48 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-          SOURCE_URL="https://github.com/cmakefmt/cmakefmt/archive/refs/tags/v${VERSION}.tar.gz"
-          curl -L --fail --silent --show-error "${SOURCE_URL}" -o /tmp/cmakefmt-source.tar.gz
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            SOURCE_URL="https://github.com/cmakefmt/cmakefmt/archive/refs/tags/v${VERSION}.tar.gz"
+            curl -L --fail --silent --show-error "${SOURCE_URL}" -o /tmp/cmakefmt-source.tar.gz
+          else
+            VERSION="$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')"
+            git archive \
+              --format=tar.gz \
+              --prefix="cmakefmt-${VERSION}/" \
+              -o /tmp/cmakefmt-source.tar.gz \
+              HEAD
+          fi
           SOURCE_SHA256="$(sha256sum /tmp/cmakefmt-source.tar.gz | awk '{print $1}')"
           bash scripts/render-homebrew-formula.sh "${VERSION}" "${SOURCE_SHA256}" > dist/cmakefmt.rb
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            cat > dist/HOMEBREW-FORMULA-DRY-RUN.txt <<EOF
+          Homebrew formula rendered from a local git archive during workflow_dispatch.
+          The SHA256 in cmakefmt.rb is a rehearsal value and will differ from the
+          GitHub-hosted source tarball used for a tagged release.
+          EOF
+          fi
+
+      - name: Upload assembled release bundle
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        with:
+          name: release-bundle
+          path: dist/*
+
+  publish-github-release:
+    name: publish-github-release
+    runs-on: ubuntu-latest
+    needs: [verify-version, build, test, assemble-release]
+    permissions:
+      contents: write
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    environment: publish-crate
+    steps:
+      - name: Download assembled release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: release-bundle
+          path: dist
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe  # v2.6.1
@@ -310,7 +361,7 @@ jobs:
   publish-homebrew-tap:
     name: publish-homebrew-tap
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test, publish]
+    needs: [verify-version, build, test, publish-github-release]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
       - name: Download Homebrew formula from GitHub release
@@ -363,7 +414,7 @@ jobs:
   publish-vscode-extension:
     name: publish-vscode-extension
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test, publish]
+    needs: [verify-version, build, test, publish-github-release]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
       - name: Check out VS Code extension repo
@@ -424,10 +475,64 @@ jobs:
       - name: Dry-run crate publish
         run: cargo publish --locked --dry-run
 
+      - name: Record dry-run result
+        shell: bash
+        run: |
+          VERSION="$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')"
+          printf 'cargo publish --locked --dry-run succeeded for %s\n' "${VERSION}" > crates-io-dry-run.txt
+
+      - name: Upload crates.io dry-run summary
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        with:
+          name: crates-io-dry-run-summary
+          path: crates-io-dry-run.txt
+
+  docker-dry-run:
+    name: docker-dry-run
+    runs-on: ubuntu-latest
+    needs: [verify-version, build, test]
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Compute release version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')"
+          echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294  # v7.0.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: cmakefmt-dry-run:${{ steps.version.outputs.value }}
+
+      - name: Smoke-test image
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="cmakefmt-dry-run:${{ steps.version.outputs.value }}"
+          docker run --rm "${IMAGE}" --version
+          printf '%s\n' 'project(foo  )' | docker run --rm -i "${IMAGE}" - >/tmp/CMakeLists.formatted
+          grep -Fxq 'project(foo)' /tmp/CMakeLists.formatted
+          printf 'Docker dry run passed for %s\n' "${IMAGE}" > docker-dry-run.txt
+
+      - name: Upload Docker dry-run summary
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        with:
+          name: docker-dry-run-summary
+          path: docker-dry-run.txt
+
   publish-docker:
     name: publish-docker
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test, publish]
+    needs: [verify-version, build, test, publish-github-release]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     permissions:
       contents: read
@@ -531,6 +636,73 @@ jobs:
         with:
           name: pypi-sdist
           path: dist/*.tar.gz
+
+  collect-dry-run-artifacts:
+    name: collect-dry-run-artifacts
+    runs-on: ubuntu-latest
+    needs:
+      - assemble-release
+      - publish-crates-io-dry-run
+      - docker-dry-run
+      - publish-pypi-wheels
+      - publish-pypi-sdist
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Download assembled release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: release-bundle
+          path: collected/release-bundle
+
+      - name: Download packaged release archives
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: collected/release-archives
+
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          pattern: pypi-wheels-*
+          merge-multiple: true
+          path: collected/pypi-wheels
+
+      - name: Download sdist artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          name: pypi-sdist
+          path: collected/pypi-sdist
+
+      - name: Download dry-run summaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        with:
+          pattern: "*-dry-run-summary"
+          merge-multiple: true
+          path: collected/dry-run-summaries
+
+      - name: Write dry-run manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "Dry-run ref: ${{ inputs.ref }}"
+            if [[ -n "${{ inputs.expected_version }}" ]]; then
+              echo "Expected version: ${{ inputs.expected_version }}"
+            fi
+            echo
+            for section in release-bundle release-archives pypi-wheels pypi-sdist dry-run-summaries; do
+              echo "[${section}]"
+              find "collected/${section}" -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort
+              echo
+            done
+          } > collected/DRY-RUN-MANIFEST.txt
+
+      - name: Upload collected dry-run artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        with:
+          name: dry-run-artifacts
+          path: collected
 
   publish-pypi-upload:
     name: Upload to PyPI
