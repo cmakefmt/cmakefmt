@@ -18,6 +18,8 @@ This project follows a simple changelog discipline:
 
 ### Changed
 
+- **Breaking:** `pip install cmakefmt` now installs the CLI binary instead of
+  a Python library. `import cmakefmt` no longer works — use the binary directly.
 - `--fast` renamed to `--no-verify` (`--fast` remains as a deprecated alias)
 - `--colour` renamed to `--color` (`--colour` remains as an alias)
 

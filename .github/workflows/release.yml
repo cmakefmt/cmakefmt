@@ -483,13 +483,14 @@ jobs:
         uses: PyO3/maturin-action@3e2bdf6ba6453a61e649744019b8a2d906c7eb38  # v1.51.0
         with:
           target: ${{ matrix.target }}
-          args: --release --features pyo3 --out dist
+          args: --release --out dist
 
-      - name: Smoke-test wheel
+      - name: Smoke-test binary
         if: matrix.target != 'aarch64'
+        shell: bash
         run: |
-          pip install --find-links dist cmakefmt
-          python -c "import cmakefmt; print(cmakefmt.__version__); cmakefmt.format_source('set(X 1)\n')"
+          pip install --no-index --find-links dist cmakefmt
+          cmakefmt --version
 
       - name: Upload wheel
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7

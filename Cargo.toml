@@ -47,7 +47,6 @@ cli = [
   "similar",
   "tempfile",
 ]
-pyo3 = ["dep:pyo3"]
 
 [dependencies]
 pest = "2"
@@ -72,10 +71,6 @@ tempfile = { version = "3", optional = true }
 schemars = { version = "^1.2", optional = true }
 lsp-server = { version = "0.7", optional = true }
 lsp-types = { version = "0.97", optional = true }
-pyo3 = { version = "0.28.3", features = [
-  "extension-module",
-  "abi3-py311",
-], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

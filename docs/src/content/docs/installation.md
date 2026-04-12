@@ -62,17 +62,14 @@ cargo build --release
 This is the right path if you are actively developing `cmakefmt`, reviewing
 changes, or benchmarking local modifications.
 
-### PyPI (Python library only)
-
-For Python projects that want to call `cmakefmt` from Python code without
-shelling out to a binary:
+### pip
 
 ```bash
 pip install cmakefmt
 ```
 
-This installs the Python library module only — it does **not** provide the
-`cmakefmt` CLI binary. See the [Python API](/python/) docs for usage.
+This installs the native `cmakefmt` binary via a pre-built wheel. See the
+[pip install guide](/python/) for details.
 
 ## Support Levels
 
@@ -83,7 +80,7 @@ what to trust:
 | --- | --- | --- |
 | Homebrew (`cmakefmt/cmakefmt`) | Officially maintained | Recommended for macOS users. Ships completions and man page. |
 | `cargo install cmakefmt-rust` | Officially maintained | Reference install path for developers already using Rust. |
-| `pip install cmakefmt` | Officially maintained | Python library bindings via PyO3. No CLI — library use only. |
+| `pip install cmakefmt` | Officially maintained | Native binary via pre-built wheel. |
 | GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
 | Docs site / CLI reference | Officially maintained | Stays in lock-step with each tagged release. |
 | `winget` / Scoop | Officially maintained | Planned first-party Windows package-manager channels. |

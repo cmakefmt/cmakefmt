@@ -111,7 +111,7 @@ brew install cmakefmt/cmakefmt/cmakefmt
 cargo install cmakefmt-rust
 ```
 
-**Python (library only):**
+**pip (any platform with Python):**
 
 ```bash
 pip install cmakefmt

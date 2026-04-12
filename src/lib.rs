@@ -65,10 +65,6 @@ pub mod lsp;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
-// Python bindings via PyO3 — only compiled with the `pyo3` feature.
-#[cfg(feature = "pyo3")]
-pub mod python;
-
 // ── Configuration ────────────────────────────────────────────────────────────
 
 pub use config::{
