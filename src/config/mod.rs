@@ -224,6 +224,27 @@ pub struct Config {
     // ── Per-command overrides ────────────────────────────────────────────
     /// Per-command configuration overrides keyed by lowercase command name.
     pub per_command_overrides: HashMap<String, PerCommandConfig>,
+
+    // ── Experimental ──────────────────────────────────────────────────
+    /// Opt-in experimental formatting options. These are unstable and may
+    /// change or be removed between releases. Enable all at once with
+    /// `--preview` on the CLI.
+    #[serde(default)]
+    pub experimental: Experimental,
+}
+
+/// Experimental formatting options gated behind `--preview` or the
+/// `[experimental]` config section. All options default to `false`.
+///
+/// These may be promoted to stable defaults in a future release, changed
+/// incompatibly, or removed entirely.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
+#[serde(default)]
+#[non_exhaustive]
+pub struct Experimental {
+    // No experimental options yet. Add new options here as they are
+    // developed. Each option should default to false.
 }
 
 /// Per-command overrides. All fields are optional — only specified fields
@@ -289,6 +310,7 @@ impl Default for Config {
             canonicalize_hashrulers: true,
             explicit_trailing_pattern: "#<".to_string(),
             per_command_overrides: HashMap::new(),
+            experimental: Experimental::default(),
         }
     }
 }

@@ -471,6 +471,14 @@ struct Cli {
     )]
     no_verify: bool,
 
+    /// Enable all experimental formatting options.
+    ///
+    /// Equivalent to setting every option in the `[experimental]` config
+    /// section. Experimental options are unstable and may change between
+    /// releases.
+    #[arg(long, help_heading = "Execution")]
+    preview: bool,
+
     /// Format only files that opt in with a `# cmakefmt: enable` style pragma.
     ///
     /// Useful for gradually rolling out formatting across a large codebase.
@@ -1934,6 +1942,14 @@ fn build_context(
     }
     if let Some(v) = cli.dangle_parens {
         config.dangle_parens = v;
+    }
+
+    // --preview enables all experimental options.
+    if cli.preview {
+        config.experimental = cmakefmt::config::Experimental::default();
+        // When experimental options are added, this should call a method
+        // that sets them all to true, e.g.:
+        // config.experimental = cmakefmt::config::Experimental::all_enabled();
     }
 
     Ok((config, registry, config_context))
@@ -4053,6 +4069,7 @@ mod tests {
             "require-pragma",
             "since",
             "staged",
+            "preview",
             "stdin-path",
             "version",
             "watch",

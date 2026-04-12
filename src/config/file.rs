@@ -12,7 +12,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::config::{
-    CaseStyle, Config, DangleAlign, FractionalTabPolicy, LineEnding, PerCommandConfig,
+    CaseStyle, Config, DangleAlign, Experimental, FractionalTabPolicy, LineEnding, PerCommandConfig,
 };
 use crate::error::{Error, FileParseError, Result};
 
@@ -43,6 +43,9 @@ struct FileConfig {
     #[serde(rename = "per_command")]
     #[cfg_attr(feature = "cli", schemars(skip))]
     legacy_per_command: HashMap<String, PerCommandConfig>,
+    /// Experimental formatting options (unstable, may change between releases).
+    #[serde(default)]
+    experimental: Experimental,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -341,6 +344,7 @@ struct EffectiveConfigFile {
     format: EffectiveFormatSection,
     markup: EffectiveMarkupSection,
     per_command_overrides: HashMap<String, PerCommandConfig>,
+    experimental: Experimental,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -429,6 +433,7 @@ impl From<&Config> for EffectiveConfigFile {
                 explicit_trailing_pattern: config.explicit_trailing_pattern.clone(),
             },
             per_command_overrides: config.per_command_overrides.clone(),
+            experimental: config.experimental.clone(),
         }
     }
 }
@@ -745,6 +750,8 @@ impl Config {
         for (name, overrides) in fc.per_command_overrides {
             self.per_command_overrides.insert(name, overrides);
         }
+
+        self.experimental = fc.experimental;
     }
 }
 
