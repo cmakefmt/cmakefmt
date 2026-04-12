@@ -2098,18 +2098,18 @@ fn parallel_without_value_uses_default_jobs() {
 }
 
 #[test]
-fn progress_bar_requires_in_place() {
+fn progress_bar_works_without_in_place() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");
     write_file(&file, "set(  FOO  value )\n");
 
     let output = cmakefmt()
-        .args(["--progress-bar", file.to_str().unwrap()])
+        .args(["--progress-bar", "--check", file.to_str().unwrap()])
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("--in-place"));
+    // Should not fail with a clap error — progress-bar no longer requires --in-place
+    assert_ne!(output.status.code(), Some(2));
 }
 
 #[test]

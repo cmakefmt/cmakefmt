@@ -340,16 +340,10 @@ struct Cli {
     )]
     parallel: Option<usize>,
 
-    /// Show a progress bar while formatting files in-place.
+    /// Show a progress bar on stderr while processing files.
     ///
-    /// The progress bar is intended for directory or multi-file runs and is
-    /// only available together with `--in-place`.
-    #[arg(
-        short,
-        long = "progress-bar",
-        requires = "in_place",
-        help_heading = "Execution"
-    )]
+    /// The progress bar is intended for directory or multi-file runs.
+    #[arg(short, long = "progress-bar", help_heading = "Execution")]
     progress_bar: bool,
 
     /// Use one or more explicit config files instead of config discovery.
@@ -668,7 +662,23 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ));
     }
     let parallel_jobs = resolve_parallel_jobs(cli.parallel)?;
-    let progress = ProgressReporter::new(cli.progress_bar, cli.in_place, targets.len());
+    let stdout_is_terminal = io::stdout().is_terminal();
+    let stderr_is_terminal = io::stderr().is_terminal();
+    let colorize_stderr = should_colorize_stderr(cli.color);
+
+    if let Some(reason) =
+        progress_bar_suppressed_reason(cli, targets.len(), stdout_is_terminal, stderr_is_terminal)
+    {
+        if colorize_stderr {
+            eprintln!("\n\x1b[1;93m⚠ warning: --progress-bar ignored ({reason})\x1b[0m\n");
+        } else {
+            eprintln!("\nwarning: --progress-bar ignored ({reason})\n");
+        }
+    }
+    let progress = ProgressReporter::new(
+        should_enable_progress_bar(cli, targets.len(), stdout_is_terminal, stderr_is_terminal),
+        targets.len(),
+    );
 
     if cli.debug {
         log_debug(format!(
@@ -677,8 +687,6 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
             debug_parallel_suffix(parallel_jobs)
         ));
     }
-
-    let colorize_stderr = should_colorize_stderr(cli.color);
 
     let start_time = std::time::Instant::now();
     let mut state = RunState {
@@ -759,6 +767,52 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
 
 fn is_stdout_mode(cli: &Cli) -> bool {
     !cli.list_changed_files && !cli.list_input_files && !cli.check && !cli.in_place
+}
+
+fn streams_stdout_during_run(cli: &Cli) -> bool {
+    if cli.report_format != ReportFormat::Human {
+        return false;
+    }
+
+    if cli.list_changed_files || cli.diff {
+        return true;
+    }
+
+    is_stdout_mode(cli) && !cli.summary && !cli.quiet
+}
+
+fn should_enable_progress_bar(
+    cli: &Cli,
+    total: usize,
+    stdout_is_terminal: bool,
+    stderr_is_terminal: bool,
+) -> bool {
+    cli.progress_bar
+        && total > 1
+        && stderr_is_terminal
+        && (!streams_stdout_during_run(cli) || !stdout_is_terminal)
+}
+
+/// Returns a human-readable reason if the progress bar was requested but
+/// suppressed, or `None` if it was enabled (or not requested).
+fn progress_bar_suppressed_reason(
+    cli: &Cli,
+    total: usize,
+    stdout_is_terminal: bool,
+    stderr_is_terminal: bool,
+) -> Option<&'static str> {
+    if !cli.progress_bar
+        || should_enable_progress_bar(cli, total, stdout_is_terminal, stderr_is_terminal)
+    {
+        return None;
+    }
+    if !stderr_is_terminal {
+        Some("stderr is not a terminal")
+    } else if total <= 1 {
+        Some("only one file to process")
+    } else {
+        Some("output is streaming to the terminal; pipe stdout to enable")
+    }
 }
 
 struct RunState {
@@ -2243,8 +2297,7 @@ struct ProgressReporter {
 }
 
 impl ProgressReporter {
-    fn new(requested: bool, in_place: bool, total: usize) -> Self {
-        let enabled = requested && in_place && total > 1 && io::stderr().is_terminal();
+    fn new(enabled: bool, total: usize) -> Self {
         let inner = enabled.then(|| {
             let progress = ProgressBar::new(total as u64);
             progress.set_draw_target(ProgressDrawTarget::stderr());
@@ -3587,9 +3640,9 @@ fn collect_kwarg_keywords(spec: &cmakefmt::spec::KwargSpec, keywords: &mut BTree
 
 #[cfg(test)]
 mod tests {
-    use clap::CommandFactory;
+    use clap::{CommandFactory, Parser};
 
-    use super::Cli;
+    use super::{should_enable_progress_bar, streams_stdout_during_run, Cli};
     use cmakefmt::{default_config_template, default_config_template_for, DumpConfigFormat};
 
     #[test]
@@ -3677,6 +3730,66 @@ mod tests {
                 "TOML dump template is missing {key}"
             );
         }
+    }
+
+    #[test]
+    fn progress_bar_policy_disables_live_stdout_on_a_terminal() {
+        for args in [
+            &["cmakefmt", "--progress-bar", "CMakeLists.txt"][..],
+            &["cmakefmt", "--progress-bar", "--diff", "CMakeLists.txt"][..],
+            &[
+                "cmakefmt",
+                "--progress-bar",
+                "--list-changed-files",
+                "CMakeLists.txt",
+            ][..],
+        ] {
+            let cli = Cli::parse_from(args);
+            assert!(streams_stdout_during_run(&cli));
+            assert!(
+                !should_enable_progress_bar(&cli, 2, true, true),
+                "progress bar should be disabled for args: {:?}",
+                args
+            );
+        }
+    }
+
+    #[test]
+    fn progress_bar_policy_allows_non_streaming_modes_on_a_terminal() {
+        for args in [
+            &["cmakefmt", "--progress-bar", "--check", "CMakeLists.txt"][..],
+            &["cmakefmt", "--progress-bar", "--summary", "CMakeLists.txt"][..],
+            &["cmakefmt", "--progress-bar", "--quiet", "CMakeLists.txt"][..],
+            &["cmakefmt", "--progress-bar", "--in-place", "CMakeLists.txt"][..],
+            &[
+                "cmakefmt",
+                "--progress-bar",
+                "--report-format",
+                "json",
+                "CMakeLists.txt",
+            ][..],
+        ] {
+            let cli = Cli::parse_from(args);
+            assert!(
+                should_enable_progress_bar(&cli, 2, true, true),
+                "progress bar should be enabled for args: {:?}",
+                args
+            );
+        }
+    }
+
+    #[test]
+    fn progress_bar_policy_allows_streaming_stdout_when_stdout_is_piped() {
+        let cli = Cli::parse_from(["cmakefmt", "--progress-bar", "--diff", "CMakeLists.txt"]);
+        assert!(streams_stdout_during_run(&cli));
+        assert!(should_enable_progress_bar(&cli, 2, false, true));
+    }
+
+    #[test]
+    fn progress_bar_policy_requires_stderr_terminal_and_multiple_targets() {
+        let cli = Cli::parse_from(["cmakefmt", "--progress-bar", "--check", "CMakeLists.txt"]);
+        assert!(!should_enable_progress_bar(&cli, 1, true, true));
+        assert!(!should_enable_progress_bar(&cli, 2, true, false));
     }
 
     // ── summary rendering ──────────────────────────────────────────────────
