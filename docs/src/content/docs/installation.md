@@ -98,7 +98,7 @@ what to trust:
 | `conda install -c conda-forge cmakefmt` | Community maintained | Built from source; autotick bot tracks releases. |
 | GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
 | Docs site / CLI reference | Officially maintained | Stays in lock-step with each tagged release. |
-| `winget` / Scoop | Officially maintained | Planned first-party Windows package-manager channels. |
+| `winget` / Scoop | Planned | Not published yet. First-party Windows package-manager channels planned after `v0.9.0`. |
 | Additional package managers (AUR, Nix, containers, etc.) | Automated or best-effort | Useful channels, but not the first rollout priority. |
 
 ## Shell Completions

@@ -8,6 +8,13 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Migration
+
+- `pip install cmakefmt` is now CLI-only. It installs the `cmakefmt`
+  executable into your environment rather than a Python module.
+- The `v0.8.0` Python binding API is gone in `v0.9.0`, so `import cmakefmt`
+  no longer works on the new release line.
+
 ### Added
 
 - `conda install -c conda-forge cmakefmt` — now available on conda-forge
