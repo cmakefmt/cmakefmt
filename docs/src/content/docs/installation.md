@@ -68,8 +68,13 @@ changes, or benchmarking local modifications.
 pip install cmakefmt
 ```
 
-This installs the native `cmakefmt` binary via a pre-built wheel. See the
-[pip install guide](/python/) for details.
+This installs the native `cmakefmt` binary into your environment's `bin/`
+directory. No Python runtime overhead — the binary is the same Rust-compiled
+formatter available via Homebrew and Cargo.
+
+Pre-built wheels are available for Linux (x86_64, aarch64), macOS (x86_64,
+aarch64), and Windows (x64). On unsupported platforms, pip falls back to
+building from the source distribution, which requires a Rust toolchain.
 
 ### conda-forge
 

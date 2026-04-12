@@ -101,7 +101,6 @@ export default defineConfig({
           items: [
             { label: "CLI Reference", slug: "cli" },
             { label: "Config Reference", slug: "config" },
-            { label: "Install via pip", slug: "python" },
             { label: "Formatter Behavior", slug: "behavior" },
           ],
         },
