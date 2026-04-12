@@ -165,7 +165,7 @@ for triage on large repositories.
 
 ```bash
 cmakefmt --verify CMakeLists.txt
-cmakefmt --required-version 0.8.0 --check .
+cmakefmt --required-version 0.9.0 --check .
 ```
 
 - `--verify` reparses the original and formatted output and rejects the run if

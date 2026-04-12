@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.9.0 — 2026-04-12
+
 ### Migration
 
 - `pip install cmakefmt` is now CLI-only. It installs the `cmakefmt`

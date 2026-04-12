@@ -190,7 +190,7 @@ cmakefmt --check --report-format sarif .
 ### Pin The Formatter Version In Automation
 
 ```bash
-cmakefmt --required-version 0.8.0 --check .
+cmakefmt --required-version 0.9.0 --check .
 ```
 
 This makes shell scripts and editor wrappers fail fast when the installed
