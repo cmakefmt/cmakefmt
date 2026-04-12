@@ -1121,7 +1121,7 @@ fn emit_human_result(
     }
 
     if cli.explain {
-        render_explain_output(result, &progress)?;
+        render_explain_output(result, progress)?;
         return Ok(());
     }
 
@@ -1630,13 +1630,13 @@ fn collect_targets(
 
 fn log_discovery_context(cli: &Cli, file_filter: Option<&Regex>) {
     if cli.staged {
-        log_debug("discovery mode: --staged (git staged files only)".to_owned());
+        log_debug("discovery mode: --staged (git staged files only)");
     } else if cli.changed {
         let since = cli.since.as_deref().unwrap_or("HEAD");
         log_debug(format!("discovery mode: --changed --since {since}"));
     }
     if !cli.no_gitignore {
-        log_debug("discovery: .gitignore rules active (use --no-gitignore to disable)".to_owned());
+        log_debug("discovery: .gitignore rules active (use --no-gitignore to disable)");
     }
     if !cli.ignore_paths.is_empty() {
         for p in &cli.ignore_paths {
@@ -1647,9 +1647,7 @@ fn log_discovery_context(cli: &Cli, file_filter: Option<&Regex>) {
         log_debug(format!("discovery: --path-regex filter active: {re}"));
     }
     if cli.require_pragma {
-        log_debug(
-            "discovery: --require-pragma active (files without pragma will be skipped)".to_owned(),
-        );
+        log_debug("discovery: --require-pragma active (files without pragma will be skipped)");
     }
 }
 
