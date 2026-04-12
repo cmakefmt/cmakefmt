@@ -465,6 +465,30 @@ fn quiet_check_emits_summary_without_per_file_lines() {
 }
 
 #[test]
+fn quiet_stdout_suppresses_formatted_output() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    let output = cmakefmt()
+        .args(["--quiet", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.is_empty(),
+        "stdout should be empty with -q, got: {stdout}"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("summary:"),
+        "summary should still appear on stderr, got: {stderr}"
+    );
+}
+
+#[test]
 fn cache_reports_hit_on_second_run() {
     let dir = tempfile::tempdir().unwrap();
     let cache_dir = dir.path().join("cache");

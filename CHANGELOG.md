@@ -8,6 +8,11 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- `--quiet` / `-q` now suppresses formatted output in stdout mode (previously
+  only suppressed "would be reformatted" lines in `--check` mode)
+
 ## 0.8.0 — 2026-04-11
 
 ### Added

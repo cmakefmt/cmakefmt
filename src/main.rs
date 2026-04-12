@@ -898,7 +898,7 @@ fn emit_human_result(
         return Ok(());
     }
 
-    if !cli.summary {
+    if !cli.summary && !cli.quiet {
         write_stdout_result(result, colorize_stdout, human_output)?;
     }
 
