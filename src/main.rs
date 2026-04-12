@@ -248,7 +248,8 @@ struct Cli {
         conflicts_with = "diff",
         conflicts_with = "list_changed_files",
         conflicts_with = "list_input_files",
-        conflicts_with = "quiet"
+        conflicts_with = "quiet",
+        conflicts_with = "progress_bar"
     )]
     explain: bool,
 
@@ -264,7 +265,8 @@ struct Cli {
         conflicts_with = "list_changed_files",
         conflicts_with = "list_input_files",
         conflicts_with = "quiet",
-        conflicts_with = "explain"
+        conflicts_with = "explain",
+        conflicts_with = "progress_bar"
     )]
     watch: bool,
 
