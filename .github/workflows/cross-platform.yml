@@ -7,9 +7,21 @@ name: Cross-Platform Output Consistency
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'Cargo.toml', 'Cargo.lock']
+    paths:
+      - '.github/workflows/cross-platform.yml'
+      - 'build.rs'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'src/**'
+      - 'tests/fixtures/**'
   pull_request:
-    paths: ['src/**', 'Cargo.toml', 'Cargo.lock']
+    paths:
+      - '.github/workflows/cross-platform.yml'
+      - 'build.rs'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'src/**'
+      - 'tests/fixtures/**'
 
 permissions: read-all
 

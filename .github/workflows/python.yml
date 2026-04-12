@@ -7,9 +7,23 @@ name: Python
 on:
   push:
     branches: [main]
-    paths: ["src/**", "Cargo.toml", "pyproject.toml"]
+    paths:
+      - ".github/workflows/python.yml"
+      - "build.rs"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "pyproject.toml"
+      - "python/**"
+      - "src/**"
   pull_request:
-    paths: ["src/**", "Cargo.toml", "pyproject.toml"]
+    paths:
+      - ".github/workflows/python.yml"
+      - "build.rs"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "pyproject.toml"
+      - "python/**"
+      - "src/**"
 
 concurrency:
   group: python-${{ github.workflow }}-${{ github.ref }}
@@ -25,7 +39,7 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, target: x86_64 }
-          - { os: ubuntu-latest, target: aarch64 }
+          - { os: ubuntu-24.04-arm, target: aarch64 }
           - { os: macos-15-intel, target: x86_64 }
           - { os: macos-latest, target: aarch64 }
           - { os: windows-latest, target: x64 }
@@ -41,7 +55,6 @@ jobs:
           args: --release --out dist
 
       - name: Smoke-test binary
-        if: matrix.target != 'aarch64'
         shell: bash
         run: |
           pip install --no-index --find-links dist cmakefmt
@@ -55,8 +68,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
       - name: Build sdist
         uses: PyO3/maturin-action@3e2bdf6ba6453a61e649744019b8a2d906c7eb38 # v1.51.0
         with:
           command: sdist
           args: --out dist
+
+      - name: Smoke-test sdist install
+        shell: bash
+        run: |
+          pip install dist/*.tar.gz
+          cmakefmt --version
+          echo 'set(  FOO  bar )' | cmakefmt -

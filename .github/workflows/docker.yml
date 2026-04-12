@@ -7,9 +7,23 @@ name: Docker Build
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile']
+    paths:
+      - '.github/workflows/docker.yml'
+      - '.dockerignore'
+      - 'build.rs'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'Dockerfile'
+      - 'src/**'
   pull_request:
-    paths: ['src/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile']
+    paths:
+      - '.github/workflows/docker.yml'
+      - '.dockerignore'
+      - 'build.rs'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'Dockerfile'
+      - 'src/**'
 
 permissions: read-all
 

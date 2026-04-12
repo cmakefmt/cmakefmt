@@ -463,7 +463,7 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, target: x86_64 }
-          - { os: ubuntu-latest, target: aarch64 }
+          - { os: ubuntu-24.04-arm, target: aarch64 }
           - { os: macos-15-intel, target: x86_64 }
           - { os: macos-latest, target: aarch64 }
           - { os: windows-latest, target: x64 }
@@ -486,11 +486,11 @@ jobs:
           args: --release --out dist
 
       - name: Smoke-test binary
-        if: matrix.target != 'aarch64'
         shell: bash
         run: |
           pip install --no-index --find-links dist cmakefmt
           cmakefmt --version
+          echo 'set(  FOO  bar )' | cmakefmt -
 
       - name: Upload wheel
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
@@ -508,11 +508,23 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.12'
+
       - name: Build sdist
         uses: PyO3/maturin-action@3e2bdf6ba6453a61e649744019b8a2d906c7eb38  # v1.51.0
         with:
           command: sdist
           args: --out dist
+
+      - name: Smoke-test sdist install
+        shell: bash
+        run: |
+          pip install dist/*.tar.gz
+          cmakefmt --version
+          echo 'set(  FOO  bar )' | cmakefmt -
 
       - name: Upload sdist
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7

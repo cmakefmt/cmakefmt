@@ -7,7 +7,12 @@ name: Real-World Regression Suite
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'Cargo.toml', 'Cargo.lock']
+    paths:
+      - '.github/workflows/real-world.yml'
+      - 'build.rs'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'src/**'
   schedule:
     - cron: '0 6 * * 1'  # weekly on Monday at 06:00 UTC
 
