@@ -645,17 +645,16 @@ fn write_packed_arguments(
                     indent.chars().count(),
                     line_width,
                 );
-                let is_trailing_comment = index + 1 == arguments.len();
-                if is_trailing_comment && comment_lines.len() == 1 && !current.is_empty() {
-                    let mut candidate =
-                        String::with_capacity(current.len() + 1 + comment_lines[0].len());
-                    candidate.push_str(&current);
-                    candidate.push(' ');
-                    candidate.push_str(&comment_lines[0]);
-                    let candidate_width = current_width + 1 + comment_lines[0].chars().count();
+                if comment_lines.len() == 1 && !current.is_empty() {
+                    let comment_width = comment_lines[0].chars().count();
+                    let candidate_width = current_width + 1 + comment_width;
                     if indent_width + candidate_width <= line_width {
-                        current = candidate;
-                        current_width = candidate_width;
+                        // Append comment inline and flush — nothing can
+                        // follow a trailing comment on the same line.
+                        current.push(' ');
+                        current.push_str(&comment_lines[0]);
+                        flush_current_line(output, &mut current, indent);
+                        current_width = 0;
                         continue;
                     }
                 }
@@ -714,17 +713,27 @@ fn write_vertical_arguments(
     for argument in arguments {
         match argument {
             Argument::InlineComment(comment) => {
-                // If the comment matches the explicit trailing pattern and there
-                // is a preceding argument line in the output, append it inline.
-                if let Some(re) = &trailing_re {
-                    if re.is_match(comment.as_str()) && output.ends_with('\n') {
+                let comment_text = comment.as_str();
+
+                // Try to keep the comment on the same line as the preceding
+                // argument. This preserves the common pattern:
+                //   dep1 # first dep
+                //   dep2 # second dep
+                if output.ends_with('\n') {
+                    let last_line_start =
+                        output[..output.len() - 1].rfind('\n').map_or(0, |p| p + 1);
+                    let last_line_width = output[last_line_start..output.len() - 1].chars().count();
+                    let comment_width = comment_text.chars().count();
+                    if last_line_width + 1 + comment_width <= config.line_width {
                         output.pop(); // remove trailing newline
                         output.push(' ');
-                        output.push_str(comment.as_str());
+                        output.push_str(comment_text);
                         output.push('\n');
                         continue;
                     }
                 }
+
+                // Comment doesn't fit inline — render on its own line(s).
                 for line in comment::format_comment_lines(
                     comment,
                     config,
