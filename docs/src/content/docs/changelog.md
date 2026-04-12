@@ -16,6 +16,34 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `--list-unknown-commands` flag — parse files and report commands that
+  don't match any built-in or user-defined spec, with file:line locations
+- `--preview` flag — enable all experimental formatting options
+- `--report-format edit` — editor-friendly JSON output with full-file
+  replacements for each changed file
+- `[experimental]` config section — placeholder for unstable formatting
+  options gated behind `--preview` (no options yet)
+- `enable_sort` config option — sort arguments in keyword sections marked
+  `sortable` in the command spec (default: off)
+- `autosort` config option — heuristically sort keyword sections where all
+  arguments are simple unquoted tokens (default: off)
+- `sortable` annotation for keyword specs — mark sections whose arguments
+  may be sorted when `enable_sort` is enabled
+- Stability contract published at `cmakefmt.dev/stability/`
+- 1.0 checklist published at `cmakefmt.dev/one-oh-checklist/`
+- Weekly scheduled benchmark CI for consistent performance tracking
+- Large-file LSP timeout test (2000 lines, < 1 second)
+
+### Changed
+
+- Default config example uses `my_add_test` with VERBOSE flag, matching
+  the playground source
+- Playground loads default config from WASM `default_config_yaml()` at
+  runtime instead of a hardcoded string
+- README banner uses absolute URL for PyPI/crates.io rendering
+
 ## 0.10.0 — 2026-04-12
 
 ### Added

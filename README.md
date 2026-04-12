@@ -190,6 +190,9 @@ cmakefmt --staged --check
 | Pin the required binary version in CI       | `cmakefmt --required-version 0.10.0 --check .`    |
 | Speed up repeated large-repo checks         | `cmakefmt --cache --check .`                     |
 | Roll out formatting file-by-file            | `cmakefmt --require-pragma --check .`            |
+| Find project-specific commands              | `cmakefmt --list-unknown-commands .`             |
+| Watch and auto-format on save               | `cmakefmt --watch .`                             |
+| Explain formatting decisions                | `cmakefmt --explain CMakeLists.txt`              |
 | Read from stdin                             | `cat CMakeLists.txt \| cmakefmt -`               |
 
 ## Configuration

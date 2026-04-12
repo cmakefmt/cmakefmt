@@ -83,6 +83,8 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`max_rows_cmdline`](#max_rows_cmdline)
   - [`always_wrap`](#always_wrap)
   - [`require_valid_layout`](#require_valid_layout)
+  - [`enable_sort`](#enable_sort)
+  - [`autosort`](#autosort)
   - [`dangle_parens`](#dangle_parens)
   - [`dangle_align`](#dangle_align)
   - [`min_prefix_length`](#min_prefix_length)
@@ -135,6 +137,8 @@ format:
   max_rows_cmdline: 2
   always_wrap: []
   require_valid_layout: false
+  enable_sort: false
+  autosort: false
   dangle_parens: false
   dangle_align: prefix
   min_prefix_length: 4
@@ -333,6 +337,40 @@ format:
 
 Useful in CI to enforce a strict line-width contract. The error message
 includes the line number, actual width, and configured limit.
+
+### `enable_sort`
+
+Sort arguments in keyword sections marked `sortable` in the command spec.
+Sorting is lexicographic and case-insensitive. Default: `false`.
+
+```yaml
+format:
+  enable_sort: true
+```
+
+Mark a keyword section as sortable in a custom command spec:
+
+```yaml
+commands:
+  my_cmd:
+    kwargs:
+      SOURCES:
+        nargs: "+"
+        sortable: true
+```
+
+### `autosort`
+
+Heuristically sort keyword sections even without an explicit `sortable`
+annotation. A section is considered sortable if all its arguments are simple
+unquoted tokens (no variables, generator expressions, or quoted strings).
+Requires `enable_sort: true` to have any effect. Default: `false`.
+
+```yaml
+format:
+  enable_sort: true
+  autosort: true
+```
 
 ### `dangle_parens`
 

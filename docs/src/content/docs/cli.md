@@ -66,8 +66,10 @@ Ignore rules only affect:
 | `--check` | Exit with code `1` when any selected file would change. |
 | `--list-changed-files` | Print only the files that would change after formatting. |
 | `--list-input-files` | Print the selected input files after discovery and filtering, without formatting them. |
+| `--list-unknown-commands` | Parse files and report commands that don't match any built-in or user-defined spec, with file:line locations. |
 | `-d`, `--diff` | Print a unified diff instead of the full formatted output. |
-| `--report-format <human\|json\|github\|checkstyle\|junit\|sarif>` | Switch between human output and CI/editor-friendly machine reporters. |
+| `--explain` | Show per-command formatting decisions (layout choice, config values, thresholds) for a single file. |
+| `--report-format <human\|json\|github\|checkstyle\|junit\|sarif\|edit>` | Switch between human output and CI/editor-friendly machine reporters. `edit` outputs JSON with full-file replacements. |
 | `-s`, `--summary` | Show a per-file status summary instead of formatted output. In stdout mode, formatted output is suppressed. |
 | `--color <auto\|always\|never>` | Control ANSI color output. `auto` only colors terminal output. `--colour` is an alias. |
 
@@ -84,9 +86,11 @@ Ignore rules only affect:
 | `--cache` | Cache formatted file results for repeated runs on the same files. |
 | `--cache-location <PATH>` | Override the cache directory. Supplying it also enables caching. |
 | `--cache-strategy <metadata\|content>` | Choose whether cache invalidation tracks file metadata or file contents. |
+| `--preview` | Enable all experimental formatting options (equivalent to setting every `[experimental]` option). |
 | `--require-pragma` | Format only files that opt in with a `# cmakefmt: enable` style pragma. |
 | `-j`, `--parallel [JOBS]` | Set the number of parallel formatting jobs. Defaults to the available CPU count minus one. Pass `--parallel 1` to force serial. |
-| `-p`, `--progress-bar` | Show a progress bar on stderr during `--in-place` multi-file runs. |
+| `-p`, `--progress-bar` | Show a progress bar on stderr during multi-file runs. Automatically suppressed when stdout streams to the terminal. |
+| `--watch` | Watch directories for changes and reformat in-place automatically. Press Ctrl+C to stop. |
 
 ## Subcommands
 
