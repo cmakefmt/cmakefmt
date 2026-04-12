@@ -316,15 +316,15 @@ struct Cli {
     )]
     report_format: ReportFormat,
 
-    /// Control ANSI colour output.
+    /// Control ANSI color output.
     #[arg(
-        long = "colour",
-        alias = "color",
+        long = "color",
+        alias = "colour",
         value_enum,
         default_value_t = ColorChoice::Auto,
         help_heading = "Output Modes"
     )]
-    colour: ColorChoice,
+    color: ColorChoice,
 
     /// Set the number of parallel formatting jobs.
     ///
@@ -400,14 +400,19 @@ struct Cli {
     ///
     /// In-place rewrites verify semantics by default; use this flag to enable
     /// the same safety check in stdout, diff, and check modes.
-    #[arg(long, help_heading = "Execution", conflicts_with = "fast")]
+    #[arg(long, help_heading = "Execution", conflicts_with = "no_verify")]
     verify: bool,
 
     /// Skip semantic verification, even for in-place rewrites.
     ///
     /// Improves throughput on trusted inputs at the cost of safety.
-    #[arg(long, help_heading = "Execution", conflicts_with = "verify")]
-    fast: bool,
+    #[arg(
+        long = "no-verify",
+        visible_alias = "fast",
+        help_heading = "Execution",
+        conflicts_with = "verify"
+    )]
+    no_verify: bool,
 
     /// Format only files that opt in with a `# cmakefmt: enable` style pragma.
     ///
@@ -642,7 +647,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     validate_cli(cli)?;
 
     let stdout_mode = is_stdout_mode(cli);
-    let colorize_stdout = stdout_mode && should_colorize_stdout(cli.colour);
+    let colorize_stdout = stdout_mode && should_colorize_stdout(cli.color);
     let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
     let mut targets = collect_targets(cli, file_filter.as_ref())?;
     if cli.sorted {
@@ -673,7 +678,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ));
     }
 
-    let colorize_stderr = should_colorize_stderr(cli.colour);
+    let colorize_stderr = should_colorize_stderr(cli.color);
 
     let start_time = std::time::Instant::now();
     let mut state = RunState {
@@ -995,7 +1000,7 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
         ));
     }
 
-    if cli.verify && cli.fast {
+    if cli.verify && cli.no_verify {
         return Err(cmakefmt::Error::Formatter(
             "--verify cannot be combined with --fast".to_owned(),
         ));
@@ -2015,7 +2020,7 @@ fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
 }
 
 fn verification_mode(cli: &Cli) -> VerificationMode {
-    if cli.verify || (cli.in_place && !cli.fast) {
+    if cli.verify || (cli.in_place && !cli.no_verify) {
         VerificationMode::Enabled
     } else {
         VerificationMode::Disabled
@@ -3593,7 +3598,7 @@ mod tests {
         let non_config_flags = [
             "check",
             "config-file",
-            "colour",
+            "color",
             "changed",
             "debug",
             "diff",
@@ -3620,7 +3625,7 @@ mod tests {
             "report-format",
             "required-version",
             "verify",
-            "fast",
+            "no-verify",
             "require-pragma",
             "since",
             "staged",

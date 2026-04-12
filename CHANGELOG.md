@@ -8,6 +8,11 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Changed
+
+- `--fast` renamed to `--no-verify` (`--fast` remains as a deprecated alias)
+- `--colour` renamed to `--color` (`--colour` remains as an alias)
+
 ### Fixed
 
 - `--quiet` / `-q` now suppresses formatted output in stdout mode (previously

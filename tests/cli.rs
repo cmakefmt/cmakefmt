@@ -2013,11 +2013,11 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains(".cmakefmt.yaml"));
     assert!(stdout.contains(".cmakefmt.yml"));
     assert!(stdout.contains(".cmakefmt.toml"));
-    assert!(stdout.contains("--colour <COLOUR>"));
+    assert!(stdout.contains("--color <COLOR>"));
     assert!(stdout.contains("--generate-man-page"));
     assert!(stdout.contains("--required-version <VERSION>"));
     assert!(stdout.contains("--verify"));
-    assert!(stdout.contains("--fast"));
+    assert!(stdout.contains("--no-verify"));
     assert!(stdout.contains("--require-pragma"));
     assert!(stdout.contains("--in-place"));
     assert!(stdout.contains("-c, --config-file <PATH>"));

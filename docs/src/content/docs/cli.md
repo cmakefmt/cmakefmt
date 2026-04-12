@@ -69,7 +69,7 @@ Ignore rules only affect:
 | `-d`, `--diff` | Print a unified diff instead of the full formatted output. |
 | `--report-format <human\|json\|github\|checkstyle\|junit\|sarif>` | Switch between human output and CI/editor-friendly machine reporters. |
 | `-s`, `--summary` | Show a per-file status summary instead of formatted output. In stdout mode, formatted output is suppressed. |
-| `--colour <auto\|always\|never>` | Highlight changed formatted output lines in cyan. `auto` only colors terminal output. |
+| `--color <auto\|always\|never>` | Control ANSI color output. `auto` only colors terminal output. `--colour` is an alias. |
 
 ## Execution Flags
 
@@ -80,7 +80,7 @@ Ignore rules only affect:
 | `--keep-going` | Continue processing later files after a file-level parse/format error. |
 | `--required-version <VERSION>` | Refuse to run unless the current `cmakefmt` version matches exactly. Useful for pinned CI and editor wrappers. |
 | `--verify` | Parse the original and formatted output and reject the result if the CMake semantics change. |
-| `--fast` | Skip semantic verification, including the default rewrite-time verification used by `--in-place`. |
+| `--no-verify` | Skip semantic verification, including the default rewrite-time verification used by `--in-place`. `--fast` is a deprecated alias. |
 | `--cache` | Cache formatted file results for repeated runs on the same files. |
 | `--cache-location <PATH>` | Override the cache directory. Supplying it also enables caching. |
 | `--cache-strategy <metadata\|content>` | Choose whether cache invalidation tracks file metadata or file contents. |
@@ -146,7 +146,7 @@ cmakefmt --in-place .
 ```
 
 The "apply formatting now" mode. Every discovered CMake file gets rewritten.
-In-place rewrites verify parse-tree stability by default. Use `--fast` to skip
+In-place rewrites verify parse-tree stability by default. Use `--no-verify` to skip
 this verification and improve throughput on trusted inputs.
 
 ### Verify A Dry Run Semantically
