@@ -2975,3 +2975,76 @@ fn summary_two_line_format_for_changed_file() {
         summary_lines[marker_line + 1]
     );
 }
+
+// ── editorconfig ──────────────────────────────────────────────────────
+
+#[test]
+fn editorconfig_fallback_sets_tab_size() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join(".editorconfig"),
+        "[*]\nroot = true\nindent_style = space\nindent_size = 8\n",
+    )
+    .unwrap();
+    // No .cmakefmt.yaml — editorconfig should be the fallback.
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "if(TRUE)\nset(FOO bar)\nendif()\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // With indent_size=8, the `set` line should be indented with 8 spaces.
+    assert!(
+        stdout.contains("        set(FOO bar)"),
+        "expected 8-space indent from editorconfig, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn cmakefmt_config_overrides_editorconfig() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join(".editorconfig"),
+        "[*]\nroot = true\nindent_size = 8\n",
+    )
+    .unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  tab_size: 3\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "if(TRUE)\nset(FOO bar)\nendif()\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // cmakefmt config (tab_size=3) should win over editorconfig (indent_size=8).
+    assert!(
+        stdout.contains("   set(FOO bar)"),
+        "expected 3-space indent from cmakefmt config, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn no_editorconfig_flag_disables_fallback() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join(".editorconfig"),
+        "[*]\nroot = true\nindent_size = 8\n",
+    )
+    .unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "if(TRUE)\nset(FOO bar)\nendif()\n");
+
+    let output = cmakefmt()
+        .args(["--no-editorconfig", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // Default tab_size is 2, not 8 from editorconfig.
+    assert!(
+        stdout.contains("  set(FOO bar)"),
+        "expected 2-space default indent with --no-editorconfig, got:\n{stdout}"
+    );
+}

@@ -364,6 +364,14 @@ struct Cli {
     #[arg(long, help_heading = "Config Overrides")]
     no_config: bool,
 
+    /// Disable `.editorconfig` fallback.
+    ///
+    /// By default, when no `.cmakefmt.yaml` config file is found, cmakefmt
+    /// reads `indent_style` and `indent_size` from `.editorconfig`. This
+    /// flag disables that fallback.
+    #[arg(long = "no-editorconfig", help_heading = "Config Overrides")]
+    no_editorconfig: bool,
+
     /// Override the maximum line width.
     #[arg(short = 'l', long, help_heading = "Config Overrides")]
     line_width: Option<usize>,
@@ -1370,6 +1378,10 @@ fn collect_targets(
     cli: &Cli,
     file_filter: Option<&Regex>,
 ) -> Result<Vec<InputTarget>, cmakefmt::Error> {
+    if cli.debug {
+        log_discovery_context(cli, file_filter);
+    }
+
     let inputs = collect_input_arguments(cli, file_filter)?;
 
     let mut targets = Vec::new();
@@ -1388,14 +1400,37 @@ fn collect_targets(
         }
 
         if path.is_dir() {
-            for discovered in discover_cmake_files_with_options(
+            let all_cmake = discover_cmake_files_with_options(
                 &path,
                 DiscoveryOptions {
-                    file_filter,
+                    file_filter: None,
                     honor_gitignore: !cli.no_gitignore,
                     explicit_ignore_paths: &cli.ignore_paths,
                 },
-            ) {
+            );
+            let filtered = if file_filter.is_some() {
+                discover_cmake_files_with_options(
+                    &path,
+                    DiscoveryOptions {
+                        file_filter,
+                        honor_gitignore: !cli.no_gitignore,
+                        explicit_ignore_paths: &cli.ignore_paths,
+                    },
+                )
+            } else {
+                all_cmake.clone()
+            };
+
+            if cli.debug && file_filter.is_some() {
+                let filtered_set: BTreeSet<_> = filtered.iter().collect();
+                for skipped in &all_cmake {
+                    if !filtered_set.contains(skipped) {
+                        log_debug(format!("skipped by --path-regex: {}", skipped.display()));
+                    }
+                }
+            }
+
+            for discovered in filtered {
                 push_unique_path(&mut targets, &mut seen_paths, discovered);
             }
             continue;
@@ -1408,6 +1443,31 @@ fn collect_targets(
     }
 
     Ok(targets)
+}
+
+fn log_discovery_context(cli: &Cli, file_filter: Option<&Regex>) {
+    if cli.staged {
+        log_debug("discovery mode: --staged (git staged files only)".to_owned());
+    } else if cli.changed {
+        let since = cli.since.as_deref().unwrap_or("HEAD");
+        log_debug(format!("discovery mode: --changed --since {since}"));
+    }
+    if !cli.no_gitignore {
+        log_debug("discovery: .gitignore rules active (use --no-gitignore to disable)".to_owned());
+    }
+    if !cli.ignore_paths.is_empty() {
+        for p in &cli.ignore_paths {
+            log_debug(format!("discovery: explicit ignore path: {}", p.display()));
+        }
+    }
+    if let Some(re) = file_filter {
+        log_debug(format!("discovery: --path-regex filter active: {re}"));
+    }
+    if cli.require_pragma {
+        log_debug(
+            "discovery: --require-pragma active (files without pragma will be skipped)".to_owned(),
+        );
+    }
 }
 
 fn collect_input_arguments(
@@ -1563,6 +1623,28 @@ fn build_context(
     let mut registry = CommandRegistry::builtins().clone();
     for path in &config_context.sources {
         registry.merge_override_file(path)?;
+    }
+
+    // Apply .editorconfig fallback when no cmakefmt config file was found.
+    if matches!(config_context.mode, ConfigSourceMode::DefaultsOnly) && !cli.no_editorconfig {
+        if let Some(path) = file_path {
+            let ec = cmakefmt::config::editorconfig::read_editorconfig(path);
+            if let Some(use_tabs) = ec.use_tabs {
+                config.use_tabchars = use_tabs;
+            }
+            if let Some(tab_size) = ec.tab_size {
+                config.tab_size = tab_size;
+            }
+            if cli.debug && ec.has_any() {
+                log_debug(format!(
+                    "editorconfig fallback: tab_size={}, use_tabs={}",
+                    ec.tab_size
+                        .map_or("(default)".to_owned(), |v| v.to_string()),
+                    ec.use_tabs
+                        .map_or("(default)".to_owned(), |v| v.to_string()),
+                ));
+            }
+        }
     }
 
     if let Some(v) = cli.line_width {
@@ -3668,6 +3750,7 @@ mod tests {
             "list-changed-files",
             "list-input-files",
             "no-config",
+            "no-editorconfig",
             "no-gitignore",
             "sorted",
             "parallel",

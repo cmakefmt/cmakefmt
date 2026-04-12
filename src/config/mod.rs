@@ -9,6 +9,9 @@
 //! (`.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`), and CLI
 //! overrides.
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+#[doc(hidden)]
+pub mod editorconfig;
 pub mod file;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 mod legacy;
