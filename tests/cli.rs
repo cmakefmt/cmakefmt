@@ -1695,14 +1695,14 @@ fn config_file_can_define_custom_command_specs() {
     let config_path = dir.path().join("custom.yaml");
     std::fs::write(
         &config_path,
-        "format:\n  line_width: 30\ncommands:\n  my_custom_command:\n    pargs: 1\n    kwargs:\n      SOURCES:\n        nargs: \"+\"\n      LIBRARIES:\n        nargs: \"+\"\n",
+        "format:\n  line_width: 30\ncommands:\n  my_add_test:\n    pargs: 1\n    kwargs:\n      SOURCES:\n        nargs: \"+\"\n      LIBRARIES:\n        nargs: \"+\"\n",
     )
     .unwrap();
 
     let input = dir.path().join("input.cmake");
     write_file(
         &input,
-        "my_custom_command(target SOURCES a.cpp b.cpp c.cpp LIBRARIES foo bar)\n",
+        "my_add_test(target SOURCES a.cpp b.cpp c.cpp LIBRARIES foo bar)\n",
     );
 
     let output = cmakefmt()
@@ -1716,7 +1716,7 @@ fn config_file_can_define_custom_command_specs() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("my_custom_command("));
+    assert!(stdout.contains("my_add_test("));
     assert!(stdout.contains("\n  SOURCES a.cpp b.cpp c.cpp\n"));
     assert!(stdout.contains("\n  LIBRARIES foo bar)"));
 }
@@ -1734,7 +1734,7 @@ fn dump_config_prints_template() {
     assert!(stdout.contains("markup:"));
     assert!(stdout.contains("# per_command_overrides:"));
     assert!(stdout.contains("# commands:"));
-    assert!(stdout.contains("#   my_custom_command:"));
+    assert!(stdout.contains("#   my_add_test:"));
 }
 
 #[test]
@@ -1751,8 +1751,8 @@ fn dump_config_toml_prints_template() {
     assert!(stdout.contains("line_width = 80"));
     assert!(stdout.contains("# use_tabs = true"));
     assert!(stdout.contains("[markup]"));
-    assert!(stdout.contains("# [per_command_overrides.my_custom_command]"));
-    assert!(stdout.contains("# [commands.my_custom_command]"));
+    assert!(stdout.contains("# [per_command_overrides.my_add_test]"));
+    assert!(stdout.contains("# [commands.my_add_test]"));
 }
 
 #[test]
