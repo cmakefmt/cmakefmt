@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://cmakefmt.dev">
-    <img src="assets/banner.png" alt="cmakefmt banner" width="100%"/>
+    <img src="https://raw.githubusercontent.com/cmakefmt/cmakefmt/main/assets/banner.png" alt="cmakefmt banner" width="100%"/>
   </a>
 </p>
 
