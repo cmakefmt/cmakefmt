@@ -187,7 +187,7 @@ cmakefmt --staged --check
 | Machine-readable CI output                  | `cmakefmt --check --report-format json .`        |
 | GitHub Actions annotations                  | `cmakefmt --check --report-format github .`      |
 | Checkstyle / JUnit / SARIF output           | `cmakefmt --check --report-format checkstyle .`  |
-| Pin the required binary version in CI       | `cmakefmt --required-version 0.9.0 --check .`    |
+| Pin the required binary version in CI       | `cmakefmt --required-version 0.10.0 --check .`    |
 | Speed up repeated large-repo checks         | `cmakefmt --cache --check .`                     |
 | Roll out formatting file-by-file            | `cmakefmt --require-pragma --check .`            |
 | Read from stdin                             | `cat CMakeLists.txt \| cmakefmt -`               |

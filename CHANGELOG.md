@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 0.10.0 — 2026-04-12
+
 ### Added
 
 - `--explain` flag — show per-command formatting decisions (layout choice,
