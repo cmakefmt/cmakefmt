@@ -110,6 +110,9 @@ struct Cli {
     files_from: Vec<String>,
 
     /// Rewrite files on disk instead of printing formatted output.
+    ///
+    /// Semantic verification is enabled by default for in-place rewrites.
+    /// Use `--fast` to skip it.
     #[arg(
         short = 'i',
         long = "in-place",
@@ -120,6 +123,8 @@ struct Cli {
     in_place: bool,
 
     /// Exit with code 1 if any selected file would change.
+    ///
+    /// No files are modified on disk.
     #[arg(
         long,
         help_heading = "Output Modes",
@@ -171,6 +176,9 @@ struct Cli {
     ignore_paths: Vec<PathBuf>,
 
     /// Ignore `.gitignore` files during recursive discovery.
+    ///
+    /// By default, cmakefmt honours `.gitignore` rules when discovering
+    /// files from directories.
     #[arg(long = "no-gitignore", help_heading = "Input Selection")]
     no_gitignore: bool,
 
@@ -197,10 +205,11 @@ struct Cli {
     #[arg(short, long, help_heading = "Output Modes", conflicts_with = "quiet")]
     summary: bool,
 
-    /// Suppress per-file human output and emit only end-of-run summaries.
+    /// Suppress per-file output and emit only end-of-run summaries.
     ///
-    /// This is intended for quieter `--check` and `--in-place` automation
-    /// workflows. It does not suppress actual errors.
+    /// In stdout mode, formatted output is suppressed. In `--check` mode,
+    /// "would be reformatted" lines are suppressed. Errors and the summary
+    /// line are always printed.
     #[arg(short, long, help_heading = "Execution")]
     quiet: bool,
 
@@ -217,7 +226,7 @@ struct Cli {
     #[arg(long = "keep-going", help_heading = "Execution")]
     keep_going: bool,
 
-    /// Print a unified diff instead of full formatted output.
+    /// Print a unified diff instead of the full formatted output.
     #[arg(
         short,
         long,
@@ -227,6 +236,8 @@ struct Cli {
     diff: bool,
 
     /// Cache formatted results for repeated runs on the same files.
+    ///
+    /// Speeds up large-repo checks by skipping files that haven't changed.
     #[arg(long, help_heading = "Execution")]
     cache: bool,
 
@@ -257,10 +268,15 @@ struct Cli {
     changed: bool,
 
     /// Select staged Git-tracked files instead of explicit input paths.
+    ///
+    /// Useful for pre-commit hooks that should only check files in the
+    /// current changeset.
     #[arg(long, help_heading = "Input Selection", conflicts_with = "changed")]
     staged: bool,
 
     /// Git base ref used together with `--changed`.
+    ///
+    /// Without this flag, `--changed` compares against `HEAD`.
     #[arg(
         long,
         requires = "changed",
@@ -291,7 +307,7 @@ struct Cli {
     )]
     line_ranges: Vec<LineRange>,
 
-    /// Choose human terminal output or machine-readable JSON reporting.
+    /// Choose the output report format.
     #[arg(
         long = "report-format",
         value_enum,
@@ -300,7 +316,7 @@ struct Cli {
     )]
     report_format: ReportFormat,
 
-    /// Control ANSI colour when printing formatted output to stdout.
+    /// Control ANSI colour output.
     #[arg(
         long = "colour",
         alias = "color",
@@ -349,6 +365,8 @@ struct Cli {
     config_paths: Vec<PathBuf>,
 
     /// Disable config discovery and ignore explicit config files.
+    ///
+    /// Only built-in defaults and CLI overrides remain.
     #[arg(long, help_heading = "Config Overrides")]
     no_config: bool,
 
@@ -373,6 +391,8 @@ struct Cli {
     dangle_parens: Option<bool>,
 
     /// Refuse to run unless the current cmakefmt version matches exactly.
+    ///
+    /// Useful for pinned CI and editor wrappers that need a specific version.
     #[arg(long, value_name = "VERSION", help_heading = "Execution")]
     required_version: Option<String>,
 
@@ -384,10 +404,14 @@ struct Cli {
     verify: bool,
 
     /// Skip semantic verification, even for in-place rewrites.
+    ///
+    /// Improves throughput on trusted inputs at the cost of safety.
     #[arg(long, help_heading = "Execution", conflicts_with = "verify")]
     fast: bool,
 
     /// Format only files that opt in with a `# cmakefmt: enable` style pragma.
+    ///
+    /// Useful for gradually rolling out formatting across a large codebase.
     #[arg(long, help_heading = "Execution")]
     require_pragma: bool,
 
