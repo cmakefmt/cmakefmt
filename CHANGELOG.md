@@ -8,6 +8,14 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `conda install -c conda-forge cmakefmt` — now available on conda-forge
+- Animated before/after formatting demo on the landing page
+- sdist smoke test in CI — verifies source distribution installs correctly
+- Native aarch64 Linux wheel builds via `ubuntu-24.04-arm` (no more
+  cross-compilation)
+
 ### Changed
 
 - **Breaking:** `pip install cmakefmt` now installs the CLI binary instead of
@@ -19,6 +27,9 @@ This project follows a simple changelog discipline:
 
 - `--quiet` / `-q` now suppresses formatted output in stdout mode (previously
   only suppressed "would be reformatted" lines in `--check` mode)
+- `pyproject.toml` now included in sdist (fixes source builds on platforms
+  without pre-built wheels)
+- PyPI wheel smoke test now runs on macOS aarch64 (previously skipped)
 
 ## 0.8.0 — 2026-04-11
 

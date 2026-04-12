@@ -456,7 +456,7 @@ jobs:
             ghcr.io/cmakefmt/cmakefmt:latest
 
   publish-pypi-wheels:
-    name: Build Python wheels (${{ matrix.os }} / ${{ matrix.target }})
+    name: Build and test Python wheels (${{ matrix.os }} / ${{ matrix.target }})
     needs: [verify-version, build, test]
     strategy:
       fail-fast: false

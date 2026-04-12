@@ -33,7 +33,7 @@ permissions: read-all
 
 jobs:
   build-wheel:
-    name: Build wheel (${{ matrix.os }} / ${{ matrix.target }})
+    name: Build and test wheel (${{ matrix.os }} / ${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
