@@ -79,6 +79,10 @@ struct FormatSection {
     always_wrap: Option<Vec<String>>,
     /// Return an error if any formatted output line exceeds `line_width`.
     require_valid_layout: Option<bool>,
+    /// Sort arguments in keyword sections marked `sortable` in the command spec.
+    enable_sort: Option<bool>,
+    /// Heuristically infer sortability for keyword sections without explicit annotation.
+    autosort: Option<bool>,
     /// Place the closing `)` on its own line when a call wraps.
     dangle_parens: Option<bool>,
     /// Alignment strategy for a dangling `)`: `prefix`, `open`, or `close`.
@@ -366,6 +370,10 @@ struct EffectiveFormatSection {
     always_wrap: Vec<String>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     require_valid_layout: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    enable_sort: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    autosort: bool,
     dangle_parens: bool,
     dangle_align: DangleAlign,
     min_prefix_length: usize,
@@ -410,6 +418,8 @@ impl From<&Config> for EffectiveConfigFile {
                 max_rows_cmdline: config.max_rows_cmdline,
                 always_wrap: config.always_wrap.clone(),
                 require_valid_layout: config.require_valid_layout,
+                enable_sort: config.enable_sort,
+                autosort: config.autosort,
                 dangle_parens: config.dangle_parens,
                 dangle_align: config.dangle_align,
                 min_prefix_length: config.min_prefix_chars,
@@ -685,6 +695,12 @@ impl Config {
         }
         if let Some(v) = fc.format.require_valid_layout {
             self.require_valid_layout = v;
+        }
+        if let Some(v) = fc.format.enable_sort {
+            self.enable_sort = v;
+        }
+        if let Some(v) = fc.format.autosort {
+            self.autosort = v;
         }
         if let Some(v) = fc.format.dangle_parens {
             self.dangle_parens = v;

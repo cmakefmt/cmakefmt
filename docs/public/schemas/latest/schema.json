@@ -86,6 +86,14 @@
             "type": "string"
           }
         },
+        "autosort": {
+          "description": "Heuristically infer sortability for keyword sections without explicit annotation.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
         "command_case": {
           "description": "Output casing for command names: `lower`, `upper`, or `unchanged`.",
           "anyOf": [
@@ -120,6 +128,14 @@
         },
         "disable": {
           "description": "Disable formatting entirely and return the source unchanged.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "enable_sort": {
+          "description": "Sort arguments in keyword sections marked `sortable` in the command spec.",
           "type": [
             "boolean",
             "null"

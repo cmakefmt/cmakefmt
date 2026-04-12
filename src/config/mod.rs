@@ -172,6 +172,14 @@ pub struct Config {
     /// Return an error when any formatted output line exceeds
     /// [`Self::line_width`].
     pub require_valid_layout: bool,
+    /// Sort arguments in keyword sections marked `sortable` in the
+    /// command spec. Sorting is lexicographic and case-insensitive.
+    pub enable_sort: bool,
+    /// Heuristically infer sortability for keyword sections without
+    /// an explicit `sortable` annotation. When enabled, a section is
+    /// considered sortable if all its arguments are simple unquoted
+    /// tokens (no variables, generator expressions, or quoted strings).
+    pub autosort: bool,
 
     // ── Parenthesis style ───────────────────────────────────────────────
     /// Place the closing `)` on its own line when a call wraps.
@@ -290,6 +298,8 @@ impl Default for Config {
             max_rows_cmdline: 2,
             always_wrap: Vec::new(),
             require_valid_layout: false,
+            enable_sort: false,
+            autosort: false,
             dangle_parens: false,
             dangle_align: DangleAlign::Prefix,
             min_prefix_chars: 4,

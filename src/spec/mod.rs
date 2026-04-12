@@ -121,6 +121,10 @@ pub struct KwargSpec {
     /// Flag tokens accepted within this keyword section.
     #[serde(default)]
     pub flags: IndexSet<String>,
+    /// When `true`, arguments in this keyword section may be sorted
+    /// lexicographically if `enable_sort` is enabled in the config.
+    #[serde(default)]
+    pub sortable: bool,
 }
 
 /// One fully resolved command form.
@@ -363,6 +367,7 @@ impl KwargSpecOverride {
                 .into_iter()
                 .map(|flag| flag.to_ascii_uppercase())
                 .collect(),
+            sortable: false,
         }
     }
 }

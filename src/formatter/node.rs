@@ -45,7 +45,11 @@ pub(crate) fn format_command(
     let spec = registry.get(&command.name);
     let first_arg = first_argument(command).map(Argument::as_str);
     let form = spec.form_for(first_arg);
-    let sections = split_sections(command, form)?;
+    let mut sections = split_sections(command, form)?;
+
+    if config.enable_sort {
+        sort_sections(&mut sections, form, config.autosort);
+    }
 
     debug.log(format!(
         "formatter: command {} form={} first_arg={} effective_config(line_width={}, tab_size={}, dangle_parens={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={}, max_hanging_wrap_groups={})",
@@ -241,6 +245,64 @@ fn split_sections<'a>(
     }
 
     Ok(sections)
+}
+
+/// Sort arguments within sections that are marked sortable.
+fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: bool) {
+    for section in sections.iter_mut() {
+        let Some(header) = section.header else {
+            continue;
+        };
+        if section.arguments.is_empty() {
+            continue;
+        }
+
+        // Check if the spec marks this keyword section as sortable.
+        let spec_sortable = form
+            .kwargs
+            .get(&header.to_ascii_uppercase())
+            .or_else(|| form.kwargs.get(header))
+            .map_or(false, |kwarg| kwarg.sortable);
+
+        let should_sort = if spec_sortable {
+            true
+        } else if autosort {
+            // Heuristic: all arguments are simple unquoted tokens (no
+            // variables, generator expressions, or quoted strings).
+            section.arguments.iter().all(|arg| {
+                matches!(arg, Argument::Unquoted(s) if !s.contains("${") && !s.contains("$<") && !s.contains("$ENV{") && !s.contains("$CACHE{"))
+            })
+        } else {
+            false
+        };
+
+        if should_sort {
+            // Partition into non-comment arguments and inline comments.
+            // Sort only the non-comment arguments, preserving comment positions.
+            let non_comment_positions: Vec<usize> = section
+                .arguments
+                .iter()
+                .enumerate()
+                .filter(|(_, a)| !a.is_comment())
+                .map(|(i, _)| i)
+                .collect();
+
+            let mut sortable_args: Vec<&Argument> = non_comment_positions
+                .iter()
+                .map(|&i| section.arguments[i])
+                .collect();
+
+            sortable_args.sort_by(|a, b| {
+                a.as_str()
+                    .to_ascii_lowercase()
+                    .cmp(&b.as_str().to_ascii_lowercase())
+            });
+
+            for (j, &pos) in non_comment_positions.iter().enumerate() {
+                section.arguments[pos] = sortable_args[j];
+            }
+        }
+    }
 }
 
 fn nested_token_belongs_to_current_section(
