@@ -3048,3 +3048,127 @@ fn no_editorconfig_flag_disables_fallback() {
         "expected 2-space default indent with --no-editorconfig, got:\n{stdout}"
     );
 }
+
+// ── --explain ─────────────────────────────────────────────────────────
+
+#[test]
+fn explain_shows_formatter_decisions() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(mylib PUBLIC dep1 dep2 dep3)\n",
+    );
+
+    let output = cmakefmt()
+        .args(["--explain", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Formatting decisions for"),
+        "expected explain header, got:\n{stderr}"
+    );
+    assert!(
+        stderr.contains("layout="),
+        "expected layout decision in explain output, got:\n{stderr}"
+    );
+}
+
+#[test]
+fn explain_requires_single_target() {
+    let dir = tempfile::tempdir().unwrap();
+    let a = dir.path().join("a.cmake");
+    let b = dir.path().join("b.cmake");
+    write_file(&a, "set(A val)\n");
+    write_file(&b, "set(B val)\n");
+
+    let output = cmakefmt()
+        .args(["--explain", a.to_str().unwrap(), b.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("exactly one"),
+        "expected single-target error, got:\n{stderr}"
+    );
+}
+
+#[test]
+fn explain_conflicts_with_check() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(A val)\n");
+
+    let output = cmakefmt()
+        .args(["--explain", "--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+}
+
+// ── --watch ───────────────────────────────────────────────────────────
+
+#[test]
+fn watch_conflicts_with_check() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(A val)\n");
+
+    let output = cmakefmt()
+        .args(["--watch", "--check", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
+fn watch_rejects_stdin() {
+    let output = cmakefmt().args(["--watch", "-"]).output().unwrap();
+
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("stdin"),
+        "expected stdin rejection, got:\n{stderr}"
+    );
+}
+
+#[test]
+fn watch_reformats_changed_file() {
+    use std::time::Duration;
+
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(  FOO  bar )\n");
+
+    // Spawn --watch in background
+    let mut child = cmakefmt()
+        .args(["--watch", dir.path().to_str().unwrap()])
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    // Give the watcher time to start
+    std::thread::sleep(Duration::from_millis(500));
+
+    // Touch the file to trigger a reformat
+    write_file(&file, "set(  FOO  bar )\n");
+
+    // Wait for the watcher to process the event
+    std::thread::sleep(Duration::from_secs(2));
+
+    // Kill the watcher
+    child.kill().ok();
+    child.wait().ok();
+
+    // Check the file was reformatted
+    let contents = std::fs::read_to_string(&file).unwrap();
+    assert_eq!(contents, "set(FOO bar)\n");
+}
