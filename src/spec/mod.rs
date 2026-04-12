@@ -266,6 +266,9 @@ pub(crate) struct KwargSpecOverride {
     #[serde(default)]
     #[serde(skip_serializing_if = "IndexSet::is_empty")]
     pub flags: IndexSet<String>,
+    /// Mark this keyword section as sortable.
+    #[serde(default)]
+    pub sortable: bool,
 }
 
 /// Partial override for a command form.
@@ -367,7 +370,7 @@ impl KwargSpecOverride {
                 .into_iter()
                 .map(|flag| flag.to_ascii_uppercase())
                 .collect(),
-            sortable: false,
+            sortable: self.sortable,
         }
     }
 }

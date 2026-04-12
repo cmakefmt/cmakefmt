@@ -3363,3 +3363,113 @@ fn lsp_formats_large_file_within_timeout() {
         }
     }
 }
+
+// ── enable_sort / autosort ────────────────────────────────────────────
+
+#[test]
+fn enable_sort_does_not_sort_without_sortable_annotation() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  enable_sort: true\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(mylib PUBLIC zebra apple mango)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // PUBLIC args not marked sortable in builtin spec — should preserve order
+    assert!(
+        stdout.contains("zebra apple mango"),
+        "expected unsorted output, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn autosort_sorts_simple_unquoted_args() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  enable_sort: true\n  autosort: true\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(mylib PUBLIC zebra apple mango)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("apple mango zebra"),
+        "expected sorted output, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn autosort_does_not_sort_args_with_variables() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  enable_sort: true\n  autosort: true\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(mylib PUBLIC ${ZEBRA_LIB} apple mango)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // Contains a variable — autosort should not sort
+    assert!(
+        stdout.contains("${ZEBRA_LIB} apple mango"),
+        "expected unsorted output (variable present), got:\n{stdout}"
+    );
+}
+
+#[test]
+fn enable_sort_with_sortable_spec_sorts() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        concat!(
+            "format:\n  enable_sort: true\n",
+            "commands:\n  my_cmd:\n    pargs: 0\n    kwargs:\n",
+            "      ITEMS:\n        nargs: \"+\"\n        sortable: true\n"
+        ),
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "my_cmd(ITEMS zebra apple mango)\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("apple mango zebra"),
+        "expected sorted output from sortable spec, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn sort_is_case_insensitive() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  enable_sort: true\n  autosort: true\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(mylib PUBLIC Zebra apple Mango)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("apple Mango Zebra"),
+        "expected case-insensitive sorted output, got:\n{stdout}"
+    );
+}
