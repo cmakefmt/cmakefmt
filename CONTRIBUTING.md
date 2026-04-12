@@ -124,10 +124,40 @@ If the option has a CLI override flag, also update:
 - `src/main.rs`
 - `tests/cli.rs`
 
-If the option should be surfaced in the browser playground, also update:
+The browser playground loads its default config from the WASM
+`default_config_yaml()` function at runtime, so config changes are
+picked up automatically after a WASM rebuild.
 
-- `docs/src/components/Playground.astro`
-  - the `DEFAULT_CONFIG` string near the top of the `<script>` block
+## If You Add An Experimental Option
+
+New formatting behaviors that are not yet ready for stable defaults go in
+the `Experimental` struct in `src/config/mod.rs`. Each option must default
+to `false` (off) and be gated behind `config.experimental.<option>` in the
+formatter.
+
+Then update:
+
+- `src/config/mod.rs`
+  - add a `pub` field to `Experimental` (the struct is `#[non_exhaustive]`)
+- `src/config/file.rs`
+  - `FileConfig` picks up the field automatically via the `experimental`
+    section in the config file schema
+- `src/main.rs`
+  - the `--preview` flag sets all experimental options on; update the
+    `build_context` function if the new option needs explicit activation
+- `docs/src/content/docs/config.md`
+  - document the option under a dedicated Experimental section and mark it
+    as unstable
+- `CHANGELOG.md`
+  - add an entry noting the option is experimental and may change
+
+The promotion path for experimental options:
+
+1. Ship the option behind `[experimental]` for at least one release.
+2. Gather feedback — if no issues are reported, promote to a stable default.
+3. Promotion means moving the field from `Experimental` to `Config` and
+   changing the default to `true`. This is a formatting output change and
+   should be documented in the changelog.
 
 ## If You Change Formatting Behavior
 
