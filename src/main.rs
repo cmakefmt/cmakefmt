@@ -579,6 +579,8 @@ enum ReportFormat {
     Junit,
     /// SARIF JSON.
     Sarif,
+    /// Editor-friendly JSON with byte-range replacements.
+    Edit,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -3285,7 +3287,30 @@ fn print_non_human_report(
             );
             Ok(())
         }
+        ReportFormat::Edit => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&build_edit_report(results)).map_err(|err| {
+                    cmakefmt::Error::Formatter(format!("failed to build edit report: {err}"))
+                })?
+            );
+            Ok(())
+        }
     }
+}
+
+fn build_edit_report(results: &[ProcessedTarget]) -> serde_json::Value {
+    let edits: Vec<serde_json::Value> = results
+        .iter()
+        .filter(|r| r.would_change && !r.skipped)
+        .map(|r| {
+            serde_json::json!({
+                "file": r.display_name,
+                "replacement": r.formatted
+            })
+        })
+        .collect();
+    serde_json::json!({ "edits": edits })
 }
 
 fn should_print_human_summary(
