@@ -91,7 +91,7 @@ pub use error::{Error, Result};
 // ── Formatting ───────────────────────────────────────────────────────────────
 
 pub use formatter::{
-    format_file, format_source, format_source_with_debug, format_source_with_registry,
+    format_parsed_file, format_source, format_source_with_debug, format_source_with_registry,
     format_source_with_registry_debug,
 };
 

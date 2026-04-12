@@ -10,8 +10,10 @@
 pub(crate) mod comment;
 pub(crate) mod node;
 
+use std::path::PathBuf;
+
 use crate::config::{Config, LineEnding};
-use crate::error::{Error, Result};
+use crate::error::{Error, FileParseError, Result};
 use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
@@ -63,6 +65,7 @@ pub fn format_source_with_registry(
     if config.disable {
         return Ok(source.to_owned());
     }
+    validate_runtime_config(config)?;
     let formatted = format_source_impl(source, config, registry, &mut DebugLog::disabled())?.0;
     Ok(apply_line_ending(source, &formatted, config.line_ending))
 }
@@ -76,6 +79,7 @@ pub fn format_source_with_registry_debug(
     if config.disable {
         return Ok((source.to_owned(), Vec::new()));
     }
+    validate_runtime_config(config)?;
     let mut lines = Vec::new();
     let mut debug = DebugLog::enabled(&mut lines);
     let (formatted, _) = format_source_impl(source, config, registry, &mut debug)?;
@@ -85,7 +89,11 @@ pub fn format_source_with_registry_debug(
     ))
 }
 
-/// Format an already parsed AST file.
+/// Format an already parsed AST file using the original source text.
+///
+/// This entry point preserves the same high-level config semantics as
+/// [`format_source_with_registry`]: `disable` returns the original `source`
+/// unchanged and `line_ending` is applied relative to the original source.
 ///
 /// Useful when you want to parse once and format the same AST repeatedly with
 /// different [`Config`] or registry settings, avoiding re-parsing overhead.
@@ -93,26 +101,40 @@ pub fn format_source_with_registry_debug(
 /// # Examples
 ///
 /// ```
-/// use cmakefmt::{format_file, Config, CommandRegistry};
+/// use cmakefmt::{format_parsed_file, Config, CommandRegistry};
 ///
 /// let cmake = "PROJECT(MyProject)\n";
 /// let file = cmakefmt::parser::parse(cmake).unwrap();
-/// let formatted = format_file(
-///     &file, &Config::default(), CommandRegistry::builtins(),
+/// let formatted = format_parsed_file(
+///     cmake,
+///     &file,
+///     &Config::default(),
+///     CommandRegistry::builtins(),
 /// ).unwrap();
 /// assert_eq!(formatted, "project(MyProject)\n");
 /// ```
-pub fn format_file(file: &File, config: &Config, registry: &CommandRegistry) -> Result<String> {
-    format_file_with_debug(file, config, registry, &mut DebugLog::disabled())
+pub fn format_parsed_file(
+    source: &str,
+    file: &File,
+    config: &Config,
+    registry: &CommandRegistry,
+) -> Result<String> {
+    if config.disable {
+        return Ok(source.to_owned());
+    }
+    validate_runtime_config(config)?;
+    let formatted =
+        format_parsed_file_with_debug(file, config, registry, &mut DebugLog::disabled())?;
+    Ok(apply_line_ending(source, &formatted, config.line_ending))
 }
 
-fn format_file_with_debug(
+fn format_parsed_file_with_debug(
     file: &File,
     config: &Config,
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
 ) -> Result<String> {
-    let patterns = config.compiled_patterns();
+    let patterns = config.compiled_patterns().map_err(runtime_config_error)?;
     let mut output = String::new();
     let mut previous_was_content = false;
     let mut block_depth = 0usize;
@@ -359,13 +381,13 @@ fn flush_enabled_chunk(
 
     let file = match parser::parse(enabled_chunk) {
         Ok(file) => file,
-        Err(Error::Parse(source)) => {
+        Err(Error::ParseContext { diagnostic, .. }) => {
             return Err(Error::ParseContext {
                 display_name: "<source>".to_owned(),
                 source_text: enabled_chunk.clone().into_boxed_str(),
                 start_line: chunk_start_line,
                 barrier_context,
-                source,
+                diagnostic,
             });
         }
         Err(err) => return Err(err),
@@ -374,10 +396,28 @@ fn flush_enabled_chunk(
     debug.log(format!(
         "formatter: formatting enabled chunk with {statement_count} statement(s) starting at source line {chunk_start_line}"
     ));
-    let formatted = format_file_with_debug(&file, config, registry, debug)?;
+    let formatted = format_parsed_file_with_debug(&file, config, registry, debug)?;
     output.push_str(&formatted);
     enabled_chunk.clear();
     Ok(statement_count)
+}
+
+fn validate_runtime_config(config: &Config) -> Result<()> {
+    config.validate_patterns().map_err(runtime_config_error)?;
+    Ok(())
+}
+
+fn runtime_config_error(message: String) -> Error {
+    Error::Config {
+        path: PathBuf::from("<programmatic-config>"),
+        details: FileParseError {
+            format: "runtime",
+            message: message.clone().into_boxed_str(),
+            line: None,
+            column: None,
+        },
+        source_message: message.into_boxed_str(),
+    }
 }
 
 fn detect_barrier(line: &str) -> Option<BarrierEvent<'_>> {
@@ -486,4 +526,61 @@ fn matches_ascii_insensitive(input: &str, candidates: &[&str]) -> bool {
     candidates
         .iter()
         .any(|candidate| input.eq_ignore_ascii_case(candidate))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_parsed_file_honors_disable() {
+        let source = "set(  X  1 )\n";
+        let file = parser::parse(source).unwrap();
+        let config = Config {
+            disable: true,
+            ..Config::default()
+        };
+
+        let formatted =
+            format_parsed_file(source, &file, &config, CommandRegistry::builtins()).unwrap();
+
+        assert_eq!(formatted, source);
+    }
+
+    #[test]
+    fn format_parsed_file_applies_line_endings_relative_to_source() {
+        let source = "set(  X  1 )\r\n";
+        let file = parser::parse(source).unwrap();
+        let config = Config {
+            line_ending: LineEnding::Auto,
+            ..Config::default()
+        };
+
+        let formatted =
+            format_parsed_file(source, &file, &config, CommandRegistry::builtins()).unwrap();
+
+        assert_eq!(formatted, "set(X 1)\r\n");
+    }
+
+    #[test]
+    fn format_source_rejects_invalid_programmatic_regex_config() {
+        let config = Config {
+            fence_pattern: "[".to_owned(),
+            ..Config::default()
+        };
+
+        let err = format_source("set(X 1)\n", &config).unwrap_err();
+        match err {
+            Error::Config {
+                path,
+                details,
+                source_message,
+            } => {
+                assert_eq!(path, PathBuf::from("<programmatic-config>"));
+                assert_eq!(details.format, "runtime");
+                assert!(source_message.contains("invalid regex"));
+            }
+            other => panic!("expected config error, got {other:?}"),
+        }
+    }
 }

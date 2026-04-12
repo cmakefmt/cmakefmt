@@ -611,53 +611,20 @@ impl Config {
     }
 
     /// Parse a YAML config string through the same `FileConfig` schema used by
-    /// config files. Returns the resolved config and the extracted `commands:`
-    /// section (if present) for separate registry merging.
+    /// config files and return the resolved runtime [`Config`].
     ///
-    /// This validates sections (`format:`, `markup:`) and rejects
-    /// unknown fields, matching the behavior of file-based config loading.
-    pub fn from_yaml_str(yaml: &str) -> Result<(Self, Option<serde_yaml::Value>)> {
-        let file_config: FileConfig =
-            serde_yaml::from_str(yaml).map_err(|source| Error::Config {
-                path: std::path::PathBuf::from("<yaml-string>"),
-                details: FileParseError {
-                    format: "yaml",
-                    message: source.to_string().into_boxed_str(),
-                    line: source.location().map(|loc| loc.line()),
-                    column: source.location().map(|loc| loc.column()),
-                },
-                source_message: source.to_string().into_boxed_str(),
-            })?;
-        if !file_config.legacy_per_command.is_empty() {
-            return Err(Error::Config {
-                path: std::path::PathBuf::from("<yaml-string>"),
-                details: FileParseError {
-                    format: "yaml",
-                    message: "`per_command` has been renamed to `per_command_overrides`"
-                        .to_owned()
-                        .into_boxed_str(),
-                    line: None,
-                    column: None,
-                },
-                source_message: "`per_command` has been renamed to `per_command_overrides`"
-                    .to_owned()
-                    .into_boxed_str(),
-            });
-        }
-        let commands = file_config.commands.clone();
-        let mut config = Config::default();
-        config.apply(file_config);
-        config.validate_patterns().map_err(|msg| Error::Config {
-            path: std::path::PathBuf::from("<yaml-string>"),
-            details: FileParseError {
-                format: "yaml",
-                message: msg.clone().into_boxed_str(),
-                line: None,
-                column: None,
-            },
-            source_message: msg.into_boxed_str(),
-        })?;
-        Ok((config, commands))
+    /// This validates sections (`format:` and `markup:`) and rejects unknown
+    /// fields, matching the behavior of file-based config loading.
+    pub fn from_yaml_str(yaml: &str) -> Result<Self> {
+        Ok(parse_yaml_config(yaml)?.config)
+    }
+
+    /// Parse a YAML config string and also return a serialized `commands:`
+    /// override block for registry merging when present.
+    #[cfg_attr(not(any(target_arch = "wasm32", feature = "pyo3")), allow(dead_code))]
+    pub(crate) fn from_yaml_str_with_commands(yaml: &str) -> Result<(Self, Option<Box<str>>)> {
+        let parsed = parse_yaml_config(yaml)?;
+        Ok((parsed.config, parsed.commands_yaml))
     }
 
     /// Return the config files that would be applied for the given file.
@@ -775,6 +742,84 @@ impl Config {
             self.per_command_overrides.insert(name, overrides);
         }
     }
+}
+
+#[cfg_attr(not(any(target_arch = "wasm32", feature = "pyo3")), allow(dead_code))]
+#[derive(Debug, Clone)]
+pub(crate) struct ParsedYamlConfig {
+    pub(crate) config: Config,
+    pub(crate) commands_yaml: Option<Box<str>>,
+}
+
+fn parse_yaml_config(yaml: &str) -> Result<ParsedYamlConfig> {
+    let file_config: FileConfig = serde_yaml::from_str(yaml).map_err(|source| Error::Config {
+        path: std::path::PathBuf::from("<yaml-string>"),
+        details: FileParseError {
+            format: "yaml",
+            message: source.to_string().into_boxed_str(),
+            line: source.location().map(|loc| loc.line()),
+            column: source.location().map(|loc| loc.column()),
+        },
+        source_message: source.to_string().into_boxed_str(),
+    })?;
+    if !file_config.legacy_per_command.is_empty() {
+        return Err(Error::Config {
+            path: std::path::PathBuf::from("<yaml-string>"),
+            details: FileParseError {
+                format: "yaml",
+                message: "`per_command` has been renamed to `per_command_overrides`"
+                    .to_owned()
+                    .into_boxed_str(),
+                line: None,
+                column: None,
+            },
+            source_message: "`per_command` has been renamed to `per_command_overrides`"
+                .to_owned()
+                .into_boxed_str(),
+        });
+    }
+    let commands_yaml = file_config
+        .commands
+        .as_ref()
+        .filter(|commands| !commands.is_null())
+        .map(serialize_commands_yaml)
+        .transpose()?;
+    let mut config = Config::default();
+    config.apply(file_config);
+    config.validate_patterns().map_err(|msg| Error::Config {
+        path: std::path::PathBuf::from("<yaml-string>"),
+        details: FileParseError {
+            format: "yaml",
+            message: msg.clone().into_boxed_str(),
+            line: None,
+            column: None,
+        },
+        source_message: msg.into_boxed_str(),
+    })?;
+    Ok(ParsedYamlConfig {
+        config,
+        commands_yaml,
+    })
+}
+
+fn serialize_commands_yaml(commands: &serde_yaml::Value) -> Result<Box<str>> {
+    let key = serde_yaml::Value::String("commands".into());
+    let mut wrapper = serde_yaml::Mapping::new();
+    wrapper.insert(key, commands.clone());
+    serde_yaml::to_string(&wrapper)
+        .map(|yaml| yaml.into_boxed_str())
+        .map_err(|source| Error::Config {
+            path: std::path::PathBuf::from("<yaml-string>"),
+            details: FileParseError {
+                format: "yaml",
+                message: format!("failed to serialize commands overrides: {source}")
+                    .into_boxed_str(),
+                line: None,
+                column: None,
+            },
+            source_message: format!("failed to serialize commands overrides: {source}")
+                .into_boxed_str(),
+        })
 }
 
 fn load_config_file(path: &Path) -> Result<FileConfig> {
@@ -1325,29 +1370,30 @@ per_command_overrides:
 
     #[test]
     fn from_yaml_str_parses_format_section() {
-        let (config, commands) =
-            Config::from_yaml_str("format:\n  line_width: 120\n  tab_size: 4").unwrap();
+        let config = Config::from_yaml_str("format:\n  line_width: 120\n  tab_size: 4").unwrap();
         assert_eq!(config.line_width, 120);
         assert_eq!(config.tab_size, 4);
-        assert!(commands.is_none());
     }
 
     #[test]
     fn from_yaml_str_parses_casing_in_format_section() {
-        let (config, _) = Config::from_yaml_str("format:\n  command_case: upper").unwrap();
+        let config = Config::from_yaml_str("format:\n  command_case: upper").unwrap();
         assert_eq!(config.command_case, CaseStyle::Upper);
     }
 
     #[test]
     fn from_yaml_str_parses_markup_section() {
-        let (config, _) = Config::from_yaml_str("markup:\n  enable_markup: false").unwrap();
+        let config = Config::from_yaml_str("markup:\n  enable_markup: false").unwrap();
         assert!(!config.enable_markup);
     }
 
     #[test]
-    fn from_yaml_str_extracts_commands() {
-        let (_, commands) = Config::from_yaml_str("commands:\n  my_cmd:\n    pargs: 1").unwrap();
-        assert!(commands.is_some());
+    fn from_yaml_str_with_commands_extracts_serialized_commands_block() {
+        let (_, commands_yaml) =
+            Config::from_yaml_str_with_commands("commands:\n  my_cmd:\n    pargs: 1").unwrap();
+        let commands_yaml = commands_yaml.expect("expected serialized commands YAML");
+        assert!(commands_yaml.contains("commands:"));
+        assert!(commands_yaml.contains("my_cmd:"));
     }
 
     #[test]
@@ -1370,14 +1416,13 @@ per_command_overrides:
 
     #[test]
     fn from_yaml_str_empty_string_returns_defaults() {
-        let (config, commands) = Config::from_yaml_str("").unwrap();
+        let config = Config::from_yaml_str("").unwrap();
         assert_eq!(config.line_width, Config::default().line_width);
-        assert!(commands.is_none());
     }
 
     #[test]
     fn from_yaml_str_multiple_sections() {
-        let (config, _) =
+        let config =
             Config::from_yaml_str("format:\n  line_width: 100\n  command_case: upper").unwrap();
         assert_eq!(config.line_width, 100);
         assert_eq!(config.command_case, CaseStyle::Upper);

@@ -373,40 +373,40 @@ impl Config {
         Ok(())
     }
 
-    /// Compile all regex patterns into a [`CompiledPatterns`] cache.
+    /// Compile all regex patterns into a cache for internal formatting use.
     ///
-    /// Call this once at the start of a formatting run to avoid
-    /// recompiling regexes on every comment or argument.
-    pub fn compiled_patterns(&self) -> CompiledPatterns {
-        CompiledPatterns {
-            literal_comment: compile_optional(&self.literal_comment_pattern),
-            explicit_trailing: compile_optional(&self.explicit_trailing_pattern),
-            fence: compile_optional(&self.fence_pattern),
-            ruler: compile_optional(&self.ruler_pattern),
-        }
+    /// Callers that build [`Config`] programmatically should use
+    /// [`Config::validate_patterns`] to validate regexes up front.
+    pub(crate) fn compiled_patterns(&self) -> Result<CompiledPatterns, String> {
+        Ok(CompiledPatterns {
+            literal_comment: compile_optional(
+                "literal_comment_pattern",
+                &self.literal_comment_pattern,
+            )?,
+            explicit_trailing: compile_optional(
+                "explicit_trailing_pattern",
+                &self.explicit_trailing_pattern,
+            )?,
+        })
     }
 }
 
-fn compile_optional(pattern: &str) -> Option<Regex> {
+fn compile_optional(name: &str, pattern: &str) -> Result<Option<Regex>, String> {
     if pattern.is_empty() {
-        None
+        Ok(None)
     } else {
-        Regex::new(pattern).ok()
+        Regex::new(pattern)
+            .map(Some)
+            .map_err(|err| format!("invalid regex in {name}: {err}"))
     }
 }
 
-/// Pre-compiled regex patterns from [`Config`].
-///
-/// Build via [`Config::compiled_patterns`] once per formatting run.
-pub struct CompiledPatterns {
+/// Pre-compiled regex patterns from [`Config`] used internally while formatting.
+pub(crate) struct CompiledPatterns {
     /// Compiled `literal_comment_pattern`.
-    pub literal_comment: Option<Regex>,
+    pub(crate) literal_comment: Option<Regex>,
     /// Compiled `explicit_trailing_pattern`.
-    pub explicit_trailing: Option<Regex>,
-    /// Compiled `fence_pattern`.
-    pub fence: Option<Regex>,
-    /// Compiled `ruler_pattern`.
-    pub ruler: Option<Regex>,
+    pub(crate) explicit_trailing: Option<Regex>,
 }
 
 /// A resolved config for formatting a specific command, with per-command

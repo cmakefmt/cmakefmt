@@ -19,9 +19,7 @@ pyo3::create_exception!(cmakefmt, LayoutError, pyo3::exceptions::PyException);
 
 fn convert_error(err: crate::Error) -> PyErr {
     match err {
-        crate::Error::Parse(_) | crate::Error::ParseContext { .. } => {
-            ParseError::new_err(err.to_string())
-        }
+        crate::Error::ParseContext { .. } => ParseError::new_err(err.to_string()),
         crate::Error::Config { .. } | crate::Error::Spec { .. } => {
             ConfigError::new_err(err.to_string())
         }
@@ -90,27 +88,20 @@ fn default_config() -> PyResult<String> {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-fn resolve_config(config: Option<&str>) -> PyResult<(Config, Option<serde_yaml::Value>)> {
+fn resolve_config(config: Option<&str>) -> PyResult<(Config, Option<Box<str>>)> {
     if let Some(yaml) = config {
-        Config::from_yaml_str(yaml).map_err(convert_error)
+        Config::from_yaml_str_with_commands(yaml).map_err(convert_error)
     } else {
         Ok((Config::default(), None))
     }
 }
 
-fn build_registry(commands_value: Option<serde_yaml::Value>) -> PyResult<CommandRegistry> {
+fn build_registry(commands_yaml: Option<Box<str>>) -> PyResult<CommandRegistry> {
     let mut registry = CommandRegistry::load().map_err(convert_error)?;
-    if let Some(commands) = commands_value {
-        if !commands.is_null() {
-            let key = serde_yaml::Value::String("commands".into());
-            let mut wrapper = serde_yaml::Mapping::new();
-            wrapper.insert(key, commands);
-            let yaml_str = serde_yaml::to_string(&wrapper)
-                .map_err(|e| ConfigError::new_err(format!("spec error: {e}")))?;
-            registry
-                .merge_yaml_overrides(&yaml_str)
-                .map_err(convert_error)?;
-        }
+    if let Some(commands_yaml) = commands_yaml {
+        registry
+            .merge_yaml_overrides(commands_yaml.as_ref())
+            .map_err(convert_error)?;
     }
     Ok(registry)
 }

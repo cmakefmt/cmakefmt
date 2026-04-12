@@ -18,23 +18,16 @@ use crate::spec::registry::CommandRegistry;
 /// Returns the formatted source string, or throws a JS error on failure.
 #[wasm_bindgen]
 pub fn format(source: &str, config_yaml: &str) -> Result<String, JsValue> {
-    let (config, commands) = Config::from_yaml_str(config_yaml)
+    let (config, commands_yaml) = Config::from_yaml_str_with_commands(config_yaml)
         .map_err(|e| JsValue::from_str(&format!("config error: {e}")))?;
 
     let mut registry =
         CommandRegistry::load().map_err(|e| JsValue::from_str(&format!("registry error: {e}")))?;
 
-    if let Some(commands_val) = commands {
-        if !commands_val.is_null() {
-            let key = serde_yaml::Value::String("commands".into());
-            let mut wrapper = serde_yaml::Mapping::new();
-            wrapper.insert(key, commands_val);
-            let yaml_str = serde_yaml::to_string(&wrapper)
-                .map_err(|e| JsValue::from_str(&format!("spec error: {e}")))?;
-            registry
-                .merge_yaml_overrides(&yaml_str)
-                .map_err(|e| JsValue::from_str(&format!("spec error: {e}")))?;
-        }
+    if let Some(commands_yaml) = commands_yaml {
+        registry
+            .merge_yaml_overrides(commands_yaml.as_ref())
+            .map_err(|e| JsValue::from_str(&format!("spec error: {e}")))?;
     }
 
     crate::format_source_with_registry(source, &config, &registry)

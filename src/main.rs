@@ -23,7 +23,6 @@ use cmakefmt::{
     render_effective_config, CaseStyle, Config, DumpConfigFormat,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
-use pest::error::{ErrorVariant, LineColLocation};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use similar::TextDiff;
@@ -951,9 +950,7 @@ fn error_display_name(err: &cmakefmt::Error) -> String {
             .unwrap_or("<unknown>")
             .trim()
             .to_owned(),
-        cmakefmt::Error::Io(_)
-        | cmakefmt::Error::Parse(_)
-        | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
+        cmakefmt::Error::Io(_) | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
     }
 }
 
@@ -3021,13 +3018,13 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
             source_text,
             start_line,
             barrier_context,
-            source,
+            diagnostic,
         } => render_parse_error(
             display_name,
             source_text,
             *start_line,
             *barrier_context,
-            source,
+            diagnostic,
         ),
         cmakefmt::Error::Config { path, details, .. } => {
             render_file_parse_error("config", path, details)
@@ -3037,9 +3034,6 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
         }
         cmakefmt::Error::Formatter(message) => render_formatter_error(message),
         cmakefmt::Error::Io(source) => format!("error: I/O failure: {source}"),
-        cmakefmt::Error::Parse(source) => {
-            format!("error: parse failure\n\nparser detail: {source}")
-        }
         cmakefmt::Error::LayoutTooWide {
             line_no,
             width,
@@ -3056,9 +3050,10 @@ fn render_parse_error(
     source_text: &str,
     start_line: usize,
     barrier_context: bool,
-    source: &pest::error::Error<cmakefmt::parser::Rule>,
+    diagnostic: &cmakefmt::error::ParseDiagnostic,
 ) -> String {
-    let (local_line, local_column) = line_col_from_pest(source);
+    let local_line = diagnostic.line;
+    let local_column = diagnostic.column;
     let absolute_line = start_line + local_line.saturating_sub(1);
     let source_lines: Vec<&str> = source_text.lines().collect();
     let line_text = source_lines
@@ -3066,7 +3061,7 @@ fn render_parse_error(
         .copied()
         .or_else(|| source_lines.last().copied())
         .unwrap_or_default();
-    let (summary, mut hints) = classify_parse_failure(display_name, line_text, source);
+    let (summary, mut hints) = classify_parse_failure(display_name, line_text, diagnostic);
     if barrier_context {
         hints.push(
             "this file contains formatter barriers or fences; disabled regions are passed through verbatim"
@@ -3121,11 +3116,7 @@ fn render_parse_error(
     for hint in hints {
         let _ = writeln!(rendered, "hint: {hint}");
     }
-    let _ = writeln!(
-        rendered,
-        "parser detail: {}",
-        describe_pest_expectation(source)
-    );
+    let _ = writeln!(rendered, "parser detail: {}", diagnostic.message);
     if display_name != "<stdin>" {
         let _ = writeln!(rendered, "repro: cmakefmt --debug --check {display_name}");
     }
@@ -3197,30 +3188,6 @@ fn render_formatter_error(message: &str) -> String {
         );
     }
     rendered.trim_end().to_owned()
-}
-
-fn line_col_from_pest(source: &pest::error::Error<cmakefmt::parser::Rule>) -> (usize, usize) {
-    match source.line_col {
-        LineColLocation::Pos((line, column)) => (line, column),
-        LineColLocation::Span((line, column), _) => (line, column),
-    }
-}
-
-fn describe_pest_expectation(source: &pest::error::Error<cmakefmt::parser::Rule>) -> String {
-    match &source.variant {
-        ErrorVariant::ParsingError { positives, .. } if !positives.is_empty() => {
-            format!(
-                "expected {}",
-                positives
-                    .iter()
-                    .map(|rule| format!("{rule:?}").replace('_', " "))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        }
-        ErrorVariant::CustomError { message } => message.clone(),
-        _ => source.to_string(),
-    }
 }
 
 /// Scan `source` for the last unmatched opening parenthesis, skipping
@@ -3304,9 +3271,9 @@ fn find_unmatched_open_paren(source: &str, start_line: usize) -> Option<(usize, 
 fn classify_parse_failure(
     display_name: &str,
     line_text: &str,
-    source: &pest::error::Error<cmakefmt::parser::Rule>,
+    diagnostic: &cmakefmt::error::ParseDiagnostic,
 ) -> (String, Vec<String>) {
-    let detail = describe_pest_expectation(source);
+    let detail = diagnostic.message.as_ref();
     let trimmed = line_text.trim();
     let mut hints = Vec::new();
 

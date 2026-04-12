@@ -114,10 +114,12 @@ fn parse_benchmarks(c: &mut Criterion) {
 fn formatter_only_benchmarks(c: &mut Criterion) {
     let config = cmakefmt::Config::default();
     let registry = CommandRegistry::builtins();
-    let small = cmakefmt::parser::parse(small_source()).expect("parse should succeed");
-    let real_world =
-        cmakefmt::parser::parse(&representative_real_world_source()).expect("parse should succeed");
-    let large = cmakefmt::parser::parse(&large_synthetic_source()).expect("parse should succeed");
+    let small_src = small_source();
+    let real_world_src = representative_real_world_source();
+    let large_src = large_synthetic_source();
+    let small = cmakefmt::parser::parse(small_src).expect("parse should succeed");
+    let real_world = cmakefmt::parser::parse(&real_world_src).expect("parse should succeed");
+    let large = cmakefmt::parser::parse(&large_src).expect("parse should succeed");
     let mut group = c.benchmark_group("format_ast");
     group.warm_up_time(Duration::from_secs(2));
     group.measurement_time(Duration::from_secs(8));
@@ -125,18 +127,30 @@ fn formatter_only_benchmarks(c: &mut Criterion) {
     group.sampling_mode(SamplingMode::Flat);
 
     group.bench_function(BenchmarkId::from_parameter("small"), |b| {
-        b.iter(|| formatter::format_file(black_box(&small), &config, registry).expect("format"))
+        b.iter(|| {
+            formatter::format_parsed_file(small_src, black_box(&small), &config, registry)
+                .expect("format")
+        })
     });
     group.bench_function(
         BenchmarkId::from_parameter("representative_real_world"),
         |b| {
             b.iter(|| {
-                formatter::format_file(black_box(&real_world), &config, registry).expect("format")
+                formatter::format_parsed_file(
+                    &real_world_src,
+                    black_box(&real_world),
+                    &config,
+                    registry,
+                )
+                .expect("format")
             })
         },
     );
     group.bench_function(BenchmarkId::from_parameter("large_synthetic"), |b| {
-        b.iter(|| formatter::format_file(black_box(&large), &config, registry).expect("format"))
+        b.iter(|| {
+            formatter::format_parsed_file(&large_src, black_box(&large), &config, registry)
+                .expect("format")
+        })
     });
     group.finish();
 }
@@ -391,9 +405,6 @@ fn config_pattern_benchmarks(c: &mut Criterion) {
 
     group.bench_function(BenchmarkId::from_parameter("validate_patterns"), |b| {
         b.iter(|| black_box(&config).validate_patterns().expect("valid"))
-    });
-    group.bench_function(BenchmarkId::from_parameter("compiled_patterns"), |b| {
-        b.iter(|| black_box(&config).compiled_patterns())
     });
     group.finish();
 }

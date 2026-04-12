@@ -588,7 +588,7 @@ nargs = "+"
         .merge_override_str(overrides, PathBuf::from("test-custom-spec.toml"))
         .unwrap();
 
-    let formatted = formatter::format_file(&file, &config, &registry).unwrap();
+    let formatted = formatter::format_parsed_file(src, &file, &config, &registry).unwrap();
 
     insta::assert_snapshot!(formatted, @r#"
     my_custom_command(

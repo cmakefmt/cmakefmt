@@ -27,8 +27,13 @@ use ast::{Argument, BracketArgument, CommandInvocation, Comment, File, Statement
 /// The returned AST preserves command structure, blank lines, and comments so
 /// the formatter can round-trip files with stable semantics.
 pub fn parse(source: &str) -> Result<File> {
-    let mut pairs =
-        CmakeParser::parse(Rule::file, source).map_err(|e| Error::Parse(Box::new(e)))?;
+    let mut pairs = CmakeParser::parse(Rule::file, source).map_err(|e| Error::ParseContext {
+        display_name: "<source>".to_owned(),
+        source_text: source.to_owned().into_boxed_str(),
+        start_line: 1,
+        barrier_context: false,
+        diagnostic: crate::error::ParseDiagnostic::from_pest(&e),
+    })?;
     let file_pair = pairs
         .next()
         .ok_or_else(|| Error::Formatter("parser did not return a file pair".to_owned()))?;
@@ -372,6 +377,32 @@ mod tests {
     fn invalid_bracket_argument_returns_error() {
         let err = parse("set(VAR [=[hello]==])\n").unwrap_err();
         assert!(matches!(err, Error::Formatter(_)));
+    }
+
+    #[test]
+    fn invalid_syntax_returns_parse_context_with_crate_owned_diagnostic() {
+        let err = parse("message(\n").unwrap_err();
+        let Error::ParseContext {
+            display_name,
+            source_text,
+            start_line,
+            barrier_context,
+            diagnostic,
+        } = err
+        else {
+            panic!("expected parse context error");
+        };
+
+        assert_eq!(display_name, "<source>");
+        assert_eq!(source_text.as_ref(), "message(\n");
+        assert_eq!(start_line, 1);
+        assert!(!barrier_context);
+        assert!(
+            diagnostic.message.contains("expected"),
+            "unexpected parse diagnostic: {diagnostic:?}"
+        );
+        assert_eq!(diagnostic.line, 2);
+        assert_eq!(diagnostic.column, 1);
     }
 
     #[test]

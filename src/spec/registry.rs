@@ -48,6 +48,7 @@ const BUILTINS_TOML: &str = include_str!("builtins.toml");
 #[derive(Debug, Clone)]
 pub struct CommandRegistry {
     metadata: SpecMetadata,
+    builtin_commands: IndexSet<String>,
     commands: IndexMap<String, CommandSpec>,
     fallback: CommandSpec,
 }
@@ -100,8 +101,10 @@ impl CommandRegistry {
     /// Build a registry directly from a deserialized [`SpecFile`].
     pub(crate) fn from_spec_file(mut spec_file: SpecFile) -> Self {
         normalize_spec_file(&mut spec_file);
+        let builtin_commands = spec_file.commands.keys().cloned().collect();
         Self {
             metadata: spec_file.metadata,
+            builtin_commands,
             commands: spec_file.commands,
             fallback: CommandSpec::Single(CommandForm::default()),
         }
@@ -219,11 +222,11 @@ impl CommandRegistry {
 
     /// Return `true` when the command is present in the built-in registry.
     pub fn contains_builtin(&self, command_name: &str) -> bool {
-        self.commands.contains_key(command_name)
+        self.builtin_commands.contains(command_name)
             || (has_ascii_uppercase(command_name)
                 && self
-                    .commands
-                    .contains_key(&command_name.to_ascii_lowercase()))
+                    .builtin_commands
+                    .contains(&command_name.to_ascii_lowercase()))
     }
 
     /// Report the audited upstream CMake version for the built-in spec.
@@ -964,6 +967,26 @@ nargs = 1
         };
         assert!(form.kwargs.contains_key("PUBLIC"));
         assert!(form.kwargs.contains_key("PRIVATE"));
+    }
+
+    #[test]
+    fn contains_builtin_excludes_user_added_commands_after_merge() {
+        let mut registry = CommandRegistry::load().unwrap();
+        registry
+            .merge_toml_overrides(
+                r#"
+[commands.my_custom_command]
+pargs = 1
+"#,
+            )
+            .unwrap();
+
+        assert!(!registry.contains_builtin("my_custom_command"));
+        assert!(!registry.contains_builtin("MY_CUSTOM_COMMAND"));
+        assert!(matches!(
+            registry.get("my_custom_command"),
+            CommandSpec::Single(_)
+        ));
     }
 
     #[test]

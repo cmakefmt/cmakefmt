@@ -4,6 +4,9 @@
 
 //! Structured error types returned by parsing, config loading, and formatting.
 
+use std::fmt;
+
+use pest::error::{ErrorVariant, LineColLocation};
 use thiserror::Error;
 
 /// Structured config/spec deserialization failure metadata used for
@@ -20,16 +23,56 @@ pub struct FileParseError {
     pub column: Option<usize>,
 }
 
+/// Crate-owned parser diagnostics used by [`Error`] without exposing `pest`
+/// internals in the public API.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParseDiagnostic {
+    /// Human-readable parser detail.
+    pub message: Box<str>,
+    /// 1-based source line number.
+    pub line: usize,
+    /// 1-based source column number.
+    pub column: usize,
+}
+
+impl ParseDiagnostic {
+    pub(crate) fn from_pest(error: &pest::error::Error<crate::parser::Rule>) -> Self {
+        let (line, column) = match error.line_col {
+            LineColLocation::Pos((line, column)) => (line, column),
+            LineColLocation::Span((line, column), _) => (line, column),
+        };
+        let message = match &error.variant {
+            ErrorVariant::ParsingError { positives, .. } if !positives.is_empty() => format!(
+                "expected {}",
+                positives
+                    .iter()
+                    .map(|rule| format!("{rule:?}").replace('_', " "))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            ErrorVariant::CustomError { message } => message.clone(),
+            _ => error.to_string(),
+        };
+        Self {
+            message: message.into_boxed_str(),
+            line,
+            column,
+        }
+    }
+}
+
+impl fmt::Display for ParseDiagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
 /// Errors that can be returned by parsing, config loading, spec loading, or
 /// formatting operations.
 #[derive(Debug, Error)]
 pub enum Error {
-    /// A syntax error reported by the CMake parser.
-    #[error("parse error: {0}")]
-    Parse(#[from] Box<pest::error::Error<crate::parser::Rule>>),
-
     /// A parser error annotated with source text and line-offset context.
-    #[error("parse error in {display_name}: {source}")]
+    #[error("parse error in {display_name}: {diagnostic}")]
     ParseContext {
         /// Human-facing source name, for example a path or `<stdin>`.
         display_name: String,
@@ -39,8 +82,8 @@ pub enum Error {
         start_line: usize,
         /// Whether earlier barrier/fence handling affected how this chunk was parsed.
         barrier_context: bool,
-        /// The underlying pest parser error.
-        source: Box<pest::error::Error<crate::parser::Rule>>,
+        /// Structured parser diagnostic.
+        diagnostic: ParseDiagnostic,
     },
 
     /// A user config parse error.
@@ -100,14 +143,14 @@ impl Error {
                 source_text,
                 start_line,
                 barrier_context,
-                source,
+                diagnostic,
                 ..
             } => Self::ParseContext {
                 display_name: display_name.into(),
                 source_text,
                 start_line,
                 barrier_context,
-                source,
+                diagnostic,
             },
             other => other,
         }
