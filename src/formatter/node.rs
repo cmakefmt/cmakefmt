@@ -503,27 +503,61 @@ fn format_command_vertical(
             }
         }
 
-        // Remaining arguments in the first section.
+        // Remaining arguments in the first section — try to pack them on
+        // the same line as the first arg before wrapping to a new line.
+        // Skip inline packing if the line already ends with a comment.
         let remaining = &first_section.arguments[consumed..];
+        let line_has_comment = output.lines().last().map_or(false, |l| l.contains('#'));
+
         if !remaining.is_empty() {
-            output.push('\n');
-            if remaining.len() > cmd_config.max_pargs_hwrap() {
-                write_vertical_arguments(
-                    &mut output,
-                    remaining,
-                    &paren_indent,
-                    cmd_config.global(),
-                    patterns,
-                );
+            let line_so_far = output.lines().last().map_or(0, |l| l.len());
+            let mut inline_candidate = String::new();
+            let mut fits_inline = !line_has_comment;
+            let mut candidate_width = line_so_far;
+            if fits_inline {
+                for arg in remaining {
+                    if arg.is_comment() {
+                        fits_inline = false;
+                        break;
+                    }
+                    let token = arg.as_str();
+                    let token_width = token.chars().count();
+                    if candidate_width + 1 + token_width > cmd_config.line_width() {
+                        fits_inline = false;
+                        break;
+                    }
+                    inline_candidate.push(' ');
+                    inline_candidate.push_str(token);
+                    candidate_width += 1 + token_width;
+                }
+            }
+            if fits_inline {
+                output.push_str(&inline_candidate);
+                if sections.len() > 1 {
+                    output.push('\n');
+                }
             } else {
-                write_packed_arguments(
-                    &mut output,
-                    remaining,
-                    &paren_indent,
-                    cmd_config.global(),
-                    patterns,
-                    cmd_config.line_width(),
-                );
+                // Either they don't fit or there are keyword sections that
+                // will follow — wrap to aligned lines.
+                output.push('\n');
+                if remaining.len() > cmd_config.max_pargs_hwrap() {
+                    write_vertical_arguments(
+                        &mut output,
+                        remaining,
+                        &paren_indent,
+                        cmd_config.global(),
+                        patterns,
+                    );
+                } else {
+                    write_packed_arguments(
+                        &mut output,
+                        remaining,
+                        &paren_indent,
+                        cmd_config.global(),
+                        patterns,
+                        cmd_config.line_width(),
+                    );
+                }
             }
         } else if sections.len() > 1 {
             output.push('\n');
