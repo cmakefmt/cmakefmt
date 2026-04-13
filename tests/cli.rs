@@ -4378,3 +4378,95 @@ fn dump_parse_groups_flow_control() {
         "should contain a BODY node inside the flow block, got:\n{stdout}",
     );
 }
+
+#[test]
+fn dump_ast_reads_stdin() {
+    let mut child = cmakefmt()
+        .args(["dump", "ast", "-"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"set(FOO bar)\n")
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "dump ast with stdin should succeed"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("COMMAND") && stdout.contains("set"),
+        "stdin dump should show COMMAND set, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn dump_ast_no_color_when_forced_never() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--color", "never", "dump", "ast", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !stdout.contains("\x1b["),
+        "color never should not contain ANSI codes, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn dump_ast_color_when_forced_always() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set(FOO bar)\n");
+
+    let output = cmakefmt()
+        .args(["--color", "always", "dump", "ast", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("\x1b["),
+        "color always should contain ANSI codes, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn dump_parse_reads_stdin() {
+    let mut child = cmakefmt()
+        .args(["dump", "parse", "-"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(b"target_link_libraries(mylib PUBLIC dep1)\n")
+        .unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "dump parse with stdin should succeed"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("KEYWORD") && stdout.contains("PUBLIC"),
+        "stdin dump parse should resolve keywords, got:\n{stdout}"
+    );
+}

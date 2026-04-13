@@ -1519,17 +1519,19 @@ fn run_dump_subcommand(
     action: &DumpAction,
     file: Option<&Path>,
 ) -> Result<u8, cmakefmt::Error> {
+    let source = match file {
+        Some(path) if path.as_os_str() != "-" => {
+            std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?
+        }
+        _ => {
+            let mut buf = String::new();
+            io::Read::read_to_string(&mut io::stdin(), &mut buf).map_err(cmakefmt::Error::Io)?;
+            buf
+        }
+    };
+
     match action {
         DumpAction::Ast => {
-            let source = match file {
-                Some(path) => std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?,
-                None => {
-                    let mut buf = String::new();
-                    io::Read::read_to_string(&mut io::stdin(), &mut buf)
-                        .map_err(cmakefmt::Error::Io)?;
-                    buf
-                }
-            };
             let parsed = parser::parse(&source)?;
             let color = should_colorize_stdout(cli.color);
             let tree = cmakefmt::dump::dump_ast(&parsed, color);
@@ -1537,15 +1539,6 @@ fn run_dump_subcommand(
             Ok(EXIT_OK)
         }
         DumpAction::Parse => {
-            let source = match file {
-                Some(path) => std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?,
-                None => {
-                    let mut buf = String::new();
-                    io::Read::read_to_string(&mut io::stdin(), &mut buf)
-                        .map_err(cmakefmt::Error::Io)?;
-                    buf
-                }
-            };
             let config_path = file.filter(|p| p.as_os_str() != "-");
             let (_, registry, _) = build_context(cli, config_path)?;
             let parsed = parser::parse(&source)?;
