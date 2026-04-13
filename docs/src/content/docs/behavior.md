@@ -205,6 +205,90 @@ Use it when you want:
 Do **not** use it to describe a command's argument structure. That belongs in
 `commands:`.
 
+## `set()` Formatting
+
+`set()` is the most common CMake command and has several distinct usage
+patterns. cmakefmt handles each one with a specific rule: **the variable
+name always stays on the `set(` line**. This is enabled by the built-in
+`wrap_after_first_arg` layout hint on the `set` command spec.
+
+### Simple and short values
+
+When everything fits on one line, it stays inline:
+
+```cmake
+set(FOO bar)
+set(FOO a b c)
+set(FOO "value" PARENT_SCOPE)
+set(ENV{FOO} "value")
+set(FOO)
+```
+
+### Lists that wrap
+
+The variable name stays attached. Remaining items are aligned to the
+open parenthesis:
+
+```cmake
+set(HEADERS
+    header_a.h
+    header_b.h
+    header_c.h
+    header_d.h)
+```
+
+### Cached variables
+
+`CACHE STRING "description"` stays inline when it fits:
+
+```cmake
+set(FOO "default"
+    CACHE STRING "A description" FORCE)
+```
+
+When the cache metadata is too long, it wraps with its arguments nested:
+
+```cmake
+set(CMAKE_BUILD_TYPE
+    "Release"
+    CACHE
+      STRING
+      "A very long description that doesn't fit on one line"
+      FORCE)
+```
+
+### Comments on the variable name
+
+Inline comments stay attached to the variable name:
+
+```cmake
+set(MY_VAR # explanation of the variable
+    value_one value_two value_three)
+```
+
+### Overriding the behavior
+
+To disable `wrap_after_first_arg` for `set()`:
+
+```yaml
+per_command_overrides:
+  set:
+    wrap_after_first_arg: false
+```
+
+This reverts to the standard vertical layout where everything wraps
+below the opening parenthesis:
+
+```cmake
+set(
+  MY_VAR
+  value_one
+  value_two)
+```
+
+See [`wrap_after_first_arg`](/config/#wrap_after_first_arg) in the
+config reference for the full option documentation.
+
 ## Range Formatting
 
 `--lines START:END` formats only selected line ranges. This is mainly for

@@ -83,6 +83,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`max_rows_cmdline`](#max_rows_cmdline)
   - [`always_wrap`](#always_wrap)
   - [`require_valid_layout`](#require_valid_layout)
+  - [`wrap_after_first_arg`](#wrap_after_first_arg)
   - [`enable_sort`](#enable_sort)
   - [`autosort`](#autosort)
   - [`dangle_parens`](#dangle_parens)
@@ -137,6 +138,7 @@ format:
   max_rows_cmdline: 2
   always_wrap: []
   require_valid_layout: false
+  wrap_after_first_arg: false
   enable_sort: false
   autosort: false
   dangle_parens: false
@@ -337,6 +339,69 @@ format:
 
 Useful in CI to enforce a strict line-width contract. The error message
 includes the line number, actual width, and configured limit.
+
+### `wrap_after_first_arg`
+
+When wrapping a command across multiple lines, keep the first positional
+argument on the command line and align continuation lines to the open
+parenthesis. Default: `false`.
+
+```yaml
+format:
+  wrap_after_first_arg: true
+```
+
+When enabled globally, all commands that wrap will keep their first argument
+attached:
+
+```cmake
+# wrap_after_first_arg: true
+target_link_libraries(mylib
+                      PUBLIC dep1 dep2
+                      PRIVATE dep3 dep4)
+
+# wrap_after_first_arg: false (default)
+target_link_libraries(
+  mylib
+  PUBLIC dep1 dep2
+  PRIVATE dep3 dep4)
+```
+
+**Built-in default for `set()`:** The `set` command has `wrap_after_first_arg`
+enabled in its built-in spec, so the variable name always stays on the
+`set(` line regardless of the global setting:
+
+```cmake
+# set() always keeps the variable name attached
+set(CMAKE_BUILD_TYPE "Release"
+    CACHE STRING "Build mode." FORCE)
+
+set(SOURCES
+    a.cpp
+    b.cpp
+    c.cpp)
+```
+
+Override per-command via `per_command_overrides`:
+
+```yaml
+per_command_overrides:
+  set:
+    wrap_after_first_arg: false
+```
+
+Or enable for a specific custom command in the spec:
+
+```yaml
+commands:
+  my_cmd:
+    pargs: 1
+    layout:
+      wrap_after_first_arg: true
+    kwargs:
+      SOURCES:
+        nargs: "+"
+```
 
 ### `enable_sort`
 
