@@ -458,6 +458,7 @@ fn render_parse_command(
 }
 
 /// Render a flow-control block (`if`/`endif`, etc.).
+#[allow(clippy::too_many_arguments)]
 fn render_flow_block(
     out: &mut String,
     opener: &ast::CommandInvocation,
@@ -571,13 +572,7 @@ fn render_flow_block(
                 }
             }
         } else {
-            write_line(
-                out,
-                child_prefix,
-                conn,
-                color,
-                &format!("{}", bold_cyan("BODY", color)),
-            );
+            write_line(out, child_prefix, conn, color, &bold_cyan("BODY", color));
             let sub_groups = group_flow_control(&body.statements);
             render_groups(out, &sub_groups, registry, color, &body_prefix);
         }
