@@ -110,8 +110,6 @@ struct FormatSection {
 struct MarkupSection {
     /// Enable markup-aware comment handling.
     enable_markup: Option<bool>,
-    /// Reflow plain line comments to fit within the configured line width.
-    reflow_comments: Option<bool>,
     /// Preserve the first comment block in a file literally.
     first_comment_is_literal: Option<bool>,
     /// Regex for comments that should never be reflowed.
@@ -270,8 +268,6 @@ fn default_config_template_toml() -> String {
             "[markup]\n",
             "# Enable markup-aware comment handling.\n",
             "enable_markup = {enable_markup}\n\n",
-            "# Reflow plain line comments to fit within the configured line width.\n",
-            "# reflow_comments = true\n\n",
             "# Preserve the first comment block in a file literally.\n",
             "first_comment_is_literal = {first_comment_is_literal}\n\n",
             "# Preserve comments matching a custom regex literally.\n",
@@ -398,7 +394,6 @@ struct EffectiveFormatSection {
 #[cfg(feature = "cli")]
 struct EffectiveMarkupSection {
     enable_markup: bool,
-    reflow_comments: bool,
     first_comment_is_literal: bool,
     literal_comment_pattern: String,
     bullet_char: String,
@@ -442,7 +437,6 @@ impl From<&Config> for EffectiveConfigFile {
             },
             markup: EffectiveMarkupSection {
                 enable_markup: config.enable_markup,
-                reflow_comments: config.reflow_comments,
                 first_comment_is_literal: config.first_comment_is_literal,
                 literal_comment_pattern: config.literal_comment_pattern.clone(),
                 bullet_char: config.bullet_char.clone(),
@@ -519,8 +513,6 @@ fn default_config_template_yaml() -> String {
             "markup:\n",
             "  # Enable markup-aware comment handling.\n",
             "  enable_markup: {enable_markup}\n\n",
-            "  # Reflow plain line comments to fit within the configured line width.\n",
-            "  # reflow_comments: true\n\n",
             "  # Preserve the first comment block in a file literally.\n",
             "  first_comment_is_literal: {first_comment_is_literal}\n\n",
             "  # Preserve comments matching a custom regex literally.\n",
@@ -750,9 +742,6 @@ impl Config {
         // Markup section
         if let Some(v) = fc.markup.enable_markup {
             self.enable_markup = v;
-        }
-        if let Some(v) = fc.markup.reflow_comments {
-            self.reflow_comments = v;
         }
         if let Some(v) = fc.markup.first_comment_is_literal {
             self.first_comment_is_literal = v;
@@ -1296,7 +1285,6 @@ format:
   keyword_case: lower
 markup:
   enable_markup: false
-  reflow_comments: true
   first_comment_is_literal: false
   literal_comment_pattern: '^\\s*KEEP'
   bullet_char: '-'
@@ -1334,7 +1322,6 @@ per_command_overrides:
         assert_eq!(config.command_case, CaseStyle::Unchanged);
         assert_eq!(config.keyword_case, CaseStyle::Lower);
         assert!(!config.enable_markup);
-        assert!(config.reflow_comments);
         assert!(!config.first_comment_is_literal);
         assert_eq!(config.literal_comment_pattern, "^\\\\s*KEEP");
         assert_eq!(config.bullet_char, "-");

@@ -225,7 +225,7 @@ fn standalone_line_comment_reflows_when_enabled() {
     let src = "# This is a very long comment that should be wrapped when comment reflow is enabled for the formatter.\n";
     let config = Config {
         line_width: 50,
-        reflow_comments: true,
+        enable_markup: true,
         ..Config::default()
     };
     let formatted = format_source(src, &config).unwrap();

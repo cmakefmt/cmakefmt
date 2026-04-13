@@ -134,11 +134,10 @@ comments as lists, fences, or rulers rather than opaque text.
 The key knobs:
 
 - `markup.enable_markup`
-- `markup.reflow_comments`
 - `markup.first_comment_is_literal`
 - `markup.literal_comment_pattern`
 
-To leave comments almost entirely alone, keep `reflow_comments = false`.
+To leave comments almost entirely alone, set `enable_markup: false`.
 
 ## Control Flow And Blocks
 
@@ -379,7 +378,7 @@ layout.
 
 **Comment reflow.** By default, `cmakefmt` preserves comments without
 modification. If you want comments reflowed to fit within the configured line
-width, explicitly enable `markup.reflow_comments: true`.
+width, enable `markup.enable_markup: true`.
 
 **Config key names.** Several config keys were renamed for clarity. Any key
 `cmakefmt` does not recognise will produce a fast-fail error, not a silent

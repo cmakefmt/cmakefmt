@@ -299,6 +299,14 @@
             "null"
           ],
           "default": null
+        },
+        "wrap_after_first_arg": {
+          "description": "Keep the first positional argument on the command line when wrapping.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
         }
       },
       "additionalProperties": false
@@ -415,14 +423,6 @@
           ],
           "default": null
         },
-        "reflow_comments": {
-          "description": "Reflow plain line comments to fit within the configured line width.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": null
-        },
         "ruler_pattern": {
           "description": "Regex describing ruler-style comments that should be treated specially.",
           "type": [
@@ -513,6 +513,13 @@
           ],
           "format": "uint",
           "minimum": 0
+        },
+        "wrap_after_first_arg": {
+          "description": "Keep the first positional argument on the command line when wrapping.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

@@ -129,7 +129,6 @@ pub enum DangleAlign {
 /// | `dangle_parens` | `false` |
 /// | `dangle_align` | [`DangleAlign::Prefix`] |
 /// | `enable_markup` | `true` |
-/// | `reflow_comments` | `false` |
 /// | `first_comment_is_literal` | `true` |
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -209,10 +208,9 @@ pub struct Config {
     pub keyword_case: CaseStyle,
 
     // ── Comment markup ──────────────────────────────────────────────────
-    /// Enable markup-aware comment handling.
+    /// Enable markup-aware comment handling and reflow plain line comments
+    /// to fit within the configured line width.
     pub enable_markup: bool,
-    /// Reflow plain line comments to fit within the configured width.
-    pub reflow_comments: bool,
     /// Preserve the first comment block in a file literally.
     pub first_comment_is_literal: bool,
     /// Regex for comments that should never be reflowed.
@@ -317,7 +315,6 @@ impl Default for Config {
             command_case: CaseStyle::Lower,
             keyword_case: CaseStyle::Upper,
             enable_markup: true,
-            reflow_comments: false,
             first_comment_is_literal: true,
             literal_comment_pattern: String::new(),
             bullet_char: "*".to_string(),

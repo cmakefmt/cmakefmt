@@ -723,8 +723,6 @@ struct OutputMarkupSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     enable_markup: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    reflow_comments: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     first_comment_is_literal: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     literal_comment_pattern: Option<String>,
@@ -747,7 +745,6 @@ struct OutputMarkupSection {
 impl OutputMarkupSection {
     fn has_any(&self) -> bool {
         self.enable_markup.is_some()
-            || self.reflow_comments.is_some()
             || self.first_comment_is_literal.is_some()
             || self.literal_comment_pattern.is_some()
             || self.bullet_char.is_some()
@@ -875,8 +872,7 @@ fn merge_markup_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
 
     for (key, value) in table {
         match key.as_str() {
-            "enable_markup" => converted.markup.enable_markup = as_bool(value),
-            "reflow_comments" => converted.markup.reflow_comments = as_bool(value),
+            "enable_markup" | "reflow_comments" => converted.markup.enable_markup = as_bool(value),
             "first_comment_is_literal" => {
                 converted.markup.first_comment_is_literal = as_bool(value)
             }
@@ -1388,7 +1384,6 @@ with section("parse"):
             &path,
             r#"
 markup:
-  enable_markup: true
   reflow_comments: true
 "#,
         )
@@ -1396,7 +1391,8 @@ markup:
 
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("[markup]"));
-        assert!(converted.contains("reflow_comments = true"));
+        // reflow_comments is mapped to enable_markup
+        assert!(converted.contains("enable_markup = true"));
     }
 
     // ── Phase-16 option tests ─────────────────────────────────────────────

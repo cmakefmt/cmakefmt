@@ -212,7 +212,7 @@ style:
   keyword_case: upper
 
 markup:
-  reflow_comments: true
+  enable_markup: true
 ```
 
 Debug which config a file is actually using:

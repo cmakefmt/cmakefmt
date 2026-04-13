@@ -37,10 +37,7 @@ fn format_line_comment(
     indent_width: usize,
     line_width: usize,
 ) -> Vec<String> {
-    if !config.enable_markup
-        || !config.reflow_comments
-        || should_preserve_comment_verbatim(text, patterns)
-    {
+    if !config.enable_markup || should_preserve_comment_verbatim(text, patterns) {
         return vec![text.to_owned()];
     }
 
@@ -125,7 +122,6 @@ mod tests {
     fn reflow_config() -> Config {
         Config {
             enable_markup: true,
-            reflow_comments: true,
             ..Config::default()
         }
     }

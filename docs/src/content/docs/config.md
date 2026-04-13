@@ -97,7 +97,6 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`keyword_case`](#keyword_case)
 - [Markup Options](#markup-options)
   - [`enable_markup`](#enable_markup)
-  - [`reflow_comments`](#reflow_comments)
   - [`first_comment_is_literal`](#first_comment_is_literal)
   - [`literal_comment_pattern`](#literal_comment_pattern)
   - [`bullet_char`](#bullet_char)
@@ -152,7 +151,6 @@ format:
 
 markup:
   enable_markup: true
-  reflow_comments: false
   first_comment_is_literal: true
   literal_comment_pattern: ""
   bullet_char: "*"
@@ -590,19 +588,9 @@ markup:
   enable_markup: true
 ```
 
-When enabled, the formatter can recognize lists, fences, and rulers inside
+When enabled, the formatter reflows plain line comments to fit within the
+configured line width and can recognize lists, fences, and rulers inside
 comments rather than treating them as opaque text.
-
-### `reflow_comments`
-
-Reflow plain line comments to fit within the configured line width.
-
-```yaml
-markup:
-  reflow_comments: true
-```
-
-Leave this `false` if you want comments preserved more literally.
 
 ### `first_comment_is_literal`
 

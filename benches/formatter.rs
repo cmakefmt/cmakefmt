@@ -416,7 +416,7 @@ fn legacy_conversion_benchmark(c: &mut Criterion) {
         &legacy_path,
         "format:\n  line_width: 100\n  tab_size: 4\n  use_tabchars: false\n  \
          max_lines_hwrap: 3\n  dangle_parens: true\n\
-         markup:\n  enable_markup: true\n  reflow_comments: true\n",
+         markup:\n  enable_markup: true\n",
     )
     .expect("write legacy config");
 
