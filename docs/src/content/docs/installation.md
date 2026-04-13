@@ -8,7 +8,7 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-Get `cmakefmt` running, wire it into your project, and never think about CMake
+Get `cmakefmt` running, wire it into your project, and never worry about CMake
 formatting again.
 
 ## Current Installation Options

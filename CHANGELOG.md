@@ -29,16 +29,38 @@ This project follows a simple changelog discipline:
   for `set()` so the variable name always stays on the `set(` line.
 - Trailing inline comments now stay attached to their preceding argument
   in both packed and vertical layouts
+- Trailing comment reflow — long trailing comments that exceed `line_width`
+  are reflowed with continuation lines aligned to the `#`. The parser
+  recognises column-aligned continuation comments and merges them back into
+  the trailing comment on re-parse, ensuring idempotent round-trips.
+- Remaining positional arguments are packed inline after the first argument
+  when they fit within `line_width`, avoiding unnecessary vertical layout
 - Weekly scheduled benchmark CI for consistent performance tracking
 - Large-file LSP timeout test (2000 lines, < 1 second)
 
 ### Changed
 
+- `reflow_comments` config option merged into `enable_markup` —
+  `enable_markup: true` now controls both markup handling and comment
+  reflow. The standalone `reflow_comments` key is no longer accepted in
+  native config files (legacy conversion still maps it).
+- `set()` CACHE spec updated: `STRING`/`FILEPATH`/etc. type argument uses
+  `nargs = 2` and `FORCE` is a flag at the `CACHE` level rather than a
+  nested positional argument
+- Semantic verifier strips all comments from comparison — comments have no
+  CMake semantic meaning and were causing false-positive verification
+  failures when comment reflow changed their structure
 - Default config example uses `my_add_test` with VERBOSE flag, matching
   the playground source
 - Playground loads default config from WASM `default_config_yaml()` at
   runtime instead of a hardcoded string
 - README banner uses absolute URL for PyPI/crates.io rendering
+
+### Fixed
+
+- `autosort` now activates on keyword sections that contain inline
+  comments — previously, the presence of any inline comment caused the
+  heuristic to skip the section entirely
 
 ## 0.10.0 — 2026-04-12
 
