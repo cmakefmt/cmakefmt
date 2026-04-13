@@ -108,6 +108,8 @@ Ignore rules only affect:
 | `cmakefmt config explain` | Explain config resolution for a target or the current directory. |
 | `cmakefmt config convert <PATH>...` | Convert legacy cmake-format config files. |
 | `cmakefmt config init` | Same as `cmakefmt init`. |
+| `cmakefmt dump ast <FILE>` | Print the raw parser AST as a tree. |
+| `cmakefmt dump parse <FILE>` | Print the spec-resolved parse tree with keyword/flag grouping and flow-control nesting. |
 
 ## Other Flags
 
@@ -471,6 +473,99 @@ hint: unclosed `(` — the closing `)` is missing
 
 When formatting results surprise you rather than hard-failing, reach for
 `--debug` first.
+
+## Parse Tree Dump
+
+`cmakefmt dump` provides two tree views for debugging parser and
+formatter behavior.
+
+### `dump ast` — Raw Parser AST
+
+Prints the AST exactly as the parser produces it. No command-spec
+resolution, no flow-control grouping. Useful when a parse error is
+confusing or the parser's trailing-comment merging does something
+unexpected.
+
+```bash
+cmakefmt dump ast CMakeLists.txt
+```
+
+```text
+└─ FILE
+    ├─ COMMAND  cmake_minimum_required
+    │   ├─ ARG  VERSION  (unquoted)
+    │   └─ ARG  3.20  (unquoted)
+    ├─ ───
+    ├─ COMMAND  set
+    │   ├─ ARG  FOO  (unquoted)
+    │   ├─ ARG  bar  (unquoted)
+    │   └─ TRAILING  # my comment
+    └─ COMMAND  message
+        ├─ ARG  STATUS  (unquoted)
+        └─ ARG  "hello"  (quoted)
+```
+
+Every argument is annotated with its type — `(unquoted)`, `(quoted)`,
+or `(bracket)`. Comments show as `COMMENT`, `INLINE_COMMENT`, or
+`TRAILING`. Blank lines show as `───`.
+
+### `dump parse` — Spec-Resolved Tree
+
+Resolves each command against the built-in spec registry (and any
+user-defined specs) to show keyword/flag/positional grouping.
+Flow-control blocks are grouped into `FLOW` nodes. Useful when a
+layout decision is surprising — "why did `FORCE` end up under
+`CACHE`?" or "why is `PUBLIC` treated as a keyword?"
+
+```bash
+cmakefmt dump parse CMakeLists.txt
+```
+
+```text
+└─ FILE
+    ├─ COMMAND  cmake_minimum_required
+    │   └─ KEYWORD  VERSION
+    │       └─ ARG  3.20
+    ├─ ───
+    ├─ FLOW  if ... endif
+    │   ├─ COMMAND  if
+    │   │   └─ POSITIONAL  WIN32
+    │   ├─ BODY
+    │   │   └─ COMMAND  target_link_libraries
+    │   │       ├─ POSITIONAL  mylib
+    │   │       └─ KEYWORD  PUBLIC
+    │   │           ├─ ARG  dep1
+    │   │           └─ ARG  dep2
+    │   └─ COMMAND  endif
+    └─ COMMAND  set
+        ├─ POSITIONAL  CMAKE_BUILD_TYPE
+        ├─ POSITIONAL  "Release"
+        └─ KEYWORD  CACHE
+            ├─ ARG  STRING
+            ├─ ARG  "Build mode."
+            └─ FLAG  FORCE
+```
+
+Nested keyword specs are resolved recursively — `FORCE` shows as
+`FLAG` under `CACHE` because the `set()` spec defines it there.
+
+### Reading from stdin
+
+Both commands accept `-` to read from stdin:
+
+```bash
+echo 'set(FOO bar)' | cmakefmt dump ast -
+```
+
+### Color
+
+Output is colored by default on terminals (node types in bold cyan,
+comments in dim green, connectors in dim). Use `--color never` to
+suppress ANSI codes when piping:
+
+```bash
+cmakefmt --color never dump ast CMakeLists.txt > tree.txt
+```
 
 ## Related Reading
 

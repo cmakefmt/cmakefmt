@@ -408,6 +408,17 @@ for. It surfaces everything the formatter normally keeps to itself:
 - chosen layout families
 - changed-line summaries
 
+For structural questions — "how does the parser see this file?" or "why
+is this token treated as a keyword?" — use the tree dump commands:
+
+```bash
+cmakefmt dump ast CMakeLists.txt    # raw parser AST
+cmakefmt dump parse CMakeLists.txt  # spec-resolved tree
+```
+
+See [Parse Tree Dump](/cli/#parse-tree-dump) in the CLI reference for
+full details and example output.
+
 ## Known Differences From `cmake-format`
 
 `cmakefmt` is a practical replacement for `cmake-format`, not a byte-for-byte
