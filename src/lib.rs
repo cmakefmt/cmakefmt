@@ -57,6 +57,11 @@ pub mod spec;
 #[doc(hidden)]
 pub mod files;
 
+// AST / parse-tree dumping helpers used by the `dump` subcommand.
+#[cfg(feature = "cli")]
+#[doc(hidden)]
+pub mod dump;
+
 // LSP server — only compiled when the `lsp` feature is enabled.
 #[cfg(feature = "lsp")]
 pub mod lsp;

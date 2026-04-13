@@ -508,6 +508,15 @@ enum CliCommand {
         #[command(subcommand)]
         action: ConfigAction,
     },
+    /// Dump internal representations (AST, parse tree) for debugging.
+    Dump {
+        #[command(subcommand)]
+        action: DumpAction,
+
+        /// Input file to dump (reads stdin if omitted).
+        #[arg(global = true)]
+        file: Option<PathBuf>,
+    },
 }
 
 #[derive(Clone, Debug, Subcommand)]
@@ -553,6 +562,14 @@ enum ConfigAction {
     },
     /// Write a starter `.cmakefmt.yaml` to the current directory.
     Init,
+}
+
+#[derive(Clone, Debug, Subcommand)]
+enum DumpAction {
+    /// Print the raw parser AST as a tree.
+    Ast,
+    /// Print the formatted parse tree (not yet implemented).
+    Parse,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
@@ -699,6 +716,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         }
         Some(CliCommand::Config { action }) => {
             return run_config_subcommand(cli, action);
+        }
+        Some(CliCommand::Dump { action, file }) => {
+            return run_dump_subcommand(cli, action, file.as_deref());
         }
         None => {}
     }
@@ -1489,6 +1509,35 @@ fn run_config_subcommand(cli: &Cli, action: &ConfigAction) -> Result<u8, cmakefm
             std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
                 .map_err(cmakefmt::Error::Io)?;
             eprintln!("created .cmakefmt.yaml");
+            Ok(EXIT_OK)
+        }
+    }
+}
+
+fn run_dump_subcommand(
+    cli: &Cli,
+    action: &DumpAction,
+    file: Option<&Path>,
+) -> Result<u8, cmakefmt::Error> {
+    match action {
+        DumpAction::Ast => {
+            let source = match file {
+                Some(path) => std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?,
+                None => {
+                    let mut buf = String::new();
+                    io::Read::read_to_string(&mut io::stdin(), &mut buf)
+                        .map_err(cmakefmt::Error::Io)?;
+                    buf
+                }
+            };
+            let parsed = parser::parse(&source)?;
+            let color = should_colorize_stdout(cli.color);
+            let tree = cmakefmt::dump::dump_ast(&parsed, color);
+            print!("{tree}");
+            Ok(EXIT_OK)
+        }
+        DumpAction::Parse => {
+            eprintln!("dump parse: not yet implemented");
             Ok(EXIT_OK)
         }
     }

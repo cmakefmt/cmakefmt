@@ -4229,6 +4229,72 @@ fn bracket_comment_as_trailing_comment_preserved() {
 
 // ── Very long variable name exceeding line_width ──────────────────────
 
+// ── dump ast ────────────────────────────────────────────────────────────
+
+#[test]
+fn dump_ast_prints_tree() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "cmake_minimum_required(VERSION 3.5)\n\nproject(demo \"1.0.0\")\n# standalone comment\nset(FOO bar) # my comment\n",
+    );
+
+    let output = cmakefmt()
+        .args(["--color", "never", "dump", "ast", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "dump ast should succeed, stderr: {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // FILE root node
+    assert!(stdout.contains("FILE"), "should contain FILE root node");
+
+    // Command nodes
+    assert!(
+        stdout.contains("COMMAND")
+            && stdout.contains("cmake_minimum_required")
+            && stdout.contains("project")
+            && stdout.contains("set"),
+        "should contain all COMMAND nodes, got:\n{stdout}",
+    );
+
+    // Arguments with annotations
+    assert!(
+        stdout.contains("ARG") && stdout.contains("(unquoted)"),
+        "should contain ARG nodes with unquoted annotation, got:\n{stdout}",
+    );
+    assert!(
+        stdout.contains("(quoted)"),
+        "should contain quoted annotation, got:\n{stdout}",
+    );
+
+    // Standalone comment
+    assert!(
+        stdout.contains("COMMENT") && stdout.contains("# standalone comment"),
+        "should contain standalone COMMENT, got:\n{stdout}",
+    );
+
+    // Trailing comment
+    assert!(
+        stdout.contains("TRAILING") && stdout.contains("# my comment"),
+        "should contain TRAILING comment, got:\n{stdout}",
+    );
+
+    // Blank-line separator
+    assert!(
+        stdout.contains("───"),
+        "should contain blank-line separator, got:\n{stdout}",
+    );
+}
+
+// ── Very long variable name exceeding line_width ──────────────────────
+
 #[test]
 fn set_very_long_variable_name_exceeding_line_width() {
     let dir = tempfile::tempdir().unwrap();
