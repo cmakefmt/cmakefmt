@@ -213,7 +213,7 @@ jobs:
           subject-path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: release-${{ steps.version.outputs.value }}-${{ matrix.target }}
           path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}*
@@ -304,7 +304,7 @@ jobs:
           fi
 
       - name: Upload assembled release bundle
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: release-bundle
           path: dist/*
@@ -482,7 +482,7 @@ jobs:
           printf 'cargo publish --locked --dry-run succeeded for %s\n' "${VERSION}" > crates-io-dry-run.txt
 
       - name: Upload crates.io dry-run summary
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: crates-io-dry-run-summary
           path: crates-io-dry-run.txt
@@ -524,7 +524,7 @@ jobs:
           printf 'Docker dry run passed for %s\n' "${IMAGE}" > docker-dry-run.txt
 
       - name: Upload Docker dry-run summary
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: docker-dry-run-summary
           path: docker-dry-run.txt
@@ -598,7 +598,7 @@ jobs:
           echo 'set(  FOO  bar )' | cmakefmt -
 
       - name: Upload wheel
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: pypi-wheels-${{ matrix.os }}-${{ matrix.target }}
           path: dist/*.whl
@@ -632,7 +632,7 @@ jobs:
           echo 'set(  FOO  bar )' | cmakefmt -
 
       - name: Upload sdist
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: pypi-sdist
           path: dist/*.tar.gz
@@ -699,7 +699,7 @@ jobs:
           } > collected/DRY-RUN-MANIFEST.txt
 
       - name: Upload collected dry-run artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: dry-run-artifacts
           path: collected
