@@ -93,27 +93,60 @@ temporarily with barrier markers:
 ## My Custom Command Formats Poorly
 
 This almost always means the command registry does not know the command's
-syntax yet.
+syntax yet. You can confirm this with `dump parse` — without a spec,
+every argument shows as flat `POSITIONAL` because the formatter has no
+way to tell keywords from values:
 
-Add a `commands:` entry to your config:
+```bash
+cmakefmt dump parse CMakeLists.txt
+```
+
+```text
+└─ FILE
+    └─ COMMAND  my_add_test
+        ├─ POSITIONAL  NAME
+        ├─ POSITIONAL  my_test
+        ├─ POSITIONAL  SOURCES
+        ├─ POSITIONAL  test.cc
+        ├─ POSITIONAL  LIBRARIES
+        └─ POSITIONAL  mylib
+```
+
+Add a `commands:` entry to your config to tell `cmakefmt` the structure:
 
 ```yaml
 commands:
-  my_custom_command:
-    pargs: 1
-    flags:
-      - QUIET
+  my_add_test:
     kwargs:
+      NAME:
+        nargs: 1
       SOURCES:
+        nargs: "+"
+      LIBRARIES:
         nargs: "+"
 ```
 
-Once `cmakefmt` understands the argument structure, it can produce
-keyword-aware, properly grouped output instead of flattening everything into a
-token stream.
+Run `dump parse` again to verify the spec is picked up — keywords are
+now recognized and arguments are grouped under them:
 
-If you only want layout or style tweaks for a command whose argument structure
-`cmakefmt` already understands, use `per_command_overrides:` instead.
+```text
+└─ FILE
+    └─ COMMAND  my_add_test
+        ├─ KEYWORD  NAME
+        │   └─ ARG  my_test
+        ├─ KEYWORD  SOURCES
+        │   └─ ARG  test.cc
+        └─ KEYWORD  LIBRARIES
+            └─ ARG  mylib
+```
+
+Once `cmakefmt` understands the argument structure, it can produce
+keyword-aware, properly grouped output instead of flattening everything
+into a token stream.
+
+If you only want layout or style tweaks for a command whose argument
+structure `cmakefmt` already understands, use `per_command_overrides:`
+instead.
 
 ## Stdin Formatting Ignores My Project Config
 
