@@ -445,7 +445,10 @@ fn compile_optional(name: &str, pattern: &str) -> Result<Option<Regex>, String> 
 pub(crate) struct CompiledPatterns {
     /// Compiled `literal_comment_pattern`.
     pub(crate) literal_comment: Option<Regex>,
-    /// Compiled `explicit_trailing_pattern`.
+    /// Compiled `explicit_trailing_pattern`. Currently unused by the
+    /// formatter (trailing comments are kept inline by width), but
+    /// retained for future use and config compatibility.
+    #[allow(dead_code)]
     pub(crate) explicit_trailing: Option<Regex>,
 }
 

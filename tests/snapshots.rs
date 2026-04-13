@@ -979,8 +979,7 @@ fn bracket_arguments_force_multiline_layout() {
     let formatted = format_source(src, &Config::default()).unwrap();
 
     insta::assert_snapshot!(formatted, @"
-    set(VAR
-        [==[
+    set(VAR [==[
     line one
     line two
     ]==])

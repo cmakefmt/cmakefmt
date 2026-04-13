@@ -810,7 +810,7 @@ fn write_packed_arguments(
     let indent_width = indent.chars().count();
     let mut current_width = 0usize;
 
-    for (index, argument) in arguments.iter().enumerate() {
+    for argument in arguments {
         match argument {
             Argument::InlineComment(comment) => {
                 let comment_lines = comment::format_comment_lines(
@@ -883,8 +883,6 @@ fn write_vertical_arguments(
     config: &Config,
     patterns: &CompiledPatterns,
 ) {
-    let trailing_re = patterns.explicit_trailing.as_ref();
-
     for argument in arguments {
         match argument {
             Argument::InlineComment(comment) => {
