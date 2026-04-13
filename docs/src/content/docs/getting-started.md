@@ -9,6 +9,8 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
+![cmakefmt demo](/cmakefmt.gif)
+
 `cmakefmt` is a fast, workflow-first formatter for CMake files. This page gets you from
 installation to a fully formatted repository in under a minute.
 
