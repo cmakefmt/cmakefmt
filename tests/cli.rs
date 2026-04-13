@@ -3740,3 +3740,104 @@ fn trailing_comment_on_command_preserved() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert_eq!(stdout.trim(), "set(FOO bar) # this is a trailing comment");
 }
+
+#[test]
+fn trailing_comment_does_not_force_vertical_layout() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    // Short enough to stay inline even with the comment
+    write_file(&file, "set(FOO bar) # short\n");
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // Should remain on one line — comment should not force wrapping
+    assert_eq!(
+        stdout.lines().count(),
+        1,
+        "comment should not force wrapping, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn trailing_comment_too_long_moves_to_own_line() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 40\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "target_link_libraries(\n  mylib\n  PUBLIC\n    dep1 # this comment is way too long to fit\n)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // Comment should NOT be on the same line as dep1
+    assert!(
+        !stdout.contains("dep1 # this comment"),
+        "comment should not stay inline when too long, got:\n{stdout}"
+    );
+    // dep1 should appear on its own line
+    assert!(
+        stdout.lines().any(|l| l.trim() == "dep1"),
+        "dep1 should be on its own line, got:\n{stdout}"
+    );
+    // The comment should appear on a separate line
+    assert!(
+        stdout
+            .lines()
+            .any(|l| l.trim().starts_with("# this comment")),
+        "comment should appear on its own line, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn multiple_inline_comments_each_stay_attached() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        concat!(
+            "add_library(\n",
+            "  mylib STATIC\n",
+            "  src/a.cpp # module A\n",
+            "  src/b.cpp # module B\n",
+            "  src/c.cpp # module C\n",
+            "  src/d.cpp # module D\n",
+            ")\n",
+        ),
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for (file_name, comment) in [
+        ("src/a.cpp", "# module A"),
+        ("src/b.cpp", "# module B"),
+        ("src/c.cpp", "# module C"),
+        ("src/d.cpp", "# module D"),
+    ] {
+        let pattern = format!("{file_name} {comment}");
+        assert!(
+            stdout.contains(&pattern),
+            "expected '{pattern}' to stay attached, got:\n{stdout}"
+        );
+    }
+}
+
+#[test]
+fn comment_on_if_condition_stays_inline() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "if(CONDITION) # check this\n  message(STATUS \"hello\")\nendif()\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("if(CONDITION) # check this"),
+        "comment on if should stay inline, got:\n{stdout}"
+    );
+}
