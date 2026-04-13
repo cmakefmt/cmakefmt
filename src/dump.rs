@@ -5,6 +5,7 @@
 use crate::formatter::{split_sections, HeaderKind};
 use crate::parser::ast;
 use crate::spec::registry::CommandRegistry;
+use crate::spec::KwargSpec;
 
 // ── ANSI helpers ────────────────────────────────────────────────────────────
 
@@ -345,32 +346,12 @@ fn render_parse_command(
                     color,
                     &format!("{}  {}", bold_cyan("KEYWORD", color), name),
                 );
-                let arg_total = section.arguments.len();
-                for (ai, arg) in section.arguments.iter().enumerate() {
-                    let a_conn = connector_for(ai, arg_total);
-                    let nested_prefix = format!("{child_prefix}{cp}");
-                    if arg.is_comment() {
-                        write_line(
-                            out,
-                            &nested_prefix,
-                            a_conn,
-                            color,
-                            &format!(
-                                "{}  {}",
-                                bold_cyan("INLINE_COMMENT", color),
-                                dim_green(arg.as_str(), color),
-                            ),
-                        );
-                    } else {
-                        write_line(
-                            out,
-                            &nested_prefix,
-                            a_conn,
-                            color,
-                            &format!("{}  {}", bold_cyan("ARG", color), arg.as_str()),
-                        );
-                    }
-                }
+                let nested_prefix = format!("{child_prefix}{cp}");
+                let kwarg_spec = form
+                    .kwargs
+                    .get(&name.to_ascii_uppercase())
+                    .or_else(|| form.kwargs.get(*name));
+                render_kwarg_children(out, &section.arguments, kwarg_spec, color, &nested_prefix);
             }
             (Some(name), Some(HeaderKind::Flag)) => {
                 child_idx += 1;
@@ -453,6 +434,81 @@ fn render_parse_command(
                 bold_cyan("TRAILING", color),
                 dim_green(tc.as_str(), color),
             ),
+        );
+    }
+}
+
+/// Render the children of a keyword section, recursively classifying nested
+/// keywords and flags from the `KwargSpec`.
+fn render_kwarg_children(
+    out: &mut String,
+    arguments: &[&ast::Argument],
+    kwarg_spec: Option<&KwargSpec>,
+    color: bool,
+    prefix: &str,
+) {
+    let total = arguments.len();
+    for (i, arg) in arguments.iter().enumerate() {
+        let conn = connector_for(i, total);
+        let cp = child_prefix_for(i, total);
+
+        if arg.is_comment() {
+            write_line(
+                out,
+                prefix,
+                conn,
+                color,
+                &format!(
+                    "{}  {}",
+                    bold_cyan("INLINE_COMMENT", color),
+                    dim_green(arg.as_str(), color),
+                ),
+            );
+            continue;
+        }
+
+        let token = arg.as_str();
+        let upper = token.to_ascii_uppercase();
+
+        // Check if this token is a nested keyword.
+        let nested_kw =
+            kwarg_spec.and_then(|ks| ks.kwargs.get(&upper).or_else(|| ks.kwargs.get(token)));
+        if let Some(nested_spec) = nested_kw {
+            write_line(
+                out,
+                prefix,
+                conn,
+                color,
+                &format!("{}  {}", bold_cyan("KEYWORD", color), token),
+            );
+            // Collect remaining args that belong to this nested keyword.
+            let nested_prefix = format!("{prefix}{cp}");
+            let remaining = &arguments[i + 1..];
+            render_kwarg_children(out, remaining, Some(nested_spec), color, &nested_prefix);
+            return; // Remaining args consumed by the nested keyword.
+        }
+
+        // Check if this token is a flag.
+        let is_flag =
+            kwarg_spec.is_some_and(|ks| ks.flags.contains(&upper) || ks.flags.contains(token));
+        if is_flag {
+            write_line(
+                out,
+                prefix,
+                conn,
+                color,
+                &format!("{}  {}", bold_cyan("FLAG", color), token),
+            );
+            continue;
+        }
+
+        // Plain positional argument under this keyword.
+        write_line(
+            out,
+            prefix,
+            conn,
+            color,
+            &format!("{}  {}", bold_cyan("ARG", color), token),
         );
     }
 }
