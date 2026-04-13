@@ -604,6 +604,30 @@ mod tests {
     }
 
     #[test]
+    fn empty_continuation_line_merges_without_adding_text() {
+        let src = "set(FOO bar) # first\n             #\n             # third\n";
+        let f = parse_ok(src);
+        assert_eq!(f.statements.len(), 1);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        // Empty continuation (#) adds nothing; third line appends.
+        assert_eq!(
+            cmd.trailing_comment,
+            Some(Comment::Line("# first third".to_owned()))
+        );
+    }
+
+    #[test]
+    fn off_by_one_column_prevents_merge() {
+        // Trailing # is at column 14; continuation # is at column 15 — should NOT merge.
+        let src = "set(FOO bar) # trailing\n              # off by one\n";
+        let f = parse_ok(src);
+        assert_eq!(f.statements.len(), 2);
+        assert!(matches!(f.statements[1], Statement::Comment(_)));
+    }
+
+    #[test]
     fn file_without_final_newline() {
         let f = parse_ok("project(MyProject)");
         assert_eq!(f.statements.len(), 1);

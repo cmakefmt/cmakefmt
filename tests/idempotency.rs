@@ -74,6 +74,12 @@ fn formatter_is_idempotent_and_preserves_parse_tree() {
 }
 
 fn normalize_semantics(mut file: File, registry: &CommandRegistry) -> File {
+    // Strip standalone comments and blank lines — they have no CMake semantic
+    // meaning and may change structure when the formatter reflows them.
+    // Keep in sync with src/main.rs::normalize_semantics.
+    file.statements
+        .retain(|s| !matches!(s, Statement::Comment(_) | Statement::BlankLines(_)));
+
     for statement in &mut file.statements {
         match statement {
             Statement::Command(command) => {
@@ -83,8 +89,7 @@ fn normalize_semantics(mut file: File, registry: &CommandRegistry) -> File {
                 normalize_keyword_args(command, registry);
             }
             Statement::TemplatePlaceholder(value) => normalize_line_endings(value),
-            Statement::Comment(comment) => normalize_comment(comment),
-            Statement::BlankLines(_) => {}
+            Statement::Comment(_) | Statement::BlankLines(_) => unreachable!(),
         }
     }
 
@@ -92,23 +97,19 @@ fn normalize_semantics(mut file: File, registry: &CommandRegistry) -> File {
 }
 
 fn normalize_command_literals(command: &mut cmakefmt::parser::ast::CommandInvocation) {
-    if let Some(comment) = &mut command.trailing_comment {
-        normalize_comment(comment);
-    }
+    // Strip trailing and inline comments — they have no CMake semantic meaning.
+    // Keep in sync with src/main.rs::normalize_command_literals.
+    command.trailing_comment = None;
+    command
+        .arguments
+        .retain(|a| !matches!(a, Argument::InlineComment(_)));
 
     for argument in &mut command.arguments {
         match argument {
             Argument::Bracket(bracket) => normalize_line_endings(&mut bracket.raw),
             Argument::Quoted(value) | Argument::Unquoted(value) => normalize_line_endings(value),
-            Argument::InlineComment(comment) => normalize_comment(comment),
+            Argument::InlineComment(_) => unreachable!(),
         }
-    }
-}
-
-fn normalize_comment(comment: &mut cmakefmt::parser::ast::Comment) {
-    match comment {
-        cmakefmt::parser::ast::Comment::Line(value)
-        | cmakefmt::parser::ast::Comment::Bracket(value) => normalize_line_endings(value),
     }
 }
 

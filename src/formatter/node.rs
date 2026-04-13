@@ -284,11 +284,15 @@ fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: boo
         let should_sort = if spec_sortable {
             true
         } else if autosort {
-            // Heuristic: all arguments are simple unquoted tokens (no
-            // variables, generator expressions, or quoted strings).
-            section.arguments.iter().all(|arg| {
-                matches!(arg, Argument::Unquoted(s) if !s.contains("${") && !s.contains("$<") && !s.contains("$ENV{") && !s.contains("$CACHE{"))
-            })
+            // Heuristic: all non-comment arguments are simple unquoted tokens
+            // (no variables, generator expressions, or quoted strings).
+            section
+                .arguments
+                .iter()
+                .filter(|arg| !arg.is_comment())
+                .all(|arg| {
+                    matches!(arg, Argument::Unquoted(s) if !s.contains("${") && !s.contains("$<") && !s.contains("$ENV{") && !s.contains("$CACHE{"))
+                })
         } else {
             false
         };
