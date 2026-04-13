@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+tests/fixtures/**/*.cmake text eol=lf
+tests/fixtures/**/*.txt text eol=lf
