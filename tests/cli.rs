@@ -3552,6 +3552,68 @@ fn set_cached_inline_keyword_args() {
 }
 
 #[test]
+fn set_cached_value_stays_on_first_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "if(TRUE)\n  set(CMAKE_BUILD_TYPE \"Release\" CACHE STRING \"Build mode.\" FORCE)\nendif()\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("set(CMAKE_BUILD_TYPE \"Release\""),
+        "value should stay on same line as variable name, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn set_cached_force_is_flag_not_positional() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    // FORCE should be at the CACHE keyword level, not nested deeper
+    write_file(
+        &file,
+        "set(CMAKE_BUILD_TYPE \"Release\" CACHE STRING \"Build mode for performance but this description is very long and will cause wrapping.\" FORCE)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // FORCE should appear on a line indented at the same level as STRING
+    let force_line = stdout.lines().find(|l| l.trim() == "FORCE");
+    let string_line = stdout
+        .lines()
+        .find(|l| l.trim_start().starts_with("STRING"));
+    if let (Some(f), Some(s)) = (force_line, string_line) {
+        let force_indent = f.len() - f.trim_start().len();
+        let string_indent = s.len() - s.trim_start().len();
+        assert_eq!(
+            force_indent, string_indent,
+            "FORCE and STRING should be at the same indent level, got:\n{stdout}"
+        );
+    }
+}
+
+#[test]
+fn set_cached_inline_when_fits() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "set(FOO \"default\" CACHE STRING \"A description\" FORCE)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(
+        stdout.trim(),
+        "set(FOO \"default\" CACHE STRING \"A description\" FORCE)",
+        "should stay inline when it fits"
+    );
+}
+
+#[test]
 fn set_long_cached_wraps_keyword_nested() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");

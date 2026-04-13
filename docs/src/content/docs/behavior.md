@@ -238,21 +238,22 @@ set(HEADERS
 
 ### Cached variables
 
-`CACHE STRING "description"` stays inline when it fits:
+When everything fits, it stays on one or two lines:
 
 ```cmake
-set(FOO "default"
-    CACHE STRING "A description" FORCE)
+set(FOO "default" CACHE STRING "A description" FORCE)
+
+set(CMAKE_BUILD_TYPE "Release"
+    CACHE STRING "Build mode for performance." FORCE)
 ```
 
-When the cache metadata is too long, it wraps with its arguments nested:
+When the `CACHE` section is too long, it wraps with `STRING` and the
+description nested under `CACHE`:
 
 ```cmake
-set(CMAKE_BUILD_TYPE
-    "Release"
+set(CMAKE_BUILD_TYPE "Release"
     CACHE
-      STRING
-      "A very long description that doesn't fit on one line"
+      STRING "A very long description that doesn't fit on one line"
       FORCE)
 ```
 
