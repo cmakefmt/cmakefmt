@@ -4320,3 +4320,61 @@ fn set_very_long_variable_name_exceeding_line_width() {
         "variable name should stay on set( line regardless of width, got:\n{stdout}"
     );
 }
+
+// ── dump parse ──────────────────────────────────────────────────────────────
+
+#[test]
+fn dump_parse_prints_spec_resolved_tree() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "target_link_libraries(mylib PUBLIC dep1 dep2)\n");
+
+    let output = cmakefmt()
+        .args(["--color", "never", "dump", "parse", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "dump parse should succeed, stderr: {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    assert!(
+        stdout.contains("KEYWORD  PUBLIC"),
+        "should classify PUBLIC as KEYWORD, got:\n{stdout}",
+    );
+    assert!(
+        stdout.contains("POSITIONAL  mylib"),
+        "should classify mylib as POSITIONAL, got:\n{stdout}",
+    );
+}
+
+#[test]
+fn dump_parse_groups_flow_control() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "if(WIN32)\n  message(STATUS \"hello\")\nendif()\n");
+
+    let output = cmakefmt()
+        .args(["--color", "never", "dump", "parse", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "dump parse should succeed, stderr: {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    assert!(
+        stdout.contains("FLOW"),
+        "should contain a FLOW node for if/endif block, got:\n{stdout}",
+    );
+    assert!(
+        stdout.contains("BODY"),
+        "should contain a BODY node inside the flow block, got:\n{stdout}",
+    );
+}

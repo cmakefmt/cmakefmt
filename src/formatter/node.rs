@@ -16,16 +16,16 @@ use crate::spec::{CommandForm, CommandSpec, NArgs};
 use super::DebugLog;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum HeaderKind {
+pub(crate) enum HeaderKind {
     Keyword,
     Flag,
 }
 
 #[derive(Debug)]
-struct Section<'a> {
-    header: Option<&'a str>,
-    header_kind: Option<HeaderKind>,
-    arguments: Vec<&'a Argument>,
+pub(crate) struct Section<'a> {
+    pub(crate) header: Option<&'a str>,
+    pub(crate) header_kind: Option<HeaderKind>,
+    pub(crate) arguments: Vec<&'a Argument>,
 }
 
 /// Format a single parsed command invocation.
@@ -196,7 +196,7 @@ fn format_name(command: &CommandInvocation, cmd_config: &CommandConfig<'_>) -> S
     }
 }
 
-fn split_sections<'a>(
+pub(crate) fn split_sections<'a>(
     command: &'a CommandInvocation,
     form: &'a CommandForm,
 ) -> Result<Vec<Section<'a>>> {

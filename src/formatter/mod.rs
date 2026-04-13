@@ -10,6 +10,8 @@
 pub(crate) mod comment;
 pub(crate) mod node;
 
+pub(crate) use node::{split_sections, HeaderKind};
+
 use std::path::PathBuf;
 
 use crate::config::{Config, LineEnding};

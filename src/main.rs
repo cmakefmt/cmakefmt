@@ -1537,7 +1537,21 @@ fn run_dump_subcommand(
             Ok(EXIT_OK)
         }
         DumpAction::Parse => {
-            eprintln!("dump parse: not yet implemented");
+            let source = match file {
+                Some(path) => std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?,
+                None => {
+                    let mut buf = String::new();
+                    io::Read::read_to_string(&mut io::stdin(), &mut buf)
+                        .map_err(cmakefmt::Error::Io)?;
+                    buf
+                }
+            };
+            let config_path = file.filter(|p| p.as_os_str() != "-");
+            let (_, registry, _) = build_context(cli, config_path)?;
+            let parsed = parser::parse(&source)?;
+            let color = should_colorize_stdout(cli.color);
+            let tree = cmakefmt::dump::dump_parse(&parsed, &registry, color);
+            print!("{tree}");
             Ok(EXIT_OK)
         }
     }
