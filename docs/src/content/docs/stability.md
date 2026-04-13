@@ -1,6 +1,6 @@
 ---
 title: Stability Contract
-description: What cmakefmt guarantees across releases, and how changes are introduced.
+description: What `cmakefmt` guarantees across releases, and how changes are introduced.
 ---
 
 <!--
@@ -9,7 +9,7 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-This page defines what constitutes a breaking change in cmakefmt, how
+This page defines what constitutes a breaking change in `cmakefmt`, how
 new formatting behaviors are introduced, and what you can rely on across
 releases.
 
@@ -30,7 +30,7 @@ After 1.0, the following are part of the stability contract:
 |--------|-------------|
 | **New config options** | Any minor release. New options always have defaults that preserve existing behavior. |
 | **New CLI flags** | Any minor release. |
-| **Bug fixes that change output** | Any release. If cmakefmt produces incorrect output (violates its own layout rules), the fix ships as a bug fix, not a formatting change. |
+| **Bug fixes that change output** | Any release. If `cmakefmt` produces incorrect output (violates its own layout rules), the fix ships as a bug fix, not a formatting change. |
 | **Formatting improvements** | Introduced behind `--preview` / `[experimental]` first, promoted to stable in a subsequent minor release. |
 | **Removing a deprecated flag** | At least one minor release with a deprecation warning before removal. |
 
@@ -52,7 +52,7 @@ output changes across minor releases.
 
 ## Versioning policy
 
-cmakefmt follows [Semantic Versioning](https://semver.org/):
+`cmakefmt` follows [Semantic Versioning](https://semver.org/):
 
 - **Patch** (`0.10.1`): bug fixes, documentation, CI changes. No
   formatting output changes.
@@ -84,6 +84,6 @@ If you believe a release broke the stability contract, please
 [open an issue](https://github.com/cmakefmt/cmakefmt/issues/new)
 with:
 
-- The cmakefmt version that changed behavior
+- The `cmakefmt` version that changed behavior
 - The input file and config
 - The expected vs actual output

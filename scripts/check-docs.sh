@@ -48,7 +48,6 @@ required_files=(
   "docs/src/content/docs/badge.md"
   "docs/src/content/docs/users.md"
   "docs/src/content/docs/stability.md"
-  "docs/src/content/docs/one-oh-checklist.md"
 )
 
 for file in "${required_files[@]}"; do

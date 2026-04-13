@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: Install cmakefmt and format your first CMake file in under a minute.
+description: Install `cmakefmt` and format your first CMake file in under a minute.
 ---
 
 <!--

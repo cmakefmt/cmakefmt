@@ -1,6 +1,6 @@
 ---
 title: Architecture
-description: How cmakefmt works — a guide for contributors.
+description: How `cmakefmt` works — a guide for contributors.
 ---
 
 <!--
@@ -180,7 +180,7 @@ It handles:
 
 - `textDocument/formatting` -- whole-file formatting
 - `textDocument/rangeFormatting` -- range formatting (backed by `--lines`)
-- `textDocument/codeAction` -- "Disable cmakefmt for selection" action
+- `textDocument/codeAction` -- "Disable `cmakefmt` for selection" action
 - `workspace/didChangeConfiguration` -- live config reload
 
 The entry point is `lsp::run()`, which uses the `lsp-server` crate for the

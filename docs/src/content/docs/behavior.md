@@ -208,7 +208,7 @@ Do **not** use it to describe a command's argument structure. That belongs in
 ## `set()` Formatting
 
 `set()` is the most common CMake command and has several distinct usage
-patterns. cmakefmt handles each one with a specific rule: **the variable
+patterns. `cmakefmt` handles each one with a specific rule: **the variable
 name always stays on the `set(` line**. This is enabled by the built-in
 `wrap_after_first_arg` layout hint on the `set` command spec.
 
@@ -288,6 +288,48 @@ set(
 
 See [`wrap_after_first_arg`](/config/#wrap_after_first_arg) in the
 config reference for the full option documentation.
+
+## Trailing Comments
+
+Inline comments (``# text``) that follow an argument stay attached to
+that argument when the command wraps. The comment and argument are kept
+on the same line as long as the combined width fits within `line_width`.
+
+```cmake
+target_link_libraries(
+  mylib
+  PUBLIC
+    dep1 # first dependency
+    dep2 # second dependency
+    dep3 # third dependency)
+```
+
+If a trailing comment would exceed `line_width`, it moves to its own
+line at the current indentation:
+
+```cmake
+target_link_libraries(
+  mylib
+  PUBLIC
+    some_very_long_dependency_name
+    # This comment is too long to fit after the argument
+    another_dependency)
+```
+
+### Comments on commands
+
+A comment after the closing parenthesis is preserved as-is:
+
+```cmake
+set(FOO bar) # explanation of this variable
+```
+
+### Comments do not force wrapping
+
+The presence of a trailing comment does not by itself force a command
+into a vertical layout. The layout decision (inline, hanging, or
+vertical) is made independently based on line width and wrapping
+thresholds. The comment is then rendered within the chosen layout.
 
 ## Range Formatting
 

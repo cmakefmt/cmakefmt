@@ -9,7 +9,7 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-The cmakefmt WASM build powers the
+The `cmakefmt` WASM build powers the
 [browser playground](https://cmakefmt.dev/playground/) and can be used
 in any JavaScript or TypeScript project.
 

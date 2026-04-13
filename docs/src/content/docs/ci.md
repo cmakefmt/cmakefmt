@@ -1,6 +1,6 @@
 ---
 title: CI Integration
-description: Run cmakefmt in GitHub Actions, GitLab CI, and pre-commit.
+description: Run `cmakefmt` in GitHub Actions, GitLab CI, and pre-commit.
 ---
 
 <!--

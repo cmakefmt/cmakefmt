@@ -1,5 +1,5 @@
 ---
-title: Migration from cmake-format
+title: Migration from `cmake-format`
 ---
 
 <!--
@@ -69,7 +69,7 @@ See [Formatter Behavior](/behavior/) for the pragma syntax.
 
 ## Key Differences
 
-| Area | cmake-format | cmakefmt |
+| Area | cmake-format | `cmakefmt` |
 | --- | --- | --- |
 | Default command casing | Preserves source casing | Lowercases commands |
 | Indentation key | `tab_width` | `tab_size` |
@@ -83,7 +83,7 @@ These cmake-format options are intentionally not carried forward:
 
 | Option / Section | Reason |
 | --- | --- |
-| `[lint]` (all 17 options) | cmakefmt is a formatter only; linting is a separate concern |
+| `[lint]` (all 17 options) | `cmakefmt` is a formatter only; linting is a separate concern |
 | `[encode]` (`emit_byteorder_mark`, `input_encoding`, `output_encoding`) | UTF-8 is the modern default |
 | `[parse].vartags` / `[parse].proptags` | Used only for linting |
 | `[format].layout_passes` | Covered by `always_wrap` and per-command overrides |

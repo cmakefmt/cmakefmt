@@ -1,6 +1,6 @@
 ---
 title: Comparison
-description: How cmakefmt compares to cmake-format and gersemi.
+description: How `cmakefmt` compares to cmake-format and gersemi.
 ---
 
 <!--
@@ -14,7 +14,7 @@ There are three CMake formatters in active use: `cmakefmt`, `cmake-format`, and
 
 ## At a Glance
 
-| Feature | cmakefmt | cmake-format | gersemi |
+| Feature | `cmakefmt` | cmake-format | gersemi |
 |---|---|---|---|
 | Language | Rust | Python | Python |
 | Install | Homebrew, cargo, binary | pip | pip |

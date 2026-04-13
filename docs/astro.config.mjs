@@ -123,7 +123,6 @@ export default defineConfig({
             { label: "Library API", slug: "api" },
             { label: "Architecture", slug: "architecture" },
             { label: "Stability Contract", slug: "stability" },
-            { label: "1.0 Checklist", slug: "one-oh-checklist" },
             { label: "Contributing", slug: "contributing" },
             { label: "Changelog", slug: "changelog" },
           ],

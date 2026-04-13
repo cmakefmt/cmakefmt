@@ -43,25 +43,6 @@ reviewing changes:
 cargo install --path .
 ```
 
-### Pre-built Binaries
-
-Native binaries for Linux, macOS, and Windows are published to
-[GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest).
-Download the `.zip` / `.tar.gz` for your platform, extract, and place the
-binary on your `PATH`.
-
-### Build From Source
-
-```bash
-git clone https://github.com/cmakefmt/cmakefmt
-cd cmakefmt
-cargo build --release
-./target/release/cmakefmt --help
-```
-
-This is the right path if you are actively developing `cmakefmt`, reviewing
-changes, or benchmarking local modifications.
-
 ### pip
 
 ```bash
@@ -84,6 +65,25 @@ conda install -c conda-forge cmakefmt
 
 Built from source by conda-forge. Future version bumps are handled
 automatically by the conda-forge autotick bot.
+
+### Pre-built Binaries
+
+Native binaries for Linux, macOS, and Windows are published to
+[GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest).
+Download the `.zip` / `.tar.gz` for your platform, extract, and place the
+binary on your `PATH`.
+
+### Build From Source
+
+```bash
+git clone https://github.com/cmakefmt/cmakefmt
+cd cmakefmt
+cargo build --release
+./target/release/cmakefmt --help
+```
+
+This is the right path if you are actively developing `cmakefmt`, reviewing
+changes, or benchmarking local modifications.
 
 ## Support Levels
 

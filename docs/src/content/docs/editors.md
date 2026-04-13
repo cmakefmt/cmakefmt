@@ -1,6 +1,6 @@
 ---
 title: Editor Integration
-description: Use cmakefmt as the formatter in VS Code, Neovim, Helix, Zed, and Emacs.
+description: Use `cmakefmt` as the formatter in VS Code, Neovim, Helix, Zed, and Emacs.
 ---
 
 <!--

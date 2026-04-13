@@ -24,7 +24,11 @@ This project follows a simple changelog discipline:
 - `sortable` annotation for keyword specs — mark sections whose arguments
   may be sorted when `enable_sort` is enabled
 - Stability contract published at `cmakefmt.dev/stability/`
-- 1.0 checklist published at `cmakefmt.dev/one-oh-checklist/`
+- `wrap_after_first_arg` config option and layout hint — keep the first
+  positional argument on the command line when wrapping. Enabled by default
+  for `set()` so the variable name always stays on the `set(` line.
+- Trailing inline comments now stay attached to their preceding argument
+  in both packed and vertical layouts
 - Weekly scheduled benchmark CI for consistent performance tracking
 - Large-file LSP timeout test (2000 lines, < 1 second)
 
