@@ -66,6 +66,8 @@ path = [
   "tests/fixtures/real_world/SOURCES.md",
   "tests/fixtures/real_world/monorepo_root.cmake",
   "tests/snapshots/README.md",
+  "demo/*.tape",
+  "docs/public/*.gif",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Copyright 2026 Puneet Matharu"

@@ -23,6 +23,10 @@
 
 **A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
+![cmakefmt demo]([demo/cmakefmt.gif](https://cmakefmt.dev/cmakefmt.gif))
+
+The above demo was generated with [VHS](https://github.com/charmbracelet/vhs).
+
 `cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format) tool with a
 single native binary. Same spirit. No Python.
 

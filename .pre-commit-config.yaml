@@ -11,6 +11,7 @@ repos:
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: check-added-large-files
+        exclude: ^docs/public/cmakefmt\.gif$
       - id: check-json
       - id: check-yaml
         exclude: ^packaging/conda-forge/meta\.yaml$
