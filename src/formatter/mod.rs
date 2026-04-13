@@ -158,16 +158,29 @@ fn format_parsed_file_with_debug(
                 )?);
 
                 if let Some(trailing) = &command.trailing_comment {
+                    let comment_indent_width = output
+                        .rsplit('\n')
+                        .next()
+                        .unwrap_or_default()
+                        .chars()
+                        .count()
+                        + 1;
                     let comment_lines = comment::format_comment_lines(
                         trailing,
                         config,
                         &patterns,
-                        0,
+                        comment_indent_width,
                         config.line_width,
                     );
-                    if let Some(first) = comment_lines.first() {
+                    if let Some((first, rest)) = comment_lines.split_first() {
                         output.push(' ');
                         output.push_str(first);
+                        let continuation_indent = " ".repeat(comment_indent_width);
+                        for line in rest {
+                            output.push('\n');
+                            output.push_str(&continuation_indent);
+                            output.push_str(line);
+                        }
                     }
                 }
 

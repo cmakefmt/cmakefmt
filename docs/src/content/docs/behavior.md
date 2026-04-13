@@ -316,12 +316,46 @@ target_link_libraries(
     another_dependency)
 ```
 
+### Comments on the `set()` variable name
+
+When `wrap_after_first_arg` keeps the variable name on the `set(` line,
+an inline comment stays attached:
+
+```cmake
+set(foobarbaz # explanation of this variable
+    value_one value_two value_three)
+```
+
+### Comments in `CACHE` sections
+
+A comment within a `CACHE` section is reflowed (when `enable_markup`
+is on) and placed on its own line:
+
+```cmake
+set(CMAKE_BUILD_TYPE "Release"
+    CACHE
+      STRING
+      # This comment explains why we default to Release
+      # and spans multiple lines after reflow.
+      "Build mode for performance." FORCE)
+```
+
 ### Comments on commands
 
-A comment after the closing parenthesis is preserved as-is:
+A short comment after the closing parenthesis stays inline:
 
 ```cmake
 set(FOO bar) # explanation of this variable
+```
+
+### Comments on control flow
+
+Comments on `if()`, `foreach()`, and similar stay inline:
+
+```cmake
+if(CONDITION) # check this before proceeding
+  message(STATUS "hello")
+endif()
 ```
 
 ### Comments do not force wrapping
@@ -330,6 +364,27 @@ The presence of a trailing comment does not by itself force a command
 into a vertical layout. The layout decision (inline, hanging, or
 vertical) is made independently based on line width and wrapping
 thresholds. The comment is then rendered within the chosen layout.
+
+### Comment reflow
+
+When `markup.enable_markup` is `true` (the default), long comments
+that exceed `line_width` are reflowed with continuation lines aligned
+to the `#`:
+
+```cmake
+# Before:
+set(FOO bar) # this trailing comment is deliberately long enough to exceed the default line width and demonstrate reflow clearly
+
+# After (enable_markup: true):
+set(FOO bar) # this trailing comment is deliberately long enough to
+             # exceed the default line width and demonstrate reflow
+             # clearly
+
+# After (enable_markup: false):
+set(FOO bar) # this trailing comment is deliberately long enough to exceed the default line width and demonstrate reflow clearly
+```
+
+To disable comment reflow entirely, set `markup.enable_markup: false`.
 
 ## Range Formatting
 

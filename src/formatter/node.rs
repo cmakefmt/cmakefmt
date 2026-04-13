@@ -507,7 +507,7 @@ fn format_command_vertical(
         // the same line as the first arg before wrapping to a new line.
         // Skip inline packing if the line already ends with a comment.
         let remaining = &first_section.arguments[consumed..];
-        let line_has_comment = output.lines().last().map_or(false, |l| l.contains('#'));
+        let line_has_comment = output.lines().last().is_some_and(|l| l.contains('#'));
 
         if !remaining.is_empty() {
             let line_so_far = output.lines().last().map_or(0, |l| l.len());

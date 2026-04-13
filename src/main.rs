@@ -3948,6 +3948,15 @@ fn normalize_semantics(
     mut file: parser::ast::File,
     registry: &CommandRegistry,
 ) -> parser::ast::File {
+    // Strip standalone comments and blank lines — they have no CMake semantic
+    // meaning and may change structure when the formatter reflows them.
+    file.statements.retain(|s| {
+        !matches!(
+            s,
+            parser::ast::Statement::Comment(_) | parser::ast::Statement::BlankLines(_)
+        )
+    });
+
     for statement in &mut file.statements {
         match statement {
             parser::ast::Statement::Command(command) => {
@@ -3957,8 +3966,9 @@ fn normalize_semantics(
                 normalize_keyword_args(command, registry);
             }
             parser::ast::Statement::TemplatePlaceholder(value) => normalize_line_endings(value),
-            parser::ast::Statement::Comment(comment) => normalize_comment(comment),
-            parser::ast::Statement::BlankLines(_) => {}
+            parser::ast::Statement::Comment(_) | parser::ast::Statement::BlankLines(_) => {
+                unreachable!()
+            }
         }
     }
 
@@ -3966,9 +3976,11 @@ fn normalize_semantics(
 }
 
 fn normalize_command_literals(command: &mut parser::ast::CommandInvocation) {
-    if let Some(comment) = &mut command.trailing_comment {
-        normalize_comment(comment);
-    }
+    // Strip trailing and inline comments — they have no CMake semantic meaning.
+    command.trailing_comment = None;
+    command
+        .arguments
+        .retain(|a| !matches!(a, parser::ast::Argument::InlineComment(_)));
 
     for argument in &mut command.arguments {
         match argument {
@@ -3976,15 +3988,7 @@ fn normalize_command_literals(command: &mut parser::ast::CommandInvocation) {
             parser::ast::Argument::Quoted(value) | parser::ast::Argument::Unquoted(value) => {
                 normalize_line_endings(value)
             }
-            parser::ast::Argument::InlineComment(comment) => normalize_comment(comment),
-        }
-    }
-}
-
-fn normalize_comment(comment: &mut parser::ast::Comment) {
-    match comment {
-        parser::ast::Comment::Line(value) | parser::ast::Comment::Bracket(value) => {
-            normalize_line_endings(value)
+            parser::ast::Argument::InlineComment(_) => unreachable!(),
         }
     }
 }

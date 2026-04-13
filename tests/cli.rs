@@ -3804,6 +3804,54 @@ fn trailing_comment_on_command_preserved() {
 }
 
 #[test]
+fn long_trailing_comment_on_command_reflows_at_eof_without_input_newline() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(
+        &dir.path().join(".cmakefmt.yaml"),
+        "format:\n  line_width: 60\n",
+    );
+    let file = dir.path().join("CMakeLists.txt");
+    let input = "set(FOO bar) # this is a very long trailing comment that should wrap cleanly even when the input file ends immediately after the comment";
+    std::fs::write(&file, input).unwrap();
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert!(
+        stdout.ends_with('\n'),
+        "formatter should normalize EOF to end with a newline, got:\n{stdout:?}"
+    );
+    assert!(
+        lines.len() >= 2,
+        "long trailing comment should wrap across multiple lines, got:\n{stdout}"
+    );
+
+    let mut reconstructed = String::new();
+    for (index, line) in lines.iter().enumerate() {
+        let prefix = if index == 0 {
+            "set(FOO bar) # "
+        } else {
+            "             # "
+        };
+        assert!(
+            line.starts_with(prefix),
+            "wrapped trailing comment line should start with {prefix:?}, got:\n{stdout}"
+        );
+        if !reconstructed.is_empty() {
+            reconstructed.push(' ');
+        }
+        reconstructed.push_str(line.strip_prefix(prefix).unwrap());
+    }
+
+    assert_eq!(
+        reconstructed,
+        "this is a very long trailing comment that should wrap cleanly even when the input file ends immediately after the comment"
+    );
+}
+
+#[test]
 fn trailing_comment_does_not_force_vertical_layout() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");

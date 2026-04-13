@@ -53,6 +53,7 @@ fn build_file(pair: pest::iterators::Pair<'_, Rule>) -> Result<File> {
     let mut statements = Vec::with_capacity(items.size_hint().0);
     let mut pending_blank_lines = 0usize;
     let mut line_has_content = false;
+    let mut trailing_comment_col: Option<usize> = None;
 
     for item in items {
         collect_file_item(
@@ -60,6 +61,7 @@ fn build_file(pair: pest::iterators::Pair<'_, Rule>) -> Result<File> {
             &mut statements,
             &mut pending_blank_lines,
             &mut line_has_content,
+            &mut trailing_comment_col,
         )?;
     }
 
@@ -72,27 +74,37 @@ fn collect_file_item(
     statements: &mut Vec<Statement>,
     pending_blank_lines: &mut usize,
     line_has_content: &mut bool,
+    trailing_comment_col: &mut Option<usize>,
 ) -> Result<()> {
     match item.as_rule() {
         Rule::file_item => {
             for inner in item.into_inner() {
-                collect_file_item(inner, statements, pending_blank_lines, line_has_content)?;
+                collect_file_item(
+                    inner,
+                    statements,
+                    pending_blank_lines,
+                    line_has_content,
+                    trailing_comment_col,
+                )?;
             }
             Ok(())
         }
         Rule::command_invocation => {
+            *trailing_comment_col = None;
             flush_blank_lines(statements, pending_blank_lines);
             statements.push(Statement::Command(build_command(item)?));
             *line_has_content = true;
             Ok(())
         }
         Rule::template_placeholder => {
+            *trailing_comment_col = None;
             flush_blank_lines(statements, pending_blank_lines);
             statements.push(Statement::TemplatePlaceholder(item.as_str().to_owned()));
             *line_has_content = true;
             Ok(())
         }
         Rule::bracket_comment => {
+            *trailing_comment_col = None;
             let comment = Comment::Bracket(item.as_str().to_owned());
             if let Some(comment) = attach_trailing_comment(statements, comment, *line_has_content) {
                 flush_blank_lines(statements, pending_blank_lines);
@@ -102,11 +114,33 @@ fn collect_file_item(
             Ok(())
         }
         Rule::line_comment => {
+            let col = item.as_span().start_pos().line_col().1;
             let comment = Comment::Line(item.as_str().to_owned());
-            if let Some(comment) = attach_trailing_comment(statements, comment, *line_has_content) {
+
+            if *line_has_content {
+                // Same line as previous content — try attaching as trailing comment.
+                if let Some(comment) =
+                    attach_trailing_comment(statements, comment, *line_has_content)
+                {
+                    flush_blank_lines(statements, pending_blank_lines);
+                    statements.push(Statement::Comment(comment));
+                    *trailing_comment_col = None;
+                } else {
+                    // Attached — record column for continuation detection.
+                    *trailing_comment_col = Some(col);
+                }
+            } else if *pending_blank_lines == 0
+                && *trailing_comment_col == Some(col)
+                && merge_trailing_comment_continuation(statements, &comment)
+            {
+                // Aligned continuation merged into trailing comment.
+            } else {
+                // Standalone comment.
+                *trailing_comment_col = None;
                 flush_blank_lines(statements, pending_blank_lines);
                 statements.push(Statement::Comment(comment));
             }
+
             *line_has_content = true;
             Ok(())
         }
@@ -114,6 +148,7 @@ fn collect_file_item(
             if *line_has_content {
                 *line_has_content = false;
             } else {
+                *trailing_comment_col = None;
                 *pending_blank_lines += 1;
             }
             Ok(())
@@ -141,6 +176,31 @@ fn attach_trailing_comment(
         }
         _ => Some(comment),
     }
+}
+
+/// When a line comment on its own line is column-aligned with the `#` of a
+/// preceding trailing comment (no blank lines in between), merge the
+/// continuation body into the trailing comment text so the formatter can
+/// re-wrap them as a single unit.
+fn merge_trailing_comment_continuation(
+    statements: &mut [Statement],
+    continuation: &Comment,
+) -> bool {
+    let Some(Statement::Command(command)) = statements.last_mut() else {
+        return false;
+    };
+    let Some(Comment::Line(ref mut text)) = command.trailing_comment else {
+        return false;
+    };
+    let Comment::Line(cont_text) = continuation else {
+        return false;
+    };
+    let body = cont_text.trim_start_matches('#').trim_start();
+    if !body.is_empty() {
+        text.push(' ');
+        text.push_str(body);
+    }
+    true
 }
 
 fn flush_blank_lines(statements: &mut Vec<Statement>, pending_blank_lines: &mut usize) {
@@ -491,6 +551,56 @@ mod tests {
             panic!()
         };
         assert!(matches!(cmd.trailing_comment, Some(Comment::Line(_))));
+    }
+
+    #[test]
+    fn aligned_continuation_merges_into_trailing_comment() {
+        let src = "set(FOO bar) # first line\n             # second line\n";
+        let f = parse_ok(src);
+        assert_eq!(f.statements.len(), 1);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(
+            cmd.trailing_comment,
+            Some(Comment::Line("# first line second line".to_owned()))
+        );
+    }
+
+    #[test]
+    fn multiple_aligned_continuations_merge() {
+        let src = "set(FOO bar) # line one\n             # line two\n             # line three\n";
+        let f = parse_ok(src);
+        assert_eq!(f.statements.len(), 1);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(
+            cmd.trailing_comment,
+            Some(Comment::Line("# line one line two line three".to_owned()))
+        );
+    }
+
+    #[test]
+    fn non_aligned_comment_stays_standalone() {
+        let src = "set(FOO bar) # trailing\n# standalone\n";
+        let f = parse_ok(src);
+        assert_eq!(f.statements.len(), 2);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(
+            cmd.trailing_comment,
+            Some(Comment::Line("# trailing".to_owned()))
+        );
+        assert!(matches!(f.statements[1], Statement::Comment(_)));
+    }
+
+    #[test]
+    fn blank_line_prevents_continuation_merge() {
+        let src = "set(FOO bar) # trailing\n\n             # not a continuation\n";
+        let f = parse_ok(src);
+        assert_eq!(f.statements.len(), 3); // Command, BlankLines, Comment
     }
 
     #[test]
