@@ -131,6 +131,7 @@ export default defineConfig({
           label: "Development",
           items: [
             { label: "Library API", slug: "api" },
+            { label: "WASM API", slug: "wasm-api" },
             { label: "Architecture", slug: "architecture" },
             { label: "Stability Contract", slug: "stability" },
             { label: "Contributing", slug: "contributing" },
