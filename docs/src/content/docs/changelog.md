@@ -43,6 +43,13 @@ This project follows a simple changelog discipline:
   the trailing comment on re-parse, ensuring idempotent round-trips.
 - Remaining positional arguments are packed inline after the first argument
   when they fit within `line_width`, avoiding unnecessary vertical layout
+- `cmakefmt dump ast` subcommand — print the raw parser AST as a
+  colored Unicode box-drawing tree for debugging parser behavior
+- `cmakefmt dump parse` subcommand — print a spec-resolved parse tree
+  showing keyword/flag/positional grouping and flow-control nesting.
+  Nested keyword specs are resolved recursively (e.g. `FORCE` shows as
+  `FLAG` under `CACHE`).
+- Demo GIF on the README and Getting Started page
 - Weekly scheduled benchmark CI for consistent performance tracking
 - Large-file LSP timeout test (2000 lines, < 1 second)
 
