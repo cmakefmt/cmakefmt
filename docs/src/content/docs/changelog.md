@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.0.0 — 2026-04-14
+
 ### Added
 
 - `--list-unknown-commands` flag — parse files and report commands that
