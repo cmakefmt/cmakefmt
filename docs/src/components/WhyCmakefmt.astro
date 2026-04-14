@@ -54,7 +54,7 @@
     </p>
   </div>
 
-  <div class="why-card">
+  <div class="why-card why-card-extra">
     <span class="why-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="4" width="18" height="12" rx="2"></rect>
@@ -71,7 +71,7 @@
     </p>
   </div>
 
-  <div class="why-card">
+  <div class="why-card why-card-extra">
     <span class="why-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"></path>
@@ -86,7 +86,7 @@
     </p>
   </div>
 
-  <div class="why-card">
+  <div class="why-card why-card-extra">
     <span class="why-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 3l4 4-4 4"></path>
@@ -103,6 +103,10 @@
     </p>
   </div>
 </div>
+
+<button class="why-expand-btn not-content" data-why-expand aria-expanded="false">
+  <span class="why-expand-label">See all features ↓</span>
+</button>
 
 <style>
   .why-grid {
@@ -186,4 +190,70 @@
   .why-desc strong {
     color: var(--sl-color-text-accent);
   }
+
+  /* Mobile: hide cards 4-6 behind a toggle */
+  @media (max-width: 35.999rem) {
+    .why-card-extra {
+      display: none;
+    }
+
+    .why-grid[data-expanded] .why-card-extra {
+      display: flex;
+    }
+  }
+
+  /* Desktop: always show all cards, hide the button */
+  @media (min-width: 36rem) {
+    .why-card-extra {
+      display: flex;
+    }
+  }
+
+  .why-expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 22%, transparent);
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--sl-color-gray-6) 50%, transparent);
+    color: var(--sl-color-text-accent);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+
+  .why-expand-btn:hover {
+    border-color: color-mix(in srgb, var(--sl-color-accent) 35%, transparent);
+    background: color-mix(in srgb, var(--sl-color-accent) 8%, transparent);
+  }
+
+  @media (min-width: 36rem) {
+    .why-expand-btn {
+      display: none;
+    }
+  }
 </style>
+
+<script>
+  document.querySelectorAll("[data-why-expand]").forEach((btn) => {
+    if (!(btn instanceof HTMLButtonElement)) return;
+
+    btn.addEventListener("click", () => {
+      const grid = btn.previousElementSibling;
+      if (!grid || !grid.classList.contains("why-grid")) return;
+
+      const expanded = grid.hasAttribute("data-expanded");
+      grid.toggleAttribute("data-expanded", !expanded);
+      btn.setAttribute("aria-expanded", String(!expanded));
+
+      const label = btn.querySelector(".why-expand-label");
+      if (label) {
+        label.textContent = expanded ? "See all features ↓" : "Show fewer ↑";
+      }
+    });
+  });
+</script>
