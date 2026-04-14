@@ -23,7 +23,7 @@
 
 **A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.**
 
-![cmakefmt demo]([demo/cmakefmt.gif](https://cmakefmt.dev/cmakefmt.gif))
+![cmakefmt demo](https://cmakefmt.dev/cmakefmt.gif)
 
 The above demo was generated with [VHS](https://github.com/charmbracelet/vhs).
 
