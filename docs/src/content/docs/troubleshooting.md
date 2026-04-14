@@ -93,9 +93,21 @@ temporarily with barrier markers:
 ## My Custom Command Formats Poorly
 
 This almost always means the command registry does not know the command's
-syntax yet. You can confirm this with `dump parse` — without a spec,
-every argument shows as flat `POSITIONAL` because the formatter has no
-way to tell keywords from values:
+syntax yet. Without a spec, every token is an undifferentiated positional
+argument and gets placed one per line:
+
+```text
+my_add_test(
+  NAME
+  my_test
+  SOURCES
+  test.cc
+  LIBRARIES
+  mylib)
+```
+
+You can confirm this with `dump parse` — every argument shows as flat
+`POSITIONAL`:
 
 ```bash
 cmakefmt dump parse CMakeLists.txt
@@ -126,8 +138,18 @@ commands:
         nargs: "+"
 ```
 
-Run `dump parse` again to verify the spec is picked up — keywords are
-now recognized and arguments are grouped under them:
+Now the formatter knows which tokens are keywords and groups their
+arguments together:
+
+```text
+my_add_test(
+  NAME my_test
+  SOURCES test.cc
+  LIBRARIES mylib)
+```
+
+You can verify the spec is picked up with `dump parse` — keywords are
+recognized and arguments are grouped under them:
 
 ```text
 └─ FILE
@@ -139,10 +161,6 @@ now recognized and arguments are grouped under them:
         └─ KEYWORD  LIBRARIES
             └─ ARG  mylib
 ```
-
-Once `cmakefmt` understands the argument structure, it can produce
-keyword-aware, properly grouped output instead of flattening everything
-into a token stream.
 
 If you only want layout or style tweaks for a command whose argument
 structure `cmakefmt` already understands, use `per_command_overrides:`
