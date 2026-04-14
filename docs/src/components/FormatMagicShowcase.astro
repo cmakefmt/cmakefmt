@@ -137,182 +137,263 @@ endif()
 </section>
 
 <script>
+  const AUTO_PLAY_DELAY_MS = 1000;
+  const PANEL_READY_TIMEOUT_MS = 5000;
+  const RESET_DELAY_MS = 70;
+  const showcaseScriptStart = performance.now();
+
   type MagicMovePanel = HTMLElement & {
     animateToStep?: (step: number) => Promise<void> | void;
     currentStep?: number;
-    renderer?: { replace: (step: unknown) => void };
+    renderer?: { replace: (step: unknown) => void; isFirstRender?: boolean };
     steps?: unknown[];
   };
 
-  function initFormatShowcases() {
-    const showcases = document.querySelectorAll("[data-format-showcase]");
+  const waitForMagicMovePanel = async (panel: MagicMovePanel) => {
+    await customElements.whenDefined("magic-move");
 
-    for (const showcase of showcases) {
-      if (showcase instanceof HTMLElement && showcase.dataset.magicMoveReady === "true") {
-        continue;
-      }
-
-      const panel = showcase.querySelector("magic-move") as MagicMovePanel | null;
-      const replay = showcase.querySelector("[data-format-showcase-replay]");
-      const tabs = showcase.querySelectorAll("[data-format-showcase-tab]");
+    const deadline = performance.now() + PANEL_READY_TIMEOUT_MS;
+    while (performance.now() < deadline) {
       if (
-        !(panel instanceof HTMLElement) ||
-        !(replay instanceof HTMLButtonElement) ||
-        tabs.length === 0
+        typeof panel.animateToStep === "function" &&
+        Array.isArray(panel.steps) &&
+        panel.steps.length > 0 &&
+        typeof panel.renderer?.replace === "function"
       ) {
-        continue;
+        return true;
       }
 
-      if (showcase instanceof HTMLElement) {
-        showcase.dataset.magicMoveReady = "true";
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+    }
+
+    return false;
+  };
+
+  const prepareMagicMovePanel = (panel: MagicMovePanel) => {
+    const steps = panel.steps;
+    const renderer = panel.renderer;
+    if (!Array.isArray(steps) || steps.length === 0 || !renderer) {
+      return;
+    }
+
+    // Prime the initial frame so the first visible autoplay matches replay.
+    renderer.replace(steps[0]);
+    renderer.isFirstRender = false;
+    panel.currentStep = 0;
+  };
+
+  const initFormatShowcase = (showcase: Element) => {
+    if (!(showcase instanceof HTMLElement) || showcase.dataset.formatShowcaseInitialized === "true") {
+      return;
+    }
+
+    const panel = showcase.querySelector("magic-move") as MagicMovePanel | null;
+    const replay = showcase.querySelector("[data-format-showcase-replay]");
+    const tabs = showcase.querySelectorAll("[data-format-showcase-tab]");
+    if (
+      !(panel instanceof HTMLElement) ||
+      !(replay instanceof HTMLButtonElement) ||
+      tabs.length === 0
+    ) {
+      return;
+    }
+
+    showcase.dataset.formatShowcaseInitialized = "true";
+
+    let currentStep = 0;
+    let hasAutoPlayed = false;
+    let hasUserInteracted = false;
+    let isAnimating = false;
+    let autoPlayTimeout: number | null = null;
+    let isPanelPrepared = false;
+    let panelReadyPromise: Promise<boolean> | null = null;
+
+    const clearAutoPlayTimeout = () => {
+      if (autoPlayTimeout !== null) {
+        window.clearTimeout(autoPlayTimeout);
+        autoPlayTimeout = null;
       }
+    };
 
-      let currentStep = 0;
-      let hasAutoPlayed = false;
-      let hasUserInteracted = false;
-      let isAnimating = false;
-      let autoPlayTimeout: number | null = null;
+    const updateControls = (step: number) => {
+      currentStep = step;
 
-      const clearAutoPlayTimeout = () => {
-        if (autoPlayTimeout !== null) {
-          window.clearTimeout(autoPlayTimeout);
-          autoPlayTimeout = null;
-        }
-      };
-
-      const updateControls = (step: number) => {
-        currentStep = step;
-
-        tabs.forEach((tab) => {
-          if (!(tab instanceof HTMLButtonElement)) {
-            return;
-          }
-
-          const isActive = Number(tab.dataset.step) === step;
-          tab.classList.toggle("is-active", isActive);
-          tab.setAttribute("aria-selected", String(isActive));
-          tab.tabIndex = isActive ? 0 : -1;
-        });
-
-        const action = step === 0 ? "play" : "replay";
-        replay.dataset.action = action;
-        replay.setAttribute(
-          "aria-label",
-          action === "play" ? "Play formatter animation" : "Replay formatter animation",
-        );
-      };
-
-      const setAnimating = (animating: boolean) => {
-        isAnimating = animating;
-
-        if (showcase instanceof HTMLElement) {
-          showcase.dataset.animating = String(animating);
-        }
-
-        tabs.forEach((tab) => {
-          if (tab instanceof HTMLButtonElement) {
-            tab.disabled = animating;
-          }
-        });
-
-        replay.disabled = animating;
-      };
-
-      panel.addEventListener("magic-move:step", ((event: CustomEvent) => {
-        updateControls(Number(event.detail?.step ?? 0));
-      }) as EventListener);
-
-      const jumpToStep = (step: number) => {
-        if (currentStep === step) {
-          return;
-        }
-
-        const steps = panel.steps;
-        const renderer = panel.renderer;
-        if (!steps || !renderer || step < 0 || step >= steps.length) {
-          return;
-        }
-
-        renderer.replace(steps[step]);
-        panel.currentStep = step;
-        updateControls(step);
-      };
-
-      const animateToStep = async (step: number) => {
-        if (currentStep === step || typeof panel.animateToStep !== "function") {
-          return;
-        }
-
-        await panel.animateToStep(step);
-      };
-
-      const animateForward = async () => {
-        if (isAnimating) {
-          return;
-        }
-
-        setAnimating(true);
-
-        try {
-          if (currentStep > 0) {
-            jumpToStep(0);
-            await new Promise((resolve) => window.setTimeout(resolve, 120));
-            await animateToStep(1);
-            return;
-          }
-
-          await animateToStep(1);
-        } finally {
-          setAnimating(false);
-        }
-      };
-
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (!entry?.isIntersecting || hasAutoPlayed) {
-            return;
-          }
-
-          hasAutoPlayed = true;
-          autoPlayTimeout = window.setTimeout(() => {
-            autoPlayTimeout = null;
-
-            if (hasUserInteracted) {
-              return;
-            }
-
-            void animateForward();
-          }, 1000);
-          observer.disconnect();
-        },
-        { threshold: 0.55 },
-      );
-
-      observer.observe(panel);
-      replay.addEventListener("click", () => {
-        hasUserInteracted = true;
-        clearAutoPlayTimeout();
-        void animateForward();
-      });
       tabs.forEach((tab) => {
         if (!(tab instanceof HTMLButtonElement)) {
           return;
         }
 
-        tab.addEventListener("click", () => {
-          if (isAnimating) {
+        const isActive = Number(tab.dataset.step) === step;
+        tab.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+        tab.tabIndex = isActive ? 0 : -1;
+      });
+
+      const action = step === 0 ? "play" : "replay";
+      replay.dataset.action = action;
+      replay.setAttribute(
+        "aria-label",
+        action === "play" ? "Play formatter animation" : "Replay formatter animation",
+      );
+    };
+
+    const ensurePanelReady = async () => {
+      if (isPanelPrepared) {
+        return true;
+      }
+
+      if (!panelReadyPromise) {
+        panelReadyPromise = (async () => {
+          const isReady = await waitForMagicMovePanel(panel);
+          if (!isReady) {
+            panelReadyPromise = null;
+            return false;
+          }
+
+          prepareMagicMovePanel(panel);
+          isPanelPrepared = true;
+          currentStep = typeof panel.currentStep === "number" ? panel.currentStep : 0;
+          updateControls(Math.max(currentStep, 0));
+          return true;
+        })();
+      }
+
+      return panelReadyPromise;
+    };
+
+    const setAnimating = (animating: boolean) => {
+      isAnimating = animating;
+      showcase.dataset.animating = String(animating);
+
+      tabs.forEach((tab) => {
+        if (tab instanceof HTMLButtonElement) {
+          tab.disabled = animating;
+        }
+      });
+
+      replay.disabled = animating;
+    };
+
+    const animateToStep = async (step: number) => {
+      if (!(await ensurePanelReady())) {
+        return;
+      }
+
+      if (currentStep === step || typeof panel.animateToStep !== "function") {
+        return;
+      }
+
+      await panel.animateToStep(step);
+      currentStep = typeof panel.currentStep === "number" ? panel.currentStep : step;
+    };
+
+    const snapToStep = async (step: number) => {
+      if (!(await ensurePanelReady())) {
+        return false;
+      }
+
+      const steps = panel.steps;
+      const renderer = panel.renderer;
+      if (!Array.isArray(steps) || !renderer || step < 0 || step >= steps.length) {
+        return false;
+      }
+
+      renderer.replace(steps[step]);
+      panel.currentStep = step;
+      updateControls(step);
+      return true;
+    };
+
+    const animateForward = async () => {
+      if (isAnimating || !(await ensurePanelReady())) {
+        return;
+      }
+
+      setAnimating(true);
+
+      try {
+        if (currentStep > 0) {
+          await snapToStep(0);
+          await new Promise((resolve) => window.setTimeout(resolve, RESET_DELAY_MS));
+        }
+
+        await animateToStep(1);
+      } finally {
+        setAnimating(false);
+      }
+    };
+
+    panel.addEventListener("magic-move:step", ((event: CustomEvent) => {
+      updateControls(Number(event.detail?.step ?? 0));
+    }) as EventListener);
+
+    // Disable the library's built-in click trigger so only autoplay and the
+    // explicit replay button start the animation.
+    panel.addEventListener(
+      "click",
+      (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      },
+      { capture: true },
+    );
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting || hasAutoPlayed) {
+          return;
+        }
+
+        hasAutoPlayed = true;
+        const elapsedSinceInit = performance.now() - showcaseScriptStart;
+        const remainingDelay = Math.max(0, AUTO_PLAY_DELAY_MS - elapsedSinceInit);
+        autoPlayTimeout = window.setTimeout(() => {
+          autoPlayTimeout = null;
+
+          if (hasUserInteracted) {
             return;
           }
 
-          hasUserInteracted = true;
-          clearAutoPlayTimeout();
-          jumpToStep(Number(tab.dataset.step ?? "0"));
-        });
+          void animateForward();
+        }, remainingDelay);
+        observer.disconnect();
+      },
+      { threshold: 0.2 },
+    );
+
+    observer.observe(panel);
+
+    replay.addEventListener("click", () => {
+      hasUserInteracted = true;
+      clearAutoPlayTimeout();
+      void animateForward();
+    });
+
+    tabs.forEach((tab) => {
+      if (!(tab instanceof HTMLButtonElement)) {
+        return;
+      }
+
+      tab.addEventListener("click", () => {
+        if (isAnimating) {
+          return;
+        }
+
+        hasUserInteracted = true;
+        clearAutoPlayTimeout();
+        void snapToStep(Number(tab.dataset.step ?? "0"));
       });
-      updateControls(0);
-      setAnimating(false);
-    }
-  }
+    });
+
+    updateControls(0);
+    setAnimating(false);
+  };
+
+  const initFormatShowcases = () => {
+    document.querySelectorAll("[data-format-showcase]").forEach((showcase) => {
+      initFormatShowcase(showcase);
+    });
+  };
 
   initFormatShowcases();
   document.addEventListener("astro:page-load", initFormatShowcases);
