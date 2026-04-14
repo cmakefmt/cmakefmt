@@ -105,6 +105,7 @@ export default defineConfig({
             { label: "CLI Reference", slug: "cli" },
             { label: "Config Reference", slug: "config" },
             { label: "Formatter Behavior", slug: "behavior" },
+            { label: "Glossary", slug: "glossary" },
           ],
         },
         {
@@ -116,9 +117,14 @@ export default defineConfig({
             { label: "CI Integration", slug: "ci" },
             { label: "Performance", slug: "performance" },
             { label: "Comparison", slug: "comparison" },
+            { label: "Troubleshooting", slug: "troubleshooting" },
+          ],
+        },
+        {
+          label: "Community",
+          items: [
             { label: "Badge", slug: "badge" },
             { label: "Projects using cmakefmt", slug: "users" },
-            { label: "Troubleshooting", slug: "troubleshooting" },
           ],
         },
         {
