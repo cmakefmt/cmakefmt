@@ -5,7 +5,7 @@ template: splash
 hero:
   tagline: >-
     Automatically format your CMake files — consistent style, zero manual effort.
-    <br><span style="font-size: 0.9rem; font-style: italic; opacity: 0.7;">Same spirit as <code>cmake-format</code>. No Python.</span>
+    <br><span style="font-size: 0.9rem; font-style: italic; opacity: 0.7;"><code>cmake-format</code>, reimagined.</span>
   actions:
     - text: Documentation
       link: /getting-started/
@@ -27,15 +27,21 @@ import DotGrid from '../../components/DotGrid.astro';
 import FormatMagicShowcase from '../../components/FormatMagicShowcase.astro';
 import HeroReveal from '../../components/HeroReveal.astro';
 import SpeedCounter from '../../components/SpeedCounter.astro';
-import FeatureShowcase from '../../components/FeatureShowcase.astro';
 import InstallCmd from '../../components/InstallCmd.astro';
 import ScrollReveal from '../../components/ScrollReveal.astro';
+import WhyCmakefmt from '../../components/WhyCmakefmt.astro';
 
 <DotGrid />
 <HeroReveal />
 <ScrollReveal />
 
+## Why `cmakefmt`?
+
+<WhyCmakefmt />
+
 ## Quick Start
+
+<div style="margin-top: 1.75rem"></div>
 
 <InstallCmd label="macOS" cmd="brew install cmakefmt/cmakefmt/cmakefmt" />
 <InstallCmd label="Cargo" cmd="cargo install cmakefmt-rust" />
@@ -43,14 +49,16 @@ import ScrollReveal from '../../components/ScrollReveal.astro';
 
 Or download a pre-built binary from [GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest).
 
-Then:
+Then — just point it at your project. It discovers all CMake files
+recursively and formats them in parallel:
 
 ```bash
-cmakefmt --version
-cmakefmt init                             # generate a starter config
-cmakefmt --check .                        # dry-run: show what would change
-cmakefmt --in-place .                     # apply formatting
-cmakefmt --staged --check                 # pre-commit: format only staged files
+cmakefmt init                      # generate a starter .cmakefmt.yaml
+cmakefmt .                         # preview formatted output
+cmakefmt --diff .                  # view a unified diff of what would change
+cmakefmt --in-place .              # apply formatting across the whole project
+cmakefmt --staged --check          # use in pre-commit hooks
+cmakefmt --path-regex 'src/.*' .   # format CMake files only under src/
 ```
 
 ## Before and After
@@ -65,9 +73,9 @@ cmakefmt --staged --check                 # pre-commit: format only staged files
 
 See [Performance](/performance/) for the full methodology and benchmark environment.
 
-## Features
-
-<FeatureShowcase />
+<div class="not-content alert alert-info alert-outline" style="justify-content: center; font-size: 1.0625rem; margin: 2rem 0;">
+  Want to try it without installing? <a href="/playground/" style="font-weight: 600; text-decoration: underline; color: var(--sl-color-text-accent);">Open the Playground →</a>
+</div>
 
 ## Where to Go Next
 
@@ -75,17 +83,14 @@ See [Performance](/performance/) for the full methodology and benchmark environm
 
 <CardGrid>
   <LinkCard title="Getting Started" href="/getting-started/" description="Install and run your first format in under a minute." />
-  <LinkCard title="CLI Reference" href="/cli/" description="Every flag, every output mode, every exit code." />
-  <LinkCard title="Config Reference" href="/config/" description="Tune line width, casing, wrapping, and custom command specs." />
-  <LinkCard title="Formatter Behavior" href="/behavior/" description="What cmakefmt preserves, what it changes, and why." />
+  <LinkCard title="Formatting Cookbook" href="/cookbook/" description="Common formatting goals with before/after examples." />
 </CardGrid>
 
 <p class="reading-path-heading">Migrating from cmake-format?</p>
 
 <CardGrid>
-  <LinkCard title="Migration Guide" href="/migration/" description="Incremental rollout strategy with zero risk." />
-  <LinkCard title="Config Reference" href="/config/" description="Key name changes, new defaults, and the conversion tool." />
-  <LinkCard title="Troubleshooting" href="/troubleshooting/" description="Common issues and how to diagnose them quickly." />
+  <LinkCard title="Migration Guide" href="/migration/" description="Switch from cmake-format with one command." />
+  <LinkCard title="CLI Reference" href="/cli/" description="Every flag, every output mode, every exit code." />
 </CardGrid>
 
 <p class="reading-path-heading">Embedding cmakefmt as a library?</p>
