@@ -110,6 +110,7 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
+            { label: "Formatting Cookbook", slug: "cookbook" },
             { label: "Migration from cmake-format", slug: "migration" },
             { label: "Editor Integration", slug: "editors" },
             { label: "CI Integration", slug: "ci" },

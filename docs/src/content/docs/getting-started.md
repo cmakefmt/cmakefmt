@@ -56,7 +56,17 @@ cmakefmt config dump > .cmakefmt.yaml
 
 YAML is the recommended format. Open the file and adjust options like
 `format.line_width` and `style.command_case` to match your project's style.
-See the [Config Reference](/config/) for every available option.
+
+<div class="not-content alert alert-info alert-outline" style="margin: 1.25rem 0;">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-5 w-5 shrink-0 stroke-current">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+  </svg>
+  <span>
+    See the <a href="/config/" style="text-decoration: underline;">Config Reference</a> for every available option, or
+    browse the <a href="/cookbook/" style="text-decoration: underline;">Formatting Cookbook</a> for quick before/after
+    examples of common formatting goals.
+  </span>
+</div>
 
 ## Your First Run
 
