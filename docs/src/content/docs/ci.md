@@ -23,7 +23,7 @@ runner OS and adds it to `PATH`. No Rust toolchain required.
 Fail the workflow if any CMake files are not formatted:
 
 ```yaml
-- uses: cmakefmt/cmakefmt-action@v1
+- uses: cmakefmt/cmakefmt-action@v2
   with:
     args: '--check .'
 ```
@@ -34,7 +34,7 @@ Format files in-place. Combine with a commit step to push the changes
 automatically:
 
 ```yaml
-- uses: cmakefmt/cmakefmt-action@v1
+- uses: cmakefmt/cmakefmt-action@v2
   with:
     args: '--in-place .'
 ```
@@ -44,7 +44,7 @@ automatically:
 Install `cmakefmt` without running it, then call it yourself with custom flags:
 
 ```yaml
-- uses: cmakefmt/cmakefmt-action@v1
+- uses: cmakefmt/cmakefmt-action@v2
   with:
     args: ''
 
@@ -54,7 +54,7 @@ Install `cmakefmt` without running it, then call it yourself with custom flags:
 ### Pin a specific version
 
 ```yaml
-- uses: cmakefmt/cmakefmt-action@v1
+- uses: cmakefmt/cmakefmt-action@v2
   with:
     version: '0.2.0'
     args: '--check .'
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-      - uses: cmakefmt/cmakefmt-action@v1
+      - uses: cmakefmt/cmakefmt-action@v2
         with:
           args: '--check .'
 ```

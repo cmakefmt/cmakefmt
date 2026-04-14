@@ -73,7 +73,7 @@ cmakefmt --required-version 1.0.0 --check .
 Or pin the action version:
 
 ```yaml
-- uses: cmakefmt/cmakefmt-action@v1
+- uses: cmakefmt/cmakefmt-action@v2
   with:
     version: '1.0.0'
 ```

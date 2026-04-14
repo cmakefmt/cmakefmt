@@ -55,7 +55,7 @@ Yes. Define command specs in the `commands:` section of your
 
 Yes. Use `cmakefmt --check .` (exits non-zero if files need formatting) or
 the official [GitHub Action](https://github.com/marketplace/actions/cmakefmt)
-(`cmakefmt/cmakefmt-action@v1`).
+(`cmakefmt/cmakefmt-action@v2`).
 
 ## Is there an LSP server?
 

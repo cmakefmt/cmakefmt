@@ -25,7 +25,7 @@ There are three CMake formatters in active use: `cmakefmt`, `cmake-format`, and
 | Diff output | `--diff` | — | — |
 | Stdin formatting | `--stdin-path <path> -` | via `--` | via stdin |
 | Range formatting | `--lines` | — | — |
-| GitHub Action | `cmakefmt/cmakefmt-action@v1` | — | — |
+| GitHub Action | `cmakefmt/cmakefmt-action@v2` | — | — |
 | CI annotations | `--report-format github` | — | — |
 | VS Code extension | First-party | First-party | — |
 | Active maintenance | Yes | Minimal | Yes |
