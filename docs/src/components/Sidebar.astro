@@ -1,0 +1,198 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import SidebarSublist from '@astrojs/starlight/components/SidebarSublist.astro';
+import { Icon } from '@astrojs/starlight/components';
+
+import TableOfContentsList from '../../node_modules/@astrojs/starlight/components-internals/TableOfContents/TableOfContentsList.astro';
+
+const { sidebar, toc } = Astro.locals.starlightRoute;
+---
+
+{
+  toc?.items?.length ? (
+    <details class="mobile-toc-nav md:sl-hidden">
+      <summary class="mobile-toc-summary">
+        <span>On this page</span>
+        <Icon name="right-caret" class="mobile-toc-caret" size="1rem" />
+      </summary>
+      <div class="mobile-toc-dropdown">
+        <TableOfContentsList toc={toc.items} isMobile />
+      </div>
+    </details>
+  ) : null
+}
+
+<SidebarPersister>
+  <SidebarSublist sublist={sidebar} />
+</SidebarPersister>
+
+<script>
+  document.querySelectorAll('.mobile-toc-nav a').forEach((anchor) => {
+    anchor.addEventListener('click', () => {
+      const group = anchor.closest('.mobile-toc-nav');
+      if (group instanceof HTMLDetailsElement) group.open = false;
+      document.body.removeAttribute('data-mobile-menu-expanded');
+    });
+  });
+</script>
+
+<style>
+  @layer starlight.core {
+    .mobile-toc-nav {
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--sl-color-gray-6);
+    }
+
+    .mobile-toc-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      list-style: none;
+      cursor: pointer;
+      border-radius: 0.5rem;
+      padding: 0.6rem 0.5rem;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--sl-color-white);
+      background: color-mix(in srgb, var(--sl-color-gray-6) 82%, transparent);
+    }
+
+    .mobile-toc-summary::-webkit-details-marker,
+    .mobile-toc-summary::marker {
+      display: none;
+    }
+
+    .mobile-toc-caret {
+      flex: 0 0 auto;
+      transition: transform 0.2s ease;
+    }
+
+    .mobile-toc-nav[open] .mobile-toc-caret {
+      transform: rotate(90deg);
+    }
+
+    .mobile-toc-dropdown {
+      margin-top: 0.5rem;
+      overflow: hidden;
+      border-radius: 0.5rem;
+      border: 1px solid var(--sl-color-gray-6);
+      background: color-mix(in srgb, var(--sl-color-black) 45%, transparent);
+    }
+
+    @media (max-width: 49.999rem) {
+      :global(sl-sidebar-state-persist > ul.top-level),
+      :global(.sidebar-content > ul.top-level) {
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+      }
+
+      :global(sl-sidebar-state-persist > ul.top-level > li > a.large),
+      :global(.sidebar-content > ul.top-level > li > a.large) {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: 'title icon';
+        align-items: center;
+        column-gap: 0.8rem;
+        border-radius: 0.75rem;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid color-mix(in srgb, var(--sl-color-accent) 36%, transparent);
+        background:
+          linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--sl-color-accent) 18%, var(--sl-color-gray-6)),
+            color-mix(in srgb, var(--sl-color-accent) 8%, var(--sl-color-black))
+          );
+        box-shadow:
+          inset 0 1px color-mix(in srgb, white 10%, transparent),
+          0 10px 20px color-mix(in srgb, black 14%, transparent);
+      }
+
+      :global(sl-sidebar-state-persist > ul.top-level > li > a.large::after),
+      :global(.sidebar-content > ul.top-level > li > a.large::after) {
+        content: '';
+        grid-area: icon;
+        width: 1rem;
+        height: 1rem;
+        background-color: var(--sl-color-text-accent);
+        opacity: 0.95;
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 12a1 1 0 0 1 1-1h7.59l-3.3-3.29a1.003 1.003 0 1 1 1.42-1.42l5 5a1 1 0 0 1 .21.33a1 1 0 0 1 0 .76a1 1 0 0 1-.21.33l-5 5a1 1 0 1 1-1.42-1.42l3.3-3.29H8a1 1 0 0 1-1-1Z'/%3E%3C/svg%3E");
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 12a1 1 0 0 1 1-1h7.59l-3.3-3.29a1.003 1.003 0 1 1 1.42-1.42l5 5a1 1 0 0 1 .21.33a1 1 0 0 1 0 .76a1 1 0 0 1-.21.33l-5 5a1 1 0 1 1-1.42-1.42l3.3-3.29H8a1 1 0 0 1-1-1Z'/%3E%3C/svg%3E");
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+      }
+
+      :global(sl-sidebar-state-persist > ul.top-level > li > a.large > span),
+      :global(.sidebar-content > ul.top-level > li > a.large > span) {
+        grid-area: title;
+        min-width: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.2;
+        color: var(--sl-color-white);
+      }
+
+      :global(sl-sidebar-state-persist > ul.top-level > li > a.large:hover),
+      :global(sl-sidebar-state-persist > ul.top-level > li > a.large:focus),
+      :global(.sidebar-content > ul.top-level > li > a.large:hover),
+      :global(.sidebar-content > ul.top-level > li > a.large:focus) {
+        border-color: color-mix(in srgb, var(--sl-color-accent) 48%, transparent);
+        background:
+          linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--sl-color-accent) 24%, var(--sl-color-gray-6)),
+            color-mix(in srgb, var(--sl-color-accent) 12%, var(--sl-color-black))
+          );
+      }
+
+      :global(sl-sidebar-state-persist > ul.top-level > li > a.large[aria-current='page']),
+      :global(.sidebar-content > ul.top-level > li > a.large[aria-current='page']) {
+        border-color: transparent;
+        box-shadow:
+          inset 0 1px color-mix(in srgb, white 8%, transparent),
+          0 8px 18px color-mix(in srgb, black 16%, transparent);
+      }
+
+      :global([data-theme='dark'] sl-sidebar-state-persist > ul.top-level > li > a.large),
+      :global([data-theme='dark'] .sidebar-content > ul.top-level > li > a.large) {
+        border-color: color-mix(in srgb, var(--sl-color-accent) 62%, transparent);
+        background:
+          linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--sl-color-accent) 28%, var(--sl-color-black)),
+            color-mix(in srgb, var(--sl-color-accent) 16%, var(--sl-color-black))
+          );
+        box-shadow:
+          inset 0 1px color-mix(in srgb, white 14%, transparent),
+          0 12px 22px color-mix(in srgb, black 28%, transparent),
+          0 0 0 1px color-mix(in srgb, var(--sl-color-accent) 16%, transparent);
+      }
+
+      :global([data-theme='dark'] sl-sidebar-state-persist > ul.top-level > li > a.large::after),
+      :global([data-theme='dark'] .sidebar-content > ul.top-level > li > a.large::after) {
+        background-color: color-mix(in srgb, var(--sl-color-accent-high) 85%, white);
+      }
+
+      :global([data-theme='dark'] sl-sidebar-state-persist > ul.top-level > li > a.large:hover),
+      :global([data-theme='dark'] sl-sidebar-state-persist > ul.top-level > li > a.large:focus),
+      :global([data-theme='dark'] .sidebar-content > ul.top-level > li > a.large:hover),
+      :global([data-theme='dark'] .sidebar-content > ul.top-level > li > a.large:focus) {
+        border-color: color-mix(in srgb, var(--sl-color-accent-high) 58%, white 10%);
+        background:
+          linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--sl-color-accent) 34%, var(--sl-color-black)),
+            color-mix(in srgb, var(--sl-color-accent) 20%, var(--sl-color-black))
+          );
+      }
+    }
+  }
+</style>

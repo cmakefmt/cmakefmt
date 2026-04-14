@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 ---
 
-<div class="chart-wrapper">
+<div class="chart-wrapper" data-benchmark-comparison-chart>
   <div class="chart-controls">
     <label class="toggle-label" title="Switch y-axis scale">
       <span class="scale-label">Linear</span>
@@ -73,17 +73,11 @@
     };
   }
 
-  const canvas = document.getElementById("benchmark-comparison-chart") as HTMLCanvasElement;
-  const toggle = document.getElementById("scale-toggle") as HTMLInputElement;
-
-  let chart: Chart | null = null;
-  let logScale = false;
-
-  function buildChart() {
+  function buildChart(canvas: HTMLCanvasElement, logScale: boolean) {
     const c = colors();
-    if (chart) chart.destroy();
+    Chart.getChart(canvas)?.destroy();
 
-    chart = new Chart(canvas, {
+    new Chart(canvas, {
       type: "bar",
       data: {
         labels: DATA.map((d) => d.label),
@@ -185,16 +179,43 @@
     });
   }
 
-  toggle.addEventListener("change", () => {
-    logScale = toggle.checked;
-    buildChart();
-  });
+  function initBenchmarkComparisonCharts() {
+    document.querySelectorAll("[data-benchmark-comparison-chart]").forEach((wrapper) => {
+      if (!(wrapper instanceof HTMLDivElement)) {
+        return;
+      }
 
-  buildChart();
+      const canvas = wrapper.querySelector("#benchmark-comparison-chart");
+      const toggle = wrapper.querySelector("#scale-toggle");
+      if (!(canvas instanceof HTMLCanvasElement) || !(toggle instanceof HTMLInputElement)) {
+        return;
+      }
 
-  // Re-render when the theme toggles
-  const observer = new MutationObserver(() => buildChart());
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      if (toggle.dataset.chartBound !== "true") {
+        toggle.addEventListener("change", () => initBenchmarkComparisonCharts());
+        toggle.dataset.chartBound = "true";
+      }
+
+      buildChart(canvas, toggle.checked);
+    });
+  }
+
+  const benchmarkComparisonWindow = window as Window & {
+    __benchmarkComparisonChartsRegistered?: boolean;
+  };
+
+  if (!benchmarkComparisonWindow.__benchmarkComparisonChartsRegistered) {
+    benchmarkComparisonWindow.__benchmarkComparisonChartsRegistered = true;
+    document.addEventListener("astro:page-load", initBenchmarkComparisonCharts);
+
+    const observer = new MutationObserver(() => initBenchmarkComparisonCharts());
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+  }
+
+  initBenchmarkComparisonCharts();
 </script>
 
 <style>

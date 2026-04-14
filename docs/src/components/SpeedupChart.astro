@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 ---
 
-<div class="chart-wrapper">
+<div class="chart-wrapper" data-speedup-chart>
   <canvas id="speedup-chart" aria-label="Per-fixture speedup of cmakefmt over cmake-format"></canvas>
 </div>
 
@@ -48,14 +48,11 @@ function colors() {
   };
 }
 
-const canvas = document.getElementById('speedup-chart') as HTMLCanvasElement;
-let chart: Chart | null = null;
-
-function buildChart() {
+function buildChart(canvas: HTMLCanvasElement) {
   const c = colors();
-  if (chart) chart.destroy();
+  Chart.getChart(canvas)?.destroy();
 
-  chart = new Chart(canvas, {
+  new Chart(canvas, {
     type: 'bar',
     data: {
       labels: DATA.map(d => d.label),
@@ -153,10 +150,37 @@ function buildChart() {
   });
 }
 
-buildChart();
+function initSpeedupCharts() {
+  document.querySelectorAll('[data-speedup-chart]').forEach((wrapper) => {
+    if (!(wrapper instanceof HTMLDivElement)) {
+      return;
+    }
 
-const observer = new MutationObserver(() => buildChart());
-observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    const canvas = wrapper.querySelector('#speedup-chart');
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    buildChart(canvas);
+  });
+}
+
+const speedupChartWindow = window as Window & {
+  __speedupChartsRegistered?: boolean;
+};
+
+if (!speedupChartWindow.__speedupChartsRegistered) {
+  speedupChartWindow.__speedupChartsRegistered = true;
+  document.addEventListener('astro:page-load', initSpeedupCharts);
+
+  const observer = new MutationObserver(() => initSpeedupCharts());
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+}
+
+initSpeedupCharts();
 </script>
 
 <style>

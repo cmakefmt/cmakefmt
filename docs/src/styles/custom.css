@@ -111,9 +111,25 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 /* ─── Body — antialiased rendering ──────────────────────────────────────── */
 
+html,
+body {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (max-width: 49.999rem) {
+  html[data-has-toc] {
+    --sl-mobile-toc-height: 0rem;
+  }
+
+  .page > .header {
+    padding-inline-end: var(--sl-nav-pad-x);
+  }
 }
 
 /* ─── Logo — tight spacing ──────────────────────────────────────────────── */

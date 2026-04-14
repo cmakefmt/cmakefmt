@@ -77,6 +77,9 @@ export default defineConfig({
       components: {
         ThemeSelect: "./src/components/ThemeToggle.astro",
         Header: "./src/components/Header.astro",
+        MobileMenuToggle: "./src/components/MobileMenuToggle.astro",
+        MobileTableOfContents: "./src/components/MobileTableOfContents.astro",
+        Sidebar: "./src/components/Sidebar.astro",
       },
       lastUpdated: true,
       customCss: [

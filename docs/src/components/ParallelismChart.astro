@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 ---
 
-<div class="chart-wrapper">
+<div class="chart-wrapper" data-parallelism-chart>
   <canvas id="parallelism-chart" aria-label="Parallelism scaling: time vs worker count for 220-file and 612-file batches"></canvas>
 </div>
 
@@ -42,14 +42,11 @@ function colors() {
   };
 }
 
-const canvas = document.getElementById('parallelism-chart') as HTMLCanvasElement;
-let chart: Chart | null = null;
-
-function buildChart() {
+function buildChart(canvas: HTMLCanvasElement) {
   const c = colors();
-  if (chart) chart.destroy();
+  Chart.getChart(canvas)?.destroy();
 
-  chart = new Chart(canvas, {
+  new Chart(canvas, {
     type: 'line',
     data: {
       labels: BATCH_220.map(d => d.workers),
@@ -141,10 +138,37 @@ function buildChart() {
   });
 }
 
-buildChart();
+function initParallelismCharts() {
+  document.querySelectorAll('[data-parallelism-chart]').forEach((wrapper) => {
+    if (!(wrapper instanceof HTMLDivElement)) {
+      return;
+    }
 
-const observer = new MutationObserver(() => buildChart());
-observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    const canvas = wrapper.querySelector('#parallelism-chart');
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    buildChart(canvas);
+  });
+}
+
+const parallelismChartWindow = window as Window & {
+  __parallelismChartsRegistered?: boolean;
+};
+
+if (!parallelismChartWindow.__parallelismChartsRegistered) {
+  parallelismChartWindow.__parallelismChartsRegistered = true;
+  document.addEventListener('astro:page-load', initParallelismCharts);
+
+  const observer = new MutationObserver(() => initParallelismCharts());
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+}
+
+initParallelismCharts();
 </script>
 
 <style>

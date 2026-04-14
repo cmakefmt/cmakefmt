@@ -137,18 +137,58 @@ endif()
 </section>
 
 <script>
+  const AUTO_PLAY_DELAY_MS = 1000;
+  const showcaseScriptStart = performance.now();
+
   type MagicMovePanel = HTMLElement & {
     animateToStep?: (step: number) => Promise<void> | void;
     currentStep?: number;
-    renderer?: { replace: (step: unknown) => void };
+    renderer?: { replace: (step: unknown) => void; isFirstRender?: boolean };
     steps?: unknown[];
   };
 
-  const showcases = document.querySelectorAll("[data-format-showcase]");
+  const waitForMagicMovePanel = async (panel: MagicMovePanel) => {
+    await customElements.whenDefined("magic-move");
 
-  for (const showcase of showcases) {
-    if (showcase instanceof HTMLElement && showcase.dataset.magicMoveReady === "true") {
-      continue;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      if (
+        typeof panel.animateToStep === "function" &&
+        typeof panel.currentStep === "number" &&
+        Array.isArray(panel.steps) &&
+        typeof panel.renderer?.replace === "function"
+      ) {
+        return true;
+      }
+
+      await new Promise((resolve) => window.requestAnimationFrame(() => resolve(undefined)));
+    }
+
+    return false;
+  };
+
+  const prepareMagicMovePanel = (panel: MagicMovePanel) => {
+    const steps = panel.steps;
+    const renderer = panel.renderer;
+    if (!Array.isArray(steps) || steps.length === 0 || !renderer) {
+      return;
+    }
+
+    // `astro-magic-move` seeds the initial code block with `replace()`, which
+    // leaves the renderer thinking the next `render()` is its first one. Mark
+    // that initial state as already rendered so the first visible autoplay uses
+    // the same enter timing as a replay, without waiting through a hidden warmup.
+    renderer.replace(steps[0]);
+    renderer.isFirstRender = false;
+    panel.currentStep = 0;
+  };
+
+  const initFormatShowcase = async (showcase: Element) => {
+    if (
+      !(showcase instanceof HTMLElement) ||
+      showcase.dataset.magicMoveReady === "true" ||
+      showcase.dataset.magicMoveReady === "pending"
+    ) {
+      return;
     }
 
     const panel = showcase.querySelector("magic-move") as MagicMovePanel | null;
@@ -159,14 +199,21 @@ endif()
       !(replay instanceof HTMLButtonElement) ||
       tabs.length === 0
     ) {
-      continue;
+      return;
     }
 
-    if (showcase instanceof HTMLElement) {
-      showcase.dataset.magicMoveReady = "true";
+    showcase.dataset.magicMoveReady = "pending";
+
+    const isPanelReady = await waitForMagicMovePanel(panel);
+    if (!isPanelReady) {
+      delete showcase.dataset.magicMoveReady;
+      return;
     }
 
-    let currentStep = 0;
+    prepareMagicMovePanel(panel);
+    showcase.dataset.magicMoveReady = "true";
+
+    let currentStep = typeof panel.currentStep === "number" ? panel.currentStep : 0;
     let hasAutoPlayed = false;
     let hasUserInteracted = false;
     let isAnimating = false;
@@ -203,10 +250,7 @@ endif()
 
     const setAnimating = (animating: boolean) => {
       isAnimating = animating;
-
-      if (showcase instanceof HTMLElement) {
-        showcase.dataset.animating = String(animating);
-      }
+      showcase.dataset.animating = String(animating);
 
       tabs.forEach((tab) => {
         if (tab instanceof HTMLButtonElement) {
@@ -217,32 +261,26 @@ endif()
       replay.disabled = animating;
     };
 
-    panel.addEventListener("magic-move:step", ((event: CustomEvent) => {
-      updateControls(Number(event.detail?.step ?? 0));
-    }) as EventListener);
-
-    const jumpToStep = (step: number) => {
-      if (currentStep === step) {
-        return;
-      }
-
-      const steps = panel.steps;
-      const renderer = panel.renderer;
-      if (!steps || !renderer || step < 0 || step >= steps.length) {
-        return;
-      }
-
-      renderer.replace(steps[step]);
-      panel.currentStep = step;
-      updateControls(step);
-    };
-
     const animateToStep = async (step: number) => {
       if (currentStep === step || typeof panel.animateToStep !== "function") {
         return;
       }
 
       await panel.animateToStep(step);
+      currentStep = typeof panel.currentStep === "number" ? panel.currentStep : step;
+    };
+
+    const snapToStep = (step: number) => {
+      const steps = panel.steps;
+      const renderer = panel.renderer;
+      if (!steps || !renderer || step < 0 || step >= steps.length) {
+        return false;
+      }
+
+      renderer.replace(steps[step]);
+      panel.currentStep = step;
+      updateControls(step);
+      return true;
     };
 
     const animateForward = async () => {
@@ -254,10 +292,8 @@ endif()
 
       try {
         if (currentStep > 0) {
-          jumpToStep(0);
-          await new Promise((resolve) => window.setTimeout(resolve, 120));
-          await animateToStep(1);
-          return;
+          snapToStep(0);
+          await new Promise((resolve) => window.setTimeout(resolve, 70));
         }
 
         await animateToStep(1);
@@ -266,6 +302,10 @@ endif()
       }
     };
 
+    panel.addEventListener("magic-move:step", ((event: CustomEvent) => {
+      updateControls(Number(event.detail?.step ?? 0));
+    }) as EventListener);
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry?.isIntersecting || hasAutoPlayed) {
@@ -273,6 +313,8 @@ endif()
         }
 
         hasAutoPlayed = true;
+        const elapsedSinceInit = performance.now() - showcaseScriptStart;
+        const remainingDelay = Math.max(0, AUTO_PLAY_DELAY_MS - elapsedSinceInit);
         autoPlayTimeout = window.setTimeout(() => {
           autoPlayTimeout = null;
 
@@ -281,18 +323,20 @@ endif()
           }
 
           void animateForward();
-        }, 1000);
+        }, remainingDelay);
         observer.disconnect();
       },
-      { threshold: 0.55 },
+      { threshold: 0.2 },
     );
 
     observer.observe(panel);
+
     replay.addEventListener("click", () => {
       hasUserInteracted = true;
       clearAutoPlayTimeout();
       void animateForward();
     });
+
     tabs.forEach((tab) => {
       if (!(tab instanceof HTMLButtonElement)) {
         return;
@@ -305,26 +349,38 @@ endif()
 
         hasUserInteracted = true;
         clearAutoPlayTimeout();
-        jumpToStep(Number(tab.dataset.step ?? "0"));
+        snapToStep(Number(tab.dataset.step ?? "0"));
       });
     });
-    updateControls(0);
+
+    updateControls(Math.max(currentStep, 0));
     setAnimating(false);
-  }
+  };
+
+  const initFormatShowcases = () => {
+    document.querySelectorAll("[data-format-showcase]").forEach((showcase) => {
+      void initFormatShowcase(showcase);
+    });
+  };
+
+  initFormatShowcases();
+  document.addEventListener("astro:page-load", initFormatShowcases);
 </script>
 
 <style>
   .format-showcase {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
     align-items: center;
     margin: 2rem 0 1rem;
+    min-width: 0;
   }
 
   .format-showcase-copy {
     display: grid;
     gap: 0.85rem;
+    min-width: 0;
   }
 
   .format-showcase-kicker {
@@ -373,6 +429,8 @@ endif()
     position: relative;
     padding: 0.9rem;
     border-radius: 1.2rem;
+    min-width: 0;
+    overflow: clip;
     border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 22%, transparent);
     background:
       radial-gradient(
@@ -391,25 +449,25 @@ endif()
   }
 
   .format-showcase-toolbar {
-    display: flex;
-    align-items: center;
+    display: grid;
     gap: 0.7rem;
     margin-bottom: 0.8rem;
   }
 
   .format-showcase-tabs {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
     padding: 0.25rem;
     border-radius: 999px;
     border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 22%, transparent);
     background: color-mix(in srgb, var(--sl-color-gray-6) 76%, transparent);
     box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+    min-width: 0;
   }
 
   .format-showcase-tab {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     padding: 0.42rem 0.8rem;
@@ -426,6 +484,7 @@ endif()
       border-color 0.2s ease,
       background 0.2s ease,
       transform 0.2s ease;
+    min-width: 0;
   }
 
   .format-showcase-tab:hover {
@@ -459,14 +518,14 @@ endif()
   }
 
   .format-showcase-replay {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     height: 2.35rem;
     padding: 0.22rem 0.42rem 0.22rem 0.3rem;
+    width: 100%;
     min-width: 0;
-    justify-content: flex-start;
     border-radius: 999px;
     border: 1px solid color-mix(in srgb, var(--sl-color-gray-3) 20%, transparent);
     background: linear-gradient(
@@ -594,37 +653,50 @@ endif()
   }
 
   .format-showcase :global(.format-magic-move .shiki-magic-move-container) {
-    height: 23.5rem;
-    padding: 1rem 1.2rem;
-    font-size: 0.82rem;
+    height: 18.5rem;
+    padding: 0.95rem 1rem;
+    font-size: 0.76rem;
     line-height: 1.7;
     background: var(--shiki-background);
   }
 
-  @media (max-width: 900px) {
-    .format-showcase {
-      grid-template-columns: 1fr;
+  @media (min-width: 48rem) {
+    .format-showcase-toolbar {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+
+    .format-showcase-replay {
+      width: auto;
+      min-width: 8.25rem;
     }
   }
 
-  @media (max-width: 600px) {
+  @media (min-width: 56rem) {
+    .format-showcase {
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+      gap: 1.5rem;
+    }
+
+    .format-showcase :global(.format-magic-move .shiki-magic-move-container) {
+      height: 23.5rem;
+      padding: 1rem 1.2rem;
+      font-size: 0.82rem;
+    }
+  }
+
+  @media (max-width: 30rem) {
     .format-showcase-frame {
       padding: 0.75rem;
     }
 
-    .format-showcase-toolbar {
-      flex-wrap: wrap;
-      gap: 0.55rem;
+    .format-showcase-tab {
+      font-size: 0.68rem;
+      padding-inline: 0.55rem;
     }
 
     .format-showcase-replay {
-      margin-left: 0;
-    }
-
-    .format-showcase :global(.format-magic-move .shiki-magic-move-container) {
-      height: 20rem;
-      padding: 0.9rem 1rem;
-      font-size: 0.76rem;
+      gap: 0.4rem;
     }
   }
 </style>
