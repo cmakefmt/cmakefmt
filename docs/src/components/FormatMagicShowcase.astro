@@ -145,8 +145,59 @@ endif()
   type MagicMovePanel = HTMLElement & {
     animateToStep?: (step: number) => Promise<void> | void;
     currentStep?: number;
+    step?: number;
+    totalSteps?: number;
+    _currentStep?: number;
+    _steps?: unknown[];
     renderer?: { replace: (step: unknown) => void; isFirstRender?: boolean };
     steps?: unknown[];
+  };
+
+  const getPanelSteps = (panel: MagicMovePanel) => {
+    if (Array.isArray(panel.steps)) {
+      return panel.steps;
+    }
+
+    if (Array.isArray(panel._steps)) {
+      return panel._steps;
+    }
+
+    return null;
+  };
+
+  const getPanelStepCount = (panel: MagicMovePanel) => {
+    const steps = getPanelSteps(panel);
+    if (steps) {
+      return steps.length;
+    }
+
+    return typeof panel.totalSteps === "number" ? panel.totalSteps : 0;
+  };
+
+  const getPanelCurrentStep = (panel: MagicMovePanel) => {
+    if (typeof panel.currentStep === "number") {
+      return panel.currentStep;
+    }
+
+    if (typeof panel.step === "number") {
+      return panel.step;
+    }
+
+    if (typeof panel._currentStep === "number") {
+      return panel._currentStep;
+    }
+
+    return 0;
+  };
+
+  const setPanelCurrentStep = (panel: MagicMovePanel, step: number) => {
+    if ("currentStep" in panel) {
+      panel.currentStep = step;
+    }
+
+    if ("_currentStep" in panel) {
+      panel._currentStep = step;
+    }
   };
 
   const waitForMagicMovePanel = async (panel: MagicMovePanel) => {
@@ -156,8 +207,7 @@ endif()
     while (performance.now() < deadline) {
       if (
         typeof panel.animateToStep === "function" &&
-        Array.isArray(panel.steps) &&
-        panel.steps.length > 0 &&
+        getPanelStepCount(panel) > 0 &&
         typeof panel.renderer?.replace === "function"
       ) {
         return true;
@@ -170,7 +220,7 @@ endif()
   };
 
   const prepareMagicMovePanel = (panel: MagicMovePanel) => {
-    const steps = panel.steps;
+    const steps = getPanelSteps(panel);
     const renderer = panel.renderer;
     if (!Array.isArray(steps) || steps.length === 0 || !renderer) {
       return;
@@ -179,7 +229,7 @@ endif()
     // Prime the initial frame so the first visible autoplay matches replay.
     renderer.replace(steps[0]);
     renderer.isFirstRender = false;
-    panel.currentStep = 0;
+    setPanelCurrentStep(panel, 0);
   };
 
   const initFormatShowcase = (showcase: Element) => {
@@ -252,7 +302,7 @@ endif()
 
           prepareMagicMovePanel(panel);
           isPanelPrepared = true;
-          currentStep = typeof panel.currentStep === "number" ? panel.currentStep : 0;
+          currentStep = getPanelCurrentStep(panel);
           updateControls(Math.max(currentStep, 0));
           return true;
         })();
@@ -284,7 +334,7 @@ endif()
       }
 
       await panel.animateToStep(step);
-      currentStep = typeof panel.currentStep === "number" ? panel.currentStep : step;
+      currentStep = getPanelCurrentStep(panel) ?? step;
     };
 
     const snapToStep = async (step: number) => {
@@ -292,14 +342,14 @@ endif()
         return false;
       }
 
-      const steps = panel.steps;
+      const steps = getPanelSteps(panel);
       const renderer = panel.renderer;
       if (!Array.isArray(steps) || !renderer || step < 0 || step >= steps.length) {
         return false;
       }
 
       renderer.replace(steps[step]);
-      panel.currentStep = step;
+      setPanelCurrentStep(panel, step);
       updateControls(step);
       return true;
     };
@@ -685,7 +735,7 @@ endif()
   }
 
   .format-showcase :global(.format-magic-move .shiki-magic-move-container) {
-    height: 18.5rem;
+    height: 21rem;
     padding: 0.95rem 1rem;
     font-size: 0.76rem;
     line-height: 1.7;
