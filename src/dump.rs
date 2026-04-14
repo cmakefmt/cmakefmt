@@ -9,36 +9,28 @@ use crate::spec::KwargSpec;
 
 // ── ANSI helpers ────────────────────────────────────────────────────────────
 
-fn dim(s: &str, color: bool) -> String {
+fn ansi(s: &str, code: &str, color: bool) -> String {
     if color {
-        format!("\x1b[2m{s}\x1b[0m")
+        format!("\x1b[{code}m{s}\x1b[0m")
     } else {
         s.to_owned()
     }
+}
+
+fn dim(s: &str, color: bool) -> String {
+    ansi(s, "2", color)
 }
 
 fn bold_cyan(s: &str, color: bool) -> String {
-    if color {
-        format!("\x1b[1;36m{s}\x1b[0m")
-    } else {
-        s.to_owned()
-    }
+    ansi(s, "1;36", color)
 }
 
 fn dim_green(s: &str, color: bool) -> String {
-    if color {
-        format!("\x1b[2;32m{s}\x1b[0m")
-    } else {
-        s.to_owned()
-    }
+    ansi(s, "2;32", color)
 }
 
 fn bold_yellow(s: &str, color: bool) -> String {
-    if color {
-        format!("\x1b[1;33m{s}\x1b[0m")
-    } else {
-        s.to_owned()
-    }
+    ansi(s, "1;33", color)
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -107,50 +99,30 @@ pub fn dump_ast(file: &ast::File, color: bool) -> String {
                     arg_idx += 1;
                     let arg_last = arg_idx == arg_total;
                     let arg_conn = if arg_last { "└─" } else { "├─" };
+                    let prefix_str = dim(child_prefix.trim_end(), color);
+                    let conn_str = dim(arg_conn, color);
                     match arg {
-                        ast::Argument::Unquoted(s) => {
-                            out.push_str(&format!(
-                                "    {}  {} {}  {}{}",
-                                dim(child_prefix.trim_end(), color),
-                                dim(arg_conn, color),
-                                bold_cyan("ARG", color),
-                                s,
-                                format_annotation("unquoted", color),
-                            ));
-                            out.push('\n');
-                        }
-                        ast::Argument::Quoted(s) => {
-                            out.push_str(&format!(
-                                "    {}  {} {}  {}{}",
-                                dim(child_prefix.trim_end(), color),
-                                dim(arg_conn, color),
-                                bold_cyan("ARG", color),
-                                s,
-                                format_annotation("quoted", color),
-                            ));
-                            out.push('\n');
-                        }
-                        ast::Argument::Bracket(b) => {
-                            out.push_str(&format!(
-                                "    {}  {} {}  {}{}",
-                                dim(child_prefix.trim_end(), color),
-                                dim(arg_conn, color),
-                                bold_cyan("ARG", color),
-                                b.raw,
-                                format_annotation("bracket", color),
-                            ));
-                            out.push('\n');
-                        }
-                        ast::Argument::InlineComment(c) => {
-                            out.push_str(&format!(
-                                "    {}  {} {}  {}",
-                                dim(child_prefix.trim_end(), color),
-                                dim(arg_conn, color),
-                                bold_cyan("INLINE_COMMENT", color),
-                                dim_green(c.as_str(), color),
-                            ));
-                            out.push('\n');
-                        }
+                        ast::Argument::Unquoted(s) => out.push_str(&format!(
+                            "    {prefix_str}  {conn_str} {}  {s}{}\n",
+                            bold_cyan("ARG", color),
+                            format_annotation("unquoted", color),
+                        )),
+                        ast::Argument::Quoted(s) => out.push_str(&format!(
+                            "    {prefix_str}  {conn_str} {}  {s}{}\n",
+                            bold_cyan("ARG", color),
+                            format_annotation("quoted", color),
+                        )),
+                        ast::Argument::Bracket(b) => out.push_str(&format!(
+                            "    {prefix_str}  {conn_str} {}  {}{}\n",
+                            bold_cyan("ARG", color),
+                            b.raw,
+                            format_annotation("bracket", color),
+                        )),
+                        ast::Argument::InlineComment(c) => out.push_str(&format!(
+                            "    {prefix_str}  {conn_str} {}  {}\n",
+                            bold_cyan("INLINE_COMMENT", color),
+                            dim_green(c.as_str(), color),
+                        )),
                     }
                 }
                 if let Some(tc) = &cmd.trailing_comment {
@@ -671,21 +643,32 @@ enum FlowGroup<'a> {
     },
 }
 
+fn matches_any_insensitive(name: &str, candidates: &[&str]) -> bool {
+    candidates.iter().any(|c| name.eq_ignore_ascii_case(c))
+}
+
 fn is_block_opener(name: &str) -> bool {
-    matches!(
-        name.to_ascii_lowercase().as_str(),
-        "if" | "foreach" | "while" | "function" | "macro" | "block"
+    matches_any_insensitive(
+        name,
+        &["if", "foreach", "while", "function", "macro", "block"],
     )
 }
 
 fn is_block_intermediate(name: &str) -> bool {
-    matches!(name.to_ascii_lowercase().as_str(), "elseif" | "else")
+    matches_any_insensitive(name, &["elseif", "else"])
 }
 
 fn is_block_closer(name: &str) -> bool {
-    matches!(
-        name.to_ascii_lowercase().as_str(),
-        "endif" | "endforeach" | "endwhile" | "endfunction" | "endmacro" | "endblock"
+    matches_any_insensitive(
+        name,
+        &[
+            "endif",
+            "endforeach",
+            "endwhile",
+            "endfunction",
+            "endmacro",
+            "endblock",
+        ],
     )
 }
 

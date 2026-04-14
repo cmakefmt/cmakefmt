@@ -1530,24 +1530,20 @@ fn run_dump_subcommand(
         }
     };
 
-    match action {
-        DumpAction::Ast => {
-            let parsed = parser::parse(&source)?;
-            let color = should_colorize_stdout(cli.color);
-            let tree = cmakefmt::dump::dump_ast(&parsed, color);
-            print!("{tree}");
-            Ok(EXIT_OK)
-        }
+    let parsed = parser::parse(&source)?;
+    let color = should_colorize_stdout(cli.color);
+
+    let tree = match action {
+        DumpAction::Ast => cmakefmt::dump::dump_ast(&parsed, color),
         DumpAction::Parse => {
             let config_path = file.filter(|p| p.as_os_str() != "-");
             let (_, registry, _) = build_context(cli, config_path)?;
-            let parsed = parser::parse(&source)?;
-            let color = should_colorize_stdout(cli.color);
-            let tree = cmakefmt::dump::dump_parse(&parsed, &registry, color);
-            print!("{tree}");
-            Ok(EXIT_OK)
+            cmakefmt::dump::dump_parse(&parsed, &registry, color)
         }
-    }
+    };
+
+    print!("{tree}");
+    Ok(EXIT_OK)
 }
 
 fn install_git_hook() -> Result<u8, cmakefmt::Error> {
