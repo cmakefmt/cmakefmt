@@ -229,13 +229,7 @@ pub(crate) fn split_sections<'a>(
             continue;
         }
 
-        let header_kind = if contains_kwarg(form, token) {
-            Some(HeaderKind::Keyword)
-        } else if contains_flag(form, token) {
-            Some(HeaderKind::Flag)
-        } else {
-            None
-        };
+        let header_kind = classify_token(form, token);
 
         if let Some(header_kind) = header_kind {
             sections.push(Section {
@@ -308,19 +302,18 @@ fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: boo
                 .map(|(i, _)| i)
                 .collect();
 
-            let mut sortable_args: Vec<&Argument> = non_comment_positions
+            let mut sortable_args: Vec<(String, &Argument)> = non_comment_positions
                 .iter()
-                .map(|&i| section.arguments[i])
+                .map(|&i| {
+                    let arg = section.arguments[i];
+                    (arg.as_str().to_ascii_lowercase(), arg)
+                })
                 .collect();
 
-            sortable_args.sort_by(|a, b| {
-                a.as_str()
-                    .to_ascii_lowercase()
-                    .cmp(&b.as_str().to_ascii_lowercase())
-            });
+            sortable_args.sort_by(|(key_a, _), (key_b, _)| key_a.cmp(key_b));
 
             for (j, &pos) in non_comment_positions.iter().enumerate() {
-                section.arguments[pos] = sortable_args[j];
+                section.arguments[pos] = sortable_args[j].1;
             }
         }
     }
@@ -344,8 +337,7 @@ fn nested_token_belongs_to_current_section(
         return false;
     };
 
-    matches!(spec.nargs, NArgs::Fixed(0))
-        && (contains_nested_kwarg(spec, token) || contains_nested_flag(spec, token))
+    matches!(spec.nargs, NArgs::Fixed(0)) && is_nested_keyword_or_flag(spec, token)
 }
 
 fn try_format_inline(
@@ -355,8 +347,10 @@ fn try_format_inline(
     block_depth: usize,
     line_width: usize,
 ) -> Option<String> {
-    if command.arguments.iter().any(argument_has_newline)
-        || command.arguments.iter().any(Argument::is_comment)
+    if command
+        .arguments
+        .iter()
+        .any(|a| argument_has_newline(a) || a.is_comment())
     {
         return None;
     }
@@ -402,8 +396,10 @@ fn try_format_hanging(
     block_depth: usize,
     line_width: usize,
 ) -> Option<String> {
-    if command.arguments.iter().any(Argument::is_comment)
-        || command.arguments.iter().any(argument_has_newline)
+    if command
+        .arguments
+        .iter()
+        .any(|a| a.is_comment() || argument_has_newline(a))
     {
         return None;
     }
@@ -1107,23 +1103,42 @@ fn lookup_kwarg<'a>(form: &'a CommandForm, token: &str) -> Option<&'a crate::spe
     })
 }
 
-fn contains_kwarg(form: &CommandForm, token: &str) -> bool {
-    lookup_kwarg(form, token).is_some()
+/// Classify a token as a keyword, flag, or positional in a single pass.
+/// Avoids redundant case conversion by uppercasing at most once.
+fn classify_token(form: &CommandForm, token: &str) -> Option<HeaderKind> {
+    // Fast path: try exact-case lookup first.
+    if form.kwargs.contains_key(token) {
+        return Some(HeaderKind::Keyword);
+    }
+    if form.flags.contains(token) {
+        return Some(HeaderKind::Flag);
+    }
+
+    // Slow path: normalize case once, check both.
+    if has_ascii_lowercase(token) {
+        let upper = token.to_ascii_uppercase();
+        if form.kwargs.contains_key(&upper) {
+            return Some(HeaderKind::Keyword);
+        }
+        if form.flags.contains(&upper) {
+            return Some(HeaderKind::Flag);
+        }
+    }
+
+    None
 }
 
-fn contains_flag(form: &CommandForm, token: &str) -> bool {
-    form.flags.contains(token)
-        || (has_ascii_lowercase(token) && form.flags.contains(&token.to_ascii_uppercase()))
-}
-
-fn contains_nested_kwarg(spec: &crate::spec::KwargSpec, token: &str) -> bool {
-    spec.kwargs.get(token).is_some()
-        || (has_ascii_lowercase(token) && spec.kwargs.contains_key(&token.to_ascii_uppercase()))
-}
-
-fn contains_nested_flag(spec: &crate::spec::KwargSpec, token: &str) -> bool {
-    spec.flags.contains(token)
-        || (has_ascii_lowercase(token) && spec.flags.contains(&token.to_ascii_uppercase()))
+/// Check if a token is a nested keyword or flag in a single pass,
+/// uppercasing at most once.
+fn is_nested_keyword_or_flag(spec: &crate::spec::KwargSpec, token: &str) -> bool {
+    if spec.kwargs.contains_key(token) || spec.flags.contains(token) {
+        return true;
+    }
+    if has_ascii_lowercase(token) {
+        let upper = token.to_ascii_uppercase();
+        return spec.kwargs.contains_key(&upper) || spec.flags.contains(&upper);
+    }
+    false
 }
 
 fn is_condition_command(name: &str) -> bool {
