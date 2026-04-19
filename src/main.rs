@@ -2310,7 +2310,8 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
     let highlighted_output = colorize_stdout
         .then(|| highlight_changed_lines(&source, &formatted))
         .filter(|_| would_change);
-    let unified_diff = would_change.then(|| build_unified_diff(&display_name, &source, &formatted));
+    let unified_diff = (would_change && needs_unified_diff(cli))
+        .then(|| build_unified_diff(&display_name, &source, &formatted));
 
     Ok(ProcessedTarget {
         path: stdin_path.map(Path::to_path_buf),
@@ -2457,8 +2458,8 @@ fn process_path(
     let highlighted_output = colorize_stdout
         .then(|| highlight_changed_lines(&source, &formatted))
         .filter(|_| would_change);
-    let unified_diff =
-        would_change.then(|| build_unified_diff(&path.display().to_string(), &source, &formatted));
+    let unified_diff = (would_change && needs_unified_diff(cli))
+        .then(|| build_unified_diff(&path.display().to_string(), &source, &formatted));
 
     if let Some(cache) = &cache_context {
         if !cache_hit {
@@ -2498,6 +2499,17 @@ fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
         || cli.summary
         || cli.stat
         || cli.report_format != ReportFormat::Human
+}
+
+/// Check whether the current CLI invocation actually needs a unified diff.
+/// Computing the diff (Myers algorithm via `similar`) is expensive on large
+/// files — only pay for it when the result will be consumed.
+fn needs_unified_diff(cli: &Cli) -> bool {
+    cli.diff
+        || matches!(
+            cli.report_format,
+            ReportFormat::Junit | ReportFormat::Checkstyle
+        )
 }
 
 fn verification_mode(cli: &Cli) -> VerificationMode {

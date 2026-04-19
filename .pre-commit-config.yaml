@@ -28,7 +28,7 @@ repos:
     rev: v6.2.0
     hooks:
       - id: reuse
-        exclude: ^\.pre-commit-cache/
+        exclude: ^(\.pre-commit-cache/|benches/repos/)
 
   - repo: local
     hooks:
