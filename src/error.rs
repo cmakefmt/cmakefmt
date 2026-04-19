@@ -7,7 +7,6 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use pest::error::{ErrorVariant, LineColLocation};
 use thiserror::Error;
 
 /// Structured config/spec deserialization failure metadata used for
@@ -42,32 +41,6 @@ pub struct ParseDiagnostic {
     pub line: usize,
     /// 1-based source column number.
     pub column: usize,
-}
-
-impl ParseDiagnostic {
-    pub(crate) fn from_pest<R: pest::RuleType>(error: &pest::error::Error<R>) -> Self {
-        let (line, column) = match error.line_col {
-            LineColLocation::Pos((line, column)) => (line, column),
-            LineColLocation::Span((line, column), _) => (line, column),
-        };
-        let message = match &error.variant {
-            ErrorVariant::ParsingError { positives, .. } if !positives.is_empty() => format!(
-                "expected {}",
-                positives
-                    .iter()
-                    .map(|rule| format!("{rule:?}").replace('_', " "))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            ErrorVariant::CustomError { message } => message.clone(),
-            _ => error.to_string(),
-        };
-        Self {
-            message: message.into_boxed_str(),
-            line,
-            column,
-        }
-    }
 }
 
 impl fmt::Display for ParseDiagnostic {
@@ -189,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_diagnostic_from_pest_parsing_error() {
+    fn parse_diagnostic_from_parse_error() {
         let source = "if(\n";
         let err = crate::parser::parse(source).unwrap_err();
         if let Error::Parse(ParseError { diagnostic, .. }) = err {

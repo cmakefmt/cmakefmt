@@ -4,362 +4,103 @@
 
 //! Parser entry points for CMake source text.
 //!
-//! The grammar is defined in `parser/cmake.pest`, while
-//! [`crate::parser::ast`] contains the AST types returned by
+//! The parser is a hand-written recursive-descent implementation over a
+//! streaming scanner. [`crate::parser::ast`] contains the public AST returned by
 //! [`crate::parser::parse()`].
 
-use pest::Parser;
+use std::ops::Range;
 
 pub mod ast;
 
-mod generated {
-    use pest_derive::Parser;
+mod cursor;
+mod grammar;
+mod lower;
+mod scanner;
 
-    /// Internal pest parser generated from `cmake.pest`.
-    #[derive(Parser)]
-    #[grammar = "parser/cmake.pest"]
-    pub(super) struct CmakeParser;
+use ast::File;
+
+use crate::error::{Error, ParseDiagnostic, ParseError, Result};
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(super) struct Span {
+    pub(super) start: u32,
+    pub(super) end: u32,
 }
 
-use generated::{CmakeParser, Rule};
+impl Span {
+    pub(super) fn range(self) -> Range<usize> {
+        self.start as usize..self.end as usize
+    }
+}
 
-use crate::error::{Error, Result};
-use ast::{Argument, BracketArgument, CommandInvocation, Comment, File, Statement};
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(super) struct ScanError {
+    pub(super) message: &'static str,
+    pub(super) byte_offset: u32,
+}
+
+impl ScanError {
+    pub(super) fn new(message: &'static str, byte_offset: u32) -> Self {
+        Self {
+            message,
+            byte_offset,
+        }
+    }
+}
 
 /// Parse CMake source text into an AST [`File`].
 ///
 /// The returned AST preserves command structure, blank lines, and comments so
 /// the formatter can round-trip files with stable semantics.
 pub fn parse(source: &str) -> Result<File> {
-    let mut pairs = CmakeParser::parse(Rule::file, source).map_err(|e| {
-        Error::Parse(crate::error::ParseError {
+    parse_v2(source)
+}
+
+pub(crate) fn parse_v2(source: &str) -> Result<File> {
+    if source.len() > u32::MAX as usize {
+        return Err(Error::Parse(ParseError {
             display_name: "<source>".to_owned(),
             source_text: source.to_owned().into_boxed_str(),
             start_line: 1,
-            diagnostic: crate::error::ParseDiagnostic::from_pest(&e),
-        })
-    })?;
-    let file_pair = pairs
-        .next()
-        .ok_or_else(|| Error::Formatter("parser did not return a file pair".to_owned()))?;
-
-    build_file(file_pair)
-}
-
-fn build_file(pair: pest::iterators::Pair<'_, Rule>) -> Result<File> {
-    debug_assert_eq!(pair.as_rule(), Rule::file);
-
-    let items = pair.into_inner();
-    let mut statements = Vec::with_capacity(items.size_hint().0);
-    let mut pending_blank_lines = 0usize;
-    let mut line_has_content = false;
-    let mut trailing_comment_col: Option<usize> = None;
-
-    for item in items {
-        collect_file_item(
-            item,
-            &mut statements,
-            &mut pending_blank_lines,
-            &mut line_has_content,
-            &mut trailing_comment_col,
-        )?;
+            diagnostic: ParseDiagnostic {
+                message: "source exceeds maximum supported size".into(),
+                line: 1,
+                column: 1,
+            },
+        }));
     }
 
-    flush_blank_lines(&mut statements, &mut pending_blank_lines);
-    Ok(File { statements })
+    let tree = grammar::parse_file(source).map_err(|e| Error::Parse(to_public_error(e, source)))?;
+    Ok(lower::lower(source, tree))
 }
 
-fn collect_file_item(
-    item: pest::iterators::Pair<'_, Rule>,
-    statements: &mut Vec<Statement>,
-    pending_blank_lines: &mut usize,
-    line_has_content: &mut bool,
-    trailing_comment_col: &mut Option<usize>,
-) -> Result<()> {
-    match item.as_rule() {
-        Rule::file_item => {
-            for inner in item.into_inner() {
-                collect_file_item(
-                    inner,
-                    statements,
-                    pending_blank_lines,
-                    line_has_content,
-                    trailing_comment_col,
-                )?;
-            }
-            Ok(())
-        }
-        Rule::command_invocation => {
-            *trailing_comment_col = None;
-            flush_blank_lines(statements, pending_blank_lines);
-            statements.push(Statement::Command(build_command(item)?));
-            *line_has_content = true;
-            Ok(())
-        }
-        Rule::template_placeholder => {
-            *trailing_comment_col = None;
-            flush_blank_lines(statements, pending_blank_lines);
-            statements.push(Statement::TemplatePlaceholder(item.as_str().to_owned()));
-            *line_has_content = true;
-            Ok(())
-        }
-        Rule::bracket_comment => {
-            *trailing_comment_col = None;
-            let comment = Comment::Bracket(item.as_str().to_owned());
-            if let Some(comment) = attach_trailing_comment(statements, comment, *line_has_content) {
-                flush_blank_lines(statements, pending_blank_lines);
-                statements.push(Statement::Comment(comment));
-            }
-            *line_has_content = true;
-            Ok(())
-        }
-        Rule::line_comment => {
-            let col = item.as_span().start_pos().line_col().1;
-            let comment = Comment::Line(item.as_str().to_owned());
-
-            if *line_has_content {
-                // Same line as previous content — try attaching as trailing comment.
-                if let Some(comment) =
-                    attach_trailing_comment(statements, comment, *line_has_content)
-                {
-                    flush_blank_lines(statements, pending_blank_lines);
-                    statements.push(Statement::Comment(comment));
-                    *trailing_comment_col = None;
-                } else {
-                    // Attached — record column for continuation detection.
-                    *trailing_comment_col = Some(col);
-                }
-            } else if *pending_blank_lines == 0
-                && *trailing_comment_col == Some(col)
-                && merge_trailing_comment_continuation(statements, &comment)
-            {
-                // Aligned continuation merged into trailing comment.
-            } else {
-                // Standalone comment.
-                *trailing_comment_col = None;
-                flush_blank_lines(statements, pending_blank_lines);
-                statements.push(Statement::Comment(comment));
-            }
-
-            *line_has_content = true;
-            Ok(())
-        }
-        Rule::newline => {
-            if *line_has_content {
-                *line_has_content = false;
-            } else {
-                *trailing_comment_col = None;
-                *pending_blank_lines += 1;
-            }
-            Ok(())
-        }
-        Rule::space | Rule::EOI => Ok(()),
-        other => Err(Error::Formatter(format!(
-            "unexpected top-level parser rule: {other:?}"
-        ))),
+fn to_public_error(error: ScanError, source: &str) -> ParseError {
+    let (line, column) = line_col_at(source, error.byte_offset);
+    ParseError {
+        display_name: "<source>".to_owned(),
+        source_text: source.to_owned().into_boxed_str(),
+        start_line: 1,
+        diagnostic: ParseDiagnostic {
+            message: error.message.into(),
+            line,
+            column,
+        },
     }
 }
 
-fn attach_trailing_comment(
-    statements: &mut [Statement],
-    comment: Comment,
-    line_has_content: bool,
-) -> Option<Comment> {
-    if !line_has_content {
-        return Some(comment);
-    }
-
-    match statements.last_mut() {
-        Some(Statement::Command(command)) if command.trailing_comment.is_none() => {
-            command.trailing_comment = Some(comment);
-            None
-        }
-        _ => Some(comment),
-    }
-}
-
-/// When a line comment on its own line is column-aligned with the `#` of a
-/// preceding trailing comment (no blank lines in between), merge the
-/// continuation body into the trailing comment text so the formatter can
-/// re-wrap them as a single unit.
-fn merge_trailing_comment_continuation(
-    statements: &mut [Statement],
-    continuation: &Comment,
-) -> bool {
-    let Some(Statement::Command(command)) = statements.last_mut() else {
-        return false;
-    };
-    let Some(Comment::Line(ref mut text)) = command.trailing_comment else {
-        return false;
-    };
-    let Comment::Line(cont_text) = continuation else {
-        return false;
-    };
-    let body = cont_text.trim_start_matches('#').trim_start();
-    if !body.is_empty() {
-        text.push(' ');
-        text.push_str(body);
-    }
-    true
-}
-
-fn flush_blank_lines(statements: &mut Vec<Statement>, pending_blank_lines: &mut usize) {
-    if *pending_blank_lines == 0 {
-        return;
-    }
-
-    match statements.last_mut() {
-        Some(Statement::BlankLines(count)) => *count += *pending_blank_lines,
-        _ => statements.push(Statement::BlankLines(*pending_blank_lines)),
-    }
-
-    *pending_blank_lines = 0;
-}
-
-fn build_command(pair: pest::iterators::Pair<'_, Rule>) -> Result<CommandInvocation> {
-    debug_assert_eq!(pair.as_rule(), Rule::command_invocation);
-
-    let span = pair.as_span();
-    let mut name = None;
-    let mut arguments = Vec::new();
-
-    for inner in pair.into_inner() {
-        match inner.as_rule() {
-            Rule::identifier => {
-                name = Some(inner.as_str().to_owned());
-            }
-            Rule::arguments => {
-                arguments = build_arguments(inner)?;
-            }
-            Rule::space => {}
-            other => {
-                return Err(Error::Formatter(format!(
-                    "unexpected command parser rule: {other:?}"
-                )));
-            }
-        }
-    }
-
-    Ok(CommandInvocation {
-        name: name.ok_or_else(|| Error::Formatter("command missing identifier".to_owned()))?,
-        arguments,
-        trailing_comment: None,
-        span: (span.start(), span.end()),
-    })
-}
-
-fn build_arguments(pair: pest::iterators::Pair<'_, Rule>) -> Result<Vec<Argument>> {
-    debug_assert_eq!(pair.as_rule(), Rule::arguments);
-
-    let inner = pair.into_inner();
-    let mut args = Vec::with_capacity(inner.size_hint().0);
-
-    for p in inner {
-        collect_argument_part(p, &mut args)?;
-    }
-
-    Ok(args)
-}
-
-fn collect_argument_part(
-    pair: pest::iterators::Pair<'_, Rule>,
-    out: &mut Vec<Argument>,
-) -> Result<()> {
-    match pair.as_rule() {
-        Rule::argument_part => {
-            for inner in pair.into_inner() {
-                collect_argument_part(inner, out)?;
-            }
-            Ok(())
-        }
-        Rule::arguments => {
-            for inner in pair.into_inner() {
-                collect_argument_part(inner, out)?;
-            }
-            Ok(())
-        }
-        Rule::argument => {
-            let mut inner = pair.into_inner();
-            let argument = inner
-                .next()
-                .ok_or_else(|| Error::Formatter("argument missing child node".to_owned()))?;
-            out.push(build_argument(argument)?);
-            Ok(())
-        }
-        Rule::bracket_comment => {
-            out.push(Argument::InlineComment(Comment::Bracket(
-                pair.as_str().to_owned(),
-            )));
-            Ok(())
-        }
-        Rule::line_ending => {
-            collect_line_ending_comments(pair, out);
-            Ok(())
-        }
-        Rule::space => Ok(()),
-        other => Err(Error::Formatter(format!(
-            "unexpected argument parser rule: {other:?}"
-        ))),
-    }
-}
-
-fn collect_line_ending_comments(pair: pest::iterators::Pair<'_, Rule>, out: &mut Vec<Argument>) {
-    for inner in pair.into_inner() {
-        if inner.as_rule() == Rule::line_comment {
-            out.push(Argument::InlineComment(Comment::Line(
-                inner.as_str().to_owned(),
-            )));
-        }
-    }
-}
-
-fn build_argument(pair: pest::iterators::Pair<'_, Rule>) -> Result<Argument> {
-    match pair.as_rule() {
-        Rule::bracket_argument => {
-            let raw = pair.as_str().to_owned();
-            Ok(Argument::Bracket(validate_bracket_argument(raw)?))
-        }
-        Rule::quoted_argument => Ok(Argument::Quoted(pair.as_str().to_owned())),
-        Rule::mixed_unquoted_argument | Rule::unquoted_argument => {
-            Ok(Argument::Unquoted(pair.as_str().to_owned()))
-        }
-        other => Err(Error::Formatter(format!(
-            "unexpected argument rule: {other:?}"
-        ))),
-    }
-}
-
-/// Validate that a bracket argument's opening and closing "=" counts match.
-fn validate_bracket_argument(raw: String) -> Result<BracketArgument> {
-    let open_equals = raw
-        .strip_prefix('[')
-        .ok_or_else(|| Error::Formatter("bracket argument missing '[' prefix".to_owned()))?
-        .bytes()
-        .take_while(|&b| b == b'=')
-        .count();
-
-    let close_equals = raw
-        .strip_suffix(']')
-        .ok_or_else(|| Error::Formatter("bracket argument missing ']' suffix".to_owned()))?
-        .bytes()
-        .rev()
-        .take_while(|&b| b == b'=')
-        .count();
-
-    if open_equals != close_equals {
-        return Err(Error::Formatter(format!(
-            "invalid bracket argument delimiter: {raw}"
-        )));
-    }
-
-    Ok(BracketArgument {
-        level: open_equals,
-        raw,
-    })
+pub(super) fn line_col_at(source: &str, offset: u32) -> (usize, usize) {
+    let offset = offset as usize;
+    let clamped = offset.min(source.len());
+    let prefix = &source[..clamped];
+    let line = prefix.bytes().filter(|&b| b == b'\n').count() + 1;
+    let line_start = prefix.rfind('\n').map(|idx| idx + 1).unwrap_or(0);
+    let column = source[line_start..clamped].chars().count() + 1;
+    (line, column)
 }
 
 #[cfg(test)]
 mod tests {
+    use super::ast::{Argument, Statement};
     use super::*;
 
     fn parse_ok(src: &str) -> File {
@@ -441,7 +182,7 @@ mod tests {
     #[test]
     fn invalid_bracket_argument_returns_error() {
         let err = parse("set(VAR [=[hello]==])\n").unwrap_err();
-        assert!(matches!(err, Error::Formatter(_)));
+        assert!(matches!(err, Error::Parse(_)));
     }
 
     #[test]
@@ -454,11 +195,7 @@ mod tests {
         assert_eq!(parse_err.display_name, "<source>");
         assert_eq!(parse_err.source_text.as_ref(), "message(\n");
         assert_eq!(parse_err.start_line, 1);
-        assert!(
-            parse_err.diagnostic.message.contains("expected"),
-            "unexpected parse diagnostic: {:?}",
-            parse_err.diagnostic
-        );
+        assert!(!parse_err.diagnostic.message.is_empty());
         assert_eq!(parse_err.diagnostic.line, 2);
         assert_eq!(parse_err.diagnostic.column, 1);
     }
@@ -468,7 +205,7 @@ mod tests {
         let f = parse_ok("# this is a comment\n");
         assert!(matches!(
             &f.statements[0],
-            Statement::Comment(Comment::Line(_))
+            Statement::Comment(ast::Comment::Line(_))
         ));
     }
 
@@ -477,7 +214,7 @@ mod tests {
         let f = parse_ok("#[[ multi\nline ]]\n");
         assert!(matches!(
             &f.statements[0],
-            Statement::Comment(Comment::Bracket(_))
+            Statement::Comment(ast::Comment::Bracket(_))
         ));
     }
 
@@ -516,7 +253,7 @@ mod tests {
             panic!()
         };
         assert_eq!(cmd.name, "target_link_libraries");
-        assert_eq!(cmd.arguments.len(), 5); // mylib PUBLIC dep1 PRIVATE dep2
+        assert_eq!(cmd.arguments.len(), 5);
     }
 
     #[test]
@@ -529,7 +266,7 @@ mod tests {
         assert_eq!(cmd.arguments.len(), 3);
         assert!(matches!(
             &cmd.arguments[1],
-            Argument::InlineComment(Comment::Bracket(_))
+            Argument::InlineComment(ast::Comment::Bracket(_))
         ));
     }
 
@@ -550,7 +287,7 @@ mod tests {
         let Statement::Command(cmd) = &f.statements[0] else {
             panic!()
         };
-        assert!(matches!(cmd.trailing_comment, Some(Comment::Line(_))));
+        assert!(matches!(cmd.trailing_comment, Some(ast::Comment::Line(_))));
     }
 
     #[test]
@@ -563,7 +300,7 @@ mod tests {
         };
         assert_eq!(
             cmd.trailing_comment,
-            Some(Comment::Line("# first line second line".to_owned()))
+            Some(ast::Comment::Line("# first line second line".to_owned()))
         );
     }
 
@@ -577,7 +314,9 @@ mod tests {
         };
         assert_eq!(
             cmd.trailing_comment,
-            Some(Comment::Line("# line one line two line three".to_owned()))
+            Some(ast::Comment::Line(
+                "# line one line two line three".to_owned()
+            ))
         );
     }
 
@@ -591,7 +330,7 @@ mod tests {
         };
         assert_eq!(
             cmd.trailing_comment,
-            Some(Comment::Line("# trailing".to_owned()))
+            Some(ast::Comment::Line("# trailing".to_owned()))
         );
         assert!(matches!(f.statements[1], Statement::Comment(_)));
     }
@@ -600,7 +339,7 @@ mod tests {
     fn blank_line_prevents_continuation_merge() {
         let src = "set(FOO bar) # trailing\n\n             # not a continuation\n";
         let f = parse_ok(src);
-        assert_eq!(f.statements.len(), 3); // Command, BlankLines, Comment
+        assert_eq!(f.statements.len(), 3);
     }
 
     #[test]
@@ -611,16 +350,14 @@ mod tests {
         let Statement::Command(cmd) = &f.statements[0] else {
             panic!()
         };
-        // Empty continuation (#) adds nothing; third line appends.
         assert_eq!(
             cmd.trailing_comment,
-            Some(Comment::Line("# first third".to_owned()))
+            Some(ast::Comment::Line("# first third".to_owned()))
         );
     }
 
     #[test]
     fn off_by_one_column_prevents_merge() {
-        // Trailing # is at column 14; continuation # is at column 15 — should NOT merge.
         let src = "set(FOO bar) # trailing\n              # off by one\n";
         let f = parse_ok(src);
         assert_eq!(f.statements.len(), 2);
