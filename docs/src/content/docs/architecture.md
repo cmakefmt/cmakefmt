@@ -40,9 +40,8 @@ spec registry knows nothing about config, and the formatter consumes all three.
 
 ## Parser (`src/parser/`)
 
-The parser uses [pest](https://pest.rs/) with a PEG grammar defined in
-`src/parser/cmake.pest`. It turns CMake source text into an AST with this
-structure:
+The parser is a hand-written recursive-descent implementation over a streaming
+scanner. It turns CMake source text into an AST with this structure:
 
 ```text
 File -> Statement* -> CommandInvocation -> Argument*
@@ -52,8 +51,13 @@ File -> Statement* -> CommandInvocation -> Argument*
 inline comments. Comments are preserved as `InlineComment` arguments so they
 survive round-tripping through the formatter.
 
-The entry point is `parser::parse()` in `src/parser/mod.rs`, which returns a
-`File` AST node.
+The public entry point is `parser::parse()` in `src/parser/mod.rs`, which
+coordinates four private layers:
+
+- `cursor.rs` for byte-level traversal
+- `scanner.rs` for parser-driven literal/comment/argument scanning
+- `grammar.rs` for structural parsing into a private parse tree
+- `lower.rs` for blank-line and trailing-comment normalization into the public AST
 
 ## Command Spec Registry (`src/spec/`)
 
@@ -152,9 +156,9 @@ Crate-owned error types used across parsing, config loading, and formatting:
 
 - **`Error`** -- the top-level error enum with variants for config errors, parse
   errors (with source context), I/O errors, and formatting failures.
-- **`ParseDiagnostic`** -- crate-owned parser diagnostic that wraps pest error
-  details without exposing pest types in the public API. Includes line, column,
-  and a human-readable message.
+- **`ParseDiagnostic`** -- crate-owned parser diagnostic with line, column, and
+  a human-readable message. The parser tracks byte offsets internally and
+  resolves line/column only when constructing this public error.
 - **`FileParseError`** -- structured metadata for config/spec deserialization
   failures (format name, message, optional line/column).
 
@@ -204,7 +208,7 @@ invalid fields the same way the CLI does.
 |---|---|
 | Change formatting behavior | `src/formatter/node.rs` |
 | Add a new config option | `src/config/mod.rs` |
-| Change the parser or grammar | `src/parser/cmake.pest` |
+| Change the parser | `src/parser/{scanner,grammar,lower}.rs` |
 | Add or update a built-in command spec | `src/spec/builtins.toml` |
 | Add a new CLI flag | `src/main.rs` |
 | Modify LSP behavior | `src/lsp/mod.rs` |

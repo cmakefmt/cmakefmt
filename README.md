@@ -316,7 +316,7 @@ Key modules under `src/`:
 * `main.rs`: CLI entry point and workflow orchestration
 * `lib.rs`: public library API
 * `config/`: config loading, merging, and legacy conversion
-* `parser/`: `pest` grammar, AST, and parse pipeline
+* `parser/`: hand-written parser, AST, and lowering pipeline
 * `spec/`: built-in and user-defined command registry
 * `formatter/`: AST-to-doc formatting logic and comment handling
 * `files.rs`: file discovery and ignore handling

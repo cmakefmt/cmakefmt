@@ -56,7 +56,6 @@ path = [
   "scripts/*.sh",
   "docs/src/styles/*.css",
   "docs/tsconfig.json",
-  "src/parser/cmake.pest",
   "tests/README.md",
   "tests/fixtures/README.md",
   "tests/fixtures/basic/*.cmake",

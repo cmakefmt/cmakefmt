@@ -6,7 +6,9 @@ formatter distributed as a single binary.
 
 ## Key decisions (do not revisit without good reason)
 
-- **Parser**: `pest` (PEG, pure Rust). Grammar lives in `src/parser/cmake.pest`.
+- **Parser**: hand-written recursive descent over a streaming scanner. Public
+  AST stays in `src/parser/ast.rs`; parser internals live in
+  `src/parser/{cursor,scanner,grammar,lower}.rs`.
 - **Formatter**: Wadler-Lindig algorithm via the `pretty` crate. AST -> Doc IR -> string.
 - **Config**: YAML/TOML via `serde`. Files: `.cmakefmt.yaml`, `.cmakefmt.yml`, `.cmakefmt.toml`.
 - **CLI**: `clap` (derive API). Subcommands: `config`, `dump`, `lsp`, `completions`, `install-hook`.
@@ -78,8 +80,11 @@ cmakefmt/
 |   |   +-- editorconfig.rs    <- .editorconfig fallback support
 |   |   +-- legacy.rs          <- conversion from legacy cmake-format config files
 |   +-- parser/
-|   |   +-- mod.rs             <- public parse() fn, AST building, trailing comment merging
-|   |   +-- cmake.pest         <- pest grammar (THE source of truth)
+|   |   +-- mod.rs             <- public parse() fn, parser glue
+|   |   +-- cursor.rs          <- byte cursor over source text
+|   |   +-- scanner.rs         <- streaming scanner for literals/comments/args
+|   |   +-- grammar.rs         <- recursive-descent parser to private parse tree
+|   |   +-- lower.rs           <- parse-tree -> public AST normalization
 |   |   +-- ast.rs             <- AST node types (File, Statement, Argument, Comment)
 |   +-- spec/
 |   |   +-- mod.rs             <- NArgs, PosSpec, KwargSpec, CommandForm, CommandSpec
@@ -112,9 +117,8 @@ cmakefmt/
 ## Comment handling
 
 Comments are first-class AST nodes — they are NOT stripped and reattached.
-The pest grammar captures them inline. The AST preserves their position
-relative to surrounding nodes. The formatter treats them like any other
-node in the Doc IR.
+The parser preserves their position relative to surrounding nodes, and the
+formatter treats them like any other node in the Doc IR.
 
 Types of comments in CMake:
 

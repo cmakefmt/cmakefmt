@@ -199,8 +199,11 @@ If the change affects real-world behavior, also update:
 
 Parser changes usually require coordinated updates across:
 
-- `src/parser/cmake.pest`
 - `src/parser/mod.rs`
+- `src/parser/cursor.rs`
+- `src/parser/scanner.rs`
+- `src/parser/grammar.rs`
+- `src/parser/lower.rs`
 - `src/parser/ast.rs`
 - parser fixture tests and any snapshots affected by parse-tree changes
 
