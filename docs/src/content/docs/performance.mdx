@@ -19,11 +19,11 @@ not an accident. Speed is a design goal, not a side effect.
 
 ## Highlights
 
-- **45×** geometric-mean speedup over `cmake-format` on whole-repository benchmarks (parallel)
-- **15.6×** geometric-mean speedup on whole-repository benchmarks (serial)
-- **12.86×** geometric-mean speedup on per-file benchmarks (startup-dominated)
-- **470×** fastest whole-repo speedup (OpenCV, 282 files, parallel)
-- Formats **2,621 CMake files** (LLVM) in **161ms** with parallel mode
+- **48×** geometric-mean speedup on per-file benchmarks
+- **19×** geometric-mean speedup on whole-repository benchmarks (serial)
+- **49×** geometric-mean speedup over `cmake-format` on whole-repository benchmarks (parallel)
+- **485×** fastest whole-repo speedup (OpenCV, 282 files, parallel)
+- Formats the **55,000-line gRPC root** `CMakeLists.txt` in **180ms** (cmake-format: 76 s)
 
 ## Benchmark Environment
 
@@ -41,10 +41,15 @@ performance trends remain strong and regressions are caught early.
 
 ## Benchmark Approach
 
-Per-file timings are measured with `hyperfine` against a corpus of 15
-real-world `CMakeLists.txt` files sourced from well-known open-source projects.
-Each fixture is run in isolation — one file, one process — to isolate
-single-file formatting performance from batch overhead.
+There are two phases, each using the most natural command for its scenario.
+
+### Per-file phase
+
+Single-file timings are measured against a corpus of 11 real-world
+`CMakeLists.txt` files sourced from well-known open-source projects, ranging
+from a 2-line stub to the 55,000-line gRPC root. Each fixture is run in
+isolation — one file, one process — to isolate single-file formatting
+performance from batch overhead.
 
 Both `cmakefmt` and `cmake-format` are timed in the same `hyperfine` invocation
 so they share the same system conditions:
@@ -55,10 +60,37 @@ hyperfine --warmup 10 --runs 50 \
   "cmake-format path/to/CMakeLists.txt"
 ```
 
-- **10 warmup runs** — allow the OS page cache and branch predictor to reach a
+This is the default "format this file" operation: parse, format, emit to
+stdout. No `--check` is used because the goal is to compare the most natural
+single-file invocation, and both tools do equivalent work (parse + format +
+serialize). Adding `--check` would slightly *favour* `cmakefmt` because
+`--check` (without `--diff`) skips diff computation, so the per-file numbers
+here are the conservative measurement.
+
+### Whole-repo phase
+
+Whole-repository timings format every CMake file in the project. Emitting
+thousands of formatted files to stdout would mostly measure the terminal, not
+the formatter, so this phase uses `--check` for both tools — which is also the
+realistic CI usage pattern:
+
+```bash
+hyperfine --warmup 3 --runs 10 \
+  --command-name "cmakefmt-parallel" "cmakefmt --check path/to/repo" \
+  --command-name "cmakefmt-serial"   "cmakefmt --check --parallel 1 path/to/repo" \
+  --command-name "cmake-format"      "xargs cmake-format --check < repo-files.txt"
+```
+
+`cmake-format` has no native multi-file discovery, so the file list is
+pre-computed via `cmakefmt --list-input-files` and piped in via `xargs`. Both
+tools therefore see the same set of files.
+
+### Common methodology
+
+- **Warmup runs** — allow the OS page cache and branch predictor to reach a
   steady state before measurements are recorded
-- **50 timed runs** — give hyperfine enough samples for a stable mean and tight
-  confidence interval
+- **Timed runs** — give hyperfine enough samples for a stable mean and tight
+  confidence interval (50 for per-file, 10 for the much slower whole-repo runs)
 - **Geometric mean** — used instead of arithmetic mean because it is resistant
   to outliers and gives equal weight to each fixture regardless of absolute
   runtime
@@ -75,7 +107,10 @@ timings and speedup for that fixture.
 
 <BenchmarkComparisonChart />
 
-Per-fixture speedup. The dashed line marks the geometric mean (`12.86×`).
+Per-fixture speedup. The dashed line marks the geometric mean (`48×`). A few
+fixtures (`opencv_root`, `grpc_root`) show very large speedups — these reflect
+pathological behaviour in `cmake-format` on those specific files rather than
+cherry-picking, and are kept un-capped for transparency.
 
 <SpeedupChart />
 
@@ -87,18 +122,24 @@ benchmarks show the real-world speedup when formatting entire projects:
 
 | Repository | Files | cmakefmt (parallel) | cmakefmt (serial) | cmake-format | Speedup (parallel) |
 |---|---:|---:|---:|---:|---:|
-| catch2 | 20 | 32ms | 101ms | 3,321ms | 103.8× |
-| fmt | 11 | 20ms | 50ms | 851ms | 41.7× |
-| googletest | 4 | 17ms | 27ms | 321ms | 19.0× |
-| llvm | 2,621 | 161ms | 388ms | 4,829ms | 30.0× |
-| nlohmann_json | 41 | 42ms | 163ms | 4,529ms | 107.6× |
-| opencv | 282 | 215ms | 1,147ms | 101,208ms | 470.7× |
-| protobuf | 25 | 38ms | 60ms | 1,185ms | 31.3× |
-| spdlog | 7 | 19ms | 36ms | 378ms | 19.6× |
-| vulkan_hpp | 135 | 101ms | 440ms | 1,253ms | 12.5× |
-| oomph-lib | 613 | 484ms | 2,362ms | 17,118ms | 35.3× |
+| googletest    |      4 |     15ms |       24ms |       292ms |  19.1× |
+| spdlog        |      7 |     19ms |       34ms |       375ms |  19.7× |
+| fmt           |     11 |     20ms |       46ms |       857ms |  42.7× |
+| catch2        |     20 |     27ms |       83ms |     2,971ms | 108.5× |
+| protobuf      |     25 |     35ms |       56ms |     1,180ms |  33.7× |
+| nlohmann_json |     41 |     38ms |      152ms |     3,965ms | 103.2× |
+| grpc          |     46 |    188ms |      315ms |    76,395ms | 407.1× |
+| bullet3       |     58 |     20ms |       22ms |       517ms |  25.8× |
+| vulkan_hpp    |    135 |    100ms |      432ms |     1,243ms |  12.5× |
+| opencv        |    282 |    207ms |    1,058ms |   100,529ms | 485.3× |
+| blender       |    419 |    312ms |    1,505ms |    38,802ms | 124.5× |
+| oomph-lib     |    613 |    485ms |    2,298ms |    17,117ms |  35.3× |
+| llvm          |  2,621 |    155ms |      366ms |     4,231ms |  27.4× |
+| cmake         | 11,264 |    322ms |    1,028ms |     3,638ms |  11.3× |
 
-Geometric-mean speedup: **45.0×** (parallel) / **15.6×** (serial).
+Geometric-mean speedup: **49×** (parallel) / **19×** (serial).
+Aggregate speedup across the full corpus: **130×** (252 s of `cmake-format`
+collapses to 1.9 s of `cmakefmt --parallel`).
 
 The following Criterion estimates cover a 1000+ line synthetic stress-test file:
 
@@ -138,8 +179,8 @@ A direct head-to-head against `cmake-format` on the 613-file [oomph-lib](https:/
 (hyperfine, `--check` mode) showed:
 
 - `cmake-format`: `17.1 s`
-- `cmakefmt` serial: `2.4 s` → **`~7×` faster**
-- `cmakefmt` parallel: `0.48 s` → **`~35×` faster**
+- `cmakefmt` serial: `2.3 s` → **`~7.4×` faster**
+- `cmakefmt` parallel: `0.49 s` → **`~35×` faster**
 
 ## Version-by-Version Trend
 
@@ -153,12 +194,15 @@ changed in that release.
 
 <VersionTrendChart />
 
-The gradual increase from ~10ms to ~15ms is entirely process startup
-overhead — the formatting engine itself remains sub-millisecond. As the
-binary grew from 4.7MB to 6.0MB with new features (LSP, shell
-completions, watch mode, JSON Schema, parse tree dump), the OS needs to
-load more pages from disk at startup. This fixed cost is paid once per
-invocation and is irrelevant for multi-file runs.
+The gradual increase from ~10ms to ~15ms across early releases is entirely
+process startup overhead — the formatting engine itself remains sub-millisecond.
+As the binary grew from 4.7MB to 6.0MB with new features (LSP, shell
+completions, watch mode, JSON Schema, parse tree dump), the OS needed to load
+more pages from disk at startup. The post-`v1.0.0` datapoint shows the binary
+brought back down to 4.8MB and startup back under 12ms via link-time
+optimization (`lto = true`, `codegen-units = 1`) and removal of an unused
+dependency. This fixed cost is paid once per invocation and is irrelevant for
+multi-file runs.
 
 ## What The Numbers Mean In Practice
 

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
-captured_on = "2026-04-02"
+captured_on = "2026-04-19"
 
 [[fixture]]
 name = "abseil"
@@ -138,3 +138,39 @@ commit = "538ac8ffc5b31d163648bf9c6954e978a69337ee"
 source_url = "https://github.com/google/XNNPACK/blob/538ac8ffc5b31d163648bf9c6954e978a69337ee/CMakeLists.txt"
 raw_url = "https://raw.githubusercontent.com/google/XNNPACK/538ac8ffc5b31d163648bf9c6954e978a69337ee/CMakeLists.txt"
 sha256 = "9e4d944fbacf0e5160872d57417fb6ab763073c809647fdd48a1054826e081fb"
+
+[[fixture]]
+name = "opencv_root"
+relative_path = "opencv_root/CMakeLists.txt"
+branch = "4.x"
+commit = "934c0716d2cbbc0a5e7df56e64fedf0e57b0372e"
+source_url = "https://github.com/opencv/opencv/blob/934c0716d2cbbc0a5e7df56e64fedf0e57b0372e/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/opencv/opencv/934c0716d2cbbc0a5e7df56e64fedf0e57b0372e/CMakeLists.txt"
+sha256 = "cbdc977f3fd744612d631efe2bc02ae0c2c7945b462b36fd73132f88f4513023"
+
+[[fixture]]
+name = "blender_root"
+relative_path = "blender_root/CMakeLists.txt"
+branch = "main"
+commit = "7bf4a314211c47a0326f0fb7c07db5cae5f65916"
+source_url = "https://github.com/blender/blender/blob/7bf4a314211c47a0326f0fb7c07db5cae5f65916/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/blender/blender/7bf4a314211c47a0326f0fb7c07db5cae5f65916/CMakeLists.txt"
+sha256 = "db3197c42750dc2e73d97c963b229804f9436ceaea2224f430d78ebaa442e51d"
+
+[[fixture]]
+name = "llvm_libc_math"
+relative_path = "llvm_libc_math/CMakeLists.txt"
+branch = "main"
+commit = "ca867c7d9450b3e72157433585bb858468a308d6"
+source_url = "https://github.com/llvm/llvm-project/blob/ca867c7d9450b3e72157433585bb858468a308d6/libc/test/src/math/smoke/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/llvm/llvm-project/ca867c7d9450b3e72157433585bb858468a308d6/libc/test/src/math/smoke/CMakeLists.txt"
+sha256 = "40507a10829524d437ca2d71990cfe26c4b16473a8564727780bf9089505d71f"
+
+[[fixture]]
+name = "grpc_root"
+relative_path = "grpc_root/CMakeLists.txt"
+branch = "master"
+commit = "b72fb2894a0ae30f95206bfc283ae9dc350172d8"
+source_url = "https://github.com/grpc/grpc/blob/b72fb2894a0ae30f95206bfc283ae9dc350172d8/CMakeLists.txt"
+raw_url = "https://raw.githubusercontent.com/grpc/grpc/b72fb2894a0ae30f95206bfc283ae9dc350172d8/CMakeLists.txt"
+sha256 = "a39f6c19b75e117937f23c2737567f901a79735fd24bc381c36c03c53cfffb63"

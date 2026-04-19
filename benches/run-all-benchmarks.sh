@@ -68,10 +68,10 @@ PF_FILES=(
   "$REPO_ROOT/target/real-world-corpus/spdlog/CMakeLists.txt:spdlog:10:50"
   "$REPO_ROOT/target/real-world-corpus/mariadb_server/CMakeLists.txt:mariadb_server:10:50"
   "$REPO_ROOT/target/real-world-corpus/xnnpack/CMakeLists.txt:xnnpack:10:50"
-  "$REPO_ROOT/benches/repos/opencv/CMakeLists.txt:opencv_root:5:20"
-  "$REPO_ROOT/benches/repos/blender/CMakeLists.txt:blender_root:5:20"
-  "$REPO_ROOT/benches/repos/llvm/libc/test/src/math/smoke/CMakeLists.txt:llvm_libc_math:5:20"
-  "$REPO_ROOT/benches/repos/grpc/CMakeLists.txt:grpc_root:3:5"
+  "$REPO_ROOT/target/real-world-corpus/opencv_root/CMakeLists.txt:opencv_root:5:20"
+  "$REPO_ROOT/target/real-world-corpus/blender_root/CMakeLists.txt:blender_root:5:20"
+  "$REPO_ROOT/target/real-world-corpus/llvm_libc_math/CMakeLists.txt:llvm_libc_math:5:20"
+  "$REPO_ROOT/target/real-world-corpus/grpc_root/CMakeLists.txt:grpc_root:3:5"
 )
 
 for entry in "${PF_FILES[@]}"; do
@@ -174,10 +174,10 @@ file_paths = {
     "spdlog":        f"{repo_root}/target/real-world-corpus/spdlog/CMakeLists.txt",
     "mariadb_server":f"{repo_root}/target/real-world-corpus/mariadb_server/CMakeLists.txt",
     "xnnpack":       f"{repo_root}/target/real-world-corpus/xnnpack/CMakeLists.txt",
-    "opencv_root":   f"{repo_root}/benches/repos/opencv/CMakeLists.txt",
-    "blender_root":  f"{repo_root}/benches/repos/blender/CMakeLists.txt",
-    "llvm_libc_math":f"{repo_root}/benches/repos/llvm/libc/test/src/math/smoke/CMakeLists.txt",
-    "grpc_root":     f"{repo_root}/benches/repos/grpc/CMakeLists.txt",
+    "opencv_root":   f"{repo_root}/target/real-world-corpus/opencv_root/CMakeLists.txt",
+    "blender_root":  f"{repo_root}/target/real-world-corpus/blender_root/CMakeLists.txt",
+    "llvm_libc_math":f"{repo_root}/target/real-world-corpus/llvm_libc_math/CMakeLists.txt",
+    "grpc_root":     f"{repo_root}/target/real-world-corpus/grpc_root/CMakeLists.txt",
 }
 
 labels = {

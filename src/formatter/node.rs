@@ -926,7 +926,12 @@ fn write_vertical_arguments(
                 // argument. This preserves the common pattern:
                 //   dep1 # first dep
                 //   dep2 # second dep
-                if output.ends_with('\n') {
+                //
+                // Skip when the previous line already ends in a trailing
+                // comment — appending another `#` segment would merge two
+                // distinct comments into one, breaking idempotency on the
+                // next format pass.
+                if output.ends_with('\n') && !last_output_line_has_comment(output) {
                     let last_line_start =
                         output[..output.len() - 1].rfind('\n').map_or(0, |p| p + 1);
                     let last_line_width = output[last_line_start..output.len() - 1].chars().count();

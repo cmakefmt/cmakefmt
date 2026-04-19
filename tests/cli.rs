@@ -3793,6 +3793,36 @@ fn trailing_comments_stay_attached_in_vertical_layout() {
 }
 
 #[test]
+fn standalone_comment_does_not_merge_with_previous_trailing_comment() {
+    // Regression: a long standalone comment between two arguments gets
+    // reflowed by `format_comment_lines` into shorter lines. On the second
+    // format pass the now-short first line was being merged onto the
+    // previous argument's trailing comment, breaking idempotency.
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(
+        &file,
+        "set(FOOS\n  \"/w34189\"  # local variable is initialized but not referenced\n  # see https://example.com/some/very/long/url/that/forces/reflow\n  \"/w35038\"\n)\n",
+    );
+
+    let output = cmakefmt().args([file.to_str().unwrap()]).output().unwrap();
+    let once = String::from_utf8_lossy(&output.stdout).into_owned();
+
+    let twice_input = dir.path().join("once.cmake");
+    write_file(&twice_input, &once);
+    let output2 = cmakefmt()
+        .args([twice_input.to_str().unwrap()])
+        .output()
+        .unwrap();
+    let twice = String::from_utf8_lossy(&output2.stdout).into_owned();
+
+    assert_eq!(
+        once, twice,
+        "output must be idempotent across two format passes, got:\nonce:\n{once}\ntwice:\n{twice}"
+    );
+}
+
+#[test]
 fn trailing_comment_on_command_preserved() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");

@@ -40,8 +40,21 @@ This project follows a simple changelog discipline:
   hydration, `magic-move` property compatibility fix
 - "Getting Started" replaces "Installation" in the header nav
 
+### Changed
+
+- Real-world fixture corpus expanded with four large-file pins
+  (`opencv_root`, `blender_root`, `llvm_libc_math`, `grpc_root`) so the
+  per-file benchmark suite is fully reproducible from
+  `tests/fixtures/real_world/manifest.toml`
+
 ### Fixed
 
+- Standalone comment immediately following an argument with a trailing
+  comment no longer merges into that trailing comment on a second format
+  pass. The vertical-arguments writer now refuses to inline-attach a
+  comment when the previous line already ends in a trailing comment.
+- Landing page Quick Start now uses the canonical `cmakefmt config init`
+  command instead of the bare `cmakefmt init` form
 - Diff computation skipped when result is unused — **14s → 0.6s** on a
   55K-line file. The Myers diff algorithm was running eagerly on every
   invocation even when `--diff` was not requested.

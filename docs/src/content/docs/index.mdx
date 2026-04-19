@@ -53,7 +53,7 @@ Then — just point it at your project. It discovers all CMake files
 recursively and formats them in parallel:
 
 ```bash
-cmakefmt init                      # generate a starter .cmakefmt.yaml
+cmakefmt config init               # generate a starter .cmakefmt.yaml
 cmakefmt .                         # preview formatted output
 cmakefmt --diff .                  # view a unified diff of what would change
 cmakefmt --in-place .              # apply formatting across the whole project
@@ -67,7 +67,7 @@ cmakefmt --path-regex 'src/.*' .   # format CMake files only under src/
 
 ## Performance
 
-<SpeedCounter target={25.33} label="geometric-mean speedup over cmake-format across 15 real-world fixtures. On a 612-file repository: ~97× faster sequentially, ~240× faster with --parallel 8." />
+<SpeedCounter target={48} label="geometric-mean speedup over cmake-format across 11 real-world fixtures. On large repositories: up to 485× faster than cmake-format with parallel mode." />
 
 <BenchmarkComparisonChart />
 

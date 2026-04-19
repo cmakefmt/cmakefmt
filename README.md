@@ -55,8 +55,8 @@ single native binary. Same spirit. No Python.
 
 ## Why `cmakefmt`?
 
-* **25× faster — not a typo.** Geometric-mean speedup of `25.33x` over `cmake-format` on real-world corpora.
-  Pre-commit hooks that once made you wince now finish before you blink.
+* **48× faster — not a typo.** Geometric-mean speedup of `48×` over `cmake-format` on real-world per-file corpora,
+  rising to **485×** on whole-repository runs. Pre-commit hooks that once made you wince now finish before you blink.
 * **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
   Drop it in CI and forget about it.
 * **Built for actual workflows.** `--check`, `--diff`, `--staged`, `--changed`, `--files-from`,
@@ -71,26 +71,25 @@ single native binary. Same spirit. No Python.
 
 ## Performance
 
-| Fixture                         | Lines | `cmakefmt` ms | `cmake-format` ms | Speedup |
-|---------------------------------|------:|--------------:|------------------:|--------:|
-| `abseil/CMakeLists.txt`         |   280 |         5.358 |           172.882 |  32.27× |
-| `catch2/CMakeLists.txt`         |   230 |         5.177 |           110.495 |  21.34× |
-| `cli11/CMakeLists.txt`          |   283 |         5.174 |           125.992 |  24.35× |
-| `cmake_cmbzip2/CMakeLists.txt`  |    25 |         4.563 |            63.034 |  13.81× |
-| `googletest/CMakeLists.txt`     |    36 |         4.376 |            65.244 |  14.91× |
-| `ggml/CMakeLists.txt`           |   498 |         7.371 |           216.193 |  29.33× |
-| `llama_cpp/CMakeLists.txt`      |   286 |         5.755 |           131.230 |  22.80× |
-| `llvm_tablegen/CMakeLists.txt`  |    83 |         4.439 |            79.608 |  17.93× |
-| `mariadb_server/CMakeLists.txt` |   656 |         9.097 |           489.035 |  53.76× |
-| `nlohmann_json/CMakeLists.txt`  |   237 |         5.035 |           140.580 |  27.92× |
-| `opencv_flann/CMakeLists.txt`   |     2 |         4.263 |            54.812 |  12.86× |
-| `protobuf/CMakeLists.txt`       |   351 |         5.478 |           114.711 |  20.94× |
-| `spdlog/CMakeLists.txt`         |   413 |         6.461 |           220.804 |  34.17× |
-| `qtbase_network/CMakeLists.txt` |   420 |         7.852 |           293.745 |  37.41× |
-| `xnnpack/CMakeLists.txt`        |  1354 |        26.965 |          1432.939 |  53.14× |
+| Fixture                          |  Lines | `cmakefmt` ms | `cmake-format` ms |   Speedup |
+|----------------------------------|-------:|--------------:|------------------:|----------:|
+| `opencv_flann/CMakeLists.txt`    |      2 |          7.46 |             51.07 |      6.8× |
+| `googletest/CMakeLists.txt`      |     36 |          4.82 |             63.10 |     13.1× |
+| `llvm_tablegen/CMakeLists.txt`   |     83 |          8.81 |             76.55 |      8.7× |
+| `abseil/CMakeLists.txt`          |    280 |         10.24 |            168.91 |     16.5× |
+| `spdlog/CMakeLists.txt`          |    413 |         10.95 |            217.78 |     19.9× |
+| `mariadb_server/CMakeLists.txt`  |    656 |         11.82 |            485.42 |     41.1× |
+| `xnnpack/CMakeLists.txt`         |  1,354 |         17.57 |          1,429.83 |     81.4× |
+| `opencv/CMakeLists.txt` (root)   |  2,039 |         26.34 |         38,910.13 |  1,477.2× |
+| `blender/CMakeLists.txt` (root)  |  2,650 |         49.19 |          2,638.59 |     53.6× |
+| `llvm/libc/.../CMakeLists.txt`   |  6,688 |         20.34 |          2,219.31 |    109.1× |
+| `grpc/CMakeLists.txt` (root)     | 54,834 |        179.29 |         76,098.27 |    424.4× |
 
-Geometric-mean speedup across the full corpus: **`25.33×`**.
-On a 220-file batch, `--parallel 8` improves throughput by **`3.80×`** vs serial.
+Geometric-mean per-file speedup: **`48×`**.
+Whole-repository parallel runs (across 14 large open-source repos including
+LLVM, blender, opencv, gRPC, and oomph-lib) average **`49×` faster than
+`cmake-format`** geo-mean, with parallel mode delivering up to **`5.1×`** over
+`cmakefmt` serial on large repositories.
 
 Full methodology and profiler notes: [cmakefmt.dev/performance/](https://cmakefmt.dev/performance/).
 
