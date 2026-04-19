@@ -153,9 +153,9 @@ Shell completion installation instructions are available at [cmakefmt.dev/instal
 
 ```bash
 cmakefmt config init               # generate a starter .cmakefmt.yaml
-cmakefmt --check .                 # just show which files would change
-cmakefmt .                         # preview formatted output; changed lines shown in blue
-cmakefmt --diff .                  # view a unified diff of what would change (like `git diff`)
+cmakefmt --check .                 # dry-run: just show which files would change
+cmakefmt .                         # dry-run: preview formatted output; changed lines shown in blue
+cmakefmt --diff .                  # dry-run: view a unified diff of what would change (like `git diff`)
 cmakefmt --in-place .              # apply formatting across the whole project
 cmakefmt --staged --check          # use in pre-commit hooks
 cmakefmt --path-regex 'src/.*' .   # format CMake files only under src/
