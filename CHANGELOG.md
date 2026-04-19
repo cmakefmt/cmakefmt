@@ -45,8 +45,11 @@ This project follows a simple changelog discipline:
   comment no longer merges into that trailing comment on a second format
   pass. The vertical-arguments writer now refuses to inline-attach a
   comment when the previous line already ends in a trailing comment.
-- Landing page Quick Start now uses the canonical `cmakefmt config init`
-  command instead of the bare `cmakefmt init` form
+- All references to the non-functional `cmakefmt init` shorthand replaced
+  with the canonical `cmakefmt config init` (landing page, getting-started,
+  migration guide, CLI reference, and the binary's `--help` long text).
+  The bare `cmakefmt init` form was already inert — the CLI parses `init`
+  as a path argument — so docs that promised it were misleading.
 - Diff computation skipped when result is unused — **14s → 0.6s** on a
   55K-line file. The Myers diff algorithm was running eagerly on every
   invocation even when `--diff` was not requested.

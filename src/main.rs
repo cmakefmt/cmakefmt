@@ -42,7 +42,7 @@ Direct file arguments are always processed, even if ignore files would skip
 them during recursive discovery. Ignore rules only affect files discovered
 from directories, --files-from, or Git-aware selection modes.
 
-Use `cmakefmt init` to generate a starter .cmakefmt.yaml, or
+Use `cmakefmt config init` to generate a starter .cmakefmt.yaml, or
 `cmakefmt config dump` to print the full default template.
 
 Legacy cmake-format config files can be converted with

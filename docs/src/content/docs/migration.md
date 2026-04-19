@@ -24,7 +24,7 @@ output at each step, and commit to full migration once you are satisfied.
 2. Generate a starter config. YAML is the recommended default:
 
    ```bash
-   cmakefmt init
+   cmakefmt config init
    ```
 
 3. If you already have a `cmake-format` config file, convert it automatically:

@@ -39,19 +39,19 @@ single native binary. Same spirit. No Python.
 
 <h2>Contents</h2>
 
-- [Why `cmakefmt`?](#why-cmakefmt)
-- [Performance](#performance)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Common Workflows](#common-workflows)
-- [Configuration](#configuration)
-- [Formatter Disable Regions](#formatter-disable-regions)
-- [Library Usage](#library-usage)
-- [Documentation](#documentation)
-- [Project Layout](#project-layout)
-- [Development](#development)
-- [Status](#status)
-- [License](#license)
+* [Why `cmakefmt`?](#why-cmakefmt)
+* [Performance](#performance)
+* [Installation](#installation)
+* [Quick Start](#quick-start)
+* [Common Workflows](#common-workflows)
+* [Configuration](#configuration)
+* [Formatter Disable Regions](#formatter-disable-regions)
+* [Library Usage](#library-usage)
+* [Documentation](#documentation)
+* [Project Layout](#project-layout)
+* [Development](#development)
+* [Status](#status)
+* [License](#license)
 
 ## Why `cmakefmt`?
 
@@ -151,28 +151,14 @@ Shell completion installation instructions are available at [cmakefmt.dev/instal
 
 ## Quick Start
 
-**1. Generate a starter config in your project root:**
-
 ```bash
-cmakefmt --dump-config > .cmakefmt.yaml
-```
-
-**2. Dry-run — check your whole project without touching any files:**
-
-```bash
-cmakefmt --check .
-```
-
-**3. Apply formatting:**
-
-```bash
-cmakefmt --in-place .
-```
-
-**4. Format only the files you're about to commit:**
-
-```bash
-cmakefmt --staged --check
+cmakefmt config init               # generate a starter .cmakefmt.yaml
+cmakefmt --check .                 # just show which files would change
+cmakefmt .                         # preview formatted output; changed lines shown in blue
+cmakefmt --diff .                  # view a unified diff of what would change (like `git diff`)
+cmakefmt --in-place .              # apply formatting across the whole project
+cmakefmt --staged --check          # use in pre-commit hooks
+cmakefmt --path-regex 'src/.*' .   # format CMake files only under src/
 ```
 
 ## Common Workflows

@@ -96,7 +96,6 @@ Ignore rules only affect:
 
 | Subcommand | Meaning |
 | --- | --- |
-| `cmakefmt init` | Write a starter `.cmakefmt.yaml` to the current directory. |
 | `cmakefmt lsp` | Start the LSP server (JSON-RPC on stdio). |
 | `cmakefmt completions <SHELL>` | Print shell completions for bash, zsh, or fish. |
 | `cmakefmt install-hook` | Install a git pre-commit hook that runs `cmakefmt --check --staged`. |
@@ -107,7 +106,7 @@ Ignore rules only affect:
 | `cmakefmt config path` | Print the selected config file path for a target. |
 | `cmakefmt config explain` | Explain config resolution for a target or the current directory. |
 | `cmakefmt config convert <PATH>...` | Convert legacy cmake-format config files. |
-| `cmakefmt config init` | Same as `cmakefmt init`. |
+| `cmakefmt config init` | Write a starter `.cmakefmt.yaml` to the current directory. |
 | `cmakefmt dump ast <FILE>` | Print the raw parser AST as a tree. |
 | `cmakefmt dump parse <FILE>` | Print the spec-resolved parse tree with keyword/flag grouping and flow-control nesting. |
 
@@ -418,7 +417,7 @@ Typical output includes:
 ### Generate A Starter Config
 
 ```bash
-cmakefmt init
+cmakefmt config init
 ```
 
 Or dump the full template to stdout:

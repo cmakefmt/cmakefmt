@@ -45,7 +45,7 @@ For shell completions, editor setup, and more install options see the full [Inst
 Generate a starter config in your repository root:
 
 ```bash
-cmakefmt init
+cmakefmt config init
 ```
 
 Or dump the full default config to stdout:
