@@ -16,3 +16,5 @@ __pycache__/
 /dist/
 demo/*.gif
 .DS_Store
+benches/repos/
+benches/results/
