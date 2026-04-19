@@ -1,4 +1,6 @@
 /target
+/fuzz/target
+/fuzz/Cargo.lock
 /docs/dist
 /docs/.astro
 /docs/node_modules

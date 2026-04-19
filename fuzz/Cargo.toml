@@ -13,6 +13,8 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+pest = "2"
+pest_derive = "2"
 
 [dependencies.cmakefmt]
 path = ".."
@@ -26,4 +28,9 @@ doc = false
 [[bin]]
 name = "fuzz_format"
 path = "fuzz_targets/fuzz_format.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_parse_compare"
+path = "fuzz_targets/fuzz_parse_compare.rs"
 doc = false

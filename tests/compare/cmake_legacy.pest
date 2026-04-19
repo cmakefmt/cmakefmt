@@ -1,0 +1,118 @@
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// CMake language grammar for pest (PEG).
+//
+// Reference: https://cmake.org/cmake/help/latest/manual/cmake-language.7.html
+//
+// Design notes:
+//   - WHITESPACE is NOT set globally; CMake whitespace is handled explicitly.
+//   - Comments are named rules (not silenced) so the AST builder can see them.
+//   - Bracket argument = count matching is validated in Rust after parsing,
+//     since PEG cannot express "same number of =" in open and close bracket.
+//   - Argument separators (spaces/newlines between args) are silent (_sep).
+
+bom = _{ "\u{FEFF}" }
+
+file = { SOI ~ bom? ~ file_item* ~ EOI }
+
+file_item = { command_invocation | template_placeholder | bracket_comment | line_comment | newline | space }
+
+command_invocation = {
+    identifier ~ space* ~ "(" ~ arguments ~ ")"
+}
+
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+template_placeholder = @{ "@" ~ (ASCII_ALPHANUMERIC | "_")+ ~ "@" }
+
+arguments = { argument_part* }
+
+argument_part = { argument | bracket_comment | line_ending | space }
+
+argument = { bracket_argument | quoted_argument | mixed_unquoted_argument | unquoted_argument }
+
+argument_boundary = _{ space | newline | ")" | "#" }
+
+line_ending = { line_comment? ~ newline }
+
+newline = @{ "\r\n" | "\n" }
+
+space = @{ (" " | "\t")+ }
+
+bracket_comment = { "#" ~ bracket_argument }
+
+line_comment = @{ "#" ~ !bracket_open ~ (!newline ~ ANY)* }
+
+bracket_argument = { bracket_open ~ bracket_content ~ bracket_close }
+
+bracket_open    = @{ "[" ~ "="* ~ "[" }
+bracket_content = @{ bracket_leading_newline? ~ (!bracket_close_any ~ ANY)* }
+bracket_close   = @{ "]" ~ "="* ~ "]" }
+
+bracket_close_any = _{ "]" ~ "="* ~ "]" }
+
+bracket_leading_newline = _{ "\n" | "\r\n" }
+
+mixed_unquoted_argument = { legacy_quoted ~ (unquoted_element | legacy_quoted | legacy_make_var | nested_parens)+ }
+
+quoted_argument = { "\"" ~ quoted_element* ~ "\"" ~ &argument_boundary }
+
+quoted_element = {
+    quoted_continuation
+  | escape_sequence
+  | variable_ref
+  | genex
+  | quoted_text
+}
+
+quoted_text = @{ (!("\"" | "\\" | "$") ~ ANY)+ | "$" ~ !("{" | "ENV{" | "CACHE{" | "<") }
+
+quoted_continuation = @{ "\\" ~ newline }
+
+unquoted_argument = { (unquoted_element | legacy_quoted | legacy_make_var | nested_parens)+ }
+
+unquoted_element = {
+    escape_sequence
+  | variable_ref
+  | genex
+  | unquoted_text
+}
+
+legacy_quoted = @{ "\"" ~ (( "\\" ~ !newline ~ ANY ) | (!("\"" | newline) ~ ANY))* ~ "\"" }
+legacy_make_var = @{ "$(" ~ (!(")" | newline) ~ ANY)* ~ ")" }
+nested_parens = @{ "(" ~ nested_parens_inner* ~ ")" }
+nested_parens_inner = { nested_parens | legacy_quoted | legacy_make_var | escape_sequence | variable_ref | genex | nested_parens_text | space | line_ending }
+nested_parens_text = @{
+    (!(" " | "\t" | "\r" | "\n" | "(" | ")" | "#" | "\"" | "\\" | "$") ~ ANY)+
+  | "$" ~ !("{" | "ENV{" | "CACHE{" | "<" | "(")
+}
+
+unquoted_text = @{
+    (!(" " | "\t" | "\r" | "\n" | "(" | ")" | "#" | "\"" | "\\" | "$") ~ ANY)+
+  | "$" ~ !("{" | "ENV{" | "CACHE{" | "<" | "(")
+}
+
+escape_sequence = @{
+    escape_encoded
+  | escape_semicolon
+  | escape_identity
+}
+
+escape_encoded   = @{ "\\" ~ ("t" | "r" | "n") }
+escape_semicolon = @{ "\\;" }
+escape_identity  = @{ "\\" ~ (!ASCII_ALPHANUMERIC ~ !";" ~ ANY) }
+
+variable_ref = { normal_var | env_var | cache_var }
+
+normal_var = { "${" ~ var_name ~ "}" }
+env_var    = { "$ENV{" ~ var_name ~ "}" }
+cache_var  = { "$CACHE{" ~ var_name ~ "}" }
+
+var_name = @{ (!"}" ~ (normal_var_inner | ANY))* }
+normal_var_inner = _{ "${" ~ var_name ~ "}" }
+
+genex = { "$<" ~ genex_content ~ ">" }
+
+genex_content = @{ (genex_inner | !">" ~ ANY)* }
+genex_inner   = _{ "$<" ~ genex_content ~ ">" }
