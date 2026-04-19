@@ -5,7 +5,8 @@
 # Run the complete cmakefmt benchmark suite:
 #   Phase 1: Per-file benchmarks (11 representative files, 2–55K lines)
 #   Phase 2: Whole-repo benchmarks (14 repos, 4–11K files)
-#   Phase 3: Compile results into a Markdown summary
+#   Phase 3: Parallel scaling (opencv + oomph-lib at --parallel 1/2/4/8 + RSS)
+#   Phase 4: Compile results into a Markdown summary
 #
 # Prerequisites:
 #   cargo build --release
@@ -20,6 +21,8 @@
 # Output:
 #   benches/results/per-file/*.json
 #   benches/results/whole-repo/*.json
+#   benches/results/parallelism/*.json
+#   benches/results/parallelism/rss.txt
 #   benches/results/summary.md
 
 set -euo pipefail
@@ -29,6 +32,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CMAKEFMT="$REPO_ROOT/target/release/cmakefmt"
 PF_DIR="$SCRIPT_DIR/results/per-file"
 WR_DIR="$SCRIPT_DIR/results/whole-repo"
+PARA_DIR="$SCRIPT_DIR/results/parallelism"
 FL_DIR="$WR_DIR/filelists"
 OOMPH_DIR="/Users/PuneetMatharu/Dropbox/programming/oomph-lib/oomph-lib-repos/forked-oomph-lib"
 SUMMARY="$SCRIPT_DIR/results/summary.md"
@@ -44,8 +48,8 @@ done
 
 # ── Clean previous results ──────────────────────────────────────────────
 
-rm -rf "$PF_DIR" "$WR_DIR"
-mkdir -p "$PF_DIR" "$WR_DIR" "$FL_DIR"
+rm -rf "$PF_DIR" "$WR_DIR" "$PARA_DIR"
+mkdir -p "$PF_DIR" "$WR_DIR" "$FL_DIR" "$PARA_DIR"
 
 echo "cmakefmt:     $($CMAKEFMT --version 2>&1 | head -1)"
 echo "cmake-format: $(cmake-format --version 2>&1 | head -1)"
@@ -151,18 +155,68 @@ if [[ -d "$OOMPH_DIR" ]]; then
   echo ""
 fi
 
-# ── Phase 3: Compile results ────────────────────────────────────────────
+# ── Phase 3: Parallel scaling ───────────────────────────────────────────
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "  Phase 3: Compiling Results"
+echo "  Phase 3: Parallel Scaling"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-python3 - "$PF_DIR" "$WR_DIR" "$SUMMARY" "$REPO_ROOT" << 'PYEOF'
+# Repos to measure: pairs of "name:path". opencv lives in benches/repos;
+# oomph-lib is gated by OOMPH_DIR existing.
+PARA_TARGETS=("opencv:$REPO_ROOT/benches/repos/opencv")
+if [[ -d "$OOMPH_DIR" ]]; then
+  PARA_TARGETS+=("oomph-lib:$OOMPH_DIR")
+fi
+
+RSS_FILE="$PARA_DIR/rss.txt"
+: > "$RSS_FILE"
+
+for entry in "${PARA_TARGETS[@]}"; do
+  IFS=':' read -r name path <<< "$entry"
+  if [[ ! -d "$path" ]]; then
+    echo "  SKIP: $name ($path not found)"
+    continue
+  fi
+
+  count=$("$CMAKEFMT" --list-input-files "$path" 2>/dev/null | wc -l | tr -d ' ')
+  echo "  $name ($count files)..."
+
+  hyperfine \
+    --warmup 3 \
+    --runs 10 \
+    --export-json "$PARA_DIR/$name.json" \
+    --command-name "serial" "$CMAKEFMT --check --parallel 1 $path" \
+    --command-name "p2"     "$CMAKEFMT --check --parallel 2 $path" \
+    --command-name "p4"     "$CMAKEFMT --check --parallel 4 $path" \
+    --command-name "p8"     "$CMAKEFMT --check --parallel 8 $path" \
+    --ignore-failure
+
+  # Peak RSS — macOS only (Linux GNU time has different flags / output).
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    rss_serial=$(/usr/bin/time -l "$CMAKEFMT" --check --parallel 1 "$path" 2>&1 >/dev/null \
+      | awk '/maximum resident set size/ {print $1}')
+    rss_p8=$(/usr/bin/time -l "$CMAKEFMT" --check --parallel 8 "$path" 2>&1 >/dev/null \
+      | awk '/maximum resident set size/ {print $1}')
+    printf "%s\tserial\t%s\n%s\tp8\t%s\n" \
+      "$name" "$rss_serial" "$name" "$rss_p8" >> "$RSS_FILE"
+  fi
+
+  echo ""
+done
+
+# ── Phase 4: Compile results ────────────────────────────────────────────
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "  Phase 4: Compiling Results"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+
+python3 - "$PF_DIR" "$WR_DIR" "$PARA_DIR" "$SUMMARY" "$REPO_ROOT" << 'PYEOF'
 import json, os, sys, math
 from pathlib import Path
 
-pf_dir, wr_dir, summary_path, repo_root = sys.argv[1:5]
+pf_dir, wr_dir, para_dir, summary_path, repo_root = sys.argv[1:6]
 
 # ── Per-file ────────────────────────────────────────────────────────────
 
@@ -274,12 +328,56 @@ if wr_sp_ser:
     out.append(f"\n**Geometric-mean speedup (serial): {geo_s:.1f}x**")
     out.append(f"**Geometric-mean speedup (parallel): {geo_p:.1f}x**\n")
 
+# ── Parallel scaling ────────────────────────────────────────────────────
+
+para_rows = []
+for fname in sorted(os.listdir(para_dir)):
+    if not fname.endswith(".json"):
+        continue
+    name = fname.replace(".json", "")
+    fpath = os.path.join(para_dir, fname)
+    if os.path.getsize(fpath) == 0:
+        continue
+    data = json.load(open(fpath))
+    by_name = {r["command"]: r["mean"] * 1000 for r in data["results"]}
+    para_rows.append((name, by_name))
+
+if para_rows:
+    out.append("## Parallel Scaling\n")
+    out.append("| Repository | serial | --parallel 2 | --parallel 4 | --parallel 8 | speedup at p8 |")
+    out.append("|---|---:|---:|---:|---:|---:|")
+    for name, t in para_rows:
+        ser = t.get("serial", 0)
+        sp8 = ser / t["p8"] if t.get("p8") else 0
+        out.append(
+            f"| {name} | {ser:.0f}ms | {t.get('p2', 0):.0f}ms | "
+            f"{t.get('p4', 0):.0f}ms | {t.get('p8', 0):.0f}ms | {sp8:.1f}x |"
+        )
+
+    rss_path = os.path.join(para_dir, "rss.txt")
+    if os.path.exists(rss_path) and os.path.getsize(rss_path) > 0:
+        out.append("\n### Peak RSS (macOS)\n")
+        out.append("| Repository | serial | --parallel 8 |")
+        out.append("|---|---:|---:|")
+        rss = {}
+        for line in open(rss_path):
+            parts = line.strip().split("\t")
+            if len(parts) == 3:
+                repo, kind, bytes_str = parts
+                rss.setdefault(repo, {})[kind] = int(bytes_str) / (1024 * 1024)
+        for repo, vals in rss.items():
+            ser = vals.get("serial", 0)
+            p8 = vals.get("p8", 0)
+            out.append(f"| {repo} | {ser:.1f} MB | {p8:.1f} MB |")
+    out.append("")
+
 with open(summary_path, "w") as f:
     f.write("\n".join(out) + "\n")
 
 print(f"Summary written to {summary_path}")
-print(f"  Per-file:   {len(pf_rows)} fixtures")
-print(f"  Whole-repo: {len(wr_rows)} repositories")
+print(f"  Per-file:    {len(pf_rows)} fixtures")
+print(f"  Whole-repo:  {len(wr_rows)} repositories")
+print(f"  Parallelism: {len(para_rows)} repositories")
 PYEOF
 
 echo ""

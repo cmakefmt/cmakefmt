@@ -141,14 +141,19 @@ Geometric-mean speedup: **49×** (parallel) / **19×** (serial).
 Aggregate speedup across the full corpus: **130×** (252 s of `cmake-format`
 collapses to 1.9 s of `cmakefmt --parallel`).
 
-The following Criterion estimates cover a 1000+ line synthetic stress-test file:
+## Component Microbenchmarks
+
+The hyperfine numbers above measure end-to-end CLI invocations, including
+process startup, I/O, and discovery. The Criterion estimates below isolate
+individual pipeline stages on a 1,000+ line synthetic stress-test file
+(in-process, no I/O):
 
 | Metric | Estimate | 95% CI |
 | --- | --- | --- |
-| Parser-only | `7.1067 ms` | `7.0793–7.1359 ms` |
-| Formatter-only (from parsed AST) | `1.7545 ms` | `1.7425–1.7739 ms` |
-| End-to-end `format_source` | `8.8248 ms` | `8.8018–8.8519 ms` |
-| Debug/barrier-heavy formatting | `313.98 µs` | `311.89–317.54 µs` |
+| Parser-only | `4.8075 ms` | `4.7833–4.8471 ms` |
+| Formatter-only (from parsed AST) | `2.9462 ms` | `2.9312–2.9665 ms` |
+| End-to-end `format_source` | `7.8537 ms` | `7.7971–7.9319 ms` |
+| Debug/barrier-heavy formatting | `1.6846 ms` | `1.6805–1.6887 ms` |
 
 All Criterion estimates show a point estimate with a 95% confidence interval —
 the range within which the true mean is expected to fall 95% of the time.
@@ -157,30 +162,21 @@ produced by parsing, before formatting.
 
 ## Parallel Batch Throughput
 
-Multi-file runs are single-threaded by default, but opt-in parallelism scales
-well. The chart shows two real-world batches:
+Parallelism scales well across worker counts. The chart shows two real-world
+repositories:
 
-- **220-file batch** — the 14-fixture real-world corpus used for the per-file
-  comparison above, with each file formatted repeatedly to produce a stable
-  wall-clock measurement
-- **612-file batch** — [oomph-lib](https://github.com/oomph-lib/oomph-lib), a larger real-world CMake repository used to measure
-  scaling behavior at a more realistic project size
+- **opencv (282 files)** — a large vendor-style CMake codebase
+- **oomph-lib (613 files)** — [oomph-lib](https://github.com/oomph-lib/oomph-lib),
+  a larger real-world CMake repository used to measure scaling behavior at a
+  more realistic project size
 
-Hover a point to see the time and speedup vs serial for each batch.
+Hover a point to see the time and speedup vs serial for each repository.
 
 <ParallelismChart />
 
 Peak RSS (Resident Set Size — the RAM physically held in memory by the process)
-rises from `13.2 MB` serial to `20.7 MB` at `--parallel 8` on the 220-file
-batch, and from `11.3 MB` to `17.0 MB` on the 612-file batch. That is why the
-tool defaults to single-threaded execution unless you explicitly request more.
-
-A direct head-to-head against `cmake-format` on the 613-file [oomph-lib](https://github.com/oomph-lib/oomph-lib) repository
-(hyperfine, `--check` mode) showed:
-
-- `cmake-format`: `17.1 s`
-- `cmakefmt` serial: `2.3 s` → **`~7.4×` faster**
-- `cmakefmt` parallel: `0.49 s` → **`~35×` faster**
+rises from `22.9 MiB` serial to `36.6 MiB` at `--parallel 8` on opencv, and from
+`16.2 MiB` to `27.1 MiB` on oomph-lib.
 
 ## Version-by-Version Trend
 
