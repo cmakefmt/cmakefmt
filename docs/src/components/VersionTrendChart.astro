@@ -1,0 +1,260 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+---
+
+<div class="chart-wrapper" data-version-trend-chart>
+  <canvas
+    id="version-trend-chart"
+    aria-label="cmakefmt single-file performance trend across releases"></canvas>
+</div>
+
+<script>
+  import {
+    Chart,
+    LineController,
+    BarController,
+    LineElement,
+    BarElement,
+    PointElement,
+    CategoryScale,
+    LinearScale,
+    Tooltip,
+    Legend,
+    Filler,
+  } from "chart.js";
+  Chart.register(
+    LineController,
+    BarController,
+    LineElement,
+    BarElement,
+    PointElement,
+    CategoryScale,
+    LinearScale,
+    Tooltip,
+    Legend,
+    Filler,
+  );
+
+  // Benchmark: mariadb_server/CMakeLists.txt (656 lines)
+  // hyperfine --warmup 10 --runs 50 --shell=none
+  // All binaries: macOS aarch64 release builds from GitHub Releases
+  const DATA = [
+    { version: "v0.1.0", time: 9.6, binary: 4.7 },
+    { version: "v0.1.1", time: 9.7, binary: 4.7 },
+    { version: "v0.2.0", time: 9.7, binary: 4.8 },
+    { version: "v0.3.0", time: 10.6, binary: 5.6 },
+    { version: "v0.4.0", time: 11.4, binary: 5.5 },
+    { version: "v0.5.0", time: 13.0, binary: 5.7 },
+    { version: "v0.6.0", time: 12.4, binary: 5.7 },
+    { version: "v0.7.0", time: 12.4, binary: 5.7 },
+    { version: "v0.8.0", time: 12.5, binary: 5.7 },
+    { version: "v0.9.0", time: 12.9, binary: 5.6 },
+    { version: "v0.10.0", time: 14.2, binary: 6.0 },
+    { version: "v1.0.0", time: 15.5, binary: 6.0 },
+  ];
+
+  // Annotations for key changes
+  const ANNOTATIONS: Record<string, string> = {
+    "v0.3.0": "LSP added",
+    "v0.5.0": "completions + man pages",
+    "v0.10.0": "schema + watch + dump",
+  };
+
+  function isDark() {
+    return document.documentElement.dataset.theme === "dark";
+  }
+
+  function colors() {
+    const dark = isDark();
+    return {
+      time: dark ? "hsl(198,93%,60%)" : "hsl(200,98%,39%)",
+      timeFill: dark ? "hsla(198,93%,60%,0.12)" : "hsla(200,98%,39%,0.08)",
+      binary: dark ? "hsl(240,4%,40%)" : "hsl(240,5%,72%)",
+      grid: dark ? "hsl(240,4%,20%)" : "hsl(240,6%,90%)",
+      text: dark ? "hsl(0,0%,100%)" : "hsl(240,6%,10%)",
+      subtext: dark ? "hsl(240,5%,65%)" : "hsl(240,4%,46%)",
+      annotationBg: dark ? "hsla(198,93%,60%,0.15)" : "hsla(200,98%,39%,0.08)",
+    };
+  }
+
+  function buildChart(canvas: HTMLCanvasElement) {
+    const c = colors();
+    Chart.getChart(canvas)?.destroy();
+
+    // Annotated versions get red markers; others use the default blue
+    const annotatedIndices = new Set(
+      Object.keys(ANNOTATIONS).map((v) => DATA.findIndex((d) => d.version === v)),
+    );
+    const markerRed = "hsl(0,72%,51%)";
+    const markerRedBorder = isDark() ? "hsl(0,72%,70%)" : "hsl(0,72%,40%)";
+    const pointColors = DATA.map((_, i) => (annotatedIndices.has(i) ? markerRed : c.time));
+    const pointRadii = DATA.map((_, i) => (annotatedIndices.has(i) ? 7 : 5));
+    const pointBorderWidths = DATA.map((_, i) => (annotatedIndices.has(i) ? 2.5 : 0));
+    const pointBorderColors = DATA.map((_, i) =>
+      annotatedIndices.has(i) ? markerRedBorder : c.time,
+    );
+
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: DATA.map((d) => d.version),
+        datasets: [
+          {
+            label: "Time (ms)",
+            data: DATA.map((d) => d.time),
+            borderColor: c.time,
+            backgroundColor: c.timeFill,
+            borderWidth: 2.5,
+            pointRadius: pointRadii,
+            pointHoverRadius: 9,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointBorderColors,
+            pointBorderWidth: pointBorderWidths,
+            tension: 0.3,
+            fill: true,
+            yAxisID: "y",
+          },
+          {
+            label: "Binary size (MB)",
+            data: DATA.map((d) => d.binary),
+            borderColor: c.binary,
+            backgroundColor: "transparent",
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: c.binary,
+            pointBorderColor: c.binary,
+            tension: 0.3,
+            fill: false,
+            yAxisID: "y2",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2.2,
+        interaction: {
+          mode: "index",
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: {
+              color: c.subtext,
+              font: { size: 11, family: "var(--sl-font)" },
+              boxWidth: 14,
+              padding: 16,
+            },
+          },
+          tooltip: {
+            backgroundColor: isDark() ? "hsl(222,12%,12%)" : "hsl(0,0%,100%)",
+            titleColor: c.text,
+            bodyColor: c.subtext,
+            borderColor: c.grid,
+            borderWidth: 1,
+            padding: 10,
+            titleFont: { size: 12, weight: "bold", family: "var(--sl-font)" },
+            bodyFont: { size: 11, family: "var(--sl-font)" },
+            callbacks: {
+              afterBody(items: { dataIndex: number }[]) {
+                const idx = items[0]?.dataIndex;
+                if (idx === undefined) return "";
+                const version = DATA[idx].version;
+                const annotation = ANNOTATIONS[version];
+                return annotation ? `\n${annotation}` : "";
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: c.grid },
+            ticks: {
+              color: c.subtext,
+              font: { size: 10, family: "var(--sl-font-mono)" },
+              maxRotation: 45,
+              minRotation: 0,
+            },
+          },
+          y: {
+            position: "left",
+            title: {
+              display: true,
+              text: "Time (ms)",
+              color: c.subtext,
+              font: { size: 11, family: "var(--sl-font)" },
+            },
+            min: 0,
+            max: 20,
+            grid: { color: c.grid },
+            ticks: {
+              color: c.subtext,
+              font: { size: 10, family: "var(--sl-font-mono)" },
+            },
+          },
+          y2: {
+            position: "right",
+            title: {
+              display: true,
+              text: "Binary (MB)",
+              color: c.subtext,
+              font: { size: 11, family: "var(--sl-font)" },
+            },
+            min: 4,
+            max: 7,
+            grid: { drawOnChartArea: false },
+            ticks: {
+              color: c.subtext,
+              font: { size: 10, family: "var(--sl-font-mono)" },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  function initVersionTrendCharts() {
+    document.querySelectorAll("[data-version-trend-chart]").forEach((wrapper) => {
+      if (!(wrapper instanceof HTMLDivElement)) return;
+      const canvas = wrapper.querySelector("#version-trend-chart");
+      if (!(canvas instanceof HTMLCanvasElement)) return;
+      buildChart(canvas);
+    });
+  }
+
+  const versionTrendWindow = window as Window & {
+    __versionTrendChartsRegistered?: boolean;
+  };
+
+  if (!versionTrendWindow.__versionTrendChartsRegistered) {
+    versionTrendWindow.__versionTrendChartsRegistered = true;
+    document.addEventListener("astro:page-load", initVersionTrendCharts);
+    const observer = new MutationObserver(() => initVersionTrendCharts());
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+  }
+
+  initVersionTrendCharts();
+</script>
+
+<style>
+  .chart-wrapper {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-4) 22%, transparent);
+    background: color-mix(in srgb, var(--sl-color-gray-6) 40%, transparent);
+  }
+
+  canvas {
+    width: 100% !important;
+  }
+</style>

@@ -13,24 +13,24 @@ import { Chart, BarController, BarElement, CategoryScale, LinearScale, Tooltip, 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const DATA = [
-  { label: 'abseil',         lines: 280,  speedup: 32.27 },
-  { label: 'catch2',         lines: 230,  speedup: 21.34 },
-  { label: 'cli11',          lines: 283,  speedup: 24.35 },
-  { label: 'cmake_cmbzip2',  lines: 25,   speedup: 13.81 },
-  { label: 'googletest',     lines: 36,   speedup: 14.91 },
-  { label: 'ggml',           lines: 498,  speedup: 29.33 },
-  { label: 'llama_cpp',      lines: 286,  speedup: 22.80 },
-  { label: 'llvm_tablegen',  lines: 83,   speedup: 17.93 },
-  { label: 'mariadb_server', lines: 656,  speedup: 53.76 },
-  { label: 'nlohmann_json',  lines: 237,  speedup: 27.92 },
-  { label: 'opencv_flann',   lines: 2,    speedup: 12.86 },
-  { label: 'protobuf',       lines: 351,  speedup: 20.94 },
-  { label: 'spdlog',         lines: 413,  speedup: 34.17 },
-  { label: 'qtbase_network', lines: 420,  speedup: 37.41 },
-  { label: 'xnnpack',        lines: 1354, speedup: 53.14 },
+  { label: 'abseil',         lines: 280,  speedup: 14.31 },
+  { label: 'catch2',         lines: 230,  speedup: 10.28 },
+  { label: 'cli11',          lines: 283,  speedup: 11.80 },
+  { label: 'cmake_cmbzip2',  lines: 25,   speedup: 6.40 },
+  { label: 'googletest',     lines: 36,   speedup: 6.65 },
+  { label: 'ggml',           lines: 498,  speedup: 16.18 },
+  { label: 'llama_cpp',      lines: 286,  speedup: 11.99 },
+  { label: 'llvm_tablegen',  lines: 83,   speedup: 8.18 },
+  { label: 'mariadb_server', lines: 656,  speedup: 31.48 },
+  { label: 'nlohmann_json',  lines: 237,  speedup: 13.08 },
+  { label: 'opencv_flann',   lines: 2,    speedup: 5.59 },
+  { label: 'protobuf',       lines: 351,  speedup: 10.32 },
+  { label: 'spdlog',         lines: 413,  speedup: 17.37 },
+  { label: 'qtbase_network', lines: 420,  speedup: 22.70 },
+  { label: 'xnnpack',        lines: 1354, speedup: 39.63 },
 ];
 
-const GEO_MEAN = 25.33;
+const GEO_MEAN = 12.86;
 
 function isDark() {
   return document.documentElement.dataset.theme === 'dark';

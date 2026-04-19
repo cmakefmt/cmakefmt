@@ -8,6 +8,45 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- Formatting Cookbook page — common formatting goals with before/after
+  examples and config links
+- Glossary page — definitions of all terminology used in docs, config,
+  and parse tree dumps
+- "Why `cmakefmt`?" cards on the landing page
+- Playground CTA after the Performance section
+- Community sidebar section (badge, projects using `cmakefmt`)
+
+### Changed
+
+- Landing page restructured: explainer tagline, "Why" cards replace
+  the old Features section, slimmed "Where to Go Next" with three
+  sub-sections of two cards each
+- Comparison page updated with parallelism, recursive discovery, config
+  autocomplete, watch mode, and reordered table by user impact
+- Mobile-friendly docs: responsive layouts, unified sidebar menu with
+  TOC, chart view-transition support, "See all features" toggle on
+  mobile
+- Homepage animation: lazy panel initialization for production
+  hydration, `magic-move` property compatibility fix
+- "Getting Started" replaces "Installation" in the header nav
+
+### Fixed
+
+- Diff computation skipped when result is unused — **14s → 0.6s** on a
+  55K-line file. The Myers diff algorithm was running eagerly on every
+  invocation even when `--diff` was not requested.
+- `autosort` now activates on keyword sections containing inline
+  comments — previously any inline comment silently disabled the
+  heuristic
+- Memoized sort keys to avoid repeated `to_ascii_lowercase()` per
+  comparison
+- Single-pass token classification (`classify_token`) eliminates
+  redundant case conversion in the per-argument hot path
+- Combined iterator passes in `try_format_inline` and
+  `try_format_hanging` (two `.any()` calls merged into one)
+
 ## 1.0.0 — 2026-04-14
 
 ### Added

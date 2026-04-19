@@ -11,6 +11,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 import BenchmarkComparisonChart from '../../components/BenchmarkComparisonChart.astro';
 import SpeedupChart from '../../components/SpeedupChart.astro';
 import ParallelismChart from '../../components/ParallelismChart.astro';
+import VersionTrendChart from '../../components/VersionTrendChart.astro';
 
 `cmakefmt` is fast enough that you never have to think twice about running it
 — in local workflows, editor integrations, pre-commit hooks, or CI. That is
@@ -18,11 +19,11 @@ not an accident. Speed is a design goal, not a side effect.
 
 ## Highlights
 
-- **25.33×** geometric-mean speedup over `cmake-format` on real-world CMake files
-- **~97×** faster than `cmake-format` on a 612-file repository (sequential, [oomph-lib](https://github.com/oomph-lib/oomph-lib))
-- **~240×** faster with `--parallel 8` on the same repository
-- Fastest individual fixture: **53.76×** speedup (`mariadb_server/CMakeLists.txt`, 656 lines)
-- End-to-end format of a 1000+ line synthetic file: **~8.8 ms**
+- **45×** geometric-mean speedup over `cmake-format` on whole-repository benchmarks (parallel)
+- **15.6×** geometric-mean speedup on whole-repository benchmarks (serial)
+- **12.86×** geometric-mean speedup on per-file benchmarks (startup-dominated)
+- **470×** fastest whole-repo speedup (OpenCV, 282 files, parallel)
+- Formats **2,621 CMake files** (LLVM) in **161ms** with parallel mode
 
 ## Benchmark Environment
 
@@ -74,9 +75,30 @@ timings and speedup for that fixture.
 
 <BenchmarkComparisonChart />
 
-Per-fixture speedup. The dashed line marks the geometric mean (`25.33×`).
+Per-fixture speedup. The dashed line marks the geometric mean (`12.86×`).
 
 <SpeedupChart />
+
+## Whole-Repository Benchmarks
+
+The per-file numbers above are dominated by process startup (~10ms),
+which is a fixed cost paid once per invocation. Whole-repository
+benchmarks show the real-world speedup when formatting entire projects:
+
+| Repository | Files | cmakefmt (parallel) | cmakefmt (serial) | cmake-format | Speedup (parallel) |
+|---|---:|---:|---:|---:|---:|
+| catch2 | 20 | 32ms | 101ms | 3,321ms | 103.8× |
+| fmt | 11 | 20ms | 50ms | 851ms | 41.7× |
+| googletest | 4 | 17ms | 27ms | 321ms | 19.0× |
+| llvm | 2,621 | 161ms | 388ms | 4,829ms | 30.0× |
+| nlohmann_json | 41 | 42ms | 163ms | 4,529ms | 107.6× |
+| opencv | 282 | 215ms | 1,147ms | 101,208ms | 470.7× |
+| protobuf | 25 | 38ms | 60ms | 1,185ms | 31.3× |
+| spdlog | 7 | 19ms | 36ms | 378ms | 19.6× |
+| vulkan_hpp | 135 | 101ms | 440ms | 1,253ms | 12.5× |
+| oomph-lib | 613 | 484ms | 2,362ms | 17,118ms | 35.3× |
+
+Geometric-mean speedup: **45.0×** (parallel) / **15.6×** (serial).
 
 The following Criterion estimates cover a 1000+ line synthetic stress-test file:
 
@@ -112,12 +134,31 @@ rises from `13.2 MB` serial to `20.7 MB` at `--parallel 8` on the 220-file
 batch, and from `11.3 MB` to `17.0 MB` on the 612-file batch. That is why the
 tool defaults to single-threaded execution unless you explicitly request more.
 
-A direct head-to-head against `cmake-format` on the 612-file [oomph-lib](https://github.com/oomph-lib/oomph-lib) repository
-(`/usr/bin/time -l`) showed:
+A direct head-to-head against `cmake-format` on the 613-file [oomph-lib](https://github.com/oomph-lib/oomph-lib) repository
+(hyperfine, `--check` mode) showed:
 
-- `cmake-format` (sequential): `45.69 s` real
-- `cmakefmt` serial: `0.47 s` real → **`~97×` faster(!)**
-- `cmakefmt --parallel 8`: `0.19 s` real → **`~240×` faster(!)**
+- `cmake-format`: `17.1 s`
+- `cmakefmt` serial: `2.4 s` → **`~7×` faster**
+- `cmakefmt` parallel: `0.48 s` → **`~35×` faster**
+
+## Version-by-Version Trend
+
+Single-file performance across every release, measured on the same
+fixture (`mariadb_server/CMakeLists.txt`, 656 lines) using each
+version's official macOS aarch64 binary from GitHub Releases.
+
+The solid line shows formatting time (left axis); the dashed line shows
+binary size (right axis). Hover a point to see the details and what
+changed in that release.
+
+<VersionTrendChart />
+
+The gradual increase from ~10ms to ~15ms is entirely process startup
+overhead — the formatting engine itself remains sub-millisecond. As the
+binary grew from 4.7MB to 6.0MB with new features (LSP, shell
+completions, watch mode, JSON Schema, parse tree dump), the OS needs to
+load more pages from disk at startup. This fixed cost is paid once per
+invocation and is irrelevant for multi-file runs.
 
 ## What The Numbers Mean In Practice
 
