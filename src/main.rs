@@ -967,6 +967,9 @@ fn run_watch(
     if watch_roots.is_empty() {
         watch_roots.push(std::env::current_dir().map_err(cmakefmt::Error::Io)?);
     }
+    watch_roots.sort();
+    watch_roots.dedup();
+    let mut known_mtimes = HashMap::new();
 
     let shutdown = Arc::new(AtomicBool::new(false));
     let shutdown_clone = shutdown.clone();
@@ -998,36 +1001,34 @@ fn run_watch(
     );
 
     while !shutdown.load(Ordering::Relaxed) {
-        let events = match rx.recv_timeout(Duration::from_millis(500)) {
-            Ok(Ok(events)) => events,
+        let should_poll = match rx.recv_timeout(Duration::from_millis(500)) {
+            Ok(Ok(events)) => events.into_iter().any(|event| {
+                matches!(
+                    event.kind,
+                    DebouncedEventKind::Any | DebouncedEventKind::AnyContinuous
+                )
+            }),
             Ok(Err(err)) => {
                 eprintln!("watch error: {err}");
-                continue;
+                true
             }
-            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => true,
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
         };
 
+        if !should_poll {
+            continue;
+        }
+
+        let changed_paths = poll_watch_changes(&watch_roots, cli, file_filter, &mut known_mtimes);
         let mut formatted_paths = BTreeSet::new();
-        for event in &events {
-            if !matches!(event.kind, DebouncedEventKind::Any) {
-                continue;
-            }
-            let path = &event.path;
-            if !path.is_file() || !cmakefmt::files::is_cmake_file(path) {
-                continue;
-            }
-            if let Some(filter) = file_filter {
-                if !filter.is_match(&path.display().to_string()) {
-                    continue;
-                }
-            }
-            if formatted_paths.contains(path) {
+        for path in changed_paths {
+            if formatted_paths.contains(&path) {
                 continue;
             }
             formatted_paths.insert(path.clone());
 
-            match watch_format_file(cli, path, colorize_stderr) {
+            match watch_format_file(cli, &path, colorize_stderr) {
                 Ok(msg) => eprintln!("{msg}"),
                 Err(e) => eprintln!("error: {}: {e}", path.display()),
             }
@@ -1036,6 +1037,64 @@ fn run_watch(
 
     eprintln!("stopped.");
     Ok(EXIT_OK)
+}
+
+fn poll_watch_changes(
+    watch_roots: &[PathBuf],
+    cli: &Cli,
+    file_filter: Option<&Regex>,
+    known_mtimes: &mut HashMap<PathBuf, Option<std::time::SystemTime>>,
+) -> Vec<PathBuf> {
+    let current_paths = collect_watch_candidates(watch_roots, cli, file_filter);
+    let mut changed = Vec::new();
+
+    for path in current_paths.iter().cloned() {
+        let modified = watch_modified_time(&path);
+        let previous = known_mtimes.insert(path.clone(), modified);
+        if previous != Some(modified) {
+            changed.push(path);
+        }
+    }
+
+    known_mtimes.retain(|path, _| current_paths.contains(path));
+    changed.sort();
+    changed
+}
+
+fn collect_watch_candidates(
+    watch_roots: &[PathBuf],
+    cli: &Cli,
+    file_filter: Option<&Regex>,
+) -> BTreeSet<PathBuf> {
+    let mut candidates = BTreeSet::new();
+
+    for root in watch_roots {
+        if root.is_file() {
+            if is_cmake_file(root) {
+                candidates.insert(root.clone());
+            }
+            continue;
+        }
+
+        for path in discover_cmake_files_with_options(
+            root,
+            DiscoveryOptions {
+                file_filter,
+                honor_gitignore: !cli.no_gitignore,
+                explicit_ignore_paths: &cli.ignore_paths,
+            },
+        ) {
+            candidates.insert(path);
+        }
+    }
+
+    candidates
+}
+
+fn watch_modified_time(path: &Path) -> Option<std::time::SystemTime> {
+    std::fs::metadata(path)
+        .and_then(|metadata| metadata.modified())
+        .ok()
 }
 
 fn watch_format_file(cli: &Cli, path: &Path, colorize: bool) -> Result<String, cmakefmt::Error> {
