@@ -201,6 +201,26 @@ mod tests {
     }
 
     #[test]
+    fn unterminated_genex_reports_char_based_column() {
+        let err = parse("message(é $<TARGET_FILE:foo)\n").unwrap_err();
+        let Error::Parse(parse_err) = err else {
+            panic!("expected parse error");
+        };
+
+        assert_eq!(
+            parse_err.diagnostic.message.as_ref(),
+            "unterminated generator expression"
+        );
+        assert_eq!(parse_err.diagnostic.line, 1);
+        assert_eq!(parse_err.diagnostic.column, 11);
+    }
+
+    #[test]
+    fn line_col_at_counts_multibyte_chars_as_single_columns() {
+        assert_eq!(line_col_at("message(é $<foo", 11), (1, 11));
+    }
+
+    #[test]
     fn line_comment_standalone() {
         let f = parse_ok("# this is a comment\n");
         assert!(matches!(
@@ -460,6 +480,12 @@ mod tests {
     }
 
     #[test]
+    fn crlf_line_endings_parse() {
+        let f = parse_ok("set(FOO bar)\r\nset(BAZ qux)\r\n");
+        assert_eq!(f.statements.len(), 2);
+    }
+
+    #[test]
     fn top_level_template_placeholder_parses() {
         let f = parse_ok("@PACKAGE_INIT@\n");
         assert_eq!(
@@ -508,5 +534,15 @@ mod tests {
             cmd.arguments[2].as_str(),
             "\"CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\"\""
         );
+    }
+
+    #[test]
+    fn bracket_argument_ignores_mismatched_inner_closer() {
+        let src = "set(VAR [==[before ]====] after]==])\n";
+        let f = parse_ok(src);
+        let Statement::Command(cmd) = &f.statements[0] else {
+            panic!()
+        };
+        assert_eq!(cmd.arguments[1].as_str(), "[==[before ]====] after]==]");
     }
 }

@@ -500,6 +500,18 @@ fn is_argument_boundary(byte: Option<u8>, next: Option<u8>) -> bool {
 mod tests {
     use super::*;
 
+    fn assert_unquoted_consumes_all(src: &str) {
+        let mut cursor = Cursor::new(src);
+        assert!(matches!(
+            scan_argument(&mut cursor).unwrap(),
+            ArgumentKind::Unquoted(_)
+        ));
+        assert!(
+            cursor.at_eof(),
+            "scanner did not consume full argument: {src:?}"
+        );
+    }
+
     #[test]
     fn quoted_argument_stays_quoted_only_with_boundary() {
         let mut cursor = Cursor::new("\"hello\" )");
@@ -519,6 +531,16 @@ mod tests {
     }
 
     #[test]
+    fn quoted_argument_stays_quoted_with_crlf_boundary() {
+        let mut cursor = Cursor::new("\"hello\"\r\n");
+        assert!(matches!(
+            scan_argument(&mut cursor).unwrap(),
+            ArgumentKind::Quoted(_)
+        ));
+        assert_eq!(cursor.pos(), "\"hello\"".len() as u32);
+    }
+
+    #[test]
     fn scan_comment_distinguishes_bracket_comment() {
         let mut cursor = Cursor::new("#[[hello]]");
         assert!(matches!(
@@ -528,9 +550,89 @@ mod tests {
     }
 
     #[test]
+    fn scan_template_placeholder_returns_full_span() {
+        let mut cursor = Cursor::new("@PACKAGE_INIT@ ");
+        let span = scan_template_placeholder(&mut cursor).unwrap();
+        assert_eq!(
+            span,
+            Span {
+                start: 0,
+                end: "@PACKAGE_INIT@".len() as u32,
+            }
+        );
+        assert_eq!(cursor.pos(), "@PACKAGE_INIT@".len() as u32);
+    }
+
+    #[test]
+    fn unterminated_template_placeholder_reports_start_offset() {
+        let mut cursor = Cursor::new("@PACKAGE_INIT");
+        let err = scan_template_placeholder(&mut cursor).unwrap_err();
+        assert_eq!(err.message, "unterminated template placeholder");
+        assert_eq!(err.byte_offset, 0);
+    }
+
+    #[test]
+    fn scan_newline_consumes_crlf() {
+        let mut cursor = Cursor::new("\r\nx");
+        scan_newline(&mut cursor);
+        assert_eq!(cursor.pos(), 2);
+        assert_eq!(cursor.peek(), Some(b'x'));
+    }
+
+    #[test]
     fn unterminated_genex_reports_error() {
         let mut cursor = Cursor::new("$<TARGET_FILE:foo");
         let err = scan_argument(&mut cursor).unwrap_err();
         assert_eq!(err.message, "unterminated generator expression");
+        assert_eq!(err.byte_offset, 0);
+    }
+
+    #[test]
+    fn mismatched_bracket_argument_reports_eof_offset() {
+        let src = "[=[hello]==]";
+        let mut cursor = Cursor::new(src);
+        let err = scan_argument(&mut cursor).unwrap_err();
+        assert_eq!(err.message, "unterminated bracket argument");
+        assert_eq!(err.byte_offset, src.len() as u32);
+    }
+
+    #[test]
+    fn mismatched_bracket_comment_reports_eof_offset() {
+        let src = "#[=[hello]==]";
+        let mut cursor = Cursor::new(src);
+        let err = scan_comment(&mut cursor).unwrap_err();
+        assert_eq!(err.message, "unterminated bracket comment");
+        assert_eq!(err.byte_offset, src.len() as u32);
+    }
+
+    #[test]
+    fn nested_env_variable_reference_is_consumed_as_unquoted() {
+        assert_unquoted_consumes_all("$ENV{${NAME}}");
+    }
+
+    #[test]
+    fn nested_cache_variable_reference_is_consumed_as_unquoted() {
+        assert_unquoted_consumes_all("$CACHE{${NAME}}");
+    }
+
+    #[test]
+    fn nested_generator_expression_is_consumed_as_unquoted() {
+        assert_unquoted_consumes_all("$<IF:$<BOOL:${X}>,a,b>");
+    }
+
+    #[test]
+    fn unterminated_legacy_make_variable_reports_argument_start() {
+        let mut cursor = Cursor::new("foo$(bar\n");
+        let err = scan_argument(&mut cursor).unwrap_err();
+        assert_eq!(err.message, "unterminated legacy make variable");
+        assert_eq!(err.byte_offset, 0);
+    }
+
+    #[test]
+    fn unterminated_legacy_quoted_segment_reports_argument_start() {
+        let mut cursor = Cursor::new("foo\"bar\n");
+        let err = scan_argument(&mut cursor).unwrap_err();
+        assert_eq!(err.message, "unterminated legacy quoted segment");
+        assert_eq!(err.byte_offset, 0);
     }
 }
