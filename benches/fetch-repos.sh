@@ -12,7 +12,7 @@ mkdir -p "$REPOS_DIR"
 
 # repo_url  directory_name
 REPOS=(
-  "https://github.com/google/googletest.git        googletest"
+  "https://github.com/google/googletest.git         googletest"
   "https://github.com/catchorg/Catch2.git           catch2"
   "https://github.com/fmtlib/fmt.git                fmt"
   "https://github.com/gabime/spdlog.git             spdlog"
@@ -25,6 +25,7 @@ REPOS=(
   "https://github.com/grpc/grpc.git                 grpc"
   "https://github.com/blender/blender.git           blender"
   "https://github.com/bulletphysics/bullet3.git     bullet3"
+  "https://github.com/oomph-lib/oomph-lib.git       oomph-lib"
 )
 
 clone_sparse() {

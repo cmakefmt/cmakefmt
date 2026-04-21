@@ -43,7 +43,7 @@ There are three CMake formatters in active use: `cmakefmt`, `cmake-format`, and
 
 `cmakefmt` recursively discovers all `CMakeLists.txt` and `*.cmake` files
 by default — just point it at your project root. It also formats them in
-parallel using all available CPUs. On a 612-file repository this means
+parallel using all available CPUs. On a 611-file repository this means
 sub-second formatting of the entire project.
 
 `cmake-format` requires you to pass every file explicitly (or write a

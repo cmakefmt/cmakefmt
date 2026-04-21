@@ -34,7 +34,6 @@ PF_DIR="$SCRIPT_DIR/results/per-file"
 WR_DIR="$SCRIPT_DIR/results/whole-repo"
 PARA_DIR="$SCRIPT_DIR/results/parallelism"
 FL_DIR="$WR_DIR/filelists"
-OOMPH_DIR="/Users/PuneetMatharu/Dropbox/programming/oomph-lib/oomph-lib-repos/forked-oomph-lib"
 SUMMARY="$SCRIPT_DIR/results/summary.md"
 
 # ── Preflight checks ────────────────────────────────────────────────────
@@ -108,8 +107,8 @@ echo "════════════════════════�
 echo ""
 
 REPOS=(
-  blender bullet3 catch2 cmake fmt googletest grpc
-  llvm nlohmann_json opencv protobuf spdlog vulkan_hpp
+  blender bullet3 catch2 fmt googletest grpc llvm nlohmann_json
+  protobuf spdlog vulkan_hpp opencv oomph-lib cmake
 )
 
 for name in "${REPOS[@]}"; do
@@ -138,23 +137,6 @@ for name in "${REPOS[@]}"; do
   echo ""
 done
 
-# oomph-lib (external repo)
-if [[ -d "$OOMPH_DIR" ]]; then
-  filelist="$FL_DIR/oomph-lib.txt"
-  "$CMAKEFMT" --list-input-files "$OOMPH_DIR" > "$filelist" 2>/dev/null || true
-  count=$(wc -l < "$filelist" | tr -d ' ')
-  echo "  oomph-lib ($count files)..."
-  hyperfine \
-    --warmup 3 \
-    --runs 10 \
-    --export-json "$WR_DIR/oomph-lib.json" \
-    --command-name "cmakefmt-parallel" "$CMAKEFMT --check $OOMPH_DIR" \
-    --command-name "cmakefmt-serial" "$CMAKEFMT --check --parallel 1 $OOMPH_DIR" \
-    --command-name "cmake-format" "xargs cmake-format --check < $filelist" \
-    --ignore-failure
-  echo ""
-fi
-
 # ── Phase 3: Parallel scaling ───────────────────────────────────────────
 
 echo "═══════════════════════════════════════════════════════════════"
@@ -162,12 +144,9 @@ echo "  Phase 3: Parallel Scaling"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-# Repos to measure: pairs of "name:path". opencv lives in benches/repos;
-# oomph-lib is gated by OOMPH_DIR existing.
+# Repos to measure: pairs of "name:path". Both live in benches/repos
 PARA_TARGETS=("opencv:$REPO_ROOT/benches/repos/opencv")
-if [[ -d "$OOMPH_DIR" ]]; then
-  PARA_TARGETS+=("oomph-lib:$OOMPH_DIR")
-fi
+PARA_TARGETS+=("oomph-lib:$REPO_ROOT/benches/repos/oomph-lib")
 
 RSS_FILE="$PARA_DIR/rss.txt"
 : > "$RSS_FILE"
@@ -194,10 +173,13 @@ for entry in "${PARA_TARGETS[@]}"; do
 
   # Peak RSS — macOS only (Linux GNU time has different flags / output).
   if [[ "$OSTYPE" == "darwin"* ]]; then
+    # `cmakefmt --check` exits 1 when any file would be reformatted; combined
+    # with `set -euo pipefail`, that propagates through the pipeline and kills
+    # the script. Swallow it — we only care about RSS here.
     rss_serial=$(/usr/bin/time -l "$CMAKEFMT" --check --parallel 1 "$path" 2>&1 >/dev/null \
-      | awk '/maximum resident set size/ {print $1}')
+      | awk '/maximum resident set size/ {print $1}' || true)
     rss_p8=$(/usr/bin/time -l "$CMAKEFMT" --check --parallel 8 "$path" 2>&1 >/dev/null \
-      | awk '/maximum resident set size/ {print $1}')
+      | awk '/maximum resident set size/ {print $1}' || true)
     printf "%s\tserial\t%s\n%s\tp8\t%s\n" \
       "$name" "$rss_serial" "$name" "$rss_p8" >> "$RSS_FILE"
   fi
