@@ -319,11 +319,11 @@ impl Default for Config {
             literal_comment_pattern: String::new(),
             bullet_char: "*".to_string(),
             enum_char: ".".to_string(),
-            fence_pattern: r"^\s*[`~]{3}[^`\n]*$".to_string(),
-            ruler_pattern: r"^[^\w\s]{3}.*[^\w\s]{3}$".to_string(),
+            fence_pattern: DEFAULT_FENCE_PATTERN.to_string(),
+            ruler_pattern: DEFAULT_RULER_PATTERN.to_string(),
             hashruler_min_length: 10,
             canonicalize_hashrulers: true,
-            explicit_trailing_pattern: "#<".to_string(),
+            explicit_trailing_pattern: DEFAULT_EXPLICIT_TRAILING_PATTERN.to_string(),
             per_command_overrides: HashMap::new(),
             experimental: Experimental::default(),
         }
@@ -397,6 +397,13 @@ impl Config {
     /// Returns `Ok(())` if all patterns compile, or an error message
     /// identifying the first invalid pattern.
     pub fn validate_patterns(&self) -> Result<(), String> {
+        // Fast path for defaults — the built-in pattern strings are known
+        // to be valid. Avoids compiling three regexes on every
+        // format_source() call, which dominates per-file overhead on
+        // whole-tree runs over many small files.
+        if self.has_default_regex_patterns() {
+            return Ok(());
+        }
         let patterns = [
             ("literal_comment_pattern", &self.literal_comment_pattern),
             ("explicit_trailing_pattern", &self.explicit_trailing_pattern),
@@ -413,11 +420,29 @@ impl Config {
         Ok(())
     }
 
+    fn has_default_regex_patterns(&self) -> bool {
+        self.literal_comment_pattern.is_empty()
+            && self.explicit_trailing_pattern == DEFAULT_EXPLICIT_TRAILING_PATTERN
+            && self.fence_pattern == DEFAULT_FENCE_PATTERN
+            && self.ruler_pattern == DEFAULT_RULER_PATTERN
+    }
+
     /// Compile all regex patterns into a cache for internal formatting use.
     ///
     /// Callers that build [`Config`] programmatically should use
     /// [`Config::validate_patterns`] to validate regexes up front.
     pub(crate) fn compiled_patterns(&self) -> Result<CompiledPatterns, String> {
+        // Fast path for the common default configuration. Compiling the
+        // default regex repeatedly is a measurable cost on whole-tree runs
+        // that process many small files.
+        if self.literal_comment_pattern.is_empty()
+            && self.explicit_trailing_pattern == DEFAULT_EXPLICIT_TRAILING_PATTERN
+        {
+            return Ok(CompiledPatterns {
+                literal_comment: None,
+                explicit_trailing: Some(default_explicit_trailing_regex().clone()),
+            });
+        }
         Ok(CompiledPatterns {
             literal_comment: compile_optional(
                 "literal_comment_pattern",
@@ -429,6 +454,15 @@ impl Config {
             )?,
         })
     }
+}
+
+const DEFAULT_EXPLICIT_TRAILING_PATTERN: &str = "#<";
+const DEFAULT_FENCE_PATTERN: &str = r"^\s*[`~]{3}[^`\n]*$";
+const DEFAULT_RULER_PATTERN: &str = r"^[^\w\s]{3}.*[^\w\s]{3}$";
+
+fn default_explicit_trailing_regex() -> &'static Regex {
+    static CACHE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| Regex::new(DEFAULT_EXPLICIT_TRAILING_PATTERN).expect("default regex"))
 }
 
 fn compile_optional(name: &str, pattern: &str) -> Result<Option<Regex>, String> {

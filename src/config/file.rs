@@ -630,6 +630,12 @@ impl Config {
     /// Later files override earlier files.
     pub fn from_files(paths: &[PathBuf]) -> Result<Self> {
         let mut config = Config::default();
+        // Default-only path: default pattern strings are known-valid, skip the
+        // regex compilation that validate_patterns() performs. This matters
+        // on whole-tree runs where from_files is called per file.
+        if paths.is_empty() {
+            return Ok(config);
+        }
         for path in paths {
             let file_config = load_config_file(path)?;
             config.apply(file_config);
