@@ -194,7 +194,7 @@ The gradual increase from ~10ms to ~15ms across early releases is entirely
 process startup overhead — the formatting engine itself remains sub-millisecond.
 As the binary grew from 4.7MB to 6.0MB with new features (LSP, shell
 completions, watch mode, JSON Schema, parse tree dump), the OS needed to load
-more pages from disk at startup. The post-`v1.0.0` datapoint shows the binary
+more pages from disk at startup. The `v1.1.0` datapoint shows the binary
 brought back down to 4.8MB and wall time back under 8ms on the same 656-line
 fixture via link-time optimization (`lto = true`, `codegen-units = 1`), a
 hand-written recursive-descent parser replacing `pest`, and removal of an
