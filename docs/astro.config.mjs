@@ -80,6 +80,7 @@ export default defineConfig({
         MobileMenuToggle: "./src/components/MobileMenuToggle.astro",
         MobileTableOfContents: "./src/components/MobileTableOfContents.astro",
         Sidebar: "./src/components/Sidebar.astro",
+        Footer: "./src/components/Footer.astro",
       },
       lastUpdated: true,
       customCss: [

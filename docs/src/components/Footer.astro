@@ -1,0 +1,37 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import Default from "@astrojs/starlight/components/Footer.astro";
+---
+
+<Default><slot /></Default>
+
+<p class="version-note">
+  Docs track <code>main</code>. For historical docs, check out a release tag in
+  <a href="https://github.com/cmakefmt/cmakefmt">the repository</a> and build
+  <code>docs/</code> locally.
+</p>
+
+<style>
+  .version-note {
+    margin-top: 1.5rem;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+    text-align: center;
+  }
+
+  .version-note code {
+    font-size: inherit;
+  }
+
+  .version-note a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  .version-note a:hover {
+    color: var(--sl-color-white);
+  }
+</style>
