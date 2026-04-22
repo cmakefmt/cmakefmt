@@ -804,4 +804,123 @@ mod tests {
         let err = Error::Formatter("something went wrong".to_string());
         assert!(err.to_string().contains("something went wrong"));
     }
+
+    // ── Regex fast paths ──────────────────────────────────────────────────
+
+    #[test]
+    fn from_files_empty_path_returns_defaults() {
+        let config = Config::from_files(&[]).expect("default config should load");
+        let defaults = Config::default();
+        assert_eq!(
+            config.literal_comment_pattern,
+            defaults.literal_comment_pattern
+        );
+        assert_eq!(
+            config.explicit_trailing_pattern,
+            defaults.explicit_trailing_pattern
+        );
+        assert_eq!(config.fence_pattern, defaults.fence_pattern);
+        assert_eq!(config.ruler_pattern, defaults.ruler_pattern);
+        assert_eq!(config.line_width, defaults.line_width);
+    }
+
+    #[test]
+    fn validate_patterns_accepts_defaults() {
+        let config = Config::default();
+        assert!(
+            config.validate_patterns().is_ok(),
+            "default patterns must pass validation"
+        );
+    }
+
+    #[test]
+    fn validate_patterns_rejects_invalid_custom_pattern() {
+        let config = Config {
+            fence_pattern: "(".to_string(),
+            ..Config::default()
+        };
+        let err = config
+            .validate_patterns()
+            .expect_err("invalid fence_pattern must be rejected");
+        assert!(
+            err.contains("fence_pattern"),
+            "error should identify fence_pattern, got: {err}"
+        );
+    }
+
+    #[test]
+    fn validate_patterns_accepts_valid_custom_pattern() {
+        let config = Config {
+            fence_pattern: r"^\s*[#]{3,}$".to_string(),
+            ..Config::default()
+        };
+        assert!(config.validate_patterns().is_ok());
+    }
+
+    #[test]
+    fn compiled_patterns_uses_cached_default_regex() {
+        let config = Config::default();
+        let compiled = config.compiled_patterns().expect("defaults must compile");
+        assert!(
+            compiled.literal_comment.is_none(),
+            "empty literal_comment_pattern should produce None"
+        );
+        let explicit = compiled
+            .explicit_trailing
+            .expect("default explicit_trailing_pattern should compile to Some");
+        assert!(
+            explicit.is_match("#<"),
+            "default explicit_trailing regex should match the default marker"
+        );
+    }
+
+    #[test]
+    fn compiled_patterns_compiles_custom_literal_comment() {
+        let config = Config {
+            literal_comment_pattern: r"^\s*TODO:".to_string(),
+            ..Config::default()
+        };
+        let compiled = config
+            .compiled_patterns()
+            .expect("custom literal_comment_pattern must compile");
+        let literal = compiled
+            .literal_comment
+            .expect("custom literal_comment_pattern should compile to Some");
+        assert!(literal.is_match("  TODO: fix me"));
+        assert!(!literal.is_match("# regular comment"));
+    }
+
+    #[test]
+    fn compiled_patterns_compiles_custom_explicit_trailing() {
+        let config = Config {
+            explicit_trailing_pattern: r"^#>".to_string(),
+            ..Config::default()
+        };
+        let compiled = config
+            .compiled_patterns()
+            .expect("custom explicit_trailing_pattern must compile");
+        let explicit = compiled
+            .explicit_trailing
+            .expect("custom explicit_trailing_pattern should compile to Some");
+        assert!(explicit.is_match("#>"));
+        assert!(
+            !explicit.is_match("x#<"),
+            "custom pattern must not fall back to the cached default"
+        );
+    }
+
+    #[test]
+    fn compiled_patterns_errors_on_invalid_custom() {
+        let config = Config {
+            literal_comment_pattern: "(".to_string(),
+            ..Config::default()
+        };
+        match config.compiled_patterns() {
+            Ok(_) => panic!("invalid custom pattern must error"),
+            Err(err) => assert!(
+                err.contains("literal_comment_pattern"),
+                "error should identify literal_comment_pattern, got: {err}"
+            ),
+        }
+    }
 }
