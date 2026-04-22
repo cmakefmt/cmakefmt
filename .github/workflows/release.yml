@@ -7,12 +7,16 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref to rehearse, for example main, a commit SHA, or a release branch"
+        description: "Git ref to rehearse, for example main, a commit SHA, or a release
+          branch"
         required: true
         default: "main"
         type: string
       expected_version:
-        description: "Optional Cargo.toml version to require during the dry run"
+        description: "Optional Cargo.toml version to require during the dry run (omit
+          the 'v' prefix). This is a safety check to ensure the dry run is
+          operating on the expected version, since it won't be using a Git tag
+          ref."
         required: false
         default: ""
         type: string
@@ -29,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
@@ -92,18 +96,18 @@ jobs:
             archive_ext: zip
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           key: ${{ matrix.target }}
           save-if: false
@@ -196,7 +200,7 @@ jobs:
 
       - name: Install cosign
         if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003  # v4.1.1
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Sign release archive with cosign
         if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
@@ -208,33 +212,35 @@ jobs:
 
       - name: Attest release archive
         if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
-          subject-path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}
+          subject-path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target
+            }}.${{ matrix.archive_ext }}
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-${{ steps.version.outputs.value }}-${{ matrix.target }}
-          path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{ matrix.archive_ext }}*
+          path: cmakefmt-${{ steps.version.outputs.value }}-${{ matrix.target }}.${{
+            matrix.archive_ext }}*
 
   test:
     name: test
     runs-on: ubuntu-latest
-    needs: [verify-version, build]
+    needs: [ verify-version, build ]
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Run tests
         run: cargo test --locked
@@ -242,23 +248,23 @@ jobs:
   assemble-release:
     name: assemble-release
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test]
+    needs: [ verify-version, build, test ]
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Download packaged artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: release-*
           merge-multiple: true
@@ -304,7 +310,7 @@ jobs:
           fi
 
       - name: Upload assembled release bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: release-bundle
           path: dist/*
@@ -312,20 +318,20 @@ jobs:
   publish-github-release:
     name: publish-github-release
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test, assemble-release]
+    needs: [ verify-version, build, test, assemble-release ]
     permissions:
       contents: write
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     environment: publish-crate
     steps:
       - name: Download assembled release bundle
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: release-bundle
           path: dist
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
@@ -336,22 +342,22 @@ jobs:
   publish-crates-io:
     name: publish-crates-io
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test]
+    needs: [ verify-version, build, test ]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     environment: publish-crate
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Publish crate to crates.io
         run: cargo publish --locked
@@ -361,7 +367,7 @@ jobs:
   publish-homebrew-tap:
     name: publish-homebrew-tap
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test, publish-github-release]
+    needs: [ verify-version, build, test, publish-github-release ]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
       - name: Download Homebrew formula from GitHub release
@@ -374,7 +380,7 @@ jobs:
             -o /tmp/cmakefmt.rb
 
       - name: Check out Homebrew tap
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: cmakefmt/homebrew-cmakefmt
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -414,11 +420,11 @@ jobs:
   publish-vscode-extension:
     name: publish-vscode-extension
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test, publish-github-release]
+    needs: [ verify-version, build, test, publish-github-release ]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
       - name: Check out VS Code extension repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: cmakefmt/vscode-cmakefmt
           token: ${{ secrets.VSCODE_CMAKEFMT_TOKEN }}
@@ -456,21 +462,21 @@ jobs:
   publish-crates-io-dry-run:
     name: publish-crates-io-dry-run
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test]
+    needs: [ verify-version, build, test ]
     if: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Dry-run crate publish
         run: cargo publish --locked --dry-run
@@ -482,7 +488,7 @@ jobs:
           printf 'cargo publish --locked --dry-run succeeded for %s\n' "${VERSION}" > crates-io-dry-run.txt
 
       - name: Upload crates.io dry-run summary
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: crates-io-dry-run-summary
           path: crates-io-dry-run.txt
@@ -490,11 +496,11 @@ jobs:
   docker-dry-run:
     name: docker-dry-run
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test]
+    needs: [ verify-version, build, test ]
     if: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref }}
 
@@ -506,7 +512,7 @@ jobs:
           echo "value=${VERSION}" >> "${GITHUB_OUTPUT}"
 
       - name: Build image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           load: true
@@ -524,7 +530,7 @@ jobs:
           printf 'Docker dry run passed for %s\n' "${IMAGE}" > docker-dry-run.txt
 
       - name: Upload Docker dry-run summary
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docker-dry-run-summary
           path: docker-dry-run.txt
@@ -532,16 +538,16 @@ jobs:
   publish-docker:
     name: publish-docker
     runs-on: ubuntu-latest
-    needs: [verify-version, build, test, publish-github-release]
+    needs: [ verify-version, build, test, publish-github-release ]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -552,7 +558,7 @@ jobs:
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           push: true
@@ -562,7 +568,7 @@ jobs:
 
   publish-pypi-wheels:
     name: Build and test Python wheels (${{ matrix.os }} / ${{ matrix.target }})
-    needs: [verify-version, build, test]
+    needs: [ verify-version, build, test ]
     strategy:
       fail-fast: false
       matrix:
@@ -575,17 +581,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Build wheel
-        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1.51.0
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
@@ -598,28 +604,28 @@ jobs:
           echo 'set(  FOO  bar )' | cmakefmt -
 
       - name: Upload wheel
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: pypi-wheels-${{ matrix.os }}-${{ matrix.target }}
           path: dist/*.whl
 
   publish-pypi-sdist:
     name: Build Python sdist
-    needs: [verify-version, build, test]
+    needs: [ verify-version, build, test ]
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Build sdist
-        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1.51.0
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           command: sdist
           args: --out dist
@@ -632,7 +638,7 @@ jobs:
           echo 'set(  FOO  bar )' | cmakefmt -
 
       - name: Upload sdist
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: pypi-sdist
           path: dist/*.tar.gz
@@ -649,33 +655,33 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Download assembled release bundle
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: release-bundle
           path: collected/release-bundle
 
       - name: Download packaged release archives
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: release-*
           merge-multiple: true
           path: collected/release-archives
 
       - name: Download wheel artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: pypi-wheels-*
           merge-multiple: true
           path: collected/pypi-wheels
 
       - name: Download sdist artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: pypi-sdist
           path: collected/pypi-sdist
 
       - name: Download dry-run summaries
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: "*-dry-run-summary"
           merge-multiple: true
@@ -699,14 +705,14 @@ jobs:
           } > collected/DRY-RUN-MANIFEST.txt
 
       - name: Upload collected dry-run artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dry-run-artifacts
           path: collected
 
   publish-pypi-upload:
     name: Upload to PyPI
-    needs: [publish-pypi-wheels, publish-pypi-sdist]
+    needs: [ publish-pypi-wheels, publish-pypi-sdist ]
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     runs-on: ubuntu-latest
     environment:
@@ -716,17 +722,17 @@ jobs:
       id-token: write
     steps:
       - name: Download wheels
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: pypi-wheels-*
           merge-multiple: true
           path: dist
 
       - name: Download sdist
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: pypi-sdist
           path: dist
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1  # Docker-based; SHA pinning causes manifest errors
+        uses: pypa/gh-action-pypi-publish@release/v1 # Docker-based; SHA pinning causes manifest errors
