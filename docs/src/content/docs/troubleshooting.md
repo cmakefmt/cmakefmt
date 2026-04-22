@@ -216,7 +216,7 @@ for triage on large repositories.
 
 ```bash
 cmakefmt --verify CMakeLists.txt
-cmakefmt --required-version 1.0.0 --check .
+cmakefmt --required-version 1.1.0 --check .
 ```
 
 - `--verify` reparses the original and formatted output and rejects the run if

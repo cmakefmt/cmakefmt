@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.1.0 — 2026-04-22
+
 ### Added
 
 - Formatting Cookbook page — common formatting goals with before/after
