@@ -5,7 +5,7 @@
 ---
 
 <div class="chart-wrapper" data-parallelism-chart>
-  <canvas id="parallelism-chart" aria-label="Parallelism scaling: time vs worker count for 220-file and 612-file batches"></canvas>
+  <canvas id="parallelism-chart" aria-label="Parallelism scaling: time vs worker count for 282-file and 611-file batches"></canvas>
 </div>
 
 <script>
@@ -14,17 +14,17 @@ Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearS
 
 // Time in ms for each worker count
 const OPENCV_282 = [
-  { workers: 'serial', ms: 958.0 },
-  { workers: '--parallel 2', ms: 591.3 },
-  { workers: '--parallel 4', ms: 328.4 },
-  { workers: '--parallel 8', ms: 219.8 },
+  { workers: 'serial', ms: 102 },
+  { workers: '--parallel 2', ms: 71 },
+  { workers: '--parallel 4', ms: 49 },
+  { workers: '--parallel 8', ms: 36 },
 ];
 
-const OOMPH_613 = [
-  { workers: 'serial', ms: 2145.0 },
-  { workers: '--parallel 2', ms: 1370.0 },
-  { workers: '--parallel 4', ms: 739.7 },
-  { workers: '--parallel 8', ms: 531.4 },
+const OOMPH_611 = [
+  { workers: 'serial', ms: 144 },
+  { workers: '--parallel 2', ms: 107 },
+  { workers: '--parallel 4', ms: 78 },
+  { workers: '--parallel 8', ms: 61 },
 ];
 
 function isDark() {
@@ -63,8 +63,8 @@ function buildChart(canvas: HTMLCanvasElement) {
           tension: 0.3,
         },
         {
-          label: 'oomph-lib (613 files)',
-          data: OOMPH_613.map(d => d.ms),
+          label: 'oomph-lib (611 files)',
+          data: OOMPH_611.map(d => d.ms),
           borderColor: c.line2,
           backgroundColor: c.line2 + '22',
           pointBackgroundColor: c.line2,
@@ -123,9 +123,9 @@ function buildChart(canvas: HTMLCanvasElement) {
           padding: 10,
           callbacks: {
             label: (item) => {
-              const serialMs = item.datasetIndex === 0 ? OPENCV_282[0].ms : OOMPH_613[0].ms;
+              const serialMs = item.datasetIndex === 0 ? OPENCV_282[0].ms : OOMPH_611[0].ms;
               const speedup = (serialMs / (item.raw as number)).toFixed(2);
-              const label = item.datasetIndex === 0 ? '220-file batch' : '612-file batch';
+              const label = item.datasetIndex === 0 ? '282-file batch' : '611-file batch';
               return [
                 `  ${label}: ${(item.raw as number).toFixed(1)} ms`,
                 `  ${speedup}× faster than serial`,

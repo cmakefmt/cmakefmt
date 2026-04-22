@@ -38,6 +38,13 @@ This project follows a simple changelog discipline:
   (`opencv_root`, `blender_root`, `llvm_libc_math`, `grpc_root`) so the
   per-file benchmark suite is fully reproducible from
   `tests/fixtures/real_world/manifest.toml`
+- Refreshed headline performance numbers after the parser rewrite,
+  lazy-diff work, and related micro-optimisations:
+  - per-file geo-mean: **48× → 104×**
+  - whole-repo geo-mean: **49× → 150×** parallel, **19× → 95×** serial
+  - fastest whole-repo speedup: **485× → 2,853×** (opencv, 282 files, parallel)
+  - 55K-line gRPC root `CMakeLists.txt`: **180 ms → 39 ms**
+  - aggregate corpus wall time: **252 s → 0.65 s** (`--parallel`, 14 repos)
 
 ### Fixed
 

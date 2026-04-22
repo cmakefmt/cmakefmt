@@ -55,8 +55,8 @@ single native binary. Same spirit. No Python.
 
 ## Why `cmakefmt`?
 
-* **48× faster — not a typo.** Geometric-mean speedup of `48×` over `cmake-format` on real-world per-file corpora,
-  rising to **485×** on whole-repository runs. Pre-commit hooks that once made you wince now finish before you blink.
+* **104× faster — not a typo.** Geometric-mean speedup of `104×` over `cmake-format` on real-world per-file corpora,
+  rising to **2,853×** on whole-repository runs. Pre-commit hooks that once made you wince now finish before you blink.
 * **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
   Drop it in CI and forget about it.
 * **Built for actual workflows.** `--check`, `--diff`, `--staged`, `--changed`, `--files-from`,
@@ -73,23 +73,23 @@ single native binary. Same spirit. No Python.
 
 | Fixture                          |  Lines | `cmakefmt` ms | `cmake-format` ms |   Speedup |
 |----------------------------------|-------:|--------------:|------------------:|----------:|
-| `opencv_flann/CMakeLists.txt`    |      2 |          7.46 |             51.07 |      6.8× |
-| `googletest/CMakeLists.txt`      |     36 |          4.82 |             63.10 |     13.1× |
-| `llvm_tablegen/CMakeLists.txt`   |     83 |          8.81 |             76.55 |      8.7× |
-| `abseil/CMakeLists.txt`          |    280 |         10.24 |            168.91 |     16.5× |
-| `spdlog/CMakeLists.txt`          |    413 |         10.95 |            217.78 |     19.9× |
-| `mariadb_server/CMakeLists.txt`  |    656 |         11.82 |            485.42 |     41.1× |
-| `xnnpack/CMakeLists.txt`         |  1,354 |         17.57 |          1,429.83 |     81.4× |
-| `opencv/CMakeLists.txt` (root)   |  2,039 |         26.34 |         38,910.13 |  1,477.2× |
-| `blender/CMakeLists.txt` (root)  |  2,650 |         49.19 |          2,638.59 |     53.6× |
-| `llvm/libc/.../CMakeLists.txt`   |  6,688 |         20.34 |          2,219.31 |    109.1× |
-| `grpc/CMakeLists.txt` (root)     | 54,834 |        179.29 |         76,098.27 |    424.4× |
+| `opencv_flann/CMakeLists.txt`    |      2 |           6.3 |              55.8 |      8.9× |
+| `googletest/CMakeLists.txt`      |     36 |           5.4 |              68.2 |     12.6× |
+| `llvm_tablegen/CMakeLists.txt`   |     83 |           6.4 |              83.8 |     13.1× |
+| `abseil/CMakeLists.txt`          |    280 |           6.8 |             186.1 |     27.4× |
+| `spdlog/CMakeLists.txt`          |    413 |           7.7 |             239.1 |     31.1× |
+| `mariadb_server/CMakeLists.txt`  |    656 |           7.1 |             532.0 |     75.0× |
+| `xnnpack/CMakeLists.txt`         |  1,354 |           8.6 |           1,568.9 |    182.2× |
+| `opencv/CMakeLists.txt` (root)   |  2,039 |           9.8 |          43,158.4 |  4,417.2× |
+| `blender/CMakeLists.txt` (root)  |  2,650 |           8.6 |           2,922.7 |    338.5× |
+| `llvm/libc/.../CMakeLists.txt`   |  6,688 |           8.9 |           2,473.7 |    279.3× |
+| `grpc/CMakeLists.txt` (root)     | 54,834 |          39.4 |          84,489.2 |  2,146.2× |
 
-Geometric-mean per-file speedup: **`48×`**.
+Geometric-mean per-file speedup: **`104×`**.
 Whole-repository parallel runs (across 14 large open-source repos including
-LLVM, blender, opencv, gRPC, and oomph-lib) average **`49×` faster than
-`cmake-format`** geo-mean, with parallel mode delivering up to **`5.1×`** over
-`cmakefmt` serial on large repositories.
+LLVM, blender, opencv, gRPC, and oomph-lib) average **`150×` faster than
+`cmake-format`** geo-mean (**`95×`** serial), with parallel mode delivering
+up to **`2.9×`** over `cmakefmt` serial on large repositories.
 
 Full methodology and profiler notes: [cmakefmt.dev/performance/](https://cmakefmt.dev/performance/).
 

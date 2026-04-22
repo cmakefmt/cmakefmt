@@ -54,7 +54,7 @@ sub-second formatting of the entire project.
 ## Performance
 
 `cmakefmt` is a native binary with no interpreter startup overhead. On a
-cold invocation it formats a typical `CMakeLists.txt` in under 5 ms. Python
+cold invocation it formats a typical `CMakeLists.txt` in under 10 ms. Python
 tools (`cmake-format`, `gersemi`) typically spend 200–500 ms just starting the
 interpreter before any file is touched — noticeable on every save in an editor.
 

@@ -13,20 +13,20 @@ import { Chart, BarController, BarElement, CategoryScale, LinearScale, Logarithm
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, LogarithmicScale, Tooltip, Legend);
 
 const DATA = [
-  { label: 'opencv_flann',   lines: 2,     speedup: 6.8 },
-  { label: 'googletest',     lines: 36,    speedup: 13.1 },
-  { label: 'llvm_tablegen',  lines: 83,    speedup: 8.7 },
-  { label: 'abseil',         lines: 280,   speedup: 16.5 },
-  { label: 'spdlog',         lines: 413,   speedup: 19.9 },
-  { label: 'mariadb_server', lines: 656,   speedup: 41.1 },
-  { label: 'xnnpack',        lines: 1354,  speedup: 81.4 },
-  { label: 'opencv_root',    lines: 2039,  speedup: 1477.2 },
-  { label: 'blender_root',   lines: 2650,  speedup: 53.6 },
-  { label: 'llvm_libc_math', lines: 6688,  speedup: 109.1 },
-  { label: 'grpc_root',      lines: 54834, speedup: 424.4 },
+  { label: 'opencv_flann',   lines: 2,     speedup: 8.9 },
+  { label: 'googletest',     lines: 36,    speedup: 12.6 },
+  { label: 'llvm_tablegen',  lines: 83,    speedup: 13.1 },
+  { label: 'abseil',         lines: 280,   speedup: 27.4 },
+  { label: 'spdlog',         lines: 413,   speedup: 31.1 },
+  { label: 'mariadb_server', lines: 656,   speedup: 75.0 },
+  { label: 'xnnpack',        lines: 1354,  speedup: 182.2 },
+  { label: 'opencv_root',    lines: 2039,  speedup: 4417.2 },
+  { label: 'blender_root',   lines: 2650,  speedup: 338.5 },
+  { label: 'llvm_libc_math', lines: 6688,  speedup: 279.3 },
+  { label: 'grpc_root',      lines: 54834, speedup: 2146.2 },
 ];
 
-const GEO_MEAN = 48.0;
+const GEO_MEAN = 103.9;
 
 function isDark() {
   return document.documentElement.dataset.theme === 'dark';

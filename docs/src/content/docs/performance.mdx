@@ -19,11 +19,11 @@ not an accident. Speed is a design goal, not a side effect.
 
 ## Highlights
 
-- **48×** geometric-mean speedup on per-file benchmarks
-- **19×** geometric-mean speedup on whole-repository benchmarks (serial)
-- **49×** geometric-mean speedup over `cmake-format` on whole-repository benchmarks (parallel)
-- **485×** fastest whole-repo speedup (OpenCV, 282 files, parallel)
-- Formats the **55,000-line gRPC root** `CMakeLists.txt` in **180ms** (cmake-format: 76 s)
+- **104×** geometric-mean speedup on per-file benchmarks
+- **95×** geometric-mean speedup on whole-repository benchmarks (serial)
+- **150×** geometric-mean speedup over `cmake-format` on whole-repository benchmarks (parallel)
+- **2,853×** fastest whole-repo speedup (OpenCV, 282 files, parallel)
+- Formats the **55,000-line gRPC root** `CMakeLists.txt` in **~39ms** (cmake-format: 84 s)
 
 ## Benchmark Environment
 
@@ -107,7 +107,7 @@ timings and speedup for that fixture.
 
 <BenchmarkComparisonChart />
 
-Per-fixture speedup. The dashed line marks the geometric mean (`48×`). A few
+Per-fixture speedup. The dashed line marks the geometric mean (`104×`). A few
 fixtures (`opencv_root`, `grpc_root`) show very large speedups — these reflect
 pathological behaviour in `cmake-format` on those specific files rather than
 cherry-picking, and are kept un-capped for transparency.
@@ -122,24 +122,24 @@ benchmarks show the real-world speedup when formatting entire projects:
 
 | Repository | Files | cmakefmt (parallel) | cmakefmt (serial) | cmake-format | Speedup (parallel) |
 |---|---:|---:|---:|---:|---:|
-| googletest    |      4 |     15ms |       24ms |       292ms |  19.1× |
-| spdlog        |      7 |     19ms |       34ms |       375ms |  19.7× |
-| fmt           |     11 |     20ms |       46ms |       857ms |  42.7× |
-| catch2        |     20 |     27ms |       83ms |     2,971ms | 108.5× |
-| protobuf      |     25 |     35ms |       56ms |     1,180ms |  33.7× |
-| nlohmann_json |     41 |     38ms |      152ms |     3,965ms | 103.2× |
-| grpc          |     46 |    188ms |      315ms |    76,395ms | 407.1× |
-| bullet3       |     58 |     20ms |       22ms |       517ms |  25.8× |
-| vulkan_hpp    |    135 |    100ms |      432ms |     1,243ms |  12.5× |
-| opencv        |    282 |    207ms |    1,058ms |   100,529ms | 485.3× |
-| blender       |    419 |    312ms |    1,505ms |    38,802ms | 124.5× |
-| oomph-lib     |    611 |    485ms |    2,298ms |    17,117ms |  35.3× |
-| llvm          |  2,621 |    155ms |      366ms |     4,231ms |  27.4× |
-| cmake         | 11,264 |    322ms |    1,028ms |     3,638ms |  11.3× |
+| googletest    |      4 |     10ms |       10ms |       321ms |   31.1× |
+| spdlog        |      7 |     10ms |       10ms |       376ms |   38.5× |
+| fmt           |     11 |     10ms |       15ms |       849ms |   82.3× |
+| catch2        |     20 |     12ms |       16ms |     3,320ms |  280.8× |
+| protobuf      |     25 |     10ms |       12ms |     1,182ms |  118.7× |
+| nlohmann_json |     41 |     13ms |       19ms |     4,526ms |  359.6× |
+| grpc          |     46 |     44ms |       53ms |    86,855ms | 1,968.6× |
+| bullet3       |     58 |     12ms |       15ms |       557ms |   47.1× |
+| vulkan_hpp    |    135 |     20ms |       36ms |     1,244ms |   63.5× |
+| opencv        |    282 |     35ms |      101ms |   100,711ms | 2,853.0× |
+| blender       |    419 |     46ms |      133ms |    42,950ms |  939.0× |
+| oomph-lib     |    611 |     59ms |      144ms |    12,879ms |  218.2× |
+| llvm          |  2,621 |    102ms |      117ms |     4,811ms |   47.2× |
+| cmake         | 11,264 |    265ms |      636ms |     3,908ms |   14.7× |
 
-Geometric-mean speedup: **49×** (parallel) / **19×** (serial).
-Aggregate speedup across the full corpus: **130×** (252 s of `cmake-format`
-collapses to 1.9 s of `cmakefmt --parallel`).
+Geometric-mean speedup: **150×** (parallel) / **95×** (serial).
+Aggregate speedup across the full corpus: **408×** (264 s of `cmake-format`
+collapses to 0.65 s of `cmakefmt --parallel`).
 
 ## Component Microbenchmarks
 
@@ -175,8 +175,8 @@ Hover a point to see the time and speedup vs serial for each repository.
 <ParallelismChart />
 
 Peak RSS (Resident Set Size — the RAM physically held in memory by the process)
-rises from `22.9 MiB` serial to `36.6 MiB` at `--parallel 8` on opencv, and from
-`16.2 MiB` to `27.1 MiB` on oomph-lib.
+rises from `14.9 MB` serial to `19.4 MB` at `--parallel 8` on opencv, and from
+`13.6 MB` to `16.8 MB` on oomph-lib.
 
 ## Version-by-Version Trend
 
@@ -195,10 +195,11 @@ process startup overhead — the formatting engine itself remains sub-millisecon
 As the binary grew from 4.7MB to 6.0MB with new features (LSP, shell
 completions, watch mode, JSON Schema, parse tree dump), the OS needed to load
 more pages from disk at startup. The post-`v1.0.0` datapoint shows the binary
-brought back down to 4.8MB and startup back under 12ms via link-time
-optimization (`lto = true`, `codegen-units = 1`) and removal of an unused
-dependency. This fixed cost is paid once per invocation and is irrelevant for
-multi-file runs.
+brought back down to 4.8MB and wall time back under 8ms on the same 656-line
+fixture via link-time optimization (`lto = true`, `codegen-units = 1`), a
+hand-written recursive-descent parser replacing `pest`, and removal of an
+unused dependency. This fixed cost is paid once per invocation and is
+irrelevant for multi-file runs.
 
 ## What The Numbers Mean In Practice
 
