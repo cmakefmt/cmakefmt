@@ -16,6 +16,85 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- `install(TARGETS ...)` artifact-kind subgroups are now modelled as
+  nested keyword sections per CMake's documented signature. Each of
+  `RUNTIME/LIBRARY/ARCHIVE/OBJECTS/FRAMEWORK/BUNDLE/PRIVATE_HEADER/
+  PUBLIC_HEADER/RESOURCE/FILE_SET/CXX_MODULES_BMI` carries its own
+  `DESTINATION/PERMISSIONS/CONFIGURATIONS/COMPONENT/NAMELINK_COMPONENT`
+  subkwargs and `OPTIONAL/EXCLUDE_FROM_ALL/NAMELINK_ONLY/NAMELINK_SKIP`
+  subflags. `OBJECTS` was previously missing; `FILE_SET` now correctly
+  takes a positional set name.
+- `install(PROGRAMS)` form (previously absent). `install(SCRIPT|CODE)`
+  now accept `COMPONENT`, `ALL_COMPONENTS`, `EXCLUDE_FROM_ALL`.
+  `install(RUNTIME_DEPENDENCY_SET)` fully modelled with per-artifact-
+  kind subgroups plus the seven regex/file filter kwargs.
+- `install(IMPORTED_RUNTIME_ARTIFACTS)` restructured with the same
+  artifact-kind subgroup pattern as TARGETS.
+- `install(FILES)` gains `TYPE`, `RENAME`, `EXCLUDE_FROM_ALL`.
+- `install(DIRECTORY)` gains `TYPE`, `DIRECTORY_PERMISSIONS`,
+  `CONFIGURATIONS`, `MESSAGE_NEVER`, `EXCLUDE_FROM_ALL`,
+  `FILES_MATCHING`; `PATTERN`/`REGEX` subgroups now take their
+  pattern as a positional and accept `EXCLUDE` plus a nested
+  `PERMISSIONS` subkwarg.
+- `RUNTIME_DEPENDENCIES` promoted from an unstructured value list to
+  a proper kwarg group with `DIRECTORIES`, `PRE_INCLUDE_REGEXES`,
+  `PRE_EXCLUDE_REGEXES`, `POST_INCLUDE_REGEXES`,
+  `POST_EXCLUDE_REGEXES`, `POST_INCLUDE_FILES`,
+  `POST_EXCLUDE_FILES` subkwargs.
+
+### Changed
+
+- Pair-aware vertical rendering for sections with nested subkwargs.
+  When a wrapped section contains subkwargs, each `subkwarg + value`
+  pair renders as a single logical line at the nested indent —
+  matching the layout shown in `cmake --help-command install`.
+  Non-grouped sections (`PUBLIC`/`PRIVATE`/`INTERFACE`, etc.) keep
+  their existing flat packing.
+- Trailing comments attached to a keyword header (`RUNTIME # runtime
+  artifacts`) stay on the header line when they fit within
+  `line_width`, and reflow through the standard comment formatter
+  when they don't.
+
+### Fixed
+
+- Subkwarg argument values no longer collide with ancestor keyword
+  names. `install(TARGETS foo LIBRARY COMPONENT Runtime)` previously
+  reinterpreted `Runtime` as the `RUNTIME` artifact-kind subgroup;
+  the splitter now force-attaches a kwarg's required nargs as
+  values regardless of token classification. `OneOrMore` nargs
+  (`CONFIGURATIONS Debug Runtime`) are also protected.
+- Inline comments interleaved between a subkwarg and its value no
+  longer count toward the subkwarg's nargs quota. The grouped
+  writer advances by non-comment tokens so
+  `COMPONENT # comment\n  Runtime` keeps `Runtime` as the
+  `COMPONENT` value.
+- `#` line comments appearing *before* a kwarg's required positional
+  (e.g. `FILE_SET # set comment\n  HEADERS …`) no longer swallow the
+  positional into the comment text. Positionals are always emitted
+  before any comments on the header line.
+- Long trailing comments on a keyword header now respect
+  `line_width` — they break to a new line at the nested indent and
+  reflow rather than producing an overlong line.
+- `autosort` no longer scrambles kwarg sections whose spec declares
+  nested subkwargs or flags. The gate applies equally to
+  explicitly-`sortable: true` sections, so malformed specs can't
+  bypass it. Pure flat-list kwargs (`PUBLIC`, user ITEMS-style
+  lists) still sort.
+- Removed an accidental top-level `PERMISSIONS` entry from
+  `install(DIRECTORY)`. Per CMake docs, `PERMISSIONS` only appears
+  as a subkwarg of a `PATTERN|REGEX` subgroup; the top-level
+  permission kwargs are `FILE_PERMISSIONS` and
+  `DIRECTORY_PERMISSIONS`.
+
+### Removed
+
+- Dormant `fuzz/` directory (three cargo-fuzz targets plus the
+  frozen pest parser comparison harness). Never wired into CI; the
+  parser rewrite they guarded is shipped. Can be recreated if a
+  fuzzing push returns.
+
 ## 1.1.0 — 2026-04-22
 
 ### Added
