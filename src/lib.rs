@@ -100,8 +100,8 @@ pub mod wasm;
 // ── Configuration ────────────────────────────────────────────────────────────
 
 pub use config::{
-    CaseStyle, CommandConfig, Config, DangleAlign, Experimental, FractionalTabPolicy, LineEnding,
-    PerCommandConfig,
+    CaseStyle, CommandConfig, Config, ContinuationAlign, DangleAlign, Experimental,
+    FractionalTabPolicy, LineEnding, PerCommandConfig,
 };
 
 pub use config::default_config_template;

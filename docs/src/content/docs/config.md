@@ -84,6 +84,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`always_wrap`](#always_wrap)
   - [`require_valid_layout`](#require_valid_layout)
   - [`wrap_after_first_arg`](#wrap_after_first_arg)
+  - [`continuation_align`](#continuation_align)
   - [`enable_sort`](#enable_sort)
   - [`autosort`](#autosort)
   - [`dangle_parens`](#dangle_parens)
@@ -400,6 +401,58 @@ commands:
       SOURCES:
         nargs: "+"
 ```
+
+### `continuation_align`
+
+How to indent continuation lines when a wrapped keyword section (like a
+subkwarg plus its values) overflows `line_width`. Two modes:
+
+- `same-indent` (default) — the continuation wraps at the same indent
+  as the keyword itself.
+- `under-first-value` — the continuation aligns under the column of
+  the first value after the keyword (the cmake-format hanging-indent
+  style).
+
+```yaml
+format:
+  continuation_align: under-first-value
+```
+
+Both are legitimate layout opinions — `same-indent` stays consistent
+with the rest of cmakefmt's wrapping rules; `under-first-value` is
+useful for users migrating from `cmake-format`. The knob only affects
+subkwarg groups inside structural kwarg sections (e.g. `PATTERN …
+PERMISSIONS …` inside `install(DIRECTORY)` or `RUNTIME COMPONENT …`
+inside `install(TARGETS)`); flat-list sections like `PUBLIC` in
+`target_link_libraries` are unaffected.
+
+With a long `PERMISSIONS` value list inside a `PATTERN` subgroup:
+
+```cmake
+# same-indent (default) — continuation at the subkwarg indent
+install(DIRECTORY src/
+  DESTINATION include
+  PATTERN *.h
+    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+    GROUP_EXECUTE GROUP_READ)
+
+# under-first-value — continuation aligned under OWNER_EXECUTE's column
+install(DIRECTORY src/
+  DESTINATION include
+  PATTERN *.h
+    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                GROUP_EXECUTE GROUP_READ)
+```
+
+Override per-command via `per_command_overrides`:
+
+```yaml
+per_command_overrides:
+  install:
+    continuation_align: under-first-value
+```
+
+Or in a custom spec via `layout.continuation_align`.
 
 ### `enable_sort`
 

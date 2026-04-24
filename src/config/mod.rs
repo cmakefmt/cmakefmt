@@ -86,6 +86,44 @@ pub enum FractionalTabPolicy {
     RoundUp,
 }
 
+/// How to indent continuation lines when a wrapped keyword section
+/// overflows [`Config::line_width`].
+///
+/// Suppose `PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+/// GROUP_EXECUTE GROUP_READ` exceeds the line budget under a
+/// `PATTERN *.h` subgroup:
+///
+/// ```cmake
+/// # SameIndent — continuation wraps at the subkwarg indent:
+/// PATTERN *.h
+///   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+///   GROUP_EXECUTE GROUP_READ
+///
+/// # UnderFirstValue — continuation aligns under the first value
+/// # after the keyword:
+/// PATTERN *.h
+///   PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+///               GROUP_EXECUTE GROUP_READ
+/// ```
+///
+/// Both are valid layout opinions. cmakefmt defaults to
+/// [`ContinuationAlign::SameIndent`] for consistency with how the
+/// rest of the formatter wraps; [`ContinuationAlign::UnderFirstValue`]
+/// matches cmake-format's hanging-indent style and is useful for
+/// users migrating from that tool.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum ContinuationAlign {
+    /// Continuation lines wrap at the same indent as the keyword
+    /// itself. The default.
+    #[default]
+    SameIndent,
+    /// Continuation lines align under the first value after the
+    /// keyword (cmake-format's hanging-indent style).
+    UnderFirstValue,
+}
+
 /// How to align the dangling closing paren.
 ///
 /// Only takes effect when [`Config::dangle_parens`] is `true`.
@@ -229,6 +267,11 @@ pub struct Config {
     /// overridden per-command via `per_command_overrides` or the spec's
     /// `layout.wrap_after_first_arg`.
     pub wrap_after_first_arg: bool,
+    /// How to indent continuation lines when a wrapped keyword
+    /// section overflows [`Self::line_width`]. Can be overridden
+    /// per-command via `per_command_overrides` or the spec's
+    /// `layout.continuation_align`.
+    pub continuation_align: ContinuationAlign,
     /// Sort arguments in keyword sections marked `sortable` in the
     /// command spec. Sorting is lexicographic and case-insensitive.
     pub enable_sort: bool,
@@ -363,6 +406,8 @@ pub struct PerCommandConfig {
     pub max_subgroups_hwrap: Option<usize>,
     /// Keep the first positional argument on the command line when wrapping.
     pub wrap_after_first_arg: Option<bool>,
+    /// Override the continuation-alignment rule for this command.
+    pub continuation_align: Option<ContinuationAlign>,
 }
 
 impl Default for Config {
@@ -382,6 +427,7 @@ impl Default for Config {
             always_wrap: Vec::new(),
             require_valid_layout: false,
             wrap_after_first_arg: false,
+            continuation_align: ContinuationAlign::SameIndent,
             enable_sort: false,
             autosort: false,
             dangle_parens: false,
@@ -663,6 +709,18 @@ impl CommandConfig<'_> {
             .unwrap_or(self.global.wrap_after_first_arg)
     }
 
+    /// Effective continuation-alignment rule for the current command.
+    ///
+    /// Resolution order: per-command user override > `spec_value`
+    /// (from the command spec's layout overrides) > global config
+    /// default.
+    pub fn continuation_align(&self, spec_value: Option<ContinuationAlign>) -> ContinuationAlign {
+        self.per_cmd
+            .and_then(|p| p.continuation_align)
+            .or(spec_value)
+            .unwrap_or(self.global.continuation_align)
+    }
+
     /// Effective indentation unit for the current command.
     pub fn indent_str(&self) -> String {
         if self.global.use_tabchars {
@@ -779,6 +837,7 @@ mod tests {
                 max_pargs_hwrap: Some(10),
                 max_subgroups_hwrap: Some(5),
                 wrap_after_first_arg: None,
+                continuation_align: None,
             },
         );
         let config = Config {

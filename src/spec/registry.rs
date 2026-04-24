@@ -559,6 +559,9 @@ fn merge_layout(base: &mut LayoutOverrides, override_layout: LayoutOverridesOver
     if let Some(value) = override_layout.max_pargs_hwrap {
         base.max_pargs_hwrap = Some(value);
     }
+    if let Some(value) = override_layout.continuation_align {
+        base.continuation_align = Some(value);
+    }
 }
 
 fn merge_flags(base: &mut IndexSet<String>, override_flags: IndexSet<String>) {

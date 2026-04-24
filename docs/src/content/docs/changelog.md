@@ -18,6 +18,13 @@ This project follows a simple changelog discipline:
 
 ### Added
 
+- `continuation_align` config knob — controls how continuation lines
+  indent when a wrapped subkwarg group overflows `line_width`. Two
+  modes: `same-indent` (default, consistent with cmakefmt's existing
+  wrapping) and `under-first-value` (cmake-format-style hanging
+  indent, aligned under the first value after the subkwarg).
+  Overridable per-command via `per_command_overrides` or per-spec
+  via `layout.continuation_align`.
 - `install(TARGETS ...)` artifact-kind subgroups are now modelled as
   nested keyword sections per CMake's documented signature. Each of
   `RUNTIME/LIBRARY/ARCHIVE/OBJECTS/FRAMEWORK/BUNDLE/PRIVATE_HEADER/

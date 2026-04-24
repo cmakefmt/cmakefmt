@@ -139,6 +139,8 @@ pub struct LayoutOverrides {
     /// continuation lines aligned to the open parenthesis. When `false`,
     /// all arguments wrap to the next line at the base indent.
     pub wrap_after_first_arg: Option<bool>,
+    /// Override continuation-alignment behaviour for this command form.
+    pub continuation_align: Option<crate::config::ContinuationAlign>,
 }
 
 /// Specification for a keyword section and any nested sub-keywords it accepts.
@@ -293,6 +295,9 @@ pub(crate) struct LayoutOverridesOverride {
     /// Keep the first positional argument on the command line when wrapping.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wrap_after_first_arg: Option<bool>,
+    /// Override continuation-alignment behaviour for this command form.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub continuation_align: Option<crate::config::ContinuationAlign>,
 }
 
 /// Partial override for a keyword specification.
@@ -429,6 +434,7 @@ impl LayoutOverridesOverride {
             always_wrap: self.always_wrap,
             max_pargs_hwrap: self.max_pargs_hwrap,
             wrap_after_first_arg: self.wrap_after_first_arg,
+            continuation_align: self.continuation_align,
         }
     }
 }

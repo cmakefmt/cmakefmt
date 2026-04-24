@@ -80,6 +80,9 @@ pub(crate) fn format_command(
     let spec_wrap_first = form.layout.as_ref().and_then(|l| l.wrap_after_first_arg);
     let wrap_after_first_arg = cmd_config.wrap_after_first_arg(spec_wrap_first);
 
+    let spec_continuation = form.layout.as_ref().and_then(|l| l.continuation_align);
+    let continuation_align = cmd_config.continuation_align(spec_continuation);
+
     let output = if force_vertical {
         debug.log(format!(
             "formatter: command {} layout=vertical (always_wrap)",
@@ -93,6 +96,7 @@ pub(crate) fn format_command(
             patterns,
             block_depth,
             wrap_after_first_arg,
+            continuation_align,
         )?
     } else if let Some(inline) = try_format_inline(
         command,
@@ -144,6 +148,7 @@ pub(crate) fn format_command(
             patterns,
             block_depth,
             wrap_after_first_arg,
+            continuation_align,
         )?
     };
 
@@ -531,6 +536,7 @@ fn try_format_hanging(
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn format_command_vertical(
     command: &CommandInvocation,
     sections: &[Section<'_>],
@@ -539,6 +545,7 @@ fn format_command_vertical(
     patterns: &CompiledPatterns,
     block_depth: usize,
     wrap_after_first_arg: bool,
+    continuation_align: crate::config::ContinuationAlign,
 ) -> Result<String> {
     let base_indent = cmd_config.indent_str().repeat(block_depth);
     let indent = format!("{base_indent}{}", cmd_config.indent_str());
@@ -691,6 +698,7 @@ fn format_command_vertical(
                                 cmd_config.global(),
                                 patterns,
                                 cmd_config.line_width(),
+                                continuation_align,
                             );
                         } else {
                             output.push('\n');
@@ -723,6 +731,7 @@ fn format_command_vertical(
                             cmd_config.global(),
                             patterns,
                             cmd_config.line_width(),
+                            continuation_align,
                         );
                     } else {
                         output.push('\n');
@@ -810,6 +819,7 @@ fn format_command_vertical(
                             cmd_config.global(),
                             patterns,
                             cmd_config.line_width(),
+                            continuation_align,
                         );
                     } else {
                         output.push('\n');
@@ -842,6 +852,7 @@ fn format_command_vertical(
                         cmd_config.global(),
                         patterns,
                         cmd_config.line_width(),
+                        continuation_align,
                     );
                 } else {
                     output.push('\n');
@@ -968,9 +979,61 @@ fn write_packed_arguments(
     patterns: &CompiledPatterns,
     line_width: usize,
 ) {
+    write_packed_arguments_with_continuation(
+        output, arguments, indent, indent, config, patterns, line_width,
+    );
+}
+
+/// Same as [`write_packed_arguments`], but uses a separate indent for
+/// continuation (wrap) lines. When `first_indent == continuation_indent`
+/// the behaviour is identical to [`write_packed_arguments`]. Used by
+/// the pair-aware grouped writer to implement
+/// [`crate::config::ContinuationAlign::UnderFirstValue`] — continuation
+/// lines align under the first value column after the subkwarg, rather
+/// than at the subkwarg's own indent.
+#[allow(clippy::too_many_arguments)]
+fn write_packed_arguments_with_continuation(
+    output: &mut String,
+    arguments: &[&Argument],
+    first_indent: &str,
+    continuation_indent: &str,
+    config: &Config,
+    patterns: &CompiledPatterns,
+    line_width: usize,
+) {
     let mut current = String::new();
-    let indent_width = indent.chars().count();
+    let mut used_first_line = false;
+
+    let indent_for = |used_first_line: bool| -> &str {
+        if used_first_line {
+            continuation_indent
+        } else {
+            first_indent
+        }
+    };
+
+    let mut current_indent_width = first_indent.chars().count();
     let mut current_width = 0usize;
+
+    let flush = |output: &mut String,
+                 current: &mut String,
+                 used_first_line: &mut bool,
+                 current_indent_width: &mut usize| {
+        if current.is_empty() {
+            return;
+        }
+        let ind = if *used_first_line {
+            continuation_indent
+        } else {
+            first_indent
+        };
+        output.push_str(ind);
+        output.push_str(current);
+        output.push('\n');
+        current.clear();
+        *used_first_line = true;
+        *current_indent_width = continuation_indent.chars().count();
+    };
 
     for argument in arguments {
         match argument {
@@ -979,35 +1042,52 @@ fn write_packed_arguments(
                     comment,
                     config,
                     patterns,
-                    indent.chars().count(),
+                    current_indent_width,
                     line_width,
                 );
                 if comment_lines.len() == 1 && !current.is_empty() {
                     let comment_width = comment_lines[0].chars().count();
                     let candidate_width = current_width + 1 + comment_width;
-                    if indent_width + candidate_width <= line_width {
-                        // Append comment inline and flush — nothing can
-                        // follow a trailing comment on the same line.
+                    if current_indent_width + candidate_width <= line_width {
                         current.push(' ');
                         current.push_str(&comment_lines[0]);
-                        flush_current_line(output, &mut current, indent);
+                        flush(
+                            output,
+                            &mut current,
+                            &mut used_first_line,
+                            &mut current_indent_width,
+                        );
                         current_width = 0;
                         continue;
                     }
                 }
 
-                flush_current_line(output, &mut current, indent);
+                flush(
+                    output,
+                    &mut current,
+                    &mut used_first_line,
+                    &mut current_indent_width,
+                );
                 current_width = 0;
                 for line in comment_lines {
-                    output.push_str(indent);
+                    output.push_str(indent_for(used_first_line));
                     output.push_str(&line);
                     output.push('\n');
+                    used_first_line = true;
+                    current_indent_width = continuation_indent.chars().count();
                 }
             }
             _ if argument_has_newline(argument) => {
-                flush_current_line(output, &mut current, indent);
+                flush(
+                    output,
+                    &mut current,
+                    &mut used_first_line,
+                    &mut current_indent_width,
+                );
                 current_width = 0;
-                write_multiline_argument(output, indent, argument.as_str());
+                write_multiline_argument(output, indent_for(used_first_line), argument.as_str());
+                used_first_line = true;
+                current_indent_width = continuation_indent.chars().count();
             }
             _ => {
                 let token = argument.as_str();
@@ -1018,7 +1098,7 @@ fn write_packed_arguments(
                     current_width + 1 + token_width
                 };
 
-                if current.is_empty() || indent_width + candidate_width <= line_width {
+                if current.is_empty() || current_indent_width + candidate_width <= line_width {
                     if current.is_empty() {
                         current.push_str(token);
                     } else {
@@ -1027,7 +1107,12 @@ fn write_packed_arguments(
                     }
                     current_width = candidate_width;
                 } else {
-                    flush_current_line(output, &mut current, indent);
+                    flush(
+                        output,
+                        &mut current,
+                        &mut used_first_line,
+                        &mut current_indent_width,
+                    );
                     current_width = token_width;
                     current = token.to_owned();
                 }
@@ -1035,7 +1120,12 @@ fn write_packed_arguments(
         }
     }
 
-    flush_current_line(output, &mut current, indent);
+    flush(
+        output,
+        &mut current,
+        &mut used_first_line,
+        &mut current_indent_width,
+    );
 }
 
 /// Pair-aware writer used when the surrounding section header declares
@@ -1043,6 +1133,7 @@ fn write_packed_arguments(
 /// subgroups). Each nested kwarg and its forced-nargs value(s) are
 /// rendered as a single logical line so that `COMPONENT Runtime` and
 /// `NAMELINK_COMPONENT Development` never split across lines.
+#[allow(clippy::too_many_arguments)]
 fn write_grouped_arguments(
     output: &mut String,
     arguments: &[&Argument],
@@ -1051,6 +1142,7 @@ fn write_grouped_arguments(
     config: &Config,
     patterns: &CompiledPatterns,
     line_width: usize,
+    continuation_align: crate::config::ContinuationAlign,
 ) {
     let mut i = 0;
     while i < arguments.len() {
@@ -1072,7 +1164,32 @@ fn write_grouped_arguments(
 
         let end = group_end(arguments, i, parent_spec);
         let group = &arguments[i..end];
-        write_packed_arguments(output, group, indent, config, patterns, line_width);
+
+        // Under UnderFirstValue, wrap lines of a subkwarg group land
+        // aligned under the column of the first value after the
+        // subkwarg token: `indent + subkwarg + " "`.
+        let hanging_indent = (continuation_align
+            == crate::config::ContinuationAlign::UnderFirstValue
+            && group.len() > 1
+            && lookup_nested_kwarg_in(parent_spec, group[0].as_str()).is_some())
+        .then(|| {
+            let header_width = group[0].as_str().chars().count();
+            format!("{indent}{}", " ".repeat(header_width + 1))
+        });
+
+        if let Some(continuation) = hanging_indent.as_deref() {
+            write_packed_arguments_with_continuation(
+                output,
+                group,
+                indent,
+                continuation,
+                config,
+                patterns,
+                line_width,
+            );
+        } else {
+            write_packed_arguments(output, group, indent, config, patterns, line_width);
+        }
         i = end;
     }
 }
@@ -1140,6 +1257,7 @@ fn write_header_line_and_group(
     config: &Config,
     patterns: &CompiledPatterns,
     line_width: usize,
+    continuation_align: crate::config::ContinuationAlign,
 ) {
     let positional_count = header_positional_count(spec);
 
@@ -1228,6 +1346,7 @@ fn write_header_line_and_group(
             config,
             patterns,
             line_width,
+            continuation_align,
         );
     }
 }
@@ -1389,17 +1508,6 @@ fn write_multiline_argument(output: &mut String, indent: &str, source: &str) {
         output.push_str(line);
         output.push('\n');
     }
-}
-
-fn flush_current_line(output: &mut String, current: &mut String, indent: &str) {
-    if current.is_empty() {
-        return;
-    }
-
-    output.push_str(indent);
-    output.push_str(current);
-    output.push('\n');
-    current.clear();
 }
 
 fn pack_tokens(

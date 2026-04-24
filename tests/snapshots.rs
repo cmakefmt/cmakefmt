@@ -6,7 +6,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use cmakefmt::spec::registry::CommandRegistry;
-use cmakefmt::{format_source, CaseStyle, Config, DangleAlign, PerCommandConfig};
+use cmakefmt::{
+    format_source, CaseStyle, Config, ContinuationAlign, DangleAlign, PerCommandConfig,
+};
 use cmakefmt::{formatter, parser};
 
 // --- Parser edge-case / coverage tests ---
@@ -652,6 +654,75 @@ fn grouped_writer_does_not_count_comments_toward_subkwarg_nargs() {
         Runtime
         DESTINATION lib)
     ");
+}
+
+#[test]
+fn continuation_align_default_uses_same_indent() {
+    // Default continuation_align mode: wrap lines of a subkwarg
+    // group land at the subkwarg's own indent.
+    let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)\n";
+    let config = Config {
+        line_width: 60,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      DIRECTORY src/
+      DESTINATION include
+      PATTERN *.internal EXCLUDE
+      PATTERN *.h
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+        GROUP_EXECUTE GROUP_READ)
+    ");
+}
+
+#[test]
+fn continuation_align_under_first_value_hangs_under_first_value() {
+    // continuation_align = UnderFirstValue: wrap lines of a
+    // subkwarg group align under the column of the first value
+    // that follows the subkwarg — matching cmake-format's
+    // hanging-indent style.
+    let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)\n";
+    let config = Config {
+        line_width: 60,
+        continuation_align: ContinuationAlign::UnderFirstValue,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      DIRECTORY src/
+      DESTINATION include
+      PATTERN *.internal EXCLUDE
+      PATTERN *.h
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                    GROUP_EXECUTE GROUP_READ)
+    ");
+}
+
+#[test]
+fn continuation_align_does_not_affect_inline_fits() {
+    // When the group fits on one line, the continuation indent has
+    // no effect — both modes produce identical output.
+    let src = "install(TARGETS foo LIBRARY COMPONENT Runtime NAMELINK_COMPONENT Development)\n";
+    for align in [
+        ContinuationAlign::SameIndent,
+        ContinuationAlign::UnderFirstValue,
+    ] {
+        let config = Config {
+            continuation_align: align,
+            ..Config::default()
+        };
+        let formatted = format_source(src, &config).unwrap();
+        assert_eq!(
+            formatted,
+            "install(TARGETS foo LIBRARY COMPONENT Runtime NAMELINK_COMPONENT Development)\n",
+            "unexpected output for {align:?}:\n{formatted}"
+        );
+    }
 }
 
 #[test]

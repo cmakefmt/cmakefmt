@@ -12,7 +12,8 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::config::{
-    CaseStyle, Config, DangleAlign, Experimental, FractionalTabPolicy, LineEnding, PerCommandConfig,
+    CaseStyle, Config, ContinuationAlign, DangleAlign, Experimental, FractionalTabPolicy,
+    LineEnding, PerCommandConfig,
 };
 use crate::error::{Error, FileParseError, Result};
 
@@ -81,6 +82,8 @@ struct FormatSection {
     require_valid_layout: Option<bool>,
     /// Keep the first positional argument on the command line when wrapping.
     wrap_after_first_arg: Option<bool>,
+    /// How to indent continuation lines: `same-indent` or `under-first-value`.
+    continuation_align: Option<ContinuationAlign>,
     /// Sort arguments in keyword sections marked `sortable` in the command spec.
     enable_sort: Option<bool>,
     /// Heuristically infer sortability for keyword sections without explicit annotation.
@@ -245,6 +248,10 @@ fn default_config_template_toml() -> String {
             "# require_valid_layout = true\n\n",
             "# Keep the first positional argument on the command line when wrapping.\n",
             "# wrap_after_first_arg = true\n\n",
+            "# Continuation-line alignment when a wrapped keyword section overflows\n",
+            "# line_width: same-indent (wrap at the keyword's indent) or under-first-value\n",
+            "# (cmake-format hanging-indent style, aligned under the first value).\n",
+            "# continuation_align = \"under-first-value\"\n\n",
             "# Sort arguments in keyword sections marked sortable in the command spec.\n",
             "# enable_sort = true\n\n",
             "# Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
@@ -376,6 +383,7 @@ struct EffectiveFormatSection {
     require_valid_layout: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     wrap_after_first_arg: bool,
+    continuation_align: ContinuationAlign,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     enable_sort: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
@@ -424,6 +432,7 @@ impl From<&Config> for EffectiveConfigFile {
                 always_wrap: config.always_wrap.clone(),
                 require_valid_layout: config.require_valid_layout,
                 wrap_after_first_arg: config.wrap_after_first_arg,
+                continuation_align: config.continuation_align,
                 enable_sort: config.enable_sort,
                 autosort: config.autosort,
                 dangle_parens: config.dangle_parens,
@@ -490,6 +499,10 @@ fn default_config_template_yaml() -> String {
             "  # require_valid_layout: true\n\n",
             "  # Keep the first positional argument on the command line when wrapping.\n",
             "  # wrap_after_first_arg: true\n\n",
+            "  # Continuation-line alignment when a wrapped keyword section overflows\n",
+            "  # line_width: same-indent (wrap at the keyword's indent) or under-first-value\n",
+            "  # (cmake-format hanging-indent style, aligned under the first value).\n",
+            "  # continuation_align: under-first-value\n\n",
             "  # Sort arguments in keyword sections marked sortable in the command spec.\n",
             "  # enable_sort: true\n\n",
             "  # Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
@@ -713,6 +726,9 @@ impl Config {
         }
         if let Some(v) = fc.format.wrap_after_first_arg {
             self.wrap_after_first_arg = v;
+        }
+        if let Some(v) = fc.format.continuation_align {
+            self.continuation_align = v;
         }
         if let Some(v) = fc.format.enable_sort {
             self.enable_sort = v;
