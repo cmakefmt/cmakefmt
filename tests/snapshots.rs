@@ -468,6 +468,334 @@ fn install_targets_recognizes_export_and_includes_sections() {
 }
 
 #[test]
+fn install_targets_subkwarg_value_does_not_collide_with_ancestor_kwarg() {
+    // `COMPONENT Runtime` inside the RUNTIME artifact-kind subgroup must
+    // keep `Runtime` as the COMPONENT value, not re-open a RUNTIME section.
+    let src = "install(TARGETS myExe mySharedLib myStaticLib RUNTIME COMPONENT Runtime LIBRARY COMPONENT Runtime NAMELINK_COMPONENT Development ARCHIVE COMPONENT Development DESTINATION lib/static FILE_SET HEADERS COMPONENT Development)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS myExe mySharedLib myStaticLib
+      RUNTIME COMPONENT Runtime
+      LIBRARY COMPONENT Runtime NAMELINK_COMPONENT Development
+      ARCHIVE COMPONENT Development DESTINATION lib/static
+      FILE_SET HEADERS COMPONENT Development)
+    ");
+}
+
+#[test]
+fn install_targets_pair_aware_wrap_at_narrow_width() {
+    // At a narrow width the LIBRARY / ARCHIVE sections must wrap with
+    // each nested subkwarg (+ its value) on its own line, not split
+    // arbitrarily by token count.
+    let src = "install(TARGETS myExe mySharedLib myStaticLib RUNTIME COMPONENT Runtime LIBRARY COMPONENT Runtime NAMELINK_COMPONENT Development ARCHIVE COMPONENT Development DESTINATION lib/static FILE_SET HEADERS COMPONENT Development)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS myExe mySharedLib myStaticLib
+      RUNTIME COMPONENT Runtime
+      LIBRARY
+        COMPONENT Runtime
+        NAMELINK_COMPONENT Development
+      ARCHIVE
+        COMPONENT Development
+        DESTINATION lib/static
+      FILE_SET HEADERS COMPONENT Development)
+    ");
+}
+
+#[test]
+fn install_targets_three_nested_subkwargs_wrap_vertically() {
+    // With three subkwargs in a single artifact-kind subgroup, at a width
+    // that cannot fit them all inline, each pair lands on its own line.
+    let src = "install(TARGETS foo LIBRARY COMPONENT Runtime NAMELINK_COMPONENT Development DESTINATION lib CONFIGURATIONS Release)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS foo
+      LIBRARY
+        COMPONENT Runtime
+        NAMELINK_COMPONENT Development
+        DESTINATION lib
+        CONFIGURATIONS Release)
+    ");
+}
+
+#[test]
+fn install_targets_file_set_with_positional_set_name_and_subkwargs() {
+    // FILE_SET has nargs=1 (set name) plus nested subkwargs. The set
+    // name must stay attached to FILE_SET and COMPONENT's value must
+    // not be reinterpreted.
+    let src = "install(TARGETS foo FILE_SET HEADERS DESTINATION include COMPONENT Development CONFIGURATIONS Release)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS foo
+      FILE_SET HEADERS
+        DESTINATION include
+        COMPONENT Development
+        CONFIGURATIONS Release)
+    ");
+}
+
+#[test]
+fn install_directory_pattern_subgroup_fits_inline_at_default_width() {
+    // When the entire PATTERN subgroup (positional + subkwarg + values)
+    // fits within the line-width budget, the formatter keeps it on a
+    // single line rather than forcing a vertical split.
+    let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_READ OWNER_WRITE)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      DIRECTORY src/
+      DESTINATION include
+      PATTERN *.internal EXCLUDE
+      PATTERN *.h PERMISSIONS OWNER_READ OWNER_WRITE)
+    ");
+}
+
+#[test]
+fn install_directory_pattern_subgroup_pairs_exclude_and_permissions() {
+    // PATTERN takes nargs=1 (the glob) and accepts nested EXCLUDE flag
+    // plus PERMISSIONS subkwarg. Both must stay grouped under PATTERN.
+    let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_READ OWNER_WRITE)\n";
+    let config = Config {
+        line_width: 45,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      DIRECTORY src/
+      DESTINATION include
+      PATTERN *.internal EXCLUDE
+      PATTERN *.h
+        PERMISSIONS OWNER_READ OWNER_WRITE)
+    ");
+}
+
+#[test]
+fn install_directory_pattern_permissions_values_wrap_within_subgroup() {
+    // When PERMISSIONS has enough values to overflow line-width, the
+    // continuation stays within the PATTERN subgroup indent — the
+    // values do not escape back to the outer DIRECTORY level and
+    // PERMISSIONS stays grouped with PATTERN.
+    let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)\n";
+    let config = Config {
+        line_width: 60,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      DIRECTORY src/
+      DESTINATION include
+      PATTERN *.internal EXCLUDE
+      PATTERN *.h
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+        GROUP_EXECUTE GROUP_READ)
+    ");
+}
+
+#[test]
+fn install_targets_one_or_more_kwarg_value_does_not_collide_with_kwarg_name() {
+    // CONFIGURATIONS has nargs="+" (OneOrMore). Its first value must be
+    // force-consumed even when that value spells a kwarg name like
+    // `Runtime` — otherwise the config name gets reinterpreted as the
+    // RUNTIME artifact-kind subgroup.
+    let src = "install(TARGETS foo CONFIGURATIONS Runtime COMPONENT dev)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(
+        formatted,
+        @"install(TARGETS foo CONFIGURATIONS Runtime COMPONENT dev)"
+    );
+}
+
+#[test]
+fn grouped_writer_does_not_count_comments_toward_subkwarg_nargs() {
+    // An inline comment between a nested subkwarg and its value must
+    // not be counted as the value — the real value (`Runtime`) must
+    // stay grouped with COMPONENT so a following sibling subkwarg
+    // (`DESTINATION lib`) opens its own group.
+    let src =
+        "install(TARGETS foo LIBRARY COMPONENT # component name\n  Runtime DESTINATION lib)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS foo
+      LIBRARY
+        COMPONENT # component name
+        Runtime
+        DESTINATION lib)
+    ");
+}
+
+#[test]
+fn autosort_does_not_scramble_structural_kwarg_sections() {
+    // Autosort must never flat-sort tokens inside a kwarg section
+    // whose spec declares required header positionals, nested
+    // subkwargs, or nested flags. Sorting them would detach
+    // positionals like FILE_SET's set name from the header or
+    // separate subkwargs from their values.
+    let src = "install(TARGETS foo FILE_SET HEADERS DESTINATION include COMPONENT Development)\n";
+    let config = Config {
+        enable_sort: true,
+        autosort: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(
+        formatted,
+        @"install(TARGETS foo FILE_SET HEADERS DESTINATION include COMPONENT Development)"
+    );
+}
+
+#[test]
+fn autosort_still_sorts_flat_positional_sections() {
+    // Regression: autosort must keep sorting legitimate flat
+    // positional sections (e.g. target_link_libraries PUBLIC list)
+    // whose spec has no header positionals, no nested kwargs, and no
+    // nested flags.
+    let src = "target_link_libraries(mylib PUBLIC zlib boost fmt)\n";
+    let config = Config {
+        enable_sort: true,
+        autosort: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(
+        formatted,
+        @"target_link_libraries(mylib PUBLIC boost fmt zlib)"
+    );
+}
+
+#[test]
+fn install_targets_long_trailing_comment_on_kwarg_breaks_and_reflows() {
+    // A trailing comment attached to a header kwarg that would push
+    // the line past the configured line_width must not be emitted
+    // inline. It breaks to its own line at the nested indent and is
+    // reflowed through the shared comment formatter.
+    let src = "install(TARGETS foo FILE_SET HEADERS # this is a much longer file set comment with many blahhhh blahhh blahhh blahhh blahhh blahhh blahhh blahhh blahhh blahhh blahhh blahhh\n  COMPONENT Development)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS foo
+      FILE_SET HEADERS
+        # this is a much longer file set comment with many blahhhh blahhh blahhh
+        # blahhh blahhh blahhh blahhh blahhh blahhh blahhh blahhh blahhh
+        COMPONENT Development)
+    ");
+}
+
+#[test]
+fn install_targets_prefix_comment_does_not_swallow_required_positional() {
+    // A `#` line comment appearing *before* a header kwarg's required
+    // positional must not land on the same output line before the
+    // positional — CMake would read the positional as part of the
+    // comment. FILE_SET's set name `HEADERS` is the canonical case.
+    let src = "install(TARGETS foo FILE_SET # file set comment\n  HEADERS COMPONENT Development)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS foo
+      FILE_SET HEADERS # file set comment
+        COMPONENT Development)
+    ");
+}
+
+#[test]
+fn install_targets_trailing_comment_on_artifact_kind_stays_on_header_line() {
+    // Inline comments that appear immediately after an artifact-kind
+    // kwarg (e.g. `RUNTIME # Following options apply to runtime`)
+    // stay on the header line when the section wraps, rather than
+    // floating to their own line above the grouped subkwargs.
+    let src = concat!(
+        "install(TARGETS myExe mySharedLib myStaticLib ",
+        "RUNTIME # Following options apply to runtime artifacts.\n",
+        "COMPONENT Runtime ",
+        "LIBRARY # Following options apply to library artifacts.\n",
+        "COMPONENT Runtime NAMELINK_COMPONENT Development ",
+        "ARCHIVE # Following options apply to archive artifacts.\n",
+        "COMPONENT Development DESTINATION lib/static ",
+        "FILE_SET HEADERS # Following options apply to file set HEADERS.\n",
+        "COMPONENT Development)\n",
+    );
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      TARGETS myExe mySharedLib myStaticLib
+      RUNTIME # Following options apply to runtime artifacts.
+        COMPONENT Runtime
+      LIBRARY # Following options apply to library artifacts.
+        COMPONENT Runtime
+        NAMELINK_COMPONENT Development
+      ARCHIVE # Following options apply to archive artifacts.
+        COMPONENT Development
+        DESTINATION lib/static
+      FILE_SET HEADERS # Following options apply to file set HEADERS.
+        COMPONENT Development)
+    ");
+}
+
+#[test]
+fn non_nested_keyword_section_still_packs_flatly() {
+    // target_link_libraries PUBLIC/PRIVATE/INTERFACE have no nested
+    // kwargs declared — the pair-aware writer must not kick in here,
+    // so existing flat packing behavior is preserved.
+    let src =
+        "target_link_libraries(mylib PUBLIC dep1 dep2 dep3 dep4 dep5 dep6 dep7 dep8 dep9 dep10)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    target_link_libraries(
+      mylib
+      PUBLIC
+        dep1
+        dep2
+        dep3
+        dep4
+        dep5
+        dep6
+        dep7
+        dep8
+        dep9
+        dep10)
+    ");
+}
+
+#[test]
 fn control_blocks_are_indented() {
     let src = "if(FOO)\nmessage(STATUS \"a\")\nif(BAR)\nmessage(STATUS \"b\")\nelse()\nmessage(STATUS \"c\")\nendif()\nendif()\n";
     let formatted = format_source(src, &Config::default()).unwrap();

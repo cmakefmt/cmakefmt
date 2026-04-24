@@ -88,6 +88,7 @@ pub(crate) fn format_command(
         format_command_vertical(
             command,
             &sections,
+            form,
             &cmd_config,
             patterns,
             block_depth,
@@ -138,6 +139,7 @@ pub(crate) fn format_command(
         format_command_vertical(
             command,
             &sections,
+            form,
             &cmd_config,
             patterns,
             block_depth,
@@ -201,6 +203,11 @@ pub(crate) fn split_sections<'a>(
     form: &'a CommandForm,
 ) -> Result<Vec<Section<'a>>> {
     let mut sections = Vec::with_capacity(command.arguments.len().min(8));
+    // Force-attach the next `pending_consume` non-comment tokens to the
+    // current section, regardless of how they classify. This prevents a
+    // subkwarg's value (e.g. `Runtime` after `COMPONENT`) from being
+    // mis-parsed as an ancestor kwarg that happens to share the name.
+    let mut pending_consume: usize = 0;
 
     for argument in &command.arguments {
         if argument.is_comment() {
@@ -220,12 +227,24 @@ pub(crate) fn split_sections<'a>(
         }
 
         let token = argument.as_str();
+
+        if pending_consume > 0 {
+            sections
+                .last_mut()
+                .expect("section list contains at least one section")
+                .arguments
+                .push(argument);
+            pending_consume -= 1;
+            continue;
+        }
+
         if nested_token_belongs_to_current_section(&sections, form, token) {
             sections
                 .last_mut()
                 .expect("section list contains at least one section")
                 .arguments
                 .push(argument);
+            pending_consume = nested_kwarg_forced_nargs(&sections, form, token);
             continue;
         }
 
@@ -237,6 +256,7 @@ pub(crate) fn split_sections<'a>(
                 header_kind: Some(header_kind),
                 arguments: Vec::new(),
             });
+            pending_consume = form_kwarg_forced_nargs(form, token);
             continue;
         }
 
@@ -258,6 +278,44 @@ pub(crate) fn split_sections<'a>(
     Ok(sections)
 }
 
+/// Minimum number of positional-argument tokens that must be
+/// force-consumed after a kwarg so its values are never reinterpreted
+/// as sibling or ancestor keywords. `OneOrMore` requires at least 1
+/// (per CMake semantics). `ZeroOrMore` and `Optional` have no minimum.
+fn forced_consumption_count(nargs: &NArgs) -> usize {
+    match nargs {
+        NArgs::Fixed(n) => *n,
+        NArgs::AtLeast(n) => *n,
+        NArgs::OneOrMore => 1,
+        NArgs::ZeroOrMore | NArgs::Optional => 0,
+    }
+}
+
+fn form_kwarg_forced_nargs(form: &CommandForm, token: &str) -> usize {
+    lookup_kwarg(form, token)
+        .map(|spec| forced_consumption_count(&spec.nargs))
+        .unwrap_or(0)
+}
+
+fn nested_kwarg_forced_nargs(sections: &[Section<'_>], form: &CommandForm, token: &str) -> usize {
+    let Some(section) = sections.last() else {
+        return 0;
+    };
+    let Some(header) = section.header else {
+        return 0;
+    };
+    let Some(parent) = lookup_kwarg(form, header) else {
+        return 0;
+    };
+    let spec = parent.kwargs.get(token).or_else(|| {
+        has_ascii_lowercase(token)
+            .then(|| token.to_ascii_uppercase())
+            .and_then(|normalized| parent.kwargs.get(&normalized))
+    });
+    spec.map(|s| forced_consumption_count(&s.nargs))
+        .unwrap_or(0)
+}
+
 /// Sort arguments within sections that are marked sortable.
 fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: bool) {
     for section in sections.iter_mut() {
@@ -268,12 +326,30 @@ fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: boo
             continue;
         }
 
-        // Check if the spec marks this keyword section as sortable.
-        let spec_sortable = form
+        let header_spec = form
             .kwargs
             .get(&header.to_ascii_uppercase())
-            .or_else(|| form.kwargs.get(header))
-            .is_some_and(|kwarg| kwarg.sortable);
+            .or_else(|| form.kwargs.get(header));
+
+        // Sections whose header spec carries nested subkwargs or
+        // nested flags can't be flat-sorted — the sort would separate
+        // a subkwarg from its value or move a nested flag across a
+        // kwarg boundary, silently changing the command's semantics
+        // (e.g. FILE_SET HEADERS DESTINATION include COMPONENT
+        // Development). Skip sorting in those cases regardless of
+        // whether the sort request came from `sortable = true` in
+        // the spec or the autosort heuristic.
+        //
+        // Pure flat-list kwargs (PUBLIC, ITEMS, …) have neither
+        // nested kwargs nor nested flags and remain sortable.
+        let structural_section =
+            header_spec.is_some_and(|spec| !spec.kwargs.is_empty() || !spec.flags.is_empty());
+        if structural_section {
+            continue;
+        }
+
+        // Check if the spec marks this keyword section as sortable.
+        let spec_sortable = header_spec.is_some_and(|kwarg| kwarg.sortable);
 
         let should_sort = if spec_sortable {
             true
@@ -337,7 +413,12 @@ fn nested_token_belongs_to_current_section(
         return false;
     };
 
-    matches!(spec.nargs, NArgs::Fixed(0)) && is_nested_keyword_or_flag(spec, token)
+    // A kwarg header that declares nested kwargs/flags (e.g. INCLUDES, or
+    // any of the install(TARGETS) artifact-kind subgroups, or FILE_SET
+    // after its positional set-name has been force-consumed) accepts
+    // nested tokens. Kwargs without nested declarations short-circuit
+    // here — is_nested_keyword_or_flag returns false.
+    is_nested_keyword_or_flag(spec, token)
 }
 
 fn try_format_inline(
@@ -453,6 +534,7 @@ fn try_format_hanging(
 fn format_command_vertical(
     command: &CommandInvocation,
     sections: &[Section<'_>],
+    form: &CommandForm,
     cmd_config: &CommandConfig<'_>,
     patterns: &CompiledPatterns,
     block_depth: usize,
@@ -586,8 +668,8 @@ fn format_command_vertical(
                         );
                     }
                 }
-                Some(header) => {
-                    let header = apply_case(cmd_config.keyword_case(), header);
+                Some(header_raw) => {
+                    let header = apply_case(cmd_config.keyword_case(), header_raw);
                     let kw_nested = format!("{paren_indent}{}", cmd_config.indent_str());
                     if section.arguments.is_empty() {
                         output.push_str(&paren_indent);
@@ -597,15 +679,29 @@ fn format_command_vertical(
                     }
                     output.push_str(&paren_indent);
                     output.push_str(&header);
+                    let parent_spec = lookup_kwarg(form, header_raw);
+                    let grouped_spec = parent_spec.filter(|s| !s.kwargs.is_empty());
                     if section.arguments.len() > cmd_config.max_pargs_hwrap() {
-                        output.push('\n');
-                        write_vertical_arguments(
-                            &mut output,
-                            &section.arguments,
-                            &kw_nested,
-                            cmd_config.global(),
-                            patterns,
-                        );
+                        if let Some(spec) = grouped_spec {
+                            write_header_line_and_group(
+                                &mut output,
+                                &section.arguments,
+                                spec,
+                                &kw_nested,
+                                cmd_config.global(),
+                                patterns,
+                                cmd_config.line_width(),
+                            );
+                        } else {
+                            output.push('\n');
+                            write_vertical_arguments(
+                                &mut output,
+                                &section.arguments,
+                                &kw_nested,
+                                cmd_config.global(),
+                                patterns,
+                            );
+                        }
                     } else if let Some(line) = format_section_inline(
                         &header,
                         section.header_kind,
@@ -618,6 +714,16 @@ fn format_command_vertical(
                         output.truncate(output.len() - header.len());
                         output.push_str(&line);
                         output.push('\n');
+                    } else if let Some(spec) = grouped_spec {
+                        write_header_line_and_group(
+                            &mut output,
+                            &section.arguments,
+                            spec,
+                            &kw_nested,
+                            cmd_config.global(),
+                            patterns,
+                            cmd_config.line_width(),
+                        );
                     } else {
                         output.push('\n');
                         write_packed_arguments(
@@ -681,8 +787,8 @@ fn format_command_vertical(
                     );
                 }
             }
-            Some(header) => {
-                let header = apply_case(cmd_config.keyword_case(), header);
+            Some(header_raw) => {
+                let header = apply_case(cmd_config.keyword_case(), header_raw);
                 if section.arguments.is_empty() {
                     output.push_str(&indent);
                     output.push_str(&header);
@@ -692,39 +798,61 @@ fn format_command_vertical(
 
                 output.push_str(&indent);
                 output.push_str(&header);
+                let parent_spec = lookup_kwarg(form, header_raw);
+                let grouped_spec = parent_spec.filter(|s| !s.kwargs.is_empty());
                 if section.arguments.len() > cmd_config.max_pargs_hwrap() {
-                    output.push('\n');
-                    write_vertical_arguments(
-                        &mut output,
-                        &section.arguments,
-                        &nested_indent,
-                        cmd_config.global(),
-                        patterns,
-                    );
-                } else {
-                    if let Some(line) = format_section_inline(
-                        &header,
-                        section.header_kind,
-                        &section.arguments,
-                        &indent,
-                        cmd_config.global(),
-                        patterns,
-                        cmd_config.line_width(),
-                    ) {
-                        output.truncate(output.len() - header.len());
-                        output.push_str(&line);
-                        output.push('\n');
-                    } else {
-                        output.push('\n');
-                        write_packed_arguments(
+                    if let Some(spec) = grouped_spec {
+                        write_header_line_and_group(
                             &mut output,
                             &section.arguments,
+                            spec,
                             &nested_indent,
                             cmd_config.global(),
                             patterns,
                             cmd_config.line_width(),
                         );
+                    } else {
+                        output.push('\n');
+                        write_vertical_arguments(
+                            &mut output,
+                            &section.arguments,
+                            &nested_indent,
+                            cmd_config.global(),
+                            patterns,
+                        );
                     }
+                } else if let Some(line) = format_section_inline(
+                    &header,
+                    section.header_kind,
+                    &section.arguments,
+                    &indent,
+                    cmd_config.global(),
+                    patterns,
+                    cmd_config.line_width(),
+                ) {
+                    output.truncate(output.len() - header.len());
+                    output.push_str(&line);
+                    output.push('\n');
+                } else if let Some(spec) = grouped_spec {
+                    write_header_line_and_group(
+                        &mut output,
+                        &section.arguments,
+                        spec,
+                        &nested_indent,
+                        cmd_config.global(),
+                        patterns,
+                        cmd_config.line_width(),
+                    );
+                } else {
+                    output.push('\n');
+                    write_packed_arguments(
+                        &mut output,
+                        &section.arguments,
+                        &nested_indent,
+                        cmd_config.global(),
+                        patterns,
+                        cmd_config.line_width(),
+                    );
                 }
             }
         }
@@ -908,6 +1036,285 @@ fn write_packed_arguments(
     }
 
     flush_current_line(output, &mut current, indent);
+}
+
+/// Pair-aware writer used when the surrounding section header declares
+/// nested kwargs (e.g. `install(TARGETS ... LIBRARY ...)` artifact-kind
+/// subgroups). Each nested kwarg and its forced-nargs value(s) are
+/// rendered as a single logical line so that `COMPONENT Runtime` and
+/// `NAMELINK_COMPONENT Development` never split across lines.
+fn write_grouped_arguments(
+    output: &mut String,
+    arguments: &[&Argument],
+    indent: &str,
+    parent_spec: &crate::spec::KwargSpec,
+    config: &Config,
+    patterns: &CompiledPatterns,
+    line_width: usize,
+) {
+    let mut i = 0;
+    while i < arguments.len() {
+        let argument = arguments[i];
+        if argument.is_comment() || argument_has_newline(argument) {
+            // Defer non-token arguments to the packed writer one at a time
+            // so existing comment and multi-line handling still applies.
+            write_packed_arguments(
+                output,
+                std::slice::from_ref(&arguments[i]),
+                indent,
+                config,
+                patterns,
+                line_width,
+            );
+            i += 1;
+            continue;
+        }
+
+        let end = group_end(arguments, i, parent_spec);
+        let group = &arguments[i..end];
+        write_packed_arguments(output, group, indent, config, patterns, line_width);
+        i = end;
+    }
+}
+
+/// Count of non-comment arguments that must stay attached to the section
+/// header line because they are positionals of the header kwarg itself
+/// (e.g. `FILE_SET HEADERS` or `PATTERN *.h`).
+fn header_positional_count(parent_spec: &crate::spec::KwargSpec) -> usize {
+    match &parent_spec.nargs {
+        NArgs::Fixed(n) => *n,
+        NArgs::AtLeast(n) => *n,
+        NArgs::OneOrMore => 1,
+        NArgs::Optional | NArgs::ZeroOrMore => 0,
+    }
+}
+
+/// Split off any leading inline single-line comments from `arguments`.
+/// Callers carry these onto the preceding section header line so that
+/// trailing comments like `RUNTIME # runtime artifacts` stay attached
+/// to the header rather than floating onto their own line above the
+/// grouped subkwargs.
+fn split_leading_inline_line_comments<'a, 'b>(
+    arguments: &'b [&'a Argument],
+) -> (&'b [&'a Argument], &'b [&'a Argument]) {
+    let split = arguments
+        .iter()
+        .position(|arg| !is_single_line_inline_comment(arg))
+        .unwrap_or(arguments.len());
+    (&arguments[..split], &arguments[split..])
+}
+
+fn is_single_line_inline_comment(argument: &Argument) -> bool {
+    matches!(
+        argument,
+        Argument::InlineComment(crate::parser::ast::Comment::Line(_))
+    )
+}
+
+/// Character width of the last line of `output` (i.e. the part after
+/// the most recent `\n`), used to decide whether an inline trailing
+/// comment still fits within the configured line budget.
+fn current_line_char_count(output: &str) -> usize {
+    output
+        .rsplit('\n')
+        .next()
+        .map_or(0, |tail| tail.chars().count())
+}
+
+/// Write the header's own positional args (if any) on the same line as
+/// the section header, carry any leading inline single-line comments
+/// onto that same line, then newline and hand the remainder off to the
+/// pair-aware grouped writer.
+///
+/// Crucially, any comments interleaved *before* the header's required
+/// positionals are emitted *after* the positionals — a line comment
+/// extends to end-of-line in CMake, so placing a positional token
+/// after one would make CMake parse the positional as comment text
+/// and silently change the command's semantics.
+#[allow(clippy::too_many_arguments)]
+fn write_header_line_and_group(
+    output: &mut String,
+    arguments: &[&Argument],
+    spec: &crate::spec::KwargSpec,
+    inner_indent: &str,
+    config: &Config,
+    patterns: &CompiledPatterns,
+    line_width: usize,
+) {
+    let positional_count = header_positional_count(spec);
+
+    // Walk the prefix that would naturally live on the header line,
+    // separating non-comment positional args from any comments found
+    // among them. Comments are deferred so that no positional is ever
+    // emitted after a line comment.
+    let mut positionals: Vec<&Argument> = Vec::new();
+    let mut deferred_comments: Vec<&Argument> = Vec::new();
+    let mut cut_at = 0usize;
+    for (idx, arg) in arguments.iter().enumerate() {
+        if positionals.len() == positional_count {
+            cut_at = idx;
+            break;
+        }
+        cut_at = idx + 1;
+        if arg.is_comment() {
+            deferred_comments.push(*arg);
+        } else {
+            positionals.push(*arg);
+        }
+    }
+    let rest = &arguments[cut_at..];
+
+    // Emit non-comment positionals on the header line first.
+    for arg in &positionals {
+        output.push(' ');
+        output.push_str(arg.as_str());
+    }
+
+    // Combine any prefix-deferred comments with leading comments of
+    // the remaining slice so they all flow after the positionals.
+    let (leading_rest_comments, rest) = split_leading_inline_line_comments(rest);
+    let mut inline_comments = deferred_comments;
+    inline_comments.extend(leading_rest_comments.iter().copied());
+
+    // A line comment terminates its line, so at most one line-comment
+    // can stay inline with the header, and only if it fits within the
+    // configured line width. Anything that doesn't fit breaks to its
+    // own line at the subkwarg indent and is reflowed through the
+    // shared comment formatter so an overlong comment still honours
+    // the configured `line_width`.
+    let mut header_line_open = true;
+    for arg in inline_comments {
+        let text = arg.as_str();
+        if header_line_open && is_single_line_inline_comment(arg) {
+            let current = current_line_char_count(output);
+            if current + 1 + text.chars().count() <= line_width {
+                output.push(' ');
+                output.push_str(text);
+                output.push('\n');
+                header_line_open = false;
+                continue;
+            }
+        }
+        if header_line_open {
+            output.push('\n');
+            header_line_open = false;
+        }
+        let reflowed = if let Argument::InlineComment(comment) = arg {
+            comment::format_comment_lines(
+                comment,
+                config,
+                patterns,
+                inner_indent.chars().count(),
+                line_width,
+            )
+        } else {
+            vec![text.to_owned()]
+        };
+        for line in reflowed {
+            output.push_str(inner_indent);
+            output.push_str(&line);
+            output.push('\n');
+        }
+    }
+    if header_line_open {
+        output.push('\n');
+    }
+    if !rest.is_empty() {
+        write_grouped_arguments(
+            output,
+            rest,
+            inner_indent,
+            spec,
+            config,
+            patterns,
+            line_width,
+        );
+    }
+}
+
+/// Compute the end-exclusive index of the argument group that starts at
+/// `start`. A group is either a nested kwarg plus the arguments it
+/// consumes according to its `nargs`, or a single bare token when the
+/// start token is not a known nested kwarg. Comments interleaved
+/// between the kwarg and its values are carried along with the group
+/// but do not count toward the nargs quota.
+fn group_end(arguments: &[&Argument], start: usize, parent_spec: &crate::spec::KwargSpec) -> usize {
+    let token = arguments[start].as_str();
+    let Some(spec) = lookup_nested_kwarg_in(parent_spec, token) else {
+        return start + 1;
+    };
+
+    match &spec.nargs {
+        NArgs::Fixed(n) => advance_by_non_comment(arguments, start + 1, *n),
+        NArgs::AtLeast(n) => {
+            let min_end = advance_by_non_comment(arguments, start + 1, *n);
+            extend_until_next_subkwarg(arguments, min_end, parent_spec)
+        }
+        NArgs::OneOrMore => {
+            let min_end = advance_by_non_comment(arguments, start + 1, 1);
+            extend_until_next_subkwarg(arguments, min_end, parent_spec)
+        }
+        NArgs::ZeroOrMore => extend_until_next_subkwarg(arguments, start + 1, parent_spec),
+        NArgs::Optional => {
+            let mut idx = start + 1;
+            while idx < arguments.len() && arguments[idx].is_comment() {
+                idx += 1;
+            }
+            if idx < arguments.len()
+                && lookup_nested_kwarg_in(parent_spec, arguments[idx].as_str()).is_none()
+            {
+                idx + 1
+            } else {
+                idx
+            }
+        }
+    }
+}
+
+/// Advance from `from` by at most `count` non-comment tokens, carrying
+/// any comments encountered along the way. Returns the exclusive end
+/// index into `arguments`.
+fn advance_by_non_comment(arguments: &[&Argument], from: usize, count: usize) -> usize {
+    let mut i = from;
+    let mut taken = 0usize;
+    while i < arguments.len() && taken < count {
+        if !arguments[i].is_comment() {
+            taken += 1;
+        }
+        i += 1;
+    }
+    i
+}
+
+fn extend_until_next_subkwarg(
+    arguments: &[&Argument],
+    start: usize,
+    parent_spec: &crate::spec::KwargSpec,
+) -> usize {
+    let mut end = start;
+    while end < arguments.len() {
+        let arg = arguments[end];
+        if arg.is_comment() {
+            end += 1;
+            continue;
+        }
+        if lookup_nested_kwarg_in(parent_spec, arg.as_str()).is_some() {
+            return end;
+        }
+        end += 1;
+    }
+    end
+}
+
+fn lookup_nested_kwarg_in<'a>(
+    parent: &'a crate::spec::KwargSpec,
+    token: &str,
+) -> Option<&'a crate::spec::KwargSpec> {
+    parent.kwargs.get(token).or_else(|| {
+        has_ascii_lowercase(token)
+            .then(|| token.to_ascii_uppercase())
+            .and_then(|normalized| parent.kwargs.get(&normalized))
+    })
 }
 
 fn write_vertical_arguments(
