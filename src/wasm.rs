@@ -15,7 +15,11 @@ use crate::spec::registry::CommandRegistry;
 /// `markup:`, and optional `commands:` sections. Unknown fields
 /// are rejected.
 ///
-/// Returns the formatted source string, or throws a JS error on failure.
+/// Returns the formatted source string, or throws a JS `Error`
+/// whose `message` is the string form of the underlying crate
+/// error. No structured error type crosses the WASM/JS boundary —
+/// JS callers should catch the thrown error and read `.message` or
+/// `.toString()` to surface it.
 #[wasm_bindgen]
 pub fn format(source: &str, config_yaml: &str) -> Result<String, JsValue> {
     let (config, commands_yaml) = Config::from_yaml_str_with_commands(config_yaml)

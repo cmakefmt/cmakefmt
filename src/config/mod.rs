@@ -8,6 +8,22 @@
 //! formatter. It is built from defaults, user config files
 //! (`.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`), and CLI
 //! overrides.
+//!
+//! # User config file schema
+//!
+//! User-facing config files are parsed under a separate schema
+//! (internal to this module) that groups options into named sections:
+//!
+//! | Section | Purpose |
+//! |---------|---------|
+//! | `[format]` | Line width, indentation, casing, dangle-paren policy, wrapping heuristics |
+//! | `[markup]` | Comment reflow knobs, markup detection patterns, ruler canonicalization |
+//! | `[per_command_overrides]` | Per-command layout overrides keyed by lowercase command name |
+//! | `[commands]` | Command-spec extensions (parsed by [`crate::spec::registry::CommandRegistry`]) |
+//!
+//! [`Config::from_file`], [`Config::from_yaml_str`], and
+//! [`Config::for_file`] load these files and return a resolved
+//! runtime [`Config`]. Unknown fields are rejected.
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
 #[doc(hidden)]
@@ -73,10 +89,14 @@ pub enum FractionalTabPolicy {
 /// How to align the dangling closing paren.
 ///
 /// Only takes effect when [`Config::dangle_parens`] is `true`.
-/// Controls where `)` is placed when a call wraps onto multiple lines:
+/// Controls where `)` is placed when a call wraps onto multiple lines.
+///
+/// At the top level (block depth = 0) `Prefix` and `Close` both place
+/// the `)` at column 0 because the command sits there — the two
+/// variants are visually identical in this case:
 ///
 /// ```cmake
-/// # Prefix / Close — `)` at the command-name column (tracks block depth):
+/// # Prefix / Close at top level — `)` at column 0:
 /// target_link_libraries(
 ///   mylib PUBLIC dep1
 /// )
@@ -86,6 +106,12 @@ pub enum FractionalTabPolicy {
 ///   mylib PUBLIC dep1
 ///                      )
 /// ```
+///
+/// Inside a nested block (`if/foreach/while/function/...`) the
+/// variants diverge: `Prefix` tracks the command-name indent (one
+/// tab stop per nesting level), while `Close` places the `)` at the
+/// current indent level — one tab stop shallower than the command
+/// name, i.e. flush with the enclosing block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
@@ -116,20 +142,47 @@ pub enum DangleAlign {
 /// };
 /// ```
 ///
+/// # Loading from disk
+///
+/// Programmatic callers typically don't build a [`Config`] from
+/// scratch — they load a user config file:
+///
+/// - [`Config::for_file`] — auto-discover the nearest
+///   `.cmakefmt.yaml|yml|toml` starting from a source file's parent
+///   directory, walking up to the repository root and then the
+///   user's home directory.
+/// - [`Config::from_file`] — load a specific config file.
+/// - [`Config::from_files`] — load and merge several in order (later
+///   files override earlier ones).
+/// - [`Config::from_yaml_str`] — deserialise from an in-memory YAML
+///   string (used by the WASM playground and tests).
+///
 /// # Defaults
+///
+/// Headline defaults for the most commonly-adjusted knobs:
 ///
 /// | Field | Default |
 /// |-------|---------|
 /// | `line_width` | `80` |
 /// | `tab_size` | `2` |
 /// | `use_tabchars` | `false` |
+/// | `line_ending` | [`LineEnding::Unix`] |
 /// | `max_empty_lines` | `1` |
+/// | `max_lines_hwrap` | `2` |
+/// | `max_pargs_hwrap` | `6` |
+/// | `max_subgroups_hwrap` | `2` |
+/// | `max_rows_cmdline` | `2` |
 /// | `command_case` | [`CaseStyle::Lower`] |
 /// | `keyword_case` | [`CaseStyle::Upper`] |
 /// | `dangle_parens` | `false` |
 /// | `dangle_align` | [`DangleAlign::Prefix`] |
 /// | `enable_markup` | `true` |
 /// | `first_comment_is_literal` | `true` |
+/// | `canonicalize_hashrulers` | `true` |
+/// | `hashruler_min_length` | `10` |
+///
+/// Fields not listed here default to `false`, empty, or their
+/// variant-level defaults — see the per-field documentation below.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -249,6 +302,19 @@ pub struct Config {
 ///
 /// These may be promoted to stable defaults in a future release, changed
 /// incompatibly, or removed entirely.
+///
+/// This struct is re-exported at the crate root even when it
+/// contains no options so consumers can write forward-compatible
+/// initialisers:
+///
+/// ```
+/// use cmakefmt::{Config, Experimental};
+///
+/// let config = Config {
+///     experimental: Experimental::default(),
+///     ..Config::default()
+/// };
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(default)]
@@ -260,6 +326,18 @@ pub struct Experimental {
 
 /// Per-command overrides. All fields are optional — only specified fields
 /// override the global config for that command.
+///
+/// # YAML/TOML key names
+///
+/// Two fields use different names in config files than in this Rust
+/// struct (for historical reasons):
+///
+/// | Rust field | YAML/TOML key |
+/// |------------|---------------|
+/// | `max_pargs_hwrap` | `max_hanging_wrap_positional_args` |
+/// | `max_subgroups_hwrap` | `max_hanging_wrap_groups` |
+///
+/// All other fields use the same name in both.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
@@ -488,6 +566,16 @@ pub(crate) struct CompiledPatterns {
 
 /// A resolved config for formatting a specific command, with per-command
 /// overrides already applied.
+///
+/// Each accessor resolves values in this priority order:
+///
+/// 1. Per-command user override from
+///    [`Config::per_command_overrides`] (if set for this command).
+/// 2. Command-spec `layout` overrides for the selected form (passed
+///    in where applicable, e.g. [`CommandConfig::wrap_after_first_arg`]).
+/// 3. Global [`Config`] default.
+///
+/// Construct via [`Config::for_command`].
 #[derive(Debug)]
 pub struct CommandConfig<'a> {
     /// The global configuration before per-command overrides are applied.

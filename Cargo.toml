@@ -99,3 +99,11 @@ codegen-units = 1
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
+
+# docs.rs builds all features and defines the `docsrs` cfg so items
+# gated with `#[cfg_attr(docsrs, doc(cfg(...)))]` render their feature
+# badges. Without this, the CLI-gated public re-exports silently
+# disappear from the rendered docs.rs page.
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

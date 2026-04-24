@@ -7,6 +7,22 @@
 //! The built-in registry describes the argument structure of known commands so
 //! the formatter can recognize positional arguments, keywords, flags, and
 //! command-specific layout hints.
+//!
+//! # Entry point
+//!
+//! Use [`crate::CommandRegistry`] to obtain a resolved registry —
+//! either [`CommandRegistry::builtins`](crate::CommandRegistry::builtins)
+//! for the lazily-initialised built-in singleton, or
+//! [`CommandRegistry::from_builtins_and_overrides`](crate::CommandRegistry::from_builtins_and_overrides)
+//! to merge a user override file on top of the built-ins.
+//!
+//! # Where the built-in spec lives
+//!
+//! The full CMake standard-library spec is compiled into the binary
+//! from `src/spec/builtins.toml`. That file also carries a
+//! `[metadata]` block recording the upstream CMake version it was
+//! last audited against; the same version is reported by
+//! [`CommandRegistry::audited_cmake_version`](crate::CommandRegistry::audited_cmake_version).
 
 pub mod registry;
 
@@ -26,11 +42,23 @@ use std::fmt;
 ///   - `"N+"` e.g. `"2+"`         → `AtLeast(2)`
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum NArgs {
+    /// Exactly `n` positional arguments. `Fixed(0)` means a
+    /// keyword-only marker (no values of its own).
     Fixed(usize),
+    /// Zero or more positional arguments — the keyword may appear
+    /// alone or be followed by any number of values until the next
+    /// sibling keyword. The default.
     #[default]
     ZeroOrMore,
+    /// One or more positional arguments. CMake requires at least one
+    /// value; the splitter force-consumes the first value regardless
+    /// of token classification so a value that spells a sibling
+    /// keyword name is still captured.
     OneOrMore,
+    /// Either zero or one positional argument.
     Optional,
+    /// At least `n` positional arguments; additional values are
+    /// consumed until the next sibling keyword.
     AtLeast(usize),
 }
 
@@ -145,7 +173,10 @@ pub struct CommandForm {
     /// Recognized top-level flags for this form.
     #[serde(default)]
     pub flags: IndexSet<String>,
-    /// Optional layout hints for this form.
+    /// Optional per-form layout hints. `None` means "inherit every
+    /// layout decision from the global [`crate::Config`]"; `Some`
+    /// overrides only the fields that are set, with unset fields
+    /// still falling back to the global config.
     #[serde(default)]
     pub layout: Option<LayoutOverrides>,
 }
@@ -164,8 +195,11 @@ impl Default for CommandForm {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum CommandSpec {
-    /// A command whose structure depends on a discriminator token, usually the
-    /// first positional argument.
+    /// A command whose structure depends on a discriminator token,
+    /// usually the first positional argument. `file(...)`,
+    /// `install(...)`, and `export(...)` are canonical examples —
+    /// their argument shape differs entirely based on the first
+    /// token (`TARGETS`, `FILES`, `DIRECTORY`, …).
     Discriminated {
         /// Known forms keyed by normalized discriminator token.
         forms: IndexMap<String, CommandForm>,
@@ -173,7 +207,9 @@ pub enum CommandSpec {
         #[serde(default)]
         fallback: Option<CommandForm>,
     },
-    /// A command with a single argument structure.
+    /// A command with a single argument structure. Most CMake
+    /// commands fall here — `target_link_libraries`, `project`,
+    /// `cmake_minimum_required`, user-defined commands, etc.
     Single(CommandForm),
 }
 

@@ -3,6 +3,30 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 //! Structured error types returned by parsing, config loading, and formatting.
+//!
+//! Every fallible crate API returns [`Result`], which is
+//! `std::result::Result<T, Error>`. The [`enum@Error`] enum
+//! distinguishes sources:
+//!
+//! - [`Error::Parse`] — CMake source failed to parse; line/column
+//!   info is 1-based.
+//! - [`Error::Config`] — a `.cmakefmt.yaml|yml|toml` (or
+//!   `from_yaml_str` input) failed to deserialise, or a programmatic
+//!   [`crate::Config`] had an invalid regex pattern.
+//! - [`Error::Spec`] — a `commands:` override file (or string)
+//!   failed to deserialise, or the built-in spec file itself did.
+//! - [`Error::Io`] — filesystem or stream I/O failure.
+//! - [`Error::Formatter`] — higher-level formatter or CLI failure
+//!   that doesn't fit another variant.
+//! - [`Error::LayoutTooWide`] — *only* produced when
+//!   [`crate::Config::require_valid_layout`] is enabled and a
+//!   formatted line exceeded the configured width. Not a bug in the
+//!   formatter — a signal to the caller.
+//!
+//! [`crate::error::FileParseError`] and
+//! [`crate::error::ParseDiagnostic`] carry structured line/column
+//! metadata (1-based, both) so editor integrations can point at the
+//! offending source without re-parsing the error string.
 
 use std::fmt;
 use std::path::PathBuf;
@@ -11,6 +35,10 @@ use thiserror::Error;
 
 /// Structured config/spec deserialization failure metadata used for
 /// user-facing diagnostics.
+///
+/// When present, `line` and `column` are **1-based** (not 0-based),
+/// matching the convention used by editors and the `ParseDiagnostic`
+/// counterpart for CMake source errors.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct FileParseError {
@@ -32,6 +60,10 @@ impl fmt::Display for FileParseError {
 
 /// Crate-owned parser diagnostics used by [`enum@Error`] without exposing `pest`
 /// internals in the public API.
+///
+/// `line` and `column` are **1-based** and count columns by characters
+/// (not bytes), so multi-byte UTF-8 characters occupy a single
+/// column.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct ParseDiagnostic {
@@ -115,7 +147,10 @@ pub enum Error {
     Io(#[from] std::io::Error),
 
     /// A higher-level formatter or CLI error that does not fit another
-    /// structured variant.
+    /// structured variant. In practice this covers: runtime regex
+    /// validation failures on a programmatically-built [`crate::Config`]
+    /// (before the config is saved to disk), CLI argument validation
+    /// failures, and rendering failures in the config/spec pretty-printers.
     #[error("formatter error: {0}")]
     Formatter(String),
 
@@ -138,7 +173,11 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Error {
-    /// Attach a human-facing source name to a contextual parser error.
+    /// Attach a human-facing source name (e.g. a file path) to a
+    /// contextual [`ParseError`]. No-op for any other variant —
+    /// `Config`, `Spec`, `Io`, `Formatter`, and `LayoutTooWide`
+    /// already carry the context they need and are returned
+    /// unchanged.
     pub fn with_display_name(self, display_name: impl Into<String>) -> Self {
         match self {
             Self::Parse(parse) => Self::Parse(parse.with_display_name(display_name)),

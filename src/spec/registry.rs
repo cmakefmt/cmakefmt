@@ -45,6 +45,7 @@ const BUILTINS_TOML: &str = include_str!("builtins.toml");
 /// | No customisation needed | [`CommandRegistry::builtins`] — lazily initialised singleton, cheapest |
 /// | Fresh owned copy | [`CommandRegistry::load`] — allocates every call |
 /// | Merge with user override file | [`CommandRegistry::from_builtins_and_overrides`] |
+/// | Owned copy without overrides | [`CommandRegistry::from_builtins_and_overrides`] with `None::<&Path>` (equivalent to `load()`) |
 #[derive(Debug, Clone)]
 pub struct CommandRegistry {
     metadata: SpecMetadata,
@@ -111,6 +112,33 @@ impl CommandRegistry {
     }
 
     /// Merge TOML-formatted command spec overrides from a string.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use cmakefmt::CommandRegistry;
+    ///
+    /// let mut registry = CommandRegistry::load().unwrap();
+    /// registry.merge_toml_overrides(r#"
+    ///     [commands.my_add_test]
+    ///     pargs = 0
+    ///     flags = ["VERBOSE"]
+    ///
+    ///     [commands.my_add_test.kwargs.NAME]
+    ///     nargs = 1
+    ///
+    ///     [commands.my_add_test.kwargs.SOURCES]
+    ///     nargs = "+"
+    /// "#).unwrap();
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Formatter`] with an unstructured parse error
+    /// string. For structured line/column diagnostics, use
+    /// [`CommandRegistry::merge_override_str`] or
+    /// [`CommandRegistry::merge_override_file`] which return
+    /// [`Error::Spec`].
     pub fn merge_toml_overrides(&mut self, toml_source: &str) -> Result<()> {
         let mut overrides: SpecOverrideFile = toml::from_str(toml_source)
             .map_err(|e| Error::Formatter(format!("spec TOML error: {e}")))?;
@@ -119,6 +147,32 @@ impl CommandRegistry {
     }
 
     /// Merge YAML-formatted command spec overrides from a string.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use cmakefmt::CommandRegistry;
+    ///
+    /// let mut registry = CommandRegistry::load().unwrap();
+    /// registry.merge_yaml_overrides("
+    /// commands:
+    ///   my_add_test:
+    ///     pargs: 0
+    ///     flags: [VERBOSE]
+    ///     kwargs:
+    ///       NAME:
+    ///         nargs: 1
+    ///       SOURCES:
+    ///         nargs: \"+\"
+    /// ").unwrap();
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Formatter`] with an unstructured parse error
+    /// string. For structured line/column diagnostics, use
+    /// [`CommandRegistry::merge_override_file`] which returns
+    /// [`Error::Spec`].
     pub fn merge_yaml_overrides(&mut self, yaml_source: &str) -> Result<()> {
         let mut overrides: SpecOverrideFile = serde_yaml::from_str(yaml_source)
             .map_err(|e| Error::Formatter(format!("spec YAML error: {e}")))?;
@@ -140,14 +194,32 @@ impl CommandRegistry {
     }
 
     /// Merge a supported user override file from disk into the registry.
+    ///
+    /// # Errors
+    ///
+    /// Deserialisation failures are reported as [`Error::Spec`] with
+    /// structured [`crate::error::FileParseError`] metadata
+    /// including 1-based line and column numbers — suitable for
+    /// surfacing to editors and IDE integrations. I/O failures are
+    /// reported as [`Error::Io`].
     #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "cli")))]
     pub fn merge_override_file(&mut self, path: &Path) -> Result<()> {
         let source = fs::read_to_string(path)?;
         self.merge_override_source(&source, path.to_path_buf(), detect_config_format(path)?)
     }
 
     /// Merge TOML override contents into the registry.
+    ///
+    /// # Errors
+    ///
+    /// Like [`merge_override_file`](Self::merge_override_file),
+    /// parse failures are reported as [`Error::Spec`] with
+    /// structured line/column metadata — unlike
+    /// [`merge_toml_overrides`](Self::merge_toml_overrides), which
+    /// returns an unstructured [`Error::Formatter`].
     #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "cli")))]
     pub fn merge_override_str(&mut self, source: &str, path: impl Into<PathBuf>) -> Result<()> {
         self.merge_override_source(source, path.into(), ConfigFileFormat::Toml)
     }
@@ -202,8 +274,14 @@ impl CommandRegistry {
         Ok(())
     }
 
-    /// Get the command spec for `command_name`, falling back to a permissive
-    /// default when the command is unknown.
+    /// Get the command spec for `command_name`, falling back to a
+    /// permissive default when the command is unknown.
+    ///
+    /// The fallback is a [`CommandSpec::Single`] with `pargs =
+    /// ZeroOrMore`, no kwargs, and no flags — i.e. "format as
+    /// generically as possible, treat every token as a positional
+    /// argument". This lets user-defined commands format sensibly
+    /// without requiring every project to author a spec override.
     pub fn get(&self, command_name: &str) -> &CommandSpec {
         if let Some(spec) = self.commands.get(command_name) {
             return spec;
@@ -237,7 +315,11 @@ impl CommandRegistry {
                     .contains(&command_name.to_ascii_lowercase()))
     }
 
-    /// Report the audited upstream CMake version for the built-in spec.
+    /// Report the upstream CMake version the built-in spec was last
+    /// audited against. The return value is a SemVer-style string
+    /// (e.g. `"4.3.1"`) sourced from the `[metadata]` block in
+    /// `src/spec/builtins.toml`. Useful for tooling that wants to
+    /// surface "cmakefmt knows about CMake X.Y" to end users.
     pub fn audited_cmake_version(&self) -> &str {
         &self.metadata.cmake_version
     }

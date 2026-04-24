@@ -51,7 +51,22 @@ impl ScanError {
 /// Parse CMake source text into an AST [`File`].
 ///
 /// The returned AST preserves command structure, blank lines, and comments so
-/// the formatter can round-trip files with stable semantics.
+/// the formatter can round-trip files with stable semantics. CRLF line
+/// endings and a UTF-8 BOM at the start of the source are both accepted
+/// and normalised internally.
+///
+/// # Examples
+///
+/// ```
+/// use cmakefmt::parser::{parse, ast::Statement};
+///
+/// let file = parse("cmake_minimum_required(VERSION 3.20)\n").unwrap();
+/// assert_eq!(file.statements.len(), 1);
+/// let Statement::Command(cmd) = &file.statements[0] else {
+///     panic!("expected a command");
+/// };
+/// assert_eq!(cmd.name, "cmake_minimum_required");
+/// ```
 pub fn parse(source: &str) -> Result<File> {
     parse_v2(source)
 }

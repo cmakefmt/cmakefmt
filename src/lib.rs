@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! `cmakefmt` is a fast, configurable CMake formatter.
 //!
 //! # Quick start
@@ -39,6 +41,29 @@
 //! | [`formatter`] | Source-to-source formatting pipeline |
 //! | [`parser`] | CMake parser and AST definitions |
 //! | [`spec`] | Built-in and user-extensible command registry |
+//!
+//! # Entry points (re-exported at the crate root)
+//!
+//! | Item | Purpose |
+//! |------|---------|
+//! | [`format_source`] / [`format_source_with_registry`] | Format a source string |
+//! | [`format_parsed_file`] | Format an already-parsed [`parser::ast::File`] |
+//! | [`format_source_with_debug`] / [`format_source_with_registry_debug`] | Format + collect debug decision log |
+//! | [`Config`], [`CommandConfig`], [`PerCommandConfig`] | Runtime configuration |
+//! | [`CaseStyle`], [`DangleAlign`], [`LineEnding`], [`FractionalTabPolicy`], [`Experimental`] | Config enums |
+//! | [`CommandRegistry`] | Built-in + user-override command specs |
+//! | [`Error`], [`Result`] | Crate-level error types |
+//!
+//! # Features
+//!
+//! | Feature | Default | Purpose |
+//! |---------|---------|---------|
+//! | `cli` | ✔ | Enables the `cmakefmt` binary plus CLI-oriented public API (`convert_legacy_config_files`, `default_config_template_for`, `generate_json_schema`, `render_effective_config`, `DumpConfigFormat`). Implies `lsp`. |
+//! | `lsp` | ✔ (via `cli`) | Compiles the `lsp::run` Language Server Protocol entry point. |
+//!
+//! The crate also has a separate target path: when compiled for
+//! `wasm32`, `wasm::format` and friends are exposed via
+//! `wasm-bindgen` for the browser playground.
 
 /// Runtime formatter configuration and config-file loading.
 pub mod config;
@@ -64,10 +89,12 @@ pub mod dump;
 
 // LSP server — only compiled when the `lsp` feature is enabled.
 #[cfg(feature = "lsp")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lsp")))]
 pub mod lsp;
 
 // WASM entry point — only compiled for wasm32 targets.
 #[cfg(target_arch = "wasm32")]
+#[cfg_attr(docsrs, doc(cfg(target_arch = "wasm32")))]
 pub mod wasm;
 
 // ── Configuration ────────────────────────────────────────────────────────────
@@ -80,6 +107,7 @@ pub use config::{
 pub use config::default_config_template;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "cli")))]
 pub use config::{
     convert_legacy_config_files, default_config_template_for, generate_json_schema,
     render_effective_config, DumpConfigFormat,

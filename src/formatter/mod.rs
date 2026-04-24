@@ -6,6 +6,28 @@
 //!
 //! These functions parse input, apply barrier handling, and render a formatted
 //! output string using the command registry and runtime configuration.
+//!
+//! # Format-barrier directives
+//!
+//! The source-string entry points ([`format_source`],
+//! [`format_source_with_registry`], [`format_source_with_debug`],
+//! [`format_source_with_registry_debug`]) scan each input line for
+//! *barrier directives* that toggle formatting on and off:
+//!
+//! | Directive | Effect |
+//! |-----------|--------|
+//! | `# cmake-format: off` / `# cmake-format: on` | Skip / resume formatting |
+//! | `# cmakefmt: off` / `# cmakefmt: on` | Same, cmakefmt-branded |
+//! | `# fmt: off` / `# fmt: on` | Generic alias |
+//! | `# ~~~` (matched pair) | Fence region — content between fences is emitted verbatim |
+//!
+//! Leading whitespace before the `#` is allowed. Lines inside a
+//! disabled region are passed through unchanged.
+//!
+//! Note: [`format_parsed_file`] does **not** honour these directives
+//! — barrier detection happens pre-parse, so if you have the AST
+//! already you've bypassed that step. Use a source-string entry
+//! point if you need barriers.
 
 pub(crate) mod comment;
 pub(crate) mod node;
@@ -20,6 +42,11 @@ use crate::parser::{self, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
 /// Format raw CMake source using the built-in command registry.
+///
+/// The output always ends with a newline. When
+/// [`Config::line_ending`] is [`LineEnding::Auto`], the output line
+/// ending is detected from the input (CRLF if the source contains
+/// any `\r\n`, otherwise LF).
 ///
 /// # Examples
 ///
@@ -36,6 +63,12 @@ pub fn format_source(source: &str, config: &Config) -> Result<String> {
 
 /// Format raw CMake source using the built-in registry and also return debug
 /// lines describing the formatter's decisions.
+///
+/// The returned `Vec<String>` contains one human-readable log line
+/// per formatting decision (layout choice, section split, fallback
+/// paths, barrier events). The exact wording is **unstable across
+/// releases** and intended for interactive debugging and bug
+/// reports, not programmatic consumption.
 pub fn format_source_with_debug(source: &str, config: &Config) -> Result<(String, Vec<String>)> {
     format_source_with_registry_debug(source, config, CommandRegistry::builtins())
 }
@@ -99,6 +132,16 @@ pub fn format_source_with_registry_debug(
 ///
 /// Useful when you want to parse once and format the same AST repeatedly with
 /// different [`Config`] or registry settings, avoiding re-parsing overhead.
+///
+/// # Caveat: no barrier handling
+///
+/// Unlike [`format_source`] and its siblings, this function does
+/// **not** honour `# cmake-format: off/on`, `# cmakefmt: off/on`,
+/// `# fmt: off/on`, or `# ~~~` fence regions. Barrier detection
+/// happens pre-parse in the source-string pipeline, so by the time
+/// you hand in a parsed AST the opportunity has passed. Use one of
+/// the source-string entry points if your input contains barrier
+/// directives.
 ///
 /// # Examples
 ///

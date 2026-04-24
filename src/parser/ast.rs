@@ -2,6 +2,15 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+//! AST types returned by [`crate::parser::parse`].
+//!
+//! A CMake file parses into a [`File`] containing an ordered list of
+//! top-level [`Statement`]s. Commands carry their argument list
+//! ([`Argument`]), recognised comment forms ([`Comment`]), and the
+//! source byte span. The AST preserves blank-line and comment
+//! positions so the formatter can round-trip files with stable
+//! semantics.
+
 /// A parsed CMake source file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -22,6 +31,10 @@ pub enum Statement {
     Comment(Comment),
     /// One or more consecutive blank lines between statements.
     /// The value is the number of blank lines (>= 1).
+    ///
+    /// Blank lines at the start of the file and at the end of the
+    /// file are also preserved as `BlankLines` statements, so a
+    /// round-tripped AST matches the source's whitespace envelope.
     BlankLines(usize),
 }
 
@@ -34,7 +47,8 @@ pub struct CommandInvocation {
     pub arguments: Vec<Argument>,
     /// A comment that appears after the closing paren on the same line.
     pub trailing_comment: Option<Comment>,
-    /// Byte span (start, end) in the original source.
+    /// Half-open byte range `[start, end)` into the original source.
+    /// `start` is inclusive, `end` is exclusive.
     pub span: (usize, usize),
 }
 
@@ -45,14 +59,22 @@ pub enum Argument {
     Bracket(BracketArgument),
     /// `"..."` — includes the surrounding quotes verbatim.
     Quoted(String),
-    /// Any other token — unquoted argument, variable ref, generator expr.
+    /// Any other token — unquoted argument, variable reference
+    /// (`${VAR}`), environment reference (`$ENV{X}`), cache reference
+    /// (`$CACHE{X}`), generator expression (`$<...>`), legacy
+    /// unquoted arguments containing embedded `"..."` segments, or a
+    /// parenthesised group inside a condition (e.g. `(A OR B)`
+    /// inside `if(...)`).
     Unquoted(String),
     /// A comment that appears inline between arguments.
     InlineComment(Comment),
 }
 
 impl Argument {
-    /// The source text of this argument.
+    /// The source text of this argument. For
+    /// [`Argument::InlineComment`] the returned slice includes the
+    /// leading `#` (and, for bracket comments, the enclosing
+    /// `#[[...]]` delimiters).
     pub fn as_str(&self) -> &str {
         match self {
             Argument::Bracket(b) => &b.raw,
