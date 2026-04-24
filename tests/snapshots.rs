@@ -448,12 +448,9 @@ fn discriminated_commands_use_selected_form() {
     insta::assert_snapshot!(formatted, @"
     install(
       TARGETS cmakefmt helper
-      RUNTIME
-      DESTINATION bin
-      LIBRARY
-      DESTINATION lib
-      ARCHIVE
-      DESTINATION lib/static)
+      RUNTIME DESTINATION bin
+      LIBRARY DESTINATION lib
+      ARCHIVE DESTINATION lib/static)
     ");
 }
 

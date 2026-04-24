@@ -1450,28 +1450,38 @@ pargs = "*"
 [commands.install]
 [commands.install.forms.TARGETS]
 pargs = "+"
-flags = [
-  "OPTIONAL",
-  "EXCLUDE_FROM_ALL",
-  "NAMELINK_ONLY",
-  "NAMELINK_SKIP",
-  "RUNTIME",
-  "LIBRARY",
-  "ARCHIVE",
-  "FRAMEWORK",
-  "BUNDLE",
-  "PRIVATE_HEADER",
-  "PUBLIC_HEADER",
-  "RESOURCE",
-  "FILE_SET",
-  "CXX_MODULES_BMI",
-]
+# OPTIONAL/EXCLUDE_FROM_ALL/NAMELINK_ONLY/NAMELINK_SKIP are subflags of each
+# artifact-kind subgroup (RUNTIME/LIBRARY/ARCHIVE/OBJECTS/FRAMEWORK/BUNDLE/
+# PRIVATE_HEADER/PUBLIC_HEADER/RESOURCE/FILE_SET/CXX_MODULES_BMI), not outer
+# flags — see the per-artifact-kind blocks below. Outer-level shared
+# artifact-options act as defaults for unspecified artifact kinds.
 
 [commands.install.forms.TARGETS.kwargs.EXPORT]
 nargs = 1
 
 [commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES]
-nargs = "*"
+nargs = 0
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES.kwargs.DIRECTORIES]
+nargs = "+"
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES.kwargs.PRE_INCLUDE_REGEXES]
+nargs = "+"
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES.kwargs.PRE_EXCLUDE_REGEXES]
+nargs = "+"
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES.kwargs.POST_INCLUDE_REGEXES]
+nargs = "+"
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES.kwargs.POST_EXCLUDE_REGEXES]
+nargs = "+"
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES.kwargs.POST_INCLUDE_FILES]
+nargs = "+"
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCIES.kwargs.POST_EXCLUDE_FILES]
+nargs = "+"
 
 [commands.install.forms.TARGETS.kwargs.RUNTIME_DEPENDENCY_SET]
 nargs = 1
@@ -1482,6 +1492,7 @@ nargs = 0
 [commands.install.forms.TARGETS.kwargs.INCLUDES.kwargs.DESTINATION]
 nargs = "+"
 
+# Outer-level shared artifact-options.
 [commands.install.forms.TARGETS.kwargs.COMPONENT]
 nargs = 1
 
@@ -1497,11 +1508,169 @@ nargs = "+"
 [commands.install.forms.TARGETS.kwargs.NAMELINK_COMPONENT]
 nargs = 1
 
+# Artifact-kind subgroups. Each opens a section that accepts the five
+# artifact-options as subkwargs and four artifact-flags as subflags.
+
+[commands.install.forms.TARGETS.kwargs.ARCHIVE]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.ARCHIVE.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.ARCHIVE.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.ARCHIVE.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.ARCHIVE.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.ARCHIVE.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.LIBRARY]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.LIBRARY.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.LIBRARY.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.LIBRARY.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.LIBRARY.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.LIBRARY.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.RUNTIME]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.RUNTIME.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.RUNTIME.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.RUNTIME.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.RUNTIME.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.RUNTIME.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.OBJECTS]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.OBJECTS.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.OBJECTS.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.OBJECTS.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.OBJECTS.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.OBJECTS.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.FRAMEWORK]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.FRAMEWORK.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.FRAMEWORK.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.FRAMEWORK.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.FRAMEWORK.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.FRAMEWORK.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.BUNDLE]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.BUNDLE.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.BUNDLE.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.BUNDLE.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.BUNDLE.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.BUNDLE.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.PRIVATE_HEADER]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.PRIVATE_HEADER.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.PRIVATE_HEADER.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.PRIVATE_HEADER.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.PRIVATE_HEADER.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.PRIVATE_HEADER.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.PUBLIC_HEADER]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.PUBLIC_HEADER.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.PUBLIC_HEADER.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.PUBLIC_HEADER.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.PUBLIC_HEADER.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.PUBLIC_HEADER.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.RESOURCE]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.RESOURCE.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.RESOURCE.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.RESOURCE.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.RESOURCE.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.RESOURCE.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+# FILE_SET <set-name> — takes one positional (the set name) plus artifact-options.
+[commands.install.forms.TARGETS.kwargs.FILE_SET]
+nargs = 1
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.FILE_SET.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.FILE_SET.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.FILE_SET.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.FILE_SET.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.FILE_SET.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.TARGETS.kwargs.CXX_MODULES_BMI]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.TARGETS.kwargs.CXX_MODULES_BMI.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.CXX_MODULES_BMI.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.CXX_MODULES_BMI.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.TARGETS.kwargs.CXX_MODULES_BMI.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.TARGETS.kwargs.CXX_MODULES_BMI.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
 [commands.install.forms.FILES]
 pargs = "+"
-flags = ["OPTIONAL"]
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL"]
 
-[commands.install.forms.FILES.kwargs.COMPONENT]
+[commands.install.forms.FILES.kwargs.TYPE]
 nargs = 1
 
 [commands.install.forms.FILES.kwargs.DESTINATION]
@@ -1513,11 +1682,23 @@ nargs = "+"
 [commands.install.forms.FILES.kwargs.CONFIGURATIONS]
 nargs = "+"
 
+[commands.install.forms.FILES.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.FILES.kwargs.RENAME]
+nargs = 1
+
 [commands.install.forms.DIRECTORY]
 pargs = "+"
-flags = ["OPTIONAL", "USE_SOURCE_PERMISSIONS"]
+flags = [
+  "OPTIONAL",
+  "USE_SOURCE_PERMISSIONS",
+  "MESSAGE_NEVER",
+  "EXCLUDE_FROM_ALL",
+  "FILES_MATCHING",
+]
 
-[commands.install.forms.DIRECTORY.kwargs.COMPONENT]
+[commands.install.forms.DIRECTORY.kwargs.TYPE]
 nargs = 1
 
 [commands.install.forms.DIRECTORY.kwargs.DESTINATION]
@@ -1526,8 +1707,31 @@ nargs = 1
 [commands.install.forms.DIRECTORY.kwargs.FILE_PERMISSIONS]
 nargs = "+"
 
+[commands.install.forms.DIRECTORY.kwargs.DIRECTORY_PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.DIRECTORY.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.DIRECTORY.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.DIRECTORY.kwargs.COMPONENT]
+nargs = 1
+
+# PATTERN <pattern> / REGEX <regex> open a subgroup accepting EXCLUDE
+# and PERMISSIONS (per `install(DIRECTORY ...)` documentation).
 [commands.install.forms.DIRECTORY.kwargs.PATTERN]
-nargs = "*"
+nargs = 1
+flags = ["EXCLUDE"]
+[commands.install.forms.DIRECTORY.kwargs.PATTERN.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.DIRECTORY.kwargs.REGEX]
+nargs = 1
+flags = ["EXCLUDE"]
+[commands.install.forms.DIRECTORY.kwargs.REGEX.kwargs.PERMISSIONS]
+nargs = "+"
 
 [commands.install.forms.EXPORT]
 pargs = "+"
@@ -1565,7 +1769,9 @@ pargs = 1
 
 [commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS]
 pargs = "+"
-flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "LIBRARY", "RUNTIME", "FRAMEWORK", "BUNDLE"]
+# OPTIONAL/EXCLUDE_FROM_ALL are subflags of each artifact-kind subgroup
+# (LIBRARY/RUNTIME/FRAMEWORK/BUNDLE) per CMake docs. Outer-level shared
+# artifact-options act as defaults for unspecified artifact kinds.
 
 [commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.RUNTIME_DEPENDENCY_SET]
 nargs = 1
@@ -1583,6 +1789,54 @@ nargs = "+"
 nargs = 1
 
 [commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.LIBRARY]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL"]
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.LIBRARY.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.LIBRARY.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.LIBRARY.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.LIBRARY.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.RUNTIME]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL"]
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.RUNTIME.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.RUNTIME.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.RUNTIME.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.RUNTIME.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.FRAMEWORK]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL"]
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.FRAMEWORK.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.FRAMEWORK.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.FRAMEWORK.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.FRAMEWORK.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.BUNDLE]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL"]
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.BUNDLE.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.BUNDLE.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.BUNDLE.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS.kwargs.BUNDLE.kwargs.COMPONENT]
 nargs = 1
 
 [commands.install.forms.PACKAGE_INFO]

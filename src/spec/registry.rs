@@ -590,9 +590,178 @@ mod tests {
             .get("INCLUDES")
             .is_some_and(|spec| spec.kwargs.contains_key("DESTINATION")));
         assert!(form.kwargs.contains_key("RUNTIME_DEPENDENCY_SET"));
-        assert!(form.flags.contains("RUNTIME"));
-        assert!(form.flags.contains("LIBRARY"));
-        assert!(form.flags.contains("ARCHIVE"));
+    }
+
+    #[test]
+    fn install_targets_artifact_kinds_are_kwargs_with_subgroups() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("TARGETS"));
+
+        for kind in [
+            "ARCHIVE",
+            "LIBRARY",
+            "RUNTIME",
+            "OBJECTS",
+            "FRAMEWORK",
+            "BUNDLE",
+            "PRIVATE_HEADER",
+            "PUBLIC_HEADER",
+            "RESOURCE",
+            "FILE_SET",
+            "CXX_MODULES_BMI",
+        ] {
+            let spec = form
+                .kwargs
+                .get(kind)
+                .unwrap_or_else(|| panic!("install(TARGETS) missing artifact kind {kind}"));
+            for sub in [
+                "DESTINATION",
+                "PERMISSIONS",
+                "CONFIGURATIONS",
+                "COMPONENT",
+                "NAMELINK_COMPONENT",
+            ] {
+                assert!(
+                    spec.kwargs.contains_key(sub),
+                    "{kind} missing subkwarg {sub}"
+                );
+            }
+            for flag in [
+                "OPTIONAL",
+                "EXCLUDE_FROM_ALL",
+                "NAMELINK_ONLY",
+                "NAMELINK_SKIP",
+            ] {
+                assert!(spec.flags.contains(flag), "{kind} missing subflag {flag}");
+            }
+            assert!(
+                !form.flags.contains(kind),
+                "{kind} should not appear as an outer flag"
+            );
+        }
+    }
+
+    #[test]
+    fn install_targets_file_set_takes_positional_set_name() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("TARGETS"));
+        let file_set = form.kwargs.get("FILE_SET").unwrap();
+        assert_eq!(file_set.nargs, crate::spec::NArgs::Fixed(1));
+    }
+
+    #[test]
+    fn install_targets_artifact_option_flags_are_not_outer_flags() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("TARGETS"));
+        for flag in [
+            "OPTIONAL",
+            "EXCLUDE_FROM_ALL",
+            "NAMELINK_ONLY",
+            "NAMELINK_SKIP",
+        ] {
+            assert!(
+                !form.flags.contains(flag),
+                "{flag} should not appear at the outer TARGETS level"
+            );
+        }
+    }
+
+    #[test]
+    fn install_targets_runtime_dependencies_is_kwarg_group() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("TARGETS"));
+        let rd = form.kwargs.get("RUNTIME_DEPENDENCIES").unwrap();
+        for sub in [
+            "DIRECTORIES",
+            "PRE_INCLUDE_REGEXES",
+            "PRE_EXCLUDE_REGEXES",
+            "POST_INCLUDE_REGEXES",
+            "POST_EXCLUDE_REGEXES",
+            "POST_INCLUDE_FILES",
+            "POST_EXCLUDE_FILES",
+        ] {
+            assert!(
+                rd.kwargs.contains_key(sub),
+                "RUNTIME_DEPENDENCIES missing subkwarg {sub}"
+            );
+        }
+    }
+
+    #[test]
+    fn install_imported_runtime_artifacts_artifact_kinds_are_kwargs() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry
+            .get("install")
+            .form_for(Some("IMPORTED_RUNTIME_ARTIFACTS"));
+
+        for kind in ["LIBRARY", "RUNTIME", "FRAMEWORK", "BUNDLE"] {
+            let spec = form
+                .kwargs
+                .get(kind)
+                .unwrap_or_else(|| panic!("IMPORTED_RUNTIME_ARTIFACTS missing {kind}"));
+            for sub in ["DESTINATION", "PERMISSIONS", "CONFIGURATIONS", "COMPONENT"] {
+                assert!(
+                    spec.kwargs.contains_key(sub),
+                    "{kind} missing subkwarg {sub}"
+                );
+            }
+            for flag in ["OPTIONAL", "EXCLUDE_FROM_ALL"] {
+                assert!(spec.flags.contains(flag), "{kind} missing subflag {flag}");
+            }
+            assert!(!form.flags.contains(kind));
+        }
+    }
+
+    #[test]
+    fn install_files_has_type_rename_and_exclude_from_all() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("FILES"));
+        assert!(form.kwargs.contains_key("TYPE"));
+        assert!(form.kwargs.contains_key("RENAME"));
+        assert!(form.flags.contains("EXCLUDE_FROM_ALL"));
+    }
+
+    #[test]
+    fn install_directory_has_full_option_coverage() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("DIRECTORY"));
+        for kw in [
+            "TYPE",
+            "DESTINATION",
+            "FILE_PERMISSIONS",
+            "DIRECTORY_PERMISSIONS",
+            "PERMISSIONS",
+            "CONFIGURATIONS",
+            "COMPONENT",
+            "PATTERN",
+            "REGEX",
+        ] {
+            assert!(form.kwargs.contains_key(kw), "DIRECTORY missing kwarg {kw}");
+        }
+        for flag in [
+            "OPTIONAL",
+            "USE_SOURCE_PERMISSIONS",
+            "MESSAGE_NEVER",
+            "EXCLUDE_FROM_ALL",
+            "FILES_MATCHING",
+        ] {
+            assert!(form.flags.contains(flag), "DIRECTORY missing flag {flag}");
+        }
+    }
+
+    #[test]
+    fn install_directory_pattern_and_regex_open_subgroup() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("DIRECTORY"));
+        for name in ["PATTERN", "REGEX"] {
+            let spec = form.kwargs.get(name).unwrap();
+            assert_eq!(spec.nargs, crate::spec::NArgs::Fixed(1));
+            assert!(spec.flags.contains("EXCLUDE"), "{name} missing EXCLUDE");
+            assert!(
+                spec.kwargs.contains_key("PERMISSIONS"),
+                "{name} missing PERMISSIONS subkwarg"
+            );
+        }
     }
 
     #[test]
