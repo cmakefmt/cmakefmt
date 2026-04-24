@@ -106,21 +106,26 @@ pub enum FractionalTabPolicy {
 ///               GROUP_EXECUTE GROUP_READ
 /// ```
 ///
-/// Both are valid layout opinions. cmakefmt defaults to
-/// [`ContinuationAlign::SameIndent`] for consistency with how the
-/// rest of the formatter wraps; [`ContinuationAlign::UnderFirstValue`]
-/// matches cmake-format's hanging-indent style and is useful for
-/// users migrating from that tool.
+/// cmakefmt defaults to [`ContinuationAlign::UnderFirstValue`]: when
+/// a subkwarg group overflows, continuation lands under the first
+/// value column so the eye can tell continuation values apart from
+/// sibling subkwargs. This also matches cmake-format's hanging-indent
+/// style, easing migration. [`ContinuationAlign::SameIndent`] is
+/// available for consumers who prefer continuation at the subkwarg's
+/// own column — consistent with how flat keyword sections
+/// (`PUBLIC`/`PRIVATE`/…) and positional lists wrap elsewhere in the
+/// formatter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum ContinuationAlign {
     /// Continuation lines wrap at the same indent as the keyword
-    /// itself. The default.
-    #[default]
+    /// itself. Consistent with how the rest of the formatter wraps
+    /// flat-list sections and positional argument lists.
     SameIndent,
     /// Continuation lines align under the first value after the
-    /// keyword (cmake-format's hanging-indent style).
+    /// keyword (cmake-format's hanging-indent style). The default.
+    #[default]
     UnderFirstValue,
 }
 
@@ -427,7 +432,7 @@ impl Default for Config {
             always_wrap: Vec::new(),
             require_valid_layout: false,
             wrap_after_first_arg: false,
-            continuation_align: ContinuationAlign::SameIndent,
+            continuation_align: ContinuationAlign::UnderFirstValue,
             enable_sort: false,
             autosort: false,
             dangle_parens: false,

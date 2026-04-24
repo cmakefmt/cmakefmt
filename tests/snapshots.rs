@@ -597,9 +597,11 @@ fn install_directory_pattern_subgroup_pairs_exclude_and_permissions() {
 #[test]
 fn install_directory_pattern_permissions_values_wrap_within_subgroup() {
     // When PERMISSIONS has enough values to overflow line-width, the
-    // continuation stays within the PATTERN subgroup indent — the
-    // values do not escape back to the outer DIRECTORY level and
-    // PERMISSIONS stays grouped with PATTERN.
+    // continuation stays within the PATTERN subgroup — the values do
+    // not escape back to the outer DIRECTORY level and PERMISSIONS
+    // stays grouped with PATTERN. Under the default
+    // `continuation_align = UnderFirstValue`, the continuation
+    // aligns under OWNER_EXECUTE's column.
     let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)\n";
     let config = Config {
         line_width: 60,
@@ -614,7 +616,7 @@ fn install_directory_pattern_permissions_values_wrap_within_subgroup() {
       PATTERN *.internal EXCLUDE
       PATTERN *.h
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-        GROUP_EXECUTE GROUP_READ)
+                    GROUP_EXECUTE GROUP_READ)
     ");
 }
 
@@ -651,43 +653,19 @@ fn grouped_writer_does_not_count_comments_toward_subkwarg_nargs() {
       TARGETS foo
       LIBRARY
         COMPONENT # component name
-        Runtime
+                  Runtime
         DESTINATION lib)
     ");
 }
 
 #[test]
-fn continuation_align_default_uses_same_indent() {
+fn continuation_align_default_hangs_under_first_value() {
     // Default continuation_align mode: wrap lines of a subkwarg
-    // group land at the subkwarg's own indent.
+    // group land under the column of the first value after the
+    // subkwarg (cmake-format's hanging-indent style).
     let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)\n";
     let config = Config {
         line_width: 60,
-        ..Config::default()
-    };
-    let formatted = format_source(src, &config).unwrap();
-
-    insta::assert_snapshot!(formatted, @r"
-    install(
-      DIRECTORY src/
-      DESTINATION include
-      PATTERN *.internal EXCLUDE
-      PATTERN *.h
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-        GROUP_EXECUTE GROUP_READ)
-    ");
-}
-
-#[test]
-fn continuation_align_under_first_value_hangs_under_first_value() {
-    // continuation_align = UnderFirstValue: wrap lines of a
-    // subkwarg group align under the column of the first value
-    // that follows the subkwarg — matching cmake-format's
-    // hanging-indent style.
-    let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)\n";
-    let config = Config {
-        line_width: 60,
-        continuation_align: ContinuationAlign::UnderFirstValue,
         ..Config::default()
     };
     let formatted = format_source(src, &config).unwrap();
@@ -700,6 +678,30 @@ fn continuation_align_under_first_value_hangs_under_first_value() {
       PATTERN *.h
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_EXECUTE GROUP_READ)
+    ");
+}
+
+#[test]
+fn continuation_align_same_indent_wraps_at_subkwarg_indent() {
+    // Opt-in continuation_align = SameIndent: wrap lines of a
+    // subkwarg group land at the subkwarg's own indent. Consistent
+    // with how the rest of the formatter wraps flat-list sections.
+    let src = "install(DIRECTORY src/ DESTINATION include PATTERN *.internal EXCLUDE PATTERN *.h PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ)\n";
+    let config = Config {
+        line_width: 60,
+        continuation_align: ContinuationAlign::SameIndent,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    install(
+      DIRECTORY src/
+      DESTINATION include
+      PATTERN *.internal EXCLUDE
+      PATTERN *.h
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+        GROUP_EXECUTE GROUP_READ)
     ");
 }
 

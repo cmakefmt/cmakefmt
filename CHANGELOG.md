@@ -12,11 +12,21 @@ This project follows a simple changelog discipline:
 
 - `continuation_align` config knob — controls how continuation lines
   indent when a wrapped subkwarg group overflows `line_width`. Two
-  modes: `same-indent` (default, consistent with cmakefmt's existing
-  wrapping) and `under-first-value` (cmake-format-style hanging
-  indent, aligned under the first value after the subkwarg).
+  modes: `under-first-value` (default — cmake-format-style hanging
+  indent, aligned under the first value after the subkwarg) and
+  `same-indent` (continuation at the subkwarg's own indent).
   Overridable per-command via `per_command_overrides` or per-spec
   via `layout.continuation_align`.
+
+  **Note:** this is a behaviour change from v1.1.0. Before v1.2.0
+  the formatter always used same-indent continuation (the knob did
+  not exist). If an install/DIRECTORY section in your codebase has
+  a subkwarg value list long enough to wrap (e.g.
+  `PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE
+  GROUP_READ`), its continuation lines will now align under the
+  first value column instead of wrapping to the subkwarg indent.
+  Set `continuation_align: same-indent` to restore the previous
+  layout.
 - `install(TARGETS ...)` artifact-kind subgroups are now modelled as
   nested keyword sections per CMake's documented signature. Each of
   `RUNTIME/LIBRARY/ARCHIVE/OBJECTS/FRAMEWORK/BUNDLE/PRIVATE_HEADER/
