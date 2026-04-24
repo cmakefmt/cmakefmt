@@ -112,6 +112,30 @@ This project follows a simple changelog discipline:
   parser rewrite they guarded is shipped. Can be recreated if a
   fuzzing push returns.
 
+### Documentation
+
+- Rustdoc / docs.rs surface polished: docs.rs now builds with
+  `all-features` and the `docsrs` cfg so feature-gated items
+  (`cli`-only re-exports, `lsp::run`, `wasm::format`) render with
+  feature badges. Added module-level docs for `parser::ast`, a
+  `# Features` table and expanded Organisation section at the crate
+  root, explicit 1-based line/column guarantees on
+  `ParseDiagnostic` and `FileParseError`, a "Loading from disk"
+  section on `Config`, per-variant docs on `NArgs`,
+  resolution-order notes on `CommandConfig`, and minimal doctest
+  examples on `CommandRegistry::merge_toml_overrides` /
+  `merge_yaml_overrides`.
+
+### Internal
+
+- Migrated the embedded built-in command spec from
+  `src/spec/builtins.toml` to `src/spec/builtins.yaml`. The file
+  shrank from 2433 to 2030 lines and the deeply-nested install
+  form hierarchy is now legible at a glance. User config and spec
+  override files still accept both TOML and YAML; only the
+  embedded baseline format changed. Parse errors on the embedded
+  spec now surface with YAML-native line/column metadata.
+
 ## 1.1.0 — 2026-04-22
 
 ### Added
