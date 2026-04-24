@@ -48,8 +48,23 @@
         }
       ]
     },
+    "ContinuationAlign": {
+      "description": "How to indent continuation lines when a wrapped keyword section\noverflows [`Config::line_width`].\n\nSuppose `PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ\nGROUP_EXECUTE GROUP_READ` exceeds the line budget under a\n`PATTERN *.h` subgroup:\n\n```cmake\n# SameIndent — continuation wraps at the subkwarg indent:\nPATTERN *.h\n  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ\n  GROUP_EXECUTE GROUP_READ\n\n# UnderFirstValue — continuation aligns under the first value\n# after the keyword:\nPATTERN *.h\n  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ\n              GROUP_EXECUTE GROUP_READ\n```\n\ncmakefmt defaults to [`ContinuationAlign::UnderFirstValue`]: when\na subkwarg group overflows, continuation lands under the first\nvalue column so the eye can tell continuation values apart from\nsibling subkwargs. This also matches cmake-format's hanging-indent\nstyle, easing migration. [`ContinuationAlign::SameIndent`] is\navailable for consumers who prefer continuation at the subkwarg's\nown column — consistent with how flat keyword sections\n(`PUBLIC`/`PRIVATE`/…) and positional lists wrap elsewhere in the\nformatter.",
+      "oneOf": [
+        {
+          "description": "Continuation lines wrap at the same indent as the keyword\nitself. Consistent with how the rest of the formatter wraps\nflat-list sections and positional argument lists.",
+          "type": "string",
+          "const": "same-indent"
+        },
+        {
+          "description": "Continuation lines align under the first value after the\nkeyword (cmake-format's hanging-indent style). The default.",
+          "type": "string",
+          "const": "under-first-value"
+        }
+      ]
+    },
     "DangleAlign": {
-      "description": "How to align the dangling closing paren.\n\nOnly takes effect when [`Config::dangle_parens`] is `true`.\nControls where `)` is placed when a call wraps onto multiple lines:\n\n```cmake\n# Prefix / Close — `)` at the command-name column (tracks block depth):\ntarget_link_libraries(\n  mylib PUBLIC dep1\n)\n\n# Open — `)` at the opening-paren column:\ntarget_link_libraries(\n  mylib PUBLIC dep1\n                     )\n```",
+      "description": "How to align the dangling closing paren.\n\nOnly takes effect when [`Config::dangle_parens`] is `true`.\nControls where `)` is placed when a call wraps onto multiple lines.\n\nAt the top level (block depth = 0) `Prefix` and `Close` both place\nthe `)` at column 0 because the command sits there — the two\nvariants are visually identical in this case:\n\n```cmake\n# Prefix / Close at top level — `)` at column 0:\ntarget_link_libraries(\n  mylib PUBLIC dep1\n)\n\n# Open — `)` at the opening-paren column:\ntarget_link_libraries(\n  mylib PUBLIC dep1\n                     )\n```\n\nInside a nested block (`if/foreach/while/function/...`) the\nvariants diverge: `Prefix` tracks the command-name indent (one\ntab stop per nesting level), while `Close` places the `)` at the\ncurrent indent level — one tab stop shallower than the command\nname, i.e. flush with the enclosing block.",
       "oneOf": [
         {
           "description": "Align with the start of the command name.",
@@ -69,7 +84,7 @@
       ]
     },
     "Experimental": {
-      "description": "Experimental formatting options gated behind `--preview` or the\n`[experimental]` config section. All options default to `false`.\n\nThese may be promoted to stable defaults in a future release, changed\nincompatibly, or removed entirely.",
+      "description": "Experimental formatting options gated behind `--preview` or the\n`[experimental]` config section. All options default to `false`.\n\nThese may be promoted to stable defaults in a future release, changed\nincompatibly, or removed entirely.\n\nThis struct is re-exported at the crate root even when it\ncontains no options so consumers can write forward-compatible\ninitialisers:\n\n```\nuse cmakefmt::{Config, Experimental};\n\nlet config = Config {\n    experimental: Experimental::default(),\n    ..Config::default()\n};\n```",
       "type": "object"
     },
     "FormatSection": {
@@ -99,6 +114,18 @@
           "anyOf": [
             {
               "$ref": "#/$defs/CaseStyle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "continuation_align": {
+          "description": "How to indent continuation lines: `same-indent` or `under-first-value`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContinuationAlign"
             },
             {
               "type": "null"
@@ -435,7 +462,7 @@
       "additionalProperties": false
     },
     "PerCommandConfig": {
-      "description": "Per-command overrides. All fields are optional — only specified fields\noverride the global config for that command.",
+      "description": "Per-command overrides. All fields are optional — only specified fields\noverride the global config for that command.\n\n# YAML/TOML key names\n\nTwo fields use different names in config files than in this Rust\nstruct (for historical reasons):\n\n| Rust field | YAML/TOML key |\n|------------|---------------|\n| `max_pargs_hwrap` | `max_hanging_wrap_positional_args` |\n| `max_subgroups_hwrap` | `max_hanging_wrap_groups` |\n\nAll other fields use the same name in both.",
       "type": "object",
       "properties": {
         "command_case": {
@@ -443,6 +470,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/CaseStyle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "continuation_align": {
+          "description": "Override the continuation-alignment rule for this command.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContinuationAlign"
             },
             {
               "type": "null"
