@@ -26,7 +26,7 @@ options, CLI output, and parse tree dumps.
 ## Formatter Concepts
 
 - **barrier / disabled region** — A `# cmakefmt: off` / `# cmakefmt: on` pair that prevents formatting of the enclosed block. Also called a "fence" when using `# ~~~`.
-- **command spec** — A description of a command's argument structure — positional args, keywords, flags, and nested sections. Defined in `builtins.toml` for built-in commands and in `commands:` in your config for custom commands.
+- **command spec** — A description of a command's argument structure — positional args, keywords, flags, and nested sections. Defined in `builtins.yaml` for built-in commands and in `commands:` in your config for custom commands.
 - **dangle parens** — When enabled (`format.dangle_parens`), the closing `)` of a wrapped command is placed on its own line.
 - **enable_markup** — Controls whether long comments are reflowed to fit within `line_width`. When `false`, comments are preserved as written.
 - **hwrap (horizontal wrap / hanging wrap)** — A layout where the first argument stays on the command line and subsequent arguments wrap to the next line, indented. The formatter tries this before falling back to fully vertical layout.

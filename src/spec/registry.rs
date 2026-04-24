@@ -23,8 +23,8 @@ use super::{
     SpecOverrideFile,
 };
 
-const BUILTINS_PATH: &str = "src/spec/builtins.toml";
-const BUILTINS_TOML: &str = include_str!("builtins.toml");
+const BUILTINS_PATH: &str = "src/spec/builtins.yaml";
+const BUILTINS_YAML: &str = include_str!("builtins.yaml");
 
 /// Registry of known CMake command specifications used to guide formatting.
 ///
@@ -55,7 +55,7 @@ pub struct CommandRegistry {
 }
 
 impl CommandRegistry {
-    /// Load the embedded built-in registry from `builtins.toml`.
+    /// Load the embedded built-in registry from `builtins.yaml`.
     ///
     /// Returns a fresh owned [`CommandRegistry`] on every call.  Prefer
     /// [`CommandRegistry::builtins`] when you only need a read-only reference —
@@ -318,7 +318,7 @@ impl CommandRegistry {
     /// Report the upstream CMake version the built-in spec was last
     /// audited against. The return value is a SemVer-style string
     /// (e.g. `"4.3.1"`) sourced from the `[metadata]` block in
-    /// `src/spec/builtins.toml`. Useful for tooling that wants to
+    /// `src/spec/builtins.yaml`. Useful for tooling that wants to
     /// surface "cmakefmt knows about CMake X.Y" to end users.
     pub fn audited_cmake_version(&self) -> &str {
         &self.metadata.cmake_version
@@ -330,14 +330,15 @@ fn has_ascii_uppercase(s: &str) -> bool {
 }
 
 fn parse_builtins() -> Result<SpecFile> {
-    let mut spec: SpecFile = toml::from_str(BUILTINS_TOML).map_err(|source| {
+    let mut spec: SpecFile = serde_yaml::from_str(BUILTINS_YAML).map_err(|source| {
+        let location = source.location();
         Error::Spec(crate::error::SpecError {
             path: PathBuf::from(BUILTINS_PATH),
             details: crate::error::FileParseError {
-                format: "TOML",
+                format: "YAML",
                 message: source.to_string().into_boxed_str(),
-                line: None,
-                column: None,
+                line: location.as_ref().map(|loc| loc.line()),
+                column: location.as_ref().map(|loc| loc.column()),
             },
         })
     })?;

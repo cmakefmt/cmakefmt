@@ -89,7 +89,7 @@ cmakefmt/
 |   +-- spec/
 |   |   +-- mod.rs             <- NArgs, PosSpec, KwargSpec, CommandForm, CommandSpec
 |   |   +-- registry.rs        <- CommandRegistry: loads builtins + user overrides
-|   |   +-- builtins.toml      <- built-in specs for all ~150 CMake commands
+|   |   +-- builtins.yaml      <- built-in specs for all ~150 CMake commands
 |   +-- formatter/
 |   |   +-- mod.rs             <- public format() fn, barrier/fence handling
 |   |   +-- node.rs            <- AST -> Doc IR (sections, wrapping, sorting)
@@ -204,16 +204,18 @@ comment reflow changes their structure. The idempotency test in
 
 ## Spec registry
 
-Built-in specs live in `src/spec/builtins.toml`. Format:
+Built-in specs live in `src/spec/builtins.yaml`. Format:
 
-```toml
-[commands.set]
-pargs = "2+"
-[commands.set.kwargs.CACHE]
-nargs = 2
-flags = ["FORCE"]
-[commands.set.layout]
-wrap_after_first_arg = true
+```yaml
+commands:
+  set:
+    pargs: '2+'
+    kwargs:
+      CACHE:
+        nargs: 2
+        flags: [FORCE]
+    layout:
+      wrap_after_first_arg: true
 ```
 
 - `registry.get("command_name")` -> `&CommandSpec`

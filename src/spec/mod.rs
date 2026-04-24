@@ -19,7 +19,7 @@
 //! # Where the built-in spec lives
 //!
 //! The full CMake standard-library spec is compiled into the binary
-//! from `src/spec/builtins.toml`. That file also carries a
+//! from `src/spec/builtins.yaml`. That file also carries a
 //! `[metadata]` block recording the upstream CMake version it was
 //! last audited against; the same version is reported by
 //! [`CommandRegistry::audited_cmake_version`](crate::CommandRegistry::audited_cmake_version).

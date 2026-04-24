@@ -211,12 +211,12 @@ Spec or built-in command changes usually require coordinated updates across:
 
 - `src/spec/mod.rs`
 - `src/spec/registry.rs`
-- `src/spec/builtins.toml`
+- `src/spec/builtins.yaml`
 - spec registry tests
 
 When you update the built-in spec to a newer upstream CMake release, also:
 
-- bump `[metadata].cmake_version` and `[metadata].audited_at` in `src/spec/builtins.toml`
+- bump `metadata.cmake_version` and `metadata.audited_at` in `src/spec/builtins.yaml`
 - update the audited version mention in `README.md`
 - add or adjust registry tests for the new commands, forms, or keywords
 - use the official CMake command docs and release notes as the source of truth

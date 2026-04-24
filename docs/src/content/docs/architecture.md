@@ -66,7 +66,7 @@ positional arguments, keyword groups, and flags. This is what lets the formatter
 distinguish semantic keywords like `PUBLIC` and `PRIVATE` from ordinary
 arguments.
 
-Built-in specs live in `src/spec/builtins.toml`. Each command maps to a
+Built-in specs live in `src/spec/builtins.yaml`. Each command maps to a
 `CommandSpec`, which is either a single `CommandForm` or a discriminated set of
 forms keyed by the first argument (e.g. `install(TARGETS ...)` vs
 `install(FILES ...)`).
@@ -209,7 +209,7 @@ invalid fields the same way the CLI does.
 | Change formatting behavior | `src/formatter/node.rs` |
 | Add a new config option | `src/config/mod.rs` |
 | Change the parser | `src/parser/{scanner,grammar,lower}.rs` |
-| Add or update a built-in command spec | `src/spec/builtins.toml` |
+| Add or update a built-in command spec | `src/spec/builtins.yaml` |
 | Add a new CLI flag | `src/main.rs` |
 | Modify LSP behavior | `src/lsp/mod.rs` |
 | Add a new error variant | `src/error.rs` |

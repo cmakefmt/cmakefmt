@@ -1,0 +1,2031 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# Built-in CMake command spec. Parsed once at startup via
+# CommandRegistry::builtins(). Users extend or override entries in their
+# own .cmakefmt.yaml under `commands:` — the merge preserves order.
+
+metadata:
+  cmake_version: 4.3.1
+  audited_at: "2026-04-02"
+  notes: Built-in command spec audited against CMake 4.3.1 documentation and
+    release notes.
+commands:
+  cmake_minimum_required:
+    pargs: 0
+    flags:
+      - FATAL_ERROR
+    kwargs:
+      VERSION:
+        nargs: 1
+  project:
+    pargs: 1
+    flags:
+      - VERSION
+      - COMPAT_VERSION
+      - SPDX_LICENSE
+      - DESCRIPTION
+      - HOMEPAGE_URL
+      - LANGUAGES
+  set:
+    pargs: "2+"
+    flags:
+      - PARENT_SCOPE
+    layout:
+      wrap_after_first_arg: true
+    kwargs:
+      CACHE:
+        nargs: 2
+        flags:
+          - FORCE
+  unset:
+    pargs: 1
+    flags:
+      - CACHE
+      - PARENT_SCOPE
+  message:
+    pargs: "1+"
+    flags:
+      - STATUS
+      - WARNING
+      - AUTHOR_WARNING
+      - SEND_ERROR
+      - FATAL_ERROR
+      - DEPRECATION
+      - NOTICE
+      - VERBOSE
+      - DEBUG
+      - TRACE
+      - CHECK_START
+      - CHECK_PASS
+      - CHECK_FAIL
+  option:
+    pargs: "2+"
+  include_guard:
+    pargs: "?"
+    flags:
+      - DIRECTORY
+      - GLOBAL
+  include:
+    pargs: 1
+    flags:
+      - OPTIONAL
+      - RESULT_VARIABLE
+      - NO_POLICY_SCOPE
+  add_subdirectory:
+    pargs: "1+"
+    flags:
+      - EXCLUDE_FROM_ALL
+      - SYSTEM
+  configure_file:
+    pargs: 2
+    flags:
+      - COPYONLY
+      - ESCAPE_QUOTES
+      - "@ONLY"
+    kwargs:
+      NEWLINE_STYLE:
+        nargs: 1
+  add_executable:
+    pargs: "2+"
+    flags:
+      - WIN32
+      - MACOSX_BUNDLE
+      - EXCLUDE_FROM_ALL
+      - IMPORTED
+      - ALIAS
+  add_library:
+    pargs: "2+"
+    flags:
+      - STATIC
+      - SHARED
+      - MODULE
+      - OBJECT
+      - INTERFACE
+      - UNKNOWN
+      - IMPORTED
+      - ALIAS
+      - EXCLUDE_FROM_ALL
+  add_custom_target:
+    pargs: "1+"
+    flags:
+      - ALL
+      - VERBATIM
+      - USES_TERMINAL
+      - COMMAND_EXPAND_LISTS
+    kwargs:
+      BYPRODUCTS:
+        nargs: "*"
+      COMMAND:
+        nargs: "+"
+      COMMENT:
+        nargs: 1
+      DEPENDS:
+        nargs: "*"
+      JOB_POOL:
+        nargs: 1
+      SOURCES:
+        nargs: "*"
+      WORKING_DIRECTORY:
+        nargs: 1
+  add_custom_command:
+    pargs: "*"
+    flags:
+      - APPEND
+      - VERBATIM
+      - USES_TERMINAL
+      - COMMAND_EXPAND_LISTS
+      - CODEGEN
+    kwargs:
+      BYPRODUCTS:
+        nargs: "*"
+      COMMAND:
+        nargs: "+"
+      COMMENT:
+        nargs: 1
+      DEPENDS:
+        nargs: "*"
+      DEPFILE:
+        nargs: 1
+      IMPLICIT_DEPENDS:
+        nargs: "*"
+      JOB_POOL:
+        nargs: 1
+      JOB_SERVER_AWARE:
+        nargs: 1
+      MAIN_DEPENDENCY:
+        nargs: 1
+      OUTPUT:
+        nargs: "+"
+      POST_BUILD:
+        nargs: "*"
+      PRE_BUILD:
+        nargs: "*"
+      PRE_LINK:
+        nargs: "*"
+      TARGET:
+        nargs: 1
+      WORKING_DIRECTORY:
+        nargs: 1
+  target_compile_definitions:
+    pargs: 1
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  target_compile_options:
+    pargs: 1
+    flags:
+      - BEFORE
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  target_include_directories:
+    pargs: 1
+    flags:
+      - BEFORE
+      - AFTER
+      - SYSTEM
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  target_link_directories:
+    pargs: 1
+    flags:
+      - BEFORE
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  target_link_libraries:
+    pargs: 1
+    flags:
+      - LINK_INTERFACE_LIBRARIES
+      - LINK_PRIVATE
+      - debug
+      - optimized
+      - general
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  target_link_options:
+    pargs: 1
+    flags:
+      - BEFORE
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  target_precompile_headers:
+    pargs: 1
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  target_sources:
+    pargs: 1
+    flags:
+      - FILE_SET
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+  set_target_properties:
+    pargs: "+"
+    kwargs:
+      PROPERTIES:
+        nargs: "*"
+  find_package:
+    pargs: "1+"
+    flags:
+      - EXACT
+      - QUIET
+      - REQUIRED
+      - MODULE
+      - CONFIG
+      - NO_MODULE
+      - NO_POLICY_SCOPE
+      - BYPASS_PROVIDER
+      - GLOBAL
+      - UNWIND_INCLUDE
+    kwargs:
+      COMPONENTS:
+        nargs: "+"
+      HINTS:
+        nargs: "*"
+      NAMES:
+        nargs: "*"
+      OPTIONAL_COMPONENTS:
+        nargs: "+"
+      PATHS:
+        nargs: "*"
+      REGISTRY_VIEW:
+        nargs: 1
+      VERSION:
+        nargs: 1
+  find_file:
+    pargs: "1+"
+    flags:
+      - NO_CACHE
+      - REQUIRED
+    kwargs:
+      DOC:
+        nargs: 1
+      HINTS:
+        nargs: "*"
+      NAMES:
+        nargs: "+"
+      PATHS:
+        nargs: "*"
+  find_library:
+    pargs: "1+"
+    flags:
+      - NO_CACHE
+      - REQUIRED
+    kwargs:
+      DOC:
+        nargs: 1
+      HINTS:
+        nargs: "*"
+      NAMES:
+        nargs: "+"
+      PATHS:
+        nargs: "*"
+  find_path:
+    pargs: "1+"
+    flags:
+      - NO_CACHE
+      - REQUIRED
+    kwargs:
+      DOC:
+        nargs: 1
+      HINTS:
+        nargs: "*"
+      NAMES:
+        nargs: "+"
+      PATHS:
+        nargs: "*"
+  find_program:
+    pargs: "1+"
+    flags:
+      - NO_CACHE
+      - REQUIRED
+    kwargs:
+      DOC:
+        nargs: 1
+      HINTS:
+        nargs: "*"
+      NAMES:
+        nargs: "+"
+      PATHS:
+        nargs: "*"
+  file:
+    forms:
+      ARCHIVE_CREATE:
+        pargs: 0
+        flags:
+          - VERBOSE
+        kwargs:
+          OUTPUT:
+            nargs: 1
+          PATHS:
+            nargs: "+"
+          FORMAT:
+            nargs: 1
+          COMPRESSION:
+            nargs: 1
+          COMPRESSION_LEVEL:
+            nargs: 1
+          MTIME:
+            nargs: 1
+          THREADS:
+            nargs: 1
+          WORKING_DIRECTORY:
+            nargs: 1
+      STRINGS:
+        pargs: 2
+        flags:
+          - NEWLINE_CONSUME
+          - NO_HEX_CONVERSION
+        kwargs:
+          ENCODING:
+            nargs: 1
+          LIMIT_COUNT:
+            nargs: 1
+          LIMIT_INPUT:
+            nargs: 1
+          LIMIT_OUTPUT:
+            nargs: 1
+          LENGTH_MINIMUM:
+            nargs: 1
+          LENGTH_MAXIMUM:
+            nargs: 1
+          REGEX:
+            nargs: 1
+      GENERATE:
+        pargs: 0
+        flags:
+          - CONDITION
+          - TARGET
+          - NEWLINE_STYLE
+          - FILE_PERMISSIONS
+          - USE_SOURCE_PERMISSIONS
+          - NO_SOURCE_PERMISSIONS
+        kwargs:
+          OUTPUT:
+            nargs: 1
+          INPUT:
+            nargs: 1
+          CONTENT:
+            nargs: 1
+      CONFIGURE:
+        pargs: 0
+        flags:
+          - "@ONLY"
+          - ESCAPE_QUOTES
+          - NEWLINE_STYLE
+        kwargs:
+          OUTPUT:
+            nargs: 1
+          CONTENT:
+            nargs: 1
+      READ:
+        pargs: 2
+        flags:
+          - HEX
+        kwargs:
+          OFFSET:
+            nargs: 1
+          LIMIT:
+            nargs: 1
+      WRITE:
+        pargs: "2+"
+      APPEND:
+        pargs: "2+"
+    fallback:
+      pargs: "*"
+  list:
+    pargs: "*"
+  string:
+    forms:
+      JSON:
+        pargs: 1
+        flags:
+          - GET
+          - GET_RAW
+          - TYPE
+          - LENGTH
+          - REMOVE
+          - MEMBER
+          - SET
+          - EQUAL
+          - STRING_ENCODE
+        kwargs:
+          ERROR_VARIABLE:
+            nargs: 1
+    fallback:
+      pargs: "*"
+  math:
+    pargs: "*"
+  execute_process:
+    pargs: "*"
+    flags:
+      - COMMAND_ERROR_IS_FATAL
+      - ECHO_OUTPUT_VARIABLE
+      - ECHO_ERROR_VARIABLE
+      - COMMAND_ECHO
+    kwargs:
+      COMMAND:
+        nargs: "+"
+      ERROR_FILE:
+        nargs: 1
+      ERROR_VARIABLE:
+        nargs: 1
+      INPUT_FILE:
+        nargs: 1
+      OUTPUT_FILE:
+        nargs: 1
+      OUTPUT_VARIABLE:
+        nargs: 1
+      RESULT_VARIABLE:
+        nargs: 1
+      RESULTS_VARIABLE:
+        nargs: 1
+      TIMEOUT:
+        nargs: 1
+      WORKING_DIRECTORY:
+        nargs: 1
+  configure_package_config_file:
+    pargs: 2
+    flags:
+      - NO_SET_AND_CHECK_MACRO
+      - NO_CHECK_REQUIRED_COMPONENTS_MACRO
+    kwargs:
+      INSTALL_DESTINATION:
+        nargs: 1
+      PATH_VARS:
+        nargs: "+"
+      INSTALL_PREFIX:
+        nargs: 1
+  write_basic_package_version_file:
+    pargs: 1
+    flags:
+      - ARCH_INDEPENDENT
+    kwargs:
+      VERSION:
+        nargs: 1
+      COMPATIBILITY:
+        nargs: 1
+  write_basic_config_version_file:
+    pargs: 1
+    flags:
+      - ARCH_INDEPENDENT
+    kwargs:
+      VERSION:
+        nargs: 1
+      COMPATIBILITY:
+        nargs: 1
+  cmake_dependent_option:
+    pargs: 5
+  find_dependency:
+    pargs: "1+"
+    flags:
+      - EXACT
+      - QUIET
+      - REQUIRED
+      - MODULE
+      - CONFIG
+      - NO_MODULE
+      - NO_POLICY_SCOPE
+      - BYPASS_PROVIDER
+      - GLOBAL
+      - UNWIND_INCLUDE
+    kwargs:
+      COMPONENTS:
+        nargs: "+"
+      HINTS:
+        nargs: "*"
+      NAMES:
+        nargs: "*"
+      OPTIONAL_COMPONENTS:
+        nargs: "+"
+      PATHS:
+        nargs: "*"
+      REGISTRY_VIEW:
+        nargs: 1
+      VERSION:
+        nargs: 1
+  feature_summary:
+    pargs: "*"
+    flags:
+      - DEFAULT_DESCRIPTION
+      - FILENAME
+      - APPEND
+      - VAR
+      - WHAT
+      - INCLUDE_QUIET_PACKAGES
+      - FATAL_ON_MISSING_REQUIRED_PACKAGES
+      - QUIET_ON_EMPTY
+  set_package_properties:
+    pargs: "+"
+    kwargs:
+      PROPERTIES:
+        nargs: "*"
+  add_feature_info:
+    pargs: 3
+  print_enabled_features:
+    pargs: "*"
+  print_disabled_features:
+    pargs: "*"
+  set_feature_info:
+    pargs: "+"
+  set_package_info:
+    pargs: "+"
+  android_add_test_data:
+    pargs: "2+"
+  add_file_dependencies:
+    pargs: "2+"
+  cmake_add_fortran_subdirectory:
+    pargs: "1+"
+  cmake_expand_imported_targets:
+    pargs: "+"
+  cmake_force_c_compiler:
+    pargs: 2
+  cmake_force_cxx_compiler:
+    pargs: 2
+  cmake_force_fortran_compiler:
+    pargs: 2
+  ctest_coverage_collect_gcov:
+    pargs: "*"
+  copy_and_fixup_bundle:
+    pargs: 4
+  fixup_bundle:
+    pargs: "3+"
+  fixup_bundle_item:
+    pargs: "4+"
+  verify_app:
+    pargs: "1+"
+  verify_bundle_prerequisites:
+    pargs: "1+"
+  verify_bundle_symlinks:
+    pargs: "1+"
+  get_bundle_main_executable:
+    pargs: 2
+  get_dotapp_dir:
+    pargs: 2
+  get_bundle_and_executable:
+    pargs: 4
+  get_bundle_all_executables:
+    pargs: 2
+  get_bundle_keys:
+    pargs: 2
+  get_item_key:
+    pargs: 2
+  get_item_rpaths:
+    pargs: 2
+  clear_bundle_keys:
+    pargs: 0
+  set_bundle_key_values:
+    pargs: "+"
+  copy_resolved_framework_into_bundle:
+    pargs: "+"
+  copy_resolved_item_into_bundle:
+    pargs: "+"
+  cpack_ifw_add_package_resources:
+    pargs: "+"
+  cpack_ifw_add_repository:
+    pargs: "+"
+  cpack_ifw_configure_component:
+    pargs: "+"
+  cpack_ifw_configure_component_group:
+    pargs: "+"
+  cpack_ifw_update_repository:
+    pargs: "+"
+  cpack_ifw_configure_file:
+    pargs: 2
+  csharp_set_windows_forms_properties:
+    pargs: "*"
+  csharp_set_designer_cs_properties:
+    pargs: "*"
+  csharp_set_xaml_cs_properties:
+    pargs: "*"
+  csharp_get_filename_keys:
+    pargs: "1+"
+  csharp_get_filename_key_base:
+    pargs: 2
+  csharp_get_dependentupon_name:
+    pargs: 2
+  externaldata_expand_arguments:
+    pargs: "2+"
+  externaldata_add_test:
+    pargs: "1+"
+  externaldata_add_target:
+    pargs: 1
+  fortrancinterface_header:
+    pargs: "1+"
+  fortrancinterface_verify:
+    pargs: "*"
+  fetchcontent_setpopulated:
+    pargs: 3
+  gnuinstalldirs_get_absolute_install_dir:
+    pargs: "3+"
+  find_jar:
+    pargs: "1+"
+  add_jar:
+    pargs: "2+"
+  install_jar:
+    pargs: "1+"
+  install_jar_exports:
+    pargs: "+"
+  export_jars:
+    pargs: "+"
+  create_javadoc:
+    pargs: "+"
+  create_javah:
+    pargs: "+"
+  install_jni_symlink:
+    pargs: 1
+  swig_add_library:
+    pargs: "+"
+  swig_link_libraries:
+    pargs: "+"
+  cmake_print_properties:
+    pargs: 0
+    kwargs:
+      TARGETS:
+        nargs: "*"
+      SOURCES:
+        nargs: "*"
+      DIRECTORIES:
+        nargs: "*"
+      TESTS:
+        nargs: "*"
+      CACHE_ENTRIES:
+        nargs: "*"
+      PROPERTIES:
+        nargs: "+"
+  cmake_print_variables:
+    pargs: "*"
+  cmake_push_check_state:
+    pargs: 0
+    flags:
+      - RESET
+  cmake_reset_check_state:
+    pargs: 0
+  cmake_pop_check_state:
+    pargs: 0
+  check_language:
+    pargs: 1
+  check_compiler_flag:
+    pargs: 3
+  check_c_compiler_flag:
+    pargs: 2
+  check_cxx_compiler_flag:
+    pargs: 2
+  check_fortran_compiler_flag:
+    pargs: 2
+  check_objc_compiler_flag:
+    pargs: 2
+  check_objcxx_compiler_flag:
+    pargs: 2
+  check_include_file:
+    pargs: "2+"
+  check_include_file_cxx:
+    pargs: "2+"
+  check_include_files:
+    pargs: "2+"
+  check_function_exists:
+    pargs: 2
+  check_library_exists:
+    pargs: 4
+  check_symbol_exists:
+    pargs: 3
+  check_type_size:
+    pargs: "2+"
+  check_variable_exists:
+    pargs: 2
+  check_c_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_c_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_cxx_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_cxx_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_fortran_function_exists:
+    pargs: 2
+  check_fortran_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_fortran_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objc_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objc_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objcxx_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objcxx_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_source_compiles:
+    pargs: 3
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+      SRC_EXT:
+        nargs: 1
+  check_source_runs:
+    pargs: 3
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+      SRC_EXT:
+        nargs: 1
+  check_linker_flag:
+    pargs: 3
+  check_cxx_symbol_exists:
+    pargs: 3
+  check_prototype_definition:
+    pargs: 5
+  check_struct_has_member:
+    pargs: 4
+    kwargs:
+      LANGUAGE:
+        nargs: 1
+  check_ipo_supported:
+    pargs: 0
+    kwargs:
+      RESULT:
+        nargs: 1
+      OUTPUT:
+        nargs: 1
+      LANGUAGES:
+        nargs: "+"
+  check_pie_supported:
+    pargs: 0
+    kwargs:
+      OUTPUT_VARIABLE:
+        nargs: 1
+      LANGUAGES:
+        nargs: "+"
+  cmake_parse_arguments:
+    pargs: "4+"
+  test_big_endian:
+    pargs: 1
+  check_cxx_accepts_flag:
+    pargs: 2
+  write_compiler_detection_header:
+    pargs: 0
+    flags:
+      - ALLOW_UNKNOWN_COMPILERS
+      - ALLOW_UNKNOWN_COMPILER_VERSIONS
+    kwargs:
+      FILE:
+        nargs: 1
+      PREFIX:
+        nargs: 1
+      COMPILERS:
+        nargs: "+"
+      FEATURES:
+        nargs: "+"
+      BARE_FEATURES:
+        nargs: "+"
+      VERSION:
+        nargs: 1
+      PROLOG:
+        nargs: 1
+      EPILOG:
+        nargs: 1
+  fetchcontent_declare:
+    pargs: 1
+    flags:
+      - EXCLUDE_FROM_ALL
+      - SYSTEM
+      - OVERRIDE_FIND_PACKAGE
+    kwargs:
+      FIND_PACKAGE_ARGS:
+        nargs: "*"
+  fetchcontent_makeavailable:
+    pargs: "+"
+  fetchcontent_getproperties:
+    pargs: 1
+    kwargs:
+      SOURCE_DIR:
+        nargs: 1
+      BINARY_DIR:
+        nargs: 1
+      POPULATED:
+        nargs: 1
+  fetchcontent_populate:
+    pargs: 1
+    flags:
+      - QUIET
+    kwargs:
+      SUBBUILD_DIR:
+        nargs: 1
+      SOURCE_DIR:
+        nargs: 1
+      BINARY_DIR:
+        nargs: 1
+  find_package_handle_standard_args:
+    pargs: "1+"
+    flags:
+      - DEFAULT_MSG
+      - HANDLE_COMPONENTS
+      - CONFIG_MODE
+      - NAME_MISMATCHED
+      - HANDLE_VERSION_RANGE
+    kwargs:
+      FOUND_VAR:
+        nargs: 1
+      REQUIRED_VARS:
+        nargs: "+"
+      VERSION_VAR:
+        nargs: 1
+      FAIL_MESSAGE:
+        nargs: 1
+      REASON_FAILURE_MESSAGE:
+        nargs: 1
+  find_package_check_version:
+    pargs: 2
+    flags:
+      - HANDLE_VERSION_RANGE
+    kwargs:
+      RESULT_MESSAGE_VARIABLE:
+        nargs: 1
+  find_package_message:
+    pargs: 3
+  gtest_add_tests:
+    pargs: 0
+    flags:
+      - SKIP_DEPENDENCY
+    kwargs:
+      TARGET:
+        nargs: 1
+      SOURCES:
+        nargs: "+"
+      EXTRA_ARGS:
+        nargs: "*"
+      WORKING_DIRECTORY:
+        nargs: 1
+      TEST_PREFIX:
+        nargs: 1
+      TEST_SUFFIX:
+        nargs: 1
+      TEST_LIST:
+        nargs: 1
+  gtest_discover_tests:
+    pargs: 1
+    flags:
+      - NO_PRETTY_TYPES
+      - NO_PRETTY_VALUES
+    kwargs:
+      EXTRA_ARGS:
+        nargs: "*"
+      WORKING_DIRECTORY:
+        nargs: 1
+      TEST_PREFIX:
+        nargs: 1
+      TEST_SUFFIX:
+        nargs: 1
+      TEST_FILTER:
+        nargs: 1
+      PROPERTIES:
+        nargs: "*"
+      TEST_LIST:
+        nargs: 1
+      DISCOVERY_TIMEOUT:
+        nargs: 1
+      XML_OUTPUT_DIR:
+        nargs: 1
+      DISCOVERY_MODE:
+        nargs: 1
+      DISCOVERY_EXTRA_ARGS:
+        nargs: "*"
+  processorcount:
+    pargs: 1
+  select_library_configurations:
+    pargs: 1
+  generate_export_header:
+    pargs: 1
+    flags:
+      - DEFINE_NO_DEPRECATED
+    kwargs:
+      BASE_NAME:
+        nargs: 1
+      EXPORT_FILE_NAME:
+        nargs: 1
+      EXPORT_MACRO_NAME:
+        nargs: 1
+      NO_EXPORT_MACRO_NAME:
+        nargs: 1
+      DEPRECATED_MACRO_NAME:
+        nargs: 1
+      NO_DEPRECATED_MACRO_NAME:
+        nargs: 1
+      STATIC_DEFINE:
+        nargs: 1
+      PREFIX_NAME:
+        nargs: 1
+      CUSTOM_CONTENT_FROM_VARIABLE:
+        nargs: 1
+      INCLUDE_GUARD_NAME:
+        nargs: 1
+  add_compiler_export_flags:
+    pargs: "?"
+  cpack_add_component:
+    pargs: 1
+    flags:
+      - HIDDEN
+      - REQUIRED
+      - DISABLED
+      - DOWNLOADED
+    kwargs:
+      DISPLAY_NAME:
+        nargs: 1
+      DESCRIPTION:
+        nargs: 1
+      GROUP:
+        nargs: 1
+      DEPENDS:
+        nargs: "+"
+      INSTALL_TYPES:
+        nargs: "+"
+      ARCHIVE_FILE:
+        nargs: 1
+      PLIST:
+        nargs: 1
+  cpack_add_component_group:
+    pargs: 1
+    flags:
+      - EXPANDED
+      - BOLD_TITLE
+    kwargs:
+      DISPLAY_NAME:
+        nargs: 1
+      DESCRIPTION:
+        nargs: 1
+      PARENT_GROUP:
+        nargs: 1
+  cpack_add_install_type:
+    pargs: 1
+    kwargs:
+      DISPLAY_NAME:
+        nargs: 1
+  cpack_configure_downloads:
+    pargs: 1
+    flags:
+      - ALL
+      - ADD_REMOVE
+      - NO_ADD_REMOVE
+    kwargs:
+      UPLOAD_DIRECTORY:
+        nargs: 1
+  externalproject_add_step:
+    pargs: 2
+    kwargs:
+      COMMAND:
+        nargs: "+"
+      COMMENT:
+        nargs: 1
+      DEPENDEES:
+        nargs: "+"
+      DEPENDERS:
+        nargs: "+"
+      DEPENDS:
+        nargs: "*"
+      BYPRODUCTS:
+        nargs: "*"
+      ALWAYS:
+        nargs: 1
+      EXCLUDE_FROM_MAIN:
+        nargs: 1
+      WORKING_DIRECTORY:
+        nargs: 1
+      LOG:
+        nargs: 1
+      USES_TERMINAL:
+        nargs: 1
+      ENVIRONMENT_MODIFICATION:
+        nargs: "*"
+  externalproject_add_steptargets:
+    pargs: "2+"
+    flags:
+      - NO_DEPENDS
+  externalproject_add_stepdependencies:
+    pargs: "3+"
+  externalproject_get_property:
+    pargs: "2+"
+  export:
+    forms:
+      EXPORT:
+        pargs: 1
+        kwargs:
+          NAMESPACE:
+            nargs: 1
+          FILE:
+            nargs: 1
+      TARGETS:
+        pargs: "+"
+        flags:
+          - APPEND
+          - EXPORT_LINK_INTERFACE_LIBRARIES
+        kwargs:
+          NAMESPACE:
+            nargs: 1
+          FILE:
+            nargs: 1
+      PACKAGE:
+        pargs: 1
+      SETUP:
+        pargs: 1
+        flags:
+          - LOWER_CASE_FILE
+        kwargs:
+          VERSION:
+            nargs: 1
+          COMPAT_VERSION:
+            nargs: 1
+          VERSION_SCHEMA:
+            nargs: 1
+          DEFAULT_TARGETS:
+            nargs: "*"
+          DEFAULT_CONFIGURATIONS:
+            nargs: "*"
+          LICENSE:
+            nargs: 1
+          DEFAULT_LICENSE:
+            nargs: 1
+          DESCRIPTION:
+            nargs: 1
+          HOMEPAGE_URL:
+            nargs: 1
+          CXX_MODULES_DIRECTORY:
+            nargs: 1
+      PACKAGE_INFO:
+        pargs: 1
+        flags:
+          - LOWER_CASE_FILE
+          - NO_PROJECT_METADATA
+        kwargs:
+          EXPORT:
+            nargs: 1
+          PROJECT:
+            nargs: 1
+          APPENDIX:
+            nargs: 1
+          VERSION:
+            nargs: 1
+          COMPAT_VERSION:
+            nargs: 1
+          VERSION_SCHEMA:
+            nargs: 1
+          DEFAULT_TARGETS:
+            nargs: "*"
+          DEFAULT_CONFIGURATIONS:
+            nargs: "*"
+          LICENSE:
+            nargs: 1
+          DEFAULT_LICENSE:
+            nargs: 1
+          DESCRIPTION:
+            nargs: 1
+          HOMEPAGE_URL:
+            nargs: 1
+          CXX_MODULES_DIRECTORY:
+            nargs: 1
+      SBOM:
+        pargs: 1
+        flags:
+          - NO_PROJECT_METADATA
+        kwargs:
+          EXPORT:
+            nargs: 1
+          PROJECT:
+            nargs: 1
+          APPENDIX:
+            nargs: 1
+          VERSION:
+            nargs: 1
+          LICENSE:
+            nargs: 1
+          DESCRIPTION:
+            nargs: 1
+          HOMEPAGE_URL:
+            nargs: 1
+          PACKAGE_URL:
+            nargs: 1
+          FORMAT:
+            nargs: 1
+    fallback:
+      pargs: "*"
+  install:
+    forms:
+      TARGETS:
+        pargs: "+"
+        kwargs:
+          EXPORT:
+            nargs: 1
+          RUNTIME_DEPENDENCIES:
+            nargs: 0
+            kwargs:
+              DIRECTORIES:
+                nargs: "+"
+              PRE_INCLUDE_REGEXES:
+                nargs: "+"
+              PRE_EXCLUDE_REGEXES:
+                nargs: "+"
+              POST_INCLUDE_REGEXES:
+                nargs: "+"
+              POST_EXCLUDE_REGEXES:
+                nargs: "+"
+              POST_INCLUDE_FILES:
+                nargs: "+"
+              POST_EXCLUDE_FILES:
+                nargs: "+"
+          RUNTIME_DEPENDENCY_SET:
+            nargs: 1
+          INCLUDES:
+            nargs: 0
+            kwargs:
+              DESTINATION:
+                nargs: "+"
+          COMPONENT:
+            nargs: 1
+          DESTINATION:
+            nargs: 1
+          PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          NAMELINK_COMPONENT:
+            nargs: 1
+          ARCHIVE:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          LIBRARY:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          RUNTIME:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          OBJECTS:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          FRAMEWORK:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          BUNDLE:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          PRIVATE_HEADER:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          PUBLIC_HEADER:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          RESOURCE:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          FILE_SET:
+            nargs: 1
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          CXX_MODULES_BMI:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+      FILES:
+        pargs: "+"
+        flags:
+          - OPTIONAL
+          - EXCLUDE_FROM_ALL
+        kwargs:
+          TYPE:
+            nargs: 1
+          DESTINATION:
+            nargs: 1
+          PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          COMPONENT:
+            nargs: 1
+          RENAME:
+            nargs: 1
+      DIRECTORY:
+        pargs: "+"
+        flags:
+          - OPTIONAL
+          - USE_SOURCE_PERMISSIONS
+          - MESSAGE_NEVER
+          - EXCLUDE_FROM_ALL
+          - FILES_MATCHING
+        kwargs:
+          TYPE:
+            nargs: 1
+          DESTINATION:
+            nargs: 1
+          FILE_PERMISSIONS:
+            nargs: "+"
+          DIRECTORY_PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          COMPONENT:
+            nargs: 1
+          PATTERN:
+            nargs: 1
+            flags:
+              - EXCLUDE
+            kwargs:
+              PERMISSIONS:
+                nargs: "+"
+          REGEX:
+            nargs: 1
+            flags:
+              - EXCLUDE
+            kwargs:
+              PERMISSIONS:
+                nargs: "+"
+      EXPORT:
+        pargs: "+"
+        flags:
+          - EXPORT_LINK_INTERFACE_LIBRARIES
+          - EXCLUDE_FROM_ALL
+          - EXPORT_PACKAGE_DEPENDENCIES
+        kwargs:
+          DESTINATION:
+            nargs: 1
+          NAMESPACE:
+            nargs: 1
+          FILE:
+            nargs: 1
+          PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          CXX_MODULES_DIRECTORY:
+            nargs: 1
+          COMPONENT:
+            nargs: 1
+      PROGRAMS:
+        pargs: "+"
+        flags:
+          - OPTIONAL
+          - EXCLUDE_FROM_ALL
+        kwargs:
+          TYPE:
+            nargs: 1
+          DESTINATION:
+            nargs: 1
+          PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          COMPONENT:
+            nargs: 1
+          RENAME:
+            nargs: 1
+      SCRIPT:
+        pargs: 1
+        flags:
+          - ALL_COMPONENTS
+          - EXCLUDE_FROM_ALL
+        kwargs:
+          COMPONENT:
+            nargs: 1
+      CODE:
+        pargs: 1
+        flags:
+          - ALL_COMPONENTS
+          - EXCLUDE_FROM_ALL
+        kwargs:
+          COMPONENT:
+            nargs: 1
+      RUNTIME_DEPENDENCY_SET:
+        pargs: 1
+        kwargs:
+          DIRECTORIES:
+            nargs: "+"
+          PRE_INCLUDE_REGEXES:
+            nargs: "+"
+          PRE_EXCLUDE_REGEXES:
+            nargs: "+"
+          POST_INCLUDE_REGEXES:
+            nargs: "+"
+          POST_EXCLUDE_REGEXES:
+            nargs: "+"
+          POST_INCLUDE_FILES:
+            nargs: "+"
+          POST_EXCLUDE_FILES:
+            nargs: "+"
+          LIBRARY:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          RUNTIME:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+          FRAMEWORK:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+              - NAMELINK_ONLY
+              - NAMELINK_SKIP
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+              NAMELINK_COMPONENT:
+                nargs: 1
+      IMPORTED_RUNTIME_ARTIFACTS:
+        pargs: "+"
+        kwargs:
+          RUNTIME_DEPENDENCY_SET:
+            nargs: 1
+          DESTINATION:
+            nargs: 1
+          PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          COMPONENT:
+            nargs: 1
+          NAMELINK_COMPONENT:
+            nargs: 1
+          LIBRARY:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+          RUNTIME:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+          FRAMEWORK:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+          BUNDLE:
+            nargs: 0
+            flags:
+              - OPTIONAL
+              - EXCLUDE_FROM_ALL
+            kwargs:
+              DESTINATION:
+                nargs: 1
+              PERMISSIONS:
+                nargs: "+"
+              CONFIGURATIONS:
+                nargs: "+"
+              COMPONENT:
+                nargs: 1
+      PACKAGE_INFO:
+        pargs: 1
+        flags:
+          - EXCLUDE_FROM_ALL
+          - LOWER_CASE_FILE
+          - NO_PROJECT_METADATA
+        kwargs:
+          EXPORT:
+            nargs: 1
+          PROJECT:
+            nargs: 1
+          APPENDIX:
+            nargs: 1
+          VERSION:
+            nargs: 1
+          COMPAT_VERSION:
+            nargs: 1
+          VERSION_SCHEMA:
+            nargs: 1
+          DEFAULT_TARGETS:
+            nargs: "*"
+          DEFAULT_CONFIGURATIONS:
+            nargs: "*"
+          LICENSE:
+            nargs: 1
+          DEFAULT_LICENSE:
+            nargs: 1
+          DESCRIPTION:
+            nargs: 1
+          HOMEPAGE_URL:
+            nargs: 1
+          CXX_MODULES_DIRECTORY:
+            nargs: 1
+          DESTINATION:
+            nargs: 1
+          PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          COMPONENT:
+            nargs: 1
+      SBOM:
+        pargs: 1
+        flags:
+          - NO_PROJECT_METADATA
+        kwargs:
+          PROJECT:
+            nargs: 1
+          APPENDIX:
+            nargs: 1
+          VERSION:
+            nargs: 1
+          LICENSE:
+            nargs: 1
+          DESCRIPTION:
+            nargs: 1
+          HOMEPAGE_URL:
+            nargs: 1
+          PACKAGE_URL:
+            nargs: 1
+          FORMAT:
+            nargs: 1
+          DESTINATION:
+            nargs: 1
+          PERMISSIONS:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          COMPONENT:
+            nargs: 1
+  if:
+    pargs: "*"
+  elseif:
+    pargs: "*"
+  else:
+    pargs: "*"
+  endif:
+    pargs: "?"
+  foreach:
+    pargs: "*"
+  endforeach:
+    pargs: "?"
+  while:
+    pargs: "*"
+  endwhile:
+    pargs: "?"
+  function:
+    pargs: "1+"
+  endfunction:
+    pargs: "?"
+  macro:
+    pargs: "1+"
+  endmacro:
+    pargs: "?"
+  return:
+    pargs: "*"
+  block:
+    pargs: "*"
+  endblock:
+    pargs: "?"
+  cmake_language:
+    forms:
+      TRACE:
+        pargs: 0
+        flags:
+          - "ON"
+          - "OFF"
+          - EXPAND
+    fallback:
+      pargs: "*"
+  external_project_add:
+    pargs: "1+"
+  aux_source_directory:
+    pargs: "*"
+  add_compile_definitions:
+    pargs: "*"
+  add_compile_options:
+    pargs: "*"
+  add_definitions:
+    pargs: "*"
+  add_dependencies:
+    pargs: "*"
+  add_link_options:
+    pargs: "*"
+  add_test:
+    pargs: "*"
+  break:
+    pargs: "*"
+  build_command:
+    pargs: "*"
+  build_name:
+    pargs: "*"
+  cmake_file_api:
+    pargs: "*"
+  cmake_host_system_information:
+    pargs: "*"
+  cmake_instrumentation:
+    pargs: 0
+    kwargs:
+      API_VERSION:
+        nargs: 1
+      DATA_VERSION:
+        nargs: 1
+      HOOKS:
+        nargs: "*"
+      OPTIONS:
+        nargs: "*"
+      CALLBACK:
+        nargs: 1
+      CUSTOM_CONTENT:
+        nargs: 3
+  cmake_path:
+    pargs: "*"
+  cmake_pkg_config:
+    forms:
+      EXTRACT:
+        pargs: "1+"
+        flags:
+          - REQUIRED
+          - EXACT
+          - QUIET
+        kwargs:
+          SYSTEM_INCLUDE_DIRS:
+            nargs: "*"
+          SYSTEM_LIBRARY_DIRS:
+            nargs: "*"
+          ALLOW_SYSTEM_INCLUDES:
+            nargs: 1
+          ALLOW_SYSTEM_LIBS:
+            nargs: 1
+          STRICTNESS:
+            nargs: 1
+          ENV_MODE:
+            nargs: 1
+          PC_LIBDIR:
+            nargs: "*"
+          PC_PATH:
+            nargs: "*"
+          DISABLE_UNINSTALLED:
+            nargs: 1
+          PC_SYSROOT_DIR:
+            nargs: 1
+          TOP_BUILD_DIR:
+            nargs: 1
+      POPULATE:
+        pargs: "1+"
+        flags:
+          - REQUIRED
+          - EXACT
+          - QUIET
+        kwargs:
+          PREFIX:
+            nargs: 1
+          BIND_PC_REQUIRES:
+            nargs: "*"
+          STRICTNESS:
+            nargs: 1
+          ENV_MODE:
+            nargs: 1
+          PC_LIBDIR:
+            nargs: "*"
+          PC_PATH:
+            nargs: "*"
+          DISABLE_UNINSTALLED:
+            nargs: 1
+          PC_SYSROOT_DIR:
+            nargs: 1
+          TOP_BUILD_DIR:
+            nargs: 1
+      IMPORT:
+        pargs: "1+"
+        flags:
+          - REQUIRED
+          - EXACT
+          - QUIET
+        kwargs:
+          NAME:
+            nargs: 1
+          PREFIX:
+            nargs: 1
+          BIND_PC_REQUIRES:
+            nargs: "*"
+          STRICTNESS:
+            nargs: 1
+          ENV_MODE:
+            nargs: 1
+          PC_LIBDIR:
+            nargs: "*"
+          PC_PATH:
+            nargs: "*"
+          DISABLE_UNINSTALLED:
+            nargs: 1
+          PC_SYSROOT_DIR:
+            nargs: 1
+          TOP_BUILD_DIR:
+            nargs: 1
+    fallback:
+      pargs: "*"
+  cmake_policy:
+    pargs: "*"
+  continue:
+    pargs: "*"
+  create_test_sourcelist:
+    pargs: "*"
+  ctest_build:
+    pargs: "*"
+  ctest_configure:
+    pargs: "*"
+  ctest_coverage:
+    pargs: "*"
+  ctest_empty_binary_directory:
+    pargs: "*"
+  ctest_memcheck:
+    pargs: "*"
+  ctest_read_custom_files:
+    pargs: "*"
+  ctest_run_script:
+    pargs: "*"
+  ctest_sleep:
+    pargs: "*"
+  ctest_start:
+    pargs: "*"
+  ctest_submit:
+    pargs: "*"
+  ctest_test:
+    pargs: "*"
+  ctest_update:
+    pargs: "*"
+  ctest_upload:
+    pargs: "*"
+  define_property:
+    pargs: "*"
+  enable_language:
+    pargs: "*"
+  enable_testing:
+    pargs: "*"
+  exec_program:
+    pargs: "*"
+  export_library_dependencies:
+    pargs: "*"
+  fltk_wrap_ui:
+    pargs: "*"
+  get_cmake_property:
+    pargs: "*"
+  get_directory_property:
+    pargs: "*"
+  get_filename_component:
+    pargs: "*"
+  get_property:
+    pargs: "*"
+  get_source_file_property:
+    pargs: "*"
+  get_target_property:
+    pargs: "*"
+  get_test_property:
+    pargs: "*"
+  include_directories:
+    pargs: "*"
+  include_external_msproject:
+    pargs: "*"
+  include_regular_expression:
+    pargs: "*"
+  install_files:
+    pargs: "*"
+  install_programs:
+    pargs: "*"
+  install_targets:
+    pargs: "*"
+  link_directories:
+    pargs: "*"
+  link_libraries:
+    pargs: "*"
+  load_cache:
+    pargs: "*"
+  load_command:
+    pargs: "*"
+  make_directory:
+    pargs: "*"
+  mark_as_advanced:
+    pargs: "*"
+  output_required_files:
+    pargs: "*"
+  qt_wrap_cpp:
+    pargs: "*"
+  qt_wrap_ui:
+    pargs: "*"
+  remove:
+    pargs: "*"
+  remove_definitions:
+    pargs: "*"
+  separate_arguments:
+    pargs: "*"
+  set_directory_properties:
+    pargs: "*"
+  set_property:
+    pargs: "*"
+  set_source_files_properties:
+    pargs: "*"
+  set_tests_properties:
+    pargs: "*"
+  site_name:
+    pargs: "*"
+  source_group:
+    pargs: "*"
+  subdir_depends:
+    pargs: "*"
+  subdirs:
+    pargs: "*"
+  target_compile_features:
+    pargs: "*"
+  try_compile:
+    pargs: "*"
+  try_run:
+    pargs: "*"
+  use_mangled_mesa:
+    pargs: "*"
+  utility_source:
+    pargs: "*"
+  variable_requires:
+    pargs: "*"
+  variable_watch:
+    pargs: "*"
+  write_file:
+    pargs: "*"

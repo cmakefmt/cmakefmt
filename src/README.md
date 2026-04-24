@@ -32,4 +32,4 @@ This directory contains the implementation of `cmakefmt`.
 - parser changes usually affect fixtures and snapshots
 - formatter changes usually affect snapshots, idempotency, and real-world corpus output
 - config changes usually affect CLI docs, dump-config output, and config tests
-- spec changes should update `builtins.toml` and registry tests together
+- spec changes should update `builtins.yaml` and registry tests together
