@@ -1710,9 +1710,9 @@ nargs = "+"
 [commands.install.forms.DIRECTORY.kwargs.DIRECTORY_PERMISSIONS]
 nargs = "+"
 
-[commands.install.forms.DIRECTORY.kwargs.PERMISSIONS]
-nargs = "+"
-
+# Note: `PERMISSIONS` is intentionally NOT a top-level kwarg of
+# install(DIRECTORY). Per CMake docs it only appears as a nested subkwarg
+# of a PATTERN or REGEX subgroup (see below).
 [commands.install.forms.DIRECTORY.kwargs.CONFIGURATIONS]
 nargs = "+"
 

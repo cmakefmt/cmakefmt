@@ -730,7 +730,6 @@ mod tests {
             "DESTINATION",
             "FILE_PERMISSIONS",
             "DIRECTORY_PERMISSIONS",
-            "PERMISSIONS",
             "CONFIGURATIONS",
             "COMPONENT",
             "PATTERN",
@@ -738,6 +737,12 @@ mod tests {
         ] {
             assert!(form.kwargs.contains_key(kw), "DIRECTORY missing kwarg {kw}");
         }
+        // PERMISSIONS is not a top-level kwarg of install(DIRECTORY) per
+        // CMake docs — it only appears nested under PATTERN/REGEX.
+        assert!(
+            !form.kwargs.contains_key("PERMISSIONS"),
+            "PERMISSIONS must not be a top-level DIRECTORY kwarg"
+        );
         for flag in [
             "OPTIONAL",
             "USE_SOURCE_PERMISSIONS",
