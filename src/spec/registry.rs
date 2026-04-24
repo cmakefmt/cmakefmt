@@ -765,6 +765,91 @@ mod tests {
     }
 
     #[test]
+    fn install_programs_mirrors_files_form() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry.get("install").form_for(Some("PROGRAMS"));
+        for kw in [
+            "TYPE",
+            "DESTINATION",
+            "PERMISSIONS",
+            "CONFIGURATIONS",
+            "COMPONENT",
+            "RENAME",
+        ] {
+            assert!(form.kwargs.contains_key(kw), "PROGRAMS missing kwarg {kw}");
+        }
+        assert!(form.flags.contains("OPTIONAL"));
+        assert!(form.flags.contains("EXCLUDE_FROM_ALL"));
+    }
+
+    #[test]
+    fn install_script_and_code_accept_component_and_flags() {
+        let registry = CommandRegistry::load().unwrap();
+        for disc in ["SCRIPT", "CODE"] {
+            let form = registry.get("install").form_for(Some(disc));
+            assert!(
+                form.kwargs.contains_key("COMPONENT"),
+                "{disc} missing COMPONENT"
+            );
+            assert!(
+                form.flags.contains("ALL_COMPONENTS"),
+                "{disc} missing ALL_COMPONENTS"
+            );
+            assert!(
+                form.flags.contains("EXCLUDE_FROM_ALL"),
+                "{disc} missing EXCLUDE_FROM_ALL"
+            );
+        }
+    }
+
+    #[test]
+    fn install_runtime_dependency_set_has_filter_kwargs_and_artifact_kinds() {
+        let registry = CommandRegistry::load().unwrap();
+        let form = registry
+            .get("install")
+            .form_for(Some("RUNTIME_DEPENDENCY_SET"));
+
+        for sub in [
+            "DIRECTORIES",
+            "PRE_INCLUDE_REGEXES",
+            "PRE_EXCLUDE_REGEXES",
+            "POST_INCLUDE_REGEXES",
+            "POST_EXCLUDE_REGEXES",
+            "POST_INCLUDE_FILES",
+            "POST_EXCLUDE_FILES",
+        ] {
+            assert!(
+                form.kwargs.contains_key(sub),
+                "RUNTIME_DEPENDENCY_SET missing {sub}"
+            );
+        }
+
+        for kind in ["LIBRARY", "RUNTIME", "FRAMEWORK"] {
+            let spec = form
+                .kwargs
+                .get(kind)
+                .unwrap_or_else(|| panic!("RUNTIME_DEPENDENCY_SET missing {kind}"));
+            for k in [
+                "DESTINATION",
+                "PERMISSIONS",
+                "CONFIGURATIONS",
+                "COMPONENT",
+                "NAMELINK_COMPONENT",
+            ] {
+                assert!(spec.kwargs.contains_key(k), "{kind} missing subkwarg {k}");
+            }
+            for f in [
+                "OPTIONAL",
+                "EXCLUDE_FROM_ALL",
+                "NAMELINK_ONLY",
+                "NAMELINK_SKIP",
+            ] {
+                assert!(spec.flags.contains(f), "{kind} missing subflag {f}");
+            }
+        }
+    }
+
+    #[test]
     fn registry_knows_cmake_language_trace_form() {
         let registry = CommandRegistry::load().unwrap();
         let form = registry.get("cmake_language").form_for(Some("TRACE"));

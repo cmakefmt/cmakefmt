@@ -1758,14 +1758,103 @@ nargs = 1
 [commands.install.forms.EXPORT.kwargs.COMPONENT]
 nargs = 1
 
+[commands.install.forms.PROGRAMS]
+pargs = "+"
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL"]
+
+[commands.install.forms.PROGRAMS.kwargs.TYPE]
+nargs = 1
+
+[commands.install.forms.PROGRAMS.kwargs.DESTINATION]
+nargs = 1
+
+[commands.install.forms.PROGRAMS.kwargs.PERMISSIONS]
+nargs = "+"
+
+[commands.install.forms.PROGRAMS.kwargs.CONFIGURATIONS]
+nargs = "+"
+
+[commands.install.forms.PROGRAMS.kwargs.COMPONENT]
+nargs = 1
+
+[commands.install.forms.PROGRAMS.kwargs.RENAME]
+nargs = 1
+
 [commands.install.forms.SCRIPT]
 pargs = 1
+flags = ["ALL_COMPONENTS", "EXCLUDE_FROM_ALL"]
+
+[commands.install.forms.SCRIPT.kwargs.COMPONENT]
+nargs = 1
 
 [commands.install.forms.CODE]
 pargs = 1
+flags = ["ALL_COMPONENTS", "EXCLUDE_FROM_ALL"]
 
+[commands.install.forms.CODE.kwargs.COMPONENT]
+nargs = 1
+
+# install(RUNTIME_DEPENDENCY_SET <set-name> ...) — same per-artifact-kind
+# subgroup shape as install(TARGETS) plus the regex/file filter kwargs.
 [commands.install.forms.RUNTIME_DEPENDENCY_SET]
 pargs = 1
+
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.DIRECTORIES]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.PRE_INCLUDE_REGEXES]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.PRE_EXCLUDE_REGEXES]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.POST_INCLUDE_REGEXES]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.POST_EXCLUDE_REGEXES]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.POST_INCLUDE_FILES]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.POST_EXCLUDE_FILES]
+nargs = "+"
+
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.LIBRARY]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.LIBRARY.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.LIBRARY.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.LIBRARY.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.LIBRARY.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.LIBRARY.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.RUNTIME]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.RUNTIME.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.RUNTIME.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.RUNTIME.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.RUNTIME.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.RUNTIME.kwargs.NAMELINK_COMPONENT]
+nargs = 1
+
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.FRAMEWORK]
+nargs = 0
+flags = ["OPTIONAL", "EXCLUDE_FROM_ALL", "NAMELINK_ONLY", "NAMELINK_SKIP"]
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.FRAMEWORK.kwargs.DESTINATION]
+nargs = 1
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.FRAMEWORK.kwargs.PERMISSIONS]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.FRAMEWORK.kwargs.CONFIGURATIONS]
+nargs = "+"
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.FRAMEWORK.kwargs.COMPONENT]
+nargs = 1
+[commands.install.forms.RUNTIME_DEPENDENCY_SET.kwargs.FRAMEWORK.kwargs.NAMELINK_COMPONENT]
+nargs = 1
 
 [commands.install.forms.IMPORTED_RUNTIME_ARTIFACTS]
 pargs = "+"
