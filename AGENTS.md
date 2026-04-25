@@ -286,7 +286,10 @@ Before triggering the workflow:
   "Check JSON schema is up to date" gate enforces this anyway)
 - add a v${VERSION} datapoint to
   `docs/src/components/VersionTrendChart.astro` with the wall-time +
-  binary-size measurement and a one-line annotation
+  binary-size measurement and a one-line annotation. Generate the
+  measurement with `./benches/version-trend-datapoint.sh`, which
+  prints the chart-ready `{ version: "...", time: ..., binary: ... }`
+  line directly to stdout.
 
 If a CI failure forces a re-run, prefer fixing the underlying issue and
 re-triggering rather than hand-editing `Cargo.toml`/`CHANGELOG.md` to

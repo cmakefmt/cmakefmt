@@ -201,6 +201,22 @@ hand-written recursive-descent parser replacing `pest`, and removal of an
 unused dependency. This fixed cost is paid once per invocation and is
 irrelevant for multi-file runs.
 
+The `v1.2.0` datapoint moves down to ~6.6ms — about 0.2ms faster than
+v1.1.0 on the same fixture under matched-methodology hyperfine
+measurements (`--shell=none --style basic`, 100 warmups, 200 runs).
+The embedded built-in command spec moved from a TOML file parsed at
+every process startup to a MessagePack blob produced once at build
+time and decoded at startup with `rmp-serde`, which is roughly 20×
+faster than parsing structured text. The YAML source is still
+maintained in `src/spec/builtins.yaml` for human editing; `build.rs`
+re-emits it as MessagePack into `OUT_DIR` and the binary
+`include_bytes!`-bundles the blob.
+
+(The v1.1.0 datapoint was re-measured against the same fixture under
+this methodology and revised from a previously-reported 7.1ms to
+6.8ms; the older number was inflated by hyperfine's progress-bar
+rendering, which we now disable via `--style basic`.)
+
 ## What The Numbers Mean In Practice
 
 The headline numbers matter not as abstract benchmarks, but because they change
