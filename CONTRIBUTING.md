@@ -237,7 +237,12 @@ Keep these aligned:
 Release tooling has a split ownership model:
 
 - `.github/workflows/prepare-release.yml`
-  - owns version bumps, lockfile refresh, commit creation, tagging, and push
+  - owns version bumps, lockfile refresh, `CHANGELOG.md` stamping,
+    `scripts/sync-changelog.py`, schema versioning, commit creation,
+    tagging, and push
+  - **do not run any of those steps manually** — see the *Releasing*
+    section in [`AGENTS.md`](AGENTS.md) for what to prepare *before*
+    triggering the workflow and what stays out of your hands
 - `.github/workflows/release.yml`
   - builds, verifies, and publishes from an existing tag
 - `packaging/homebrew/`

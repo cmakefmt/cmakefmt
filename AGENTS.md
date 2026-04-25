@@ -260,6 +260,38 @@ set(SPECIAL   keep   this   exactly)
 
 Also supported: `# cmake-format: off/on`, `# fmt: off/on`, `# ~~~`.
 
+## Releasing
+
+Three steps are **owned by `.github/workflows/prepare-release.yml`** and
+must not be done by hand:
+
+- bumping `Cargo.toml` `version` (and the `Cargo.lock` refresh that
+  follows)
+- stamping `CHANGELOG.md` — turning the working `## Unreleased` block into
+  `## <version> — <date>`
+- running `scripts/sync-changelog.py` so
+  `docs/src/content/docs/changelog.md` mirrors `CHANGELOG.md`
+
+The same workflow also copies `docs/public/schemas/latest/schema.json` to
+`docs/public/schemas/v${VERSION}/schema.json`, creates the release
+commit, tags, and pushes. `release.yml` then builds, verifies, and
+publishes from the tag.
+
+Before triggering the workflow:
+
+- make sure the `## Unreleased` block in `CHANGELOG.md` is complete and
+  attributed to the right semver-impact buckets
+- run `cmakefmt config schema > docs/public/schemas/latest/schema.json`
+  if any config-shape change landed since the previous release (CI's
+  "Check JSON schema is up to date" gate enforces this anyway)
+- add a v${VERSION} datapoint to
+  `docs/src/components/VersionTrendChart.astro` with the wall-time +
+  binary-size measurement and a one-line annotation
+
+If a CI failure forces a re-run, prefer fixing the underlying issue and
+re-triggering rather than hand-editing `Cargo.toml`/`CHANGELOG.md` to
+match a partial release state.
+
 ## Dependencies (key crates)
 
 - `pest`, `pest_derive` — PEG parser
