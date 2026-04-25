@@ -7,11 +7,11 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: mixed-line-ending
-        args: [--fix=lf]
+        args: [ --fix=lf ]
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: check-added-large-files
-        exclude: ^docs/public/cmakefmt\.gif$
+        exclude: ^(assets/banner\.png|docs/public/cmakefmt\.gif|docs/public/og-image\.png)$
       - id: check-json
       - id: check-yaml
         exclude: ^packaging/conda-forge/meta\.yaml$
@@ -38,7 +38,7 @@ repos:
       - id: cargo-fmt
         name: cargo fmt --all
         entry: cargo
-        args: [fmt, --all]
+        args: [ fmt, --all ]
         language: system
         pass_filenames: false
 
@@ -51,15 +51,15 @@ repos:
       - id: cargo-clippy
         name: cargo clippy --all-targets -- -D warnings
         entry: cargo
-        args: [clippy, --all-targets, --, -D, warnings]
+        args: [ clippy, --all-targets, --, -D, warnings ]
         language: system
         pass_filenames: false
-        stages: [pre-push]
+        stages: [ pre-push ]
 
       - id: cargo-test
         name: cargo test
         entry: cargo
-        args: [test]
+        args: [ test ]
         language: system
         pass_filenames: false
-        stages: [pre-push]
+        stages: [ pre-push ]

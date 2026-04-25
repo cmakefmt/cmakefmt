@@ -70,14 +70,22 @@ export default defineConfig({
           tag: "meta",
           attrs: {
             property: "og:image",
-            content: "https://cmakefmt.dev/logo.png",
+            content: "https://cmakefmt.dev/og-image.png",
           },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:image:width", content: "1726" },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:image:height", content: "911" },
         },
         {
           tag: "meta",
           attrs: {
             property: "og:image:alt",
-            content: "cmakefmt logo",
+            content: "cmakefmt — cmake-format, reimagined",
           },
         },
       ],
