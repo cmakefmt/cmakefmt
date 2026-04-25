@@ -16,9 +16,16 @@
     if (h1 && tagline && actions) {
       const fullText = h1.textContent || "";
 
-      // Hide elements initially
+      // Wrap the title text in an inline-block span so the cursor
+      // (rendered as the span's right border) tracks the end of the
+      // typed text, rather than sitting at the right edge of the h1's
+      // full-width block.
       h1.textContent = "";
-      h1.style.borderRight = "2px solid var(--sl-color-accent)";
+      const typingSpan = document.createElement("span");
+      typingSpan.style.borderRight = "2px solid var(--sl-color-accent)";
+      typingSpan.style.display = "inline-block";
+      h1.appendChild(typingSpan);
+
       (tagline as HTMLElement).style.opacity = "0";
       (tagline as HTMLElement).style.transform = "translateY(8px)";
       (actions as HTMLElement).style.opacity = "0";
@@ -30,13 +37,13 @@
 
       function typeChar() {
         if (i < fullText.length) {
-          h1!.textContent = fullText.slice(0, i + 1);
+          typingSpan.textContent = fullText.slice(0, i + 1);
           i++;
           setTimeout(typeChar, typingSpeed);
         } else {
           // Blink cursor briefly then remove
           setTimeout(() => {
-            h1!.style.borderRight = "2px solid transparent";
+            typingSpan.style.borderRight = "2px solid transparent";
           }, 400);
 
           // Reveal tagline

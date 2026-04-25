@@ -8,19 +8,21 @@
 
 <script>
   // Create the canvas and inject it as a full-page background on the splash page
-  const container = document.querySelector('.hero')?.closest('main') || document.querySelector('.hero');
+  const container =
+    document.querySelector(".hero")?.closest("main") || document.querySelector(".hero");
   if (container) {
     // Ensure the container is positioned for the canvas to anchor against
-    if (getComputedStyle(container).position === 'static') {
-      (container as HTMLElement).style.position = 'relative';
+    if (getComputedStyle(container).position === "static") {
+      (container as HTMLElement).style.position = "relative";
     }
-    const canvas = document.createElement('canvas');
-    canvas.id = 'dot-grid-canvas';
-    canvas.setAttribute('aria-hidden', 'true');
-    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none;';
+    const canvas = document.createElement("canvas");
+    canvas.id = "dot-grid-canvas";
+    canvas.setAttribute("aria-hidden", "true");
+    canvas.style.cssText =
+      "position:absolute;inset:0;width:100%;height:100%;z-index:-2;pointer-events:none;";
     container.prepend(canvas);
 
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext("2d")!;
     const gap = 24;
     const baseRadius = 0.8;
     const maxExtraRadius = 0.5;
@@ -52,8 +54,10 @@
       // Wave ring expands outward from hero across the full page
       const waveRadius = ((time * waveSpeed) % 1) * Math.max(w, h) * 1.6;
 
-      const isDark = document.documentElement.dataset.theme === 'dark';
-      const dotColor = isDark ? 'rgba(200,220,255,' : 'rgba(60,90,140,';
+      const isDark = document.documentElement.dataset.theme === "dark";
+      // Slightly more saturated dot colours so dots read against both
+      // light and dark backgrounds without becoming visually heavy.
+      const dotColor = isDark ? "rgba(170,205,255," : "rgba(35,70,135,";
 
       // Fade mask: dots fade vertically (strongest near hero, fading downward)
       const maxDist = Math.max(w, h);
@@ -75,7 +79,9 @@
           const eased = s * s * (3 - 2 * s);
 
           const r = baseRadius + eased * maxExtraRadius;
-          const alpha = (0.18 + eased * 0.15) * fade;
+          // Higher base alpha (was 0.18) so dots are visible at rest;
+          // peak alpha (base + boost) lifts to ~0.5 at the wave crest.
+          const alpha = (0.28 + eased * 0.2) * fade;
 
           if (alpha < 0.02) continue;
 
@@ -91,7 +97,7 @@
 
     resize();
     animId = requestAnimationFrame(draw);
-    window.addEventListener('resize', resize);
+    window.addEventListener("resize", resize);
 
     // Pause when off-screen
     const observer = new IntersectionObserver(([entry]) => {
