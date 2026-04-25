@@ -1371,34 +1371,75 @@ fn fractional_tab_policy_round_up_promotes_to_tab() {
 // --- Phase 47g Tier 1 builtins (Pass 1 of CMake spec coverage) ---
 
 #[test]
-fn mark_as_advanced_recognizes_clear_and_force_flags() {
-    let src = "mark_as_advanced(FORCE FOO BAR BAZ)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"mark_as_advanced(FORCE FOO BAR BAZ)");
+fn mark_as_advanced_force_flag_separates_when_wrapping() {
+    // line_width forces a wrap; FORCE recognised as a flag should land on
+    // its own line above the variable list, not be packed inline as a
+    // positional. Prior to Phase 47g (pargs: "*") FORCE had no special
+    // status and would pack with the variables.
+    let src = "mark_as_advanced(FORCE LONG_VAR_ONE LONG_VAR_TWO LONG_VAR_THREE LONG_VAR_FOUR)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    mark_as_advanced(
+      FORCE
+        LONG_VAR_ONE LONG_VAR_TWO
+        LONG_VAR_THREE LONG_VAR_FOUR)
+    ");
 }
 
 #[test]
-fn include_directories_recognizes_position_and_system_flags() {
-    let src = "include_directories(BEFORE SYSTEM /usr/local/include /opt/include)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @"include_directories(BEFORE SYSTEM /usr/local/include /opt/include)"
-    );
+fn include_directories_flags_recognized_when_wrapping() {
+    // BEFORE and SYSTEM are flags; once wrapped they should be visibly
+    // separate from the directory positional list.
+    let src = "include_directories(BEFORE SYSTEM /usr/local/include/path1 /opt/include/path2 /opt/include/path3)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    include_directories(
+      BEFORE
+      SYSTEM
+        /usr/local/include/path1
+        /opt/include/path2
+        /opt/include/path3)
+    ");
 }
 
 #[test]
-fn link_directories_recognizes_after_before_flags() {
-    let src = "link_directories(AFTER /usr/lib /opt/lib)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"link_directories(AFTER /usr/lib /opt/lib)");
+fn link_directories_after_flag_separates_when_wrapping() {
+    let src =
+        "link_directories(AFTER /usr/lib/path1 /usr/lib/path2 /opt/lib/path3 /opt/lib/path4)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    link_directories(
+      AFTER
+        /usr/lib/path1 /usr/lib/path2
+        /opt/lib/path3 /opt/lib/path4)
+    ");
 }
 
 #[test]
-fn enable_language_recognizes_optional_flag() {
-    let src = "enable_language(CXX C OPTIONAL)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"enable_language(CXX C OPTIONAL)");
+fn enable_language_optional_flag_separates_when_wrapping() {
+    let src = "enable_language(CXX C OBJC OBJCXX Fortran Swift OPTIONAL)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    enable_language(
+      CXX C OBJC OBJCXX Fortran Swift
+      OPTIONAL)
+    ");
 }
 
 #[test]
@@ -1412,94 +1453,205 @@ fn no_arg_flow_commands_format_without_args() {
     ");
 }
 
-// --- Phase 47g Tier 2 builtins (Pass 1 of CMake spec coverage) ---
+// --- Phase 47g Tier 2/3 builtins (Pass 1 of CMake spec coverage) ---
 
 #[test]
-fn target_compile_features_recognizes_visibility_kwargs() {
-    let src = "target_compile_features(mylib PUBLIC cxx_std_17 PRIVATE cxx_constexpr)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @"target_compile_features(mylib PUBLIC cxx_std_17 PRIVATE cxx_constexpr)"
-    );
+fn target_compile_features_visibility_kwargs_separate_when_wrapping() {
+    // PUBLIC and PRIVATE recognised as visibility kwargs; once wrapped they
+    // become separate keyword sections each with their feature list. With
+    // the prior pargs: "*" stub, all tokens packed flat.
+    let src = "target_compile_features(mylib PUBLIC cxx_std_17 cxx_constexpr cxx_lambdas PRIVATE cxx_inline_namespaces)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    target_compile_features(
+      mylib
+      PUBLIC cxx_std_17 cxx_constexpr cxx_lambdas
+      PRIVATE cxx_inline_namespaces)
+    ");
 }
 
 #[test]
-fn set_tests_properties_recognizes_directory_and_properties_kwargs() {
-    let src = "set_tests_properties(mytest DIRECTORY foo PROPERTIES TIMEOUT 30 LABELS \"slow\")\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @r#"set_tests_properties(mytest DIRECTORY foo PROPERTIES TIMEOUT 30 LABELS "slow")"#
-    );
+fn set_tests_properties_kwargs_separate_when_wrapping() {
+    let src = "set_tests_properties(mytest other_test third_test DIRECTORY some_dir PROPERTIES TIMEOUT 30 LABELS \"slow\" WILL_FAIL TRUE)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    set_tests_properties(
+      mytest other_test third_test
+      DIRECTORY some_dir
+      PROPERTIES
+        TIMEOUT 30 LABELS "slow" WILL_FAIL TRUE)
+    "#);
 }
 
 #[test]
-fn define_property_recognizes_scope_flags_and_property_kwarg() {
-    let src = "define_property(TARGET PROPERTY MY_PROP INHERITED)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"define_property(TARGET PROPERTY MY_PROP INHERITED)");
+fn define_property_scope_flags_separate_when_wrapping() {
+    let src = "define_property(TARGET PROPERTY MY_LONG_PROPERTY_NAME INHERITED BRIEF_DOCS \"Brief docs about the property\" FULL_DOCS \"Full docs go here\")\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    define_property(
+      TARGET
+      PROPERTY MY_LONG_PROPERTY_NAME
+      INHERITED
+      BRIEF_DOCS "Brief docs about the property"
+      FULL_DOCS "Full docs go here")
+    "#);
 }
 
 #[test]
-fn ctest_test_recognizes_kwargs_and_flags() {
-    let src = "ctest_test(BUILD ${CTEST_BINARY_DIRECTORY} PARALLEL_LEVEL 4 STOP_ON_FAILURE)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @"ctest_test(BUILD ${CTEST_BINARY_DIRECTORY} PARALLEL_LEVEL 4 STOP_ON_FAILURE)"
-    );
+fn ctest_test_kwargs_and_flags_separate_when_wrapping() {
+    let src = "ctest_test(BUILD ${CTEST_BINARY_DIRECTORY} PARALLEL_LEVEL 4 STOP_ON_FAILURE INCLUDE_LABEL \"unit\" RETURN_VALUE result_var)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    ctest_test(
+      BUILD ${CTEST_BINARY_DIRECTORY}
+      PARALLEL_LEVEL 4
+      STOP_ON_FAILURE
+      INCLUDE_LABEL "unit"
+      RETURN_VALUE result_var)
+    "#);
 }
 
 #[test]
-fn add_test_name_form_recognizes_kwargs() {
-    let src = "add_test(NAME mytest COMMAND my_executable arg1 arg2 WORKING_DIRECTORY /tmp)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @"add_test(NAME mytest COMMAND my_executable arg1 arg2 WORKING_DIRECTORY /tmp)"
-    );
+fn add_test_name_form_kwargs_separate_when_wrapping() {
+    let src = "add_test(NAME my_long_test_name COMMAND my_executable arg1 arg2 arg3 CONFIGURATIONS Debug Release WORKING_DIRECTORY /tmp/test)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    add_test(
+      NAME my_long_test_name
+      COMMAND my_executable arg1 arg2 arg3
+      CONFIGURATIONS Debug Release
+      WORKING_DIRECTORY /tmp/test)
+    ");
 }
 
 #[test]
-fn add_test_legacy_form_treats_args_as_positionals() {
-    let src = "add_test(simple_test my_executable arg1 arg2)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"add_test(simple_test my_executable arg1 arg2)");
+fn add_test_legacy_form_packs_all_args_as_positionals() {
+    // Legacy form (no NAME discriminator) — fallback DEFAULT form treats
+    // everything as positionals, no kwarg recognition.
+    let src = "add_test(simple_test_name my_executable arg1 arg2 arg3 arg4 arg5 arg6)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    add_test(
+      simple_test_name
+      my_executable
+      arg1
+      arg2
+      arg3
+      arg4
+      arg5
+      arg6)
+    ");
 }
 
 #[test]
-fn cmake_policy_set_form() {
+fn cmake_policy_set_form_round_trips() {
     let src = "cmake_policy(SET CMP0048 NEW)\n";
     let formatted = format_source(src, &Config::default()).unwrap();
     insta::assert_snapshot!(formatted, @"cmake_policy(SET CMP0048 NEW)");
 }
 
 #[test]
-fn cmake_policy_version_form() {
+fn cmake_policy_version_form_round_trips() {
     let src = "cmake_policy(VERSION 3.20)\n";
     let formatted = format_source(src, &Config::default()).unwrap();
     insta::assert_snapshot!(formatted, @"cmake_policy(VERSION 3.20)");
 }
 
 #[test]
-fn source_group_tree_form() {
-    let src = "source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX Headers FILES a.h b.h c.h)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @"source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX Headers FILES a.h b.h c.h)"
-    );
+fn source_group_tree_form_kwargs_separate_when_wrapping() {
+    let src = "source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/include PREFIX HeaderFiles FILES alpha.h beta.h gamma.h delta.h)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    source_group(
+      TREE ${CMAKE_CURRENT_SOURCE_DIR}/include
+      PREFIX HeaderFiles
+      FILES alpha.h beta.h gamma.h delta.h)
+    ");
 }
 
 #[test]
-fn source_group_default_form() {
-    let src = "source_group(\"Source Files\" FILES main.cpp util.cpp)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @r#"source_group("Source Files" FILES main.cpp util.cpp)"#
-    );
+fn source_group_default_form_kwargs_separate_when_wrapping() {
+    let src = "source_group(\"Source Files\" FILES main.cpp util.cpp helper.cpp REGULAR_EXPRESSION \".*\\\\.cpp$\")\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    // Verifies the fallback form is correctly applied (source_group's
+    // first arg "Source Files" is not the TREE discriminator, so the
+    // fallback FILES/REGULAR_EXPRESSION kwargs apply). Earlier the spec
+    // used a "DEFAULT" form name that wasn't recognised by form_for(),
+    // which silently fell back to the first form (TREE) where
+    // REGULAR_EXPRESSION was not a kwarg.
+    insta::assert_snapshot!(formatted, @r#"
+    source_group(
+      "Source Files"
+      FILES main.cpp util.cpp helper.cpp
+      REGULAR_EXPRESSION ".*\\.cpp$")
+    "#);
+}
+
+#[test]
+fn cmake_path_get_form_recognizes_modifier_flags() {
+    // GET form: pargs=2 (path-var, out-var) plus kind-keyword flag.
+    // Verifies that EXTENSION + LAST_ONLY are both recognised as flags.
+    let src = "cmake_path(GET FOO_PATH_VAR EXTENSION LAST_ONLY FOO_EXT_OUT_VARIABLE)\n";
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    cmake_path(
+      GET FOO_PATH_VAR
+      EXTENSION
+      LAST_ONLY FOO_EXT_OUT_VARIABLE)
+    ");
+}
+
+#[test]
+fn cmake_path_absolute_path_form_kwargs_separate_when_wrapping() {
+    let src = "cmake_path(ABSOLUTE_PATH RELATIVE_INPUT BASE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} NORMALIZE OUTPUT_VARIABLE ABS_RESULT)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    cmake_path(
+      ABSOLUTE_PATH RELATIVE_INPUT
+      BASE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      NORMALIZE
+      OUTPUT_VARIABLE ABS_RESULT)
+    ");
 }
 
 // --- Existing tests ---

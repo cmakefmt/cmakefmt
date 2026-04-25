@@ -1804,8 +1804,8 @@ commands:
             nargs: "+"
           WORKING_DIRECTORY:
             nargs: 1
-      DEFAULT:
-        pargs: "+"
+    fallback:
+      pargs: "+"
   break:
     pargs: 0
   build_command:
@@ -1860,7 +1860,116 @@ commands:
       CUSTOM_CONTENT:
         nargs: 3
   cmake_path:
-    pargs: "*"
+    forms:
+      GET:
+        pargs: 2
+        flags:
+          - ROOT_NAME
+          - ROOT_DIRECTORY
+          - ROOT_PATH
+          - FILENAME
+          - EXTENSION
+          - STEM
+          - RELATIVE_PART
+          - PARENT_PATH
+          - LAST_ONLY
+      HAS_ROOT_NAME:
+        pargs: 2
+      HAS_ROOT_DIRECTORY:
+        pargs: 2
+      HAS_ROOT_PATH:
+        pargs: 2
+      HAS_FILENAME:
+        pargs: 2
+      HAS_EXTENSION:
+        pargs: 2
+      HAS_STEM:
+        pargs: 2
+      HAS_RELATIVE_PART:
+        pargs: 2
+      HAS_PARENT_PATH:
+        pargs: 2
+      IS_ABSOLUTE:
+        pargs: 2
+      IS_RELATIVE:
+        pargs: 2
+      IS_PREFIX:
+        pargs: 3
+        flags:
+          - NORMALIZE
+      COMPARE:
+        pargs: 4
+      SET:
+        pargs: 2
+        flags:
+          - NORMALIZE
+      APPEND:
+        pargs: "+"
+        kwargs:
+          OUTPUT_VARIABLE:
+            nargs: 1
+      APPEND_STRING:
+        pargs: "+"
+        kwargs:
+          OUTPUT_VARIABLE:
+            nargs: 1
+      REMOVE_FILENAME:
+        pargs: 1
+        kwargs:
+          OUTPUT_VARIABLE:
+            nargs: 1
+      REPLACE_FILENAME:
+        pargs: 2
+        kwargs:
+          OUTPUT_VARIABLE:
+            nargs: 1
+      REMOVE_EXTENSION:
+        pargs: 1
+        flags:
+          - LAST_ONLY
+        kwargs:
+          OUTPUT_VARIABLE:
+            nargs: 1
+      REPLACE_EXTENSION:
+        pargs: 2
+        flags:
+          - LAST_ONLY
+        kwargs:
+          OUTPUT_VARIABLE:
+            nargs: 1
+      NORMAL_PATH:
+        pargs: 1
+        kwargs:
+          OUTPUT_VARIABLE:
+            nargs: 1
+      RELATIVE_PATH:
+        pargs: 1
+        kwargs:
+          BASE_DIRECTORY:
+            nargs: 1
+          OUTPUT_VARIABLE:
+            nargs: 1
+      ABSOLUTE_PATH:
+        pargs: 1
+        flags:
+          - NORMALIZE
+        kwargs:
+          BASE_DIRECTORY:
+            nargs: 1
+          OUTPUT_VARIABLE:
+            nargs: 1
+      NATIVE_PATH:
+        pargs: 2
+        flags:
+          - NORMALIZE
+      CONVERT:
+        pargs: 3
+        flags:
+          - NORMALIZE
+          - TO_CMAKE_PATH_LIST
+          - TO_NATIVE_PATH_LIST
+      HASH:
+        pargs: 2
   cmake_pkg_config:
     forms:
       EXTRACT:
@@ -2417,13 +2526,13 @@ commands:
             nargs: 1
           FILES:
             nargs: "+"
-      DEFAULT:
-        pargs: 1
-        kwargs:
-          FILES:
-            nargs: "+"
-          REGULAR_EXPRESSION:
-            nargs: 1
+    fallback:
+      pargs: 1
+      kwargs:
+        FILES:
+          nargs: "+"
+        REGULAR_EXPRESSION:
+          nargs: 1
   # Deprecated since CMake 3.0 — was a no-op even in early CMake.
   subdir_depends:
     pargs: "*"
