@@ -1,5 +1,6 @@
 ---
 title: Troubleshooting
+description: Diagnose common cmakefmt issues — file discovery, ignore rules, parse errors, and unexpected formatting.
 ---
 
 <!--

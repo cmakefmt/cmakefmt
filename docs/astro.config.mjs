@@ -54,6 +54,14 @@ export default defineConfig({
       head: [
         {
           tag: "meta",
+          attrs: { property: "og:type", content: "website" },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:site_name", content: "cmakefmt" },
+        },
+        {
+          tag: "meta",
           attrs: {
             property: "og:image",
             content: "https://cmakefmt.dev/logo.png",
@@ -64,13 +72,6 @@ export default defineConfig({
           attrs: {
             property: "og:image:alt",
             content: "cmakefmt logo",
-          },
-        },
-        {
-          tag: "meta",
-          attrs: {
-            name: "twitter:image",
-            content: "https://cmakefmt.dev/logo.png",
           },
         },
       ],

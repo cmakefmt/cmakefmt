@@ -1,5 +1,6 @@
 ---
 title: Coverage
+description: How cmakefmt's test coverage is measured, reported, and tracked across CI runs.
 ---
 
 <!--

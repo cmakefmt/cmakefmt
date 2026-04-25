@@ -1,5 +1,6 @@
 ---
 title: Installation
+description: Install cmakefmt via Homebrew, Cargo, or prebuilt binaries on macOS, Linux, and Windows.
 ---
 
 <!--

@@ -1,5 +1,6 @@
 ---
 title: Contributing
+description: Set up your environment, build cmakefmt from source, run the test suite, and submit changes.
 ---
 
 <!--

@@ -1,5 +1,6 @@
 ---
 title: Library API
+description: Embed cmakefmt in Rust code to parse, format, and inspect CMake files in-process — no subprocess required.
 ---
 
 <!--

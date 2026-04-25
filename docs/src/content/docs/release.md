@@ -1,5 +1,6 @@
 ---
 title: Release Channels
+description: How cmakefmt versions, ships, and publishes — release contract, official install channels, and what each release includes.
 ---
 
 <!--

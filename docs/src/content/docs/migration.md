@@ -1,5 +1,6 @@
 ---
 title: Migration from cmake-format
+description: Switch from cmake-format to cmakefmt with an incremental rollout, automatic config conversion, and side-by-side checks.
 ---
 
 <!--

@@ -1,5 +1,6 @@
 ---
 title: CLI Reference
+description: Complete reference for cmakefmt's command-line flags, subcommands, and input modes.
 ---
 
 <!--

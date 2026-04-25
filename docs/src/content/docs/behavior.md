@@ -1,5 +1,6 @@
 ---
 title: Formatter Behavior
+description: How cmakefmt makes formatting decisions — safety, idempotency, and what it preserves versus rewrites.
 ---
 
 <!--

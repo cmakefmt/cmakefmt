@@ -1,5 +1,6 @@
 ---
 title: Config Reference
+description: Every cmakefmt config option explained — YAML and TOML syntax, discovery order, and per-command overrides.
 ---
 
 <!--
