@@ -23,10 +23,10 @@ options, CLI output, and parse tree dumps.
 - **control flow** — Block-structured commands: `if`/`elseif`/`else`/`endif`, `foreach`/`endforeach`, `while`/`endwhile`, `function`/`endfunction`, `macro`/`endmacro`, `block`/`endblock`.
 - **discriminated command** — A command whose argument structure depends on a discriminator token (usually the first positional). `install(TARGETS ...)` and `install(FILES ...)` parse with completely different forms; the formatter inspects the first non-comment argument to pick the right one. Other examples: `file(...)`, `export(...)`, `string(JSON ...)`.
 - **flag** — A keyword-like token that takes no arguments. Example: `FORCE` in `set(VAR "val" CACHE STRING "desc" FORCE)`. Defined in the command spec.
-- **keyword (kwarg)** — A recognized token that introduces a section of arguments. Example: `PUBLIC` in `target_link_libraries(mylib PUBLIC dep1 dep2)`. Defined in the command spec.
-- **positional argument (parg)** — An argument identified by position, not by name. Example: `mylib` in `target_link_libraries(mylib PUBLIC dep1)`.
-- **subflag (nested flag)** — A flag that only counts as a flag inside a particular keyword's section. Example: `EXCLUDE` only acts as a flag inside an `install(DIRECTORY ... PATTERN <pat> EXCLUDE)` subgroup.
-- **subkwarg (nested keyword)** — A keyword that only takes effect inside another keyword's section. Example: in `install(TARGETS foo LIBRARY DESTINATION lib)`, `LIBRARY` is a top-level keyword and `DESTINATION` is its subkwarg. The command spec models nested keywords under the parent's `kwargs:` table.
+- **kwarg (keyword)** — A recognized token that introduces a section of arguments. Example: `PUBLIC` in `target_link_libraries(mylib PUBLIC dep1 dep2)`. Defined in the command spec under the `kwargs:` table.
+- **parg (positional argument)** — An argument identified by position, not by name. Example: `mylib` in `target_link_libraries(mylib PUBLIC dep1)`. The number of pargs a command or kwarg takes is set by the spec's `pargs:` field.
+- **subflag (nested flag)** — A flag that only counts as a flag inside a particular kwarg's section. Example: `EXCLUDE` only acts as a flag inside an `install(DIRECTORY ... PATTERN <pat> EXCLUDE)` subgroup.
+- **subkwarg (nested kwarg)** — A kwarg that only takes effect inside another kwarg's section. Example: in `install(TARGETS foo LIBRARY DESTINATION lib)`, `LIBRARY` is a top-level kwarg and `DESTINATION` is its subkwarg. The command spec models subkwargs under the parent's `kwargs:` table.
 - **template placeholder** — A `@VAR@`-style token in `.cmake.in` configure-file templates (e.g. `@PACKAGE_INIT@`). cmakefmt preserves these verbatim.
 
 ## Formatter Concepts
@@ -34,7 +34,7 @@ options, CLI output, and parse tree dumps.
 - **autosort** — A heuristic (`format.autosort`) that infers sortability for keyword sections without an explicit `sortable: true` marker. Sections whose arguments are all simple unquoted tokens (no variables, generator expressions, or quoted strings) get sorted lexicographically. Sections whose spec declares nested subkwargs or flags are always skipped to avoid scrambling structure.
 - **barrier / disabled region** — A `# cmakefmt: off` / `# cmakefmt: on` pair that prevents formatting of the enclosed block. Also accepted: `# cmake-format: off/on`, `# fmt: off/on`. The `# ~~~` fence form toggles a region as a matched pair.
 - **command spec** — A description of a command's argument structure — positional args, keywords, flags, and nested sections. Defined in `builtins.yaml` for built-in commands and in `commands:` in your config for custom commands.
-- **continuation_align** — A config option that controls how wrap lines indent inside a wrapped subkwarg group. `under-first-value` (default) aligns continuation under the first value column after the keyword (cmake-format hanging-indent style); `same-indent` wraps at the keyword's own indent.
+- **continuation_align** — A config option that controls how wrap lines indent inside a wrapped subkwarg group. `under-first-value` (default) aligns continuation under the first value column after the subkwarg (cmake-format hanging-indent style); `same-indent` wraps at the subkwarg's own indent.
 - **dangle parens** — When enabled (`format.dangle_parens`), the closing `)` of a wrapped command is placed on its own line.
 - **enable_markup** — Controls whether long comments are reflowed to fit within `line_width`. When `false`, comments are preserved as written.
 - **hanging indent** — The default `continuation_align` style: continuation values align under the column of the first value following a subkwarg, matching the layout shown in `cmake --help-command install`.
