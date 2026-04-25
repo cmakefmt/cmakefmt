@@ -8,6 +8,83 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- Structurally-correct command specs for ~60 previously-stubbed CMake
+  builtins. Each spec follows the canonical `cmake --help-command`
+  synopsis and gives the formatter keyword/flag awareness for layout
+  decisions (inline packing, vertical wrapping, autosort eligibility,
+  pair-aware rendering). Coverage spans:
+  - **Trivial commands**: `break`, `continue`, `enable_testing`,
+    `aux_source_directory`, `mark_as_advanced`, `add_compile_definitions`,
+    `add_compile_options`, `add_definitions`, `add_dependencies`,
+    `add_link_options`, `link_directories`, `link_libraries`,
+    `include_directories`, `include_regular_expression`, `site_name`,
+    `get_cmake_property`, `enable_language`.
+  - **Single-form commands with kwargs/flags**: `build_command`,
+    `define_property`, `set_directory_properties`, `set_tests_properties`,
+    `set_source_files_properties`, `target_compile_features`,
+    `variable_watch`, `fltk_wrap_ui`, `qt_wrap_cpp`, `qt_wrap_ui`,
+    `include_external_msproject`, `create_test_sourcelist`,
+    `separate_arguments`, `cmake_host_system_information`,
+    `cmake_file_api`, `get_target_property`, `get_test_property`,
+    `get_source_file_property`.
+  - **CTest family** (full kwarg coverage on every `ctest_*` builtin):
+    `ctest_build`, `ctest_configure`, `ctest_coverage`,
+    `ctest_empty_binary_directory`, `ctest_memcheck`,
+    `ctest_read_custom_files`, `ctest_run_script`, `ctest_sleep`,
+    `ctest_start`, `ctest_submit`, `ctest_test`, `ctest_update`,
+    `ctest_upload`.
+  - **Multi-form discriminated commands**: `add_test` (NAME-form vs
+    legacy positional fallback), `cmake_policy` (VERSION/SET/GET/PUSH/POP),
+    `source_group` (TREE-form vs default fallback), `cmake_path` (full
+    coverage of all 30+ subcommands: GET/HAS_*/IS_*/COMPARE/SET/APPEND/
+    APPEND_STRING/REMOVE_FILENAME/REPLACE_FILENAME/REMOVE_EXTENSION/
+    REPLACE_EXTENSION/NORMAL_PATH/RELATIVE_PATH/ABSOLUTE_PATH/
+    NATIVE_PATH/CONVERT/HASH).
+  - **Approximations of scope-discriminated commands**:
+    `get_directory_property`, `get_property`, `set_property`,
+    `get_filename_component`, `load_cache`, `try_compile`, `try_run`
+    — modelled as single-form with combined kwargs/flags rather than
+    full multi-scope discrimination, which is sufficient for current
+    layout decisions but may be promoted to true `forms:` later.
+
+### Fixed
+
+- Discriminated command fallback dispatch. `add_test` and `source_group`
+  previously declared their non-discriminator signatures under a
+  literally-named `DEFAULT` form, but `form_for()` looks up forms by
+  exact first-arg match. When the first arg wasn't `DEFAULT` the
+  lookup fell through to the first form in insertion order rather
+  than the intended catch-all. For
+  `source_group("Source Files" FILES … REGULAR_EXPRESSION …)` this
+  meant the TREE form was applied to a non-TREE call, so
+  `REGULAR_EXPRESSION` was not recognised as a kwarg and got
+  swallowed into the `FILES` value list. The catch-all now lives
+  under the sibling `fallback:` field, which `form_for()` consults
+  via `.or(fallback.as_ref())`. Both commands round-trip correctly.
+
+### Documentation
+
+- Annotated the 16 deprecated CMake commands that remain in
+  `builtins.yaml` as `pargs: "*"` stubs (e.g. `install_files`,
+  `install_programs`, `install_targets`, `subdirs`, `make_directory`,
+  `exec_program`, `output_required_files`, `remove`,
+  `use_mangled_mesa`, `utility_source`, `variable_requires`,
+  `write_file`, `load_command`, `export_library_dependencies`,
+  `subdir_depends`, `build_name`) with `# Deprecated since CMake X.Y`
+  YAML comments pointing at their modern replacements. The gap is
+  now explicit, not an oversight.
+
+### Internal
+
+- 12 new snapshot tests for the new specs, each using a narrow
+  `line_width` (40 or 50) to force wrapping and assert structural
+  separation: flags rendered on their own lines, kwargs as separate
+  keyword sections, multi-form fallback dispatch wired correctly.
+  Round-tripping inline-only would have masked the fallback bug
+  above.
+
 ## 1.2.0 — 2026-04-25
 
 ### Added
