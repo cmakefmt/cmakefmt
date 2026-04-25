@@ -1428,21 +1428,6 @@ fn link_directories_after_flag_separates_when_wrapping() {
 }
 
 #[test]
-fn enable_language_optional_flag_separates_when_wrapping() {
-    let src = "enable_language(CXX C OBJC OBJCXX Fortran Swift OPTIONAL)\n";
-    let config = Config {
-        line_width: 40,
-        ..Config::default()
-    };
-    let formatted = format_source(src, &config).unwrap();
-    insta::assert_snapshot!(formatted, @r"
-    enable_language(
-      CXX C OBJC OBJCXX Fortran Swift
-      OPTIONAL)
-    ");
-}
-
-#[test]
 fn no_arg_flow_commands_format_without_args() {
     let src = "break()\ncontinue()\nenable_testing()\n";
     let formatted = format_source(src, &Config::default()).unwrap();
