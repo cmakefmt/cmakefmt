@@ -1,8 +1,36 @@
 ---
-title: cmakefmt
-description: A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.
+title: A fast, correct CMake formatter
+description: Format CMakeLists.txt files automatically — Rust-powered, idempotent, drop-in replacement for cmake-format that runs 100×–2,800× faster.
 template: splash
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: |
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "cmakefmt",
+        "description": "A fast, correct CMake formatter built in Rust. Idempotent, safe, and drop-in compatible with cmake-format workflows.",
+        "url": "https://cmakefmt.dev/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Linux, macOS, Windows",
+        "softwareVersion": "1.2.0",
+        "license": "https://opensource.org/license/mit",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Puneet Matharu"
+        },
+        "codeRepository": "https://github.com/cmakefmt/cmakefmt",
+        "programmingLanguage": "Rust"
+      }
 hero:
+  title: cmakefmt
   tagline: >-
     Automatically format your CMake files — consistent style, zero manual effort.
     <br><span style="font-size: 0.9rem; font-style: italic; opacity: 0.7;"><code>cmake-format</code>, reimagined.</span>

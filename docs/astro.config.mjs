@@ -19,7 +19,13 @@ export default defineConfig({
     },
   },
   integrations: [
-    sitemap(),
+    sitemap({
+      // Apply build time as <lastmod> on every URL so crawlers know
+      // the snapshot's age. Pages that haven't changed structurally
+      // still get a fresh timestamp on each deploy — that's fine; it
+      // just nudges crawlers to revisit, which is what we want.
+      lastmod: new Date(),
+    }),
     starlight({
       expressiveCode: {
         themes: ["github-dark-default", "github-light-default"],
