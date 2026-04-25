@@ -1778,21 +1778,21 @@ commands:
   external_project_add:
     pargs: "1+"
   aux_source_directory:
-    pargs: "*"
+    pargs: 2
   add_compile_definitions:
-    pargs: "*"
+    pargs: "+"
   add_compile_options:
-    pargs: "*"
+    pargs: "+"
   add_definitions:
-    pargs: "*"
+    pargs: "+"
   add_dependencies:
-    pargs: "*"
+    pargs: "2+"
   add_link_options:
-    pargs: "*"
+    pargs: "+"
   add_test:
     pargs: "*"
   break:
-    pargs: "*"
+    pargs: 0
   build_command:
     pargs: "*"
   build_name:
@@ -1906,7 +1906,7 @@ commands:
   cmake_policy:
     pargs: "*"
   continue:
-    pargs: "*"
+    pargs: 0
   create_test_sourcelist:
     pargs: "*"
   ctest_build:
@@ -1938,9 +1938,11 @@ commands:
   define_property:
     pargs: "*"
   enable_language:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - OPTIONAL
   enable_testing:
-    pargs: "*"
+    pargs: 0
   exec_program:
     pargs: "*"
   export_library_dependencies:
@@ -1948,7 +1950,7 @@ commands:
   fltk_wrap_ui:
     pargs: "*"
   get_cmake_property:
-    pargs: "*"
+    pargs: 2
   get_directory_property:
     pargs: "*"
   get_filename_component:
@@ -1962,11 +1964,15 @@ commands:
   get_test_property:
     pargs: "*"
   include_directories:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - AFTER
+      - BEFORE
+      - SYSTEM
   include_external_msproject:
     pargs: "*"
   include_regular_expression:
-    pargs: "*"
+    pargs: "+"
   install_files:
     pargs: "*"
   install_programs:
@@ -1974,9 +1980,16 @@ commands:
   install_targets:
     pargs: "*"
   link_directories:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - AFTER
+      - BEFORE
   link_libraries:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - debug
+      - optimized
+      - general
   load_cache:
     pargs: "*"
   load_command:
@@ -1984,7 +1997,10 @@ commands:
   make_directory:
     pargs: "*"
   mark_as_advanced:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - CLEAR
+      - FORCE
   output_required_files:
     pargs: "*"
   qt_wrap_cpp:
@@ -2006,7 +2022,7 @@ commands:
   set_tests_properties:
     pargs: "*"
   site_name:
-    pargs: "*"
+    pargs: 1
   source_group:
     pargs: "*"
   subdir_depends:

@@ -1368,6 +1368,50 @@ fn fractional_tab_policy_round_up_promotes_to_tab() {
     );
 }
 
+// --- Phase 47g Tier 1 builtins (Pass 1 of CMake spec coverage) ---
+
+#[test]
+fn mark_as_advanced_recognizes_clear_and_force_flags() {
+    let src = "mark_as_advanced(FORCE FOO BAR BAZ)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @"mark_as_advanced(FORCE FOO BAR BAZ)");
+}
+
+#[test]
+fn include_directories_recognizes_position_and_system_flags() {
+    let src = "include_directories(BEFORE SYSTEM /usr/local/include /opt/include)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(
+        formatted,
+        @"include_directories(BEFORE SYSTEM /usr/local/include /opt/include)"
+    );
+}
+
+#[test]
+fn link_directories_recognizes_after_before_flags() {
+    let src = "link_directories(AFTER /usr/lib /opt/lib)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @"link_directories(AFTER /usr/lib /opt/lib)");
+}
+
+#[test]
+fn enable_language_recognizes_optional_flag() {
+    let src = "enable_language(CXX C OPTIONAL)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @"enable_language(CXX C OPTIONAL)");
+}
+
+#[test]
+fn no_arg_flow_commands_format_without_args() {
+    let src = "break()\ncontinue()\nenable_testing()\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    break()
+    continue()
+    enable_testing()
+    ");
+}
+
 // --- Existing tests ---
 
 #[test]
