@@ -133,9 +133,11 @@ This project follows a simple changelog discipline:
   and emits a MessagePack blob into `OUT_DIR`); the runtime decodes
   that blob via `rmp-serde` instead of parsing structured text on
   every invocation. Single-file wall time on the 656-line
-  mariadb_server fixture drops from 7.0 ms (v1.1.0) to 6.6 ms,
-  with empty-file startup down to 5.5 ms. The improvement holds
-  even though the install() restructure grew the spec ~4×.
+  mariadb_server fixture drops from 6.8 ms (v1.1.0) to 6.6 ms
+  under matched-methodology hyperfine measurements
+  (`--shell=none --style basic`, 100 warmups, 200 runs). The
+  improvement holds even though the install() restructure grew
+  the spec ~4×.
 
 ### Internal
 
