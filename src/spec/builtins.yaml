@@ -1790,17 +1790,60 @@ commands:
   add_link_options:
     pargs: "+"
   add_test:
-    pargs: "*"
+    forms:
+      NAME:
+        pargs: 0
+        flags:
+          - COMMAND_EXPAND_LISTS
+        kwargs:
+          NAME:
+            nargs: 1
+          COMMAND:
+            nargs: "+"
+          CONFIGURATIONS:
+            nargs: "+"
+          WORKING_DIRECTORY:
+            nargs: 1
+      DEFAULT:
+        pargs: "+"
   break:
     pargs: 0
   build_command:
-    pargs: "*"
+    pargs: 1
+    kwargs:
+      CONFIGURATION:
+        nargs: 1
+      PARALLEL_LEVEL:
+        nargs: 1
+      TARGET:
+        nargs: 1
+      PROJECT_NAME:
+        nargs: 1
+  # Deprecated since CMake 3.0 — use CMAKE_HOST_SYSTEM_PROCESSOR instead.
   build_name:
     pargs: "*"
   cmake_file_api:
-    pargs: "*"
+    forms:
+      QUERY:
+        pargs: 0
+        kwargs:
+          API_VERSION:
+            nargs: 1
+          CODEMODEL:
+            nargs: "+"
+          CACHE:
+            nargs: "+"
+          CMAKEFILES:
+            nargs: "+"
+          TOOLCHAINS:
+            nargs: "+"
   cmake_host_system_information:
-    pargs: "*"
+    pargs: 0
+    kwargs:
+      RESULT:
+        nargs: 1
+      QUERY:
+        nargs: "+"
   cmake_instrumentation:
     pargs: 0
     kwargs:
@@ -1904,65 +1947,340 @@ commands:
     fallback:
       pargs: "*"
   cmake_policy:
-    pargs: "*"
+    forms:
+      VERSION:
+        pargs: 1
+      SET:
+        pargs: 2
+      GET:
+        pargs: 2
+      PUSH:
+        pargs: 0
+      POP:
+        pargs: 0
   continue:
     pargs: 0
   create_test_sourcelist:
-    pargs: "*"
+    pargs: "+"
+    kwargs:
+      EXTRA_INCLUDE:
+        nargs: 1
+      FUNCTION:
+        nargs: 1
   ctest_build:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - APPEND
+    kwargs:
+      BUILD:
+        nargs: 1
+      CONFIGURATION:
+        nargs: 1
+      PARALLEL_LEVEL:
+        nargs: 1
+      FLAGS:
+        nargs: 1
+      PROJECT_NAME:
+        nargs: 1
+      TARGET:
+        nargs: 1
+      NUMBER_ERRORS:
+        nargs: 1
+      NUMBER_WARNINGS:
+        nargs: 1
+      RETURN_VALUE:
+        nargs: 1
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
   ctest_configure:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - APPEND
+      - QUIET
+    kwargs:
+      BUILD:
+        nargs: 1
+      SOURCE:
+        nargs: 1
+      OPTIONS:
+        nargs: 1
+      RETURN_VALUE:
+        nargs: 1
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
   ctest_coverage:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - APPEND
+      - QUIET
+    kwargs:
+      BUILD:
+        nargs: 1
+      LABELS:
+        nargs: "+"
+      RETURN_VALUE:
+        nargs: 1
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
   ctest_empty_binary_directory:
-    pargs: "*"
+    pargs: 1
   ctest_memcheck:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - APPEND
+      - QUIET
+    kwargs:
+      BUILD:
+        nargs: 1
+      START:
+        nargs: 1
+      END:
+        nargs: 1
+      STRIDE:
+        nargs: 1
+      EXCLUDE:
+        nargs: 1
+      INCLUDE:
+        nargs: 1
+      EXCLUDE_LABEL:
+        nargs: 1
+      INCLUDE_LABEL:
+        nargs: 1
+      EXCLUDE_FIXTURE:
+        nargs: 1
+      EXCLUDE_FIXTURE_SETUP:
+        nargs: 1
+      EXCLUDE_FIXTURE_CLEANUP:
+        nargs: 1
+      PARALLEL_LEVEL:
+        nargs: 1
+      RESOURCE_SPEC_FILE:
+        nargs: 1
+      TEST_LOAD:
+        nargs: 1
+      SCHEDULE_RANDOM:
+        nargs: 1
+      RETURN_VALUE:
+        nargs: 1
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
   ctest_read_custom_files:
-    pargs: "*"
+    pargs: "+"
   ctest_run_script:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - NEW_PROCESS
+    kwargs:
+      RETURN_VALUE:
+        nargs: 1
   ctest_sleep:
-    pargs: "*"
+    pargs: "+"
   ctest_start:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - APPEND
+      - QUIET
+    kwargs:
+      GROUP:
+        nargs: 1
   ctest_submit:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - QUIET
+    kwargs:
+      PARTS:
+        nargs: "+"
+      FILES:
+        nargs: "+"
+      SUBMIT_URL:
+        nargs: 1
+      BUILD_ID:
+        nargs: 1
+      HTTPHEADER:
+        nargs: 1
+      RETRY_COUNT:
+        nargs: 1
+      RETRY_DELAY:
+        nargs: 1
+      RETURN_VALUE:
+        nargs: 1
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
   ctest_test:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - APPEND
+      - STOP_ON_FAILURE
+      - QUIET
+    kwargs:
+      BUILD:
+        nargs: 1
+      START:
+        nargs: 1
+      END:
+        nargs: 1
+      STRIDE:
+        nargs: 1
+      EXCLUDE:
+        nargs: 1
+      INCLUDE:
+        nargs: 1
+      EXCLUDE_LABEL:
+        nargs: 1
+      INCLUDE_LABEL:
+        nargs: 1
+      EXCLUDE_FROM_FILE:
+        nargs: 1
+      INCLUDE_FROM_FILE:
+        nargs: 1
+      EXCLUDE_FIXTURE:
+        nargs: 1
+      EXCLUDE_FIXTURE_SETUP:
+        nargs: 1
+      EXCLUDE_FIXTURE_CLEANUP:
+        nargs: 1
+      PARALLEL_LEVEL:
+        nargs: "?"
+      RESOURCE_SPEC_FILE:
+        nargs: 1
+      TEST_LOAD:
+        nargs: 1
+      SCHEDULE_RANDOM:
+        nargs: 1
+      STOP_TIME:
+        nargs: 1
+      RETURN_VALUE:
+        nargs: 1
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
+      REPEAT:
+        nargs: 1
+      OUTPUT_JUNIT:
+        nargs: 1
   ctest_update:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - QUIET
+    kwargs:
+      SOURCE:
+        nargs: 1
+      RETURN_VALUE:
+        nargs: 1
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
   ctest_upload:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - QUIET
+    kwargs:
+      FILES:
+        nargs: "+"
+      CAPTURE_CMAKE_ERROR:
+        nargs: 1
   define_property:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - GLOBAL
+      - DIRECTORY
+      - TARGET
+      - SOURCE
+      - TEST
+      - VARIABLE
+      - CACHED_VARIABLE
+      - INHERITED
+    kwargs:
+      PROPERTY:
+        nargs: 1
+      BRIEF_DOCS:
+        nargs: "+"
+      FULL_DOCS:
+        nargs: "+"
+      INITIALIZE_FROM_VARIABLE:
+        nargs: 1
   enable_language:
     pargs: "+"
     flags:
       - OPTIONAL
   enable_testing:
     pargs: 0
+  # Deprecated since CMake 3.0 — use execute_process() instead.
   exec_program:
     pargs: "*"
+  # Deprecated since CMake 3.0 — use INTERFACE_LINK_LIBRARIES instead.
   export_library_dependencies:
     pargs: "*"
   fltk_wrap_ui:
-    pargs: "*"
+    pargs: "+"
   get_cmake_property:
     pargs: 2
   get_directory_property:
-    pargs: "*"
+    pargs: "+"
+    kwargs:
+      DIRECTORY:
+        nargs: 1
+      DEFINITION:
+        nargs: 1
   get_filename_component:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - DIRECTORY
+      - NAME
+      - EXT
+      - NAME_WE
+      - LAST_EXT
+      - NAME_WLE
+      - PATH
+      - ABSOLUTE
+      - REALPATH
+      - PROGRAM
+      - CACHE
+    kwargs:
+      BASE_DIR:
+        nargs: 1
+      PROGRAM_ARGS:
+        nargs: 1
   get_property:
-    pargs: "*"
+    pargs: 1
+    flags:
+      - GLOBAL
+      - VARIABLE
+      - SET
+      - DEFINED
+      - BRIEF_DOCS
+      - FULL_DOCS
+    kwargs:
+      DIRECTORY:
+        nargs: "?"
+      TARGET:
+        nargs: 1
+      FILE_SET:
+        nargs: 1
+      SOURCE:
+        nargs: 1
+      INSTALL:
+        nargs: 1
+      TEST:
+        nargs: 1
+      CACHE:
+        nargs: 1
+      PROPERTY:
+        nargs: 1
+      TARGET_DIRECTORY:
+        nargs: 1
   get_source_file_property:
-    pargs: "*"
+    pargs: "+"
+    kwargs:
+      DIRECTORY:
+        nargs: 1
+      TARGET_DIRECTORY:
+        nargs: 1
   get_target_property:
-    pargs: "*"
+    pargs: 3
   get_test_property:
-    pargs: "*"
+    pargs: "+"
+    kwargs:
+      DIRECTORY:
+        nargs: 1
   include_directories:
     pargs: "+"
     flags:
@@ -1970,13 +2288,23 @@ commands:
       - BEFORE
       - SYSTEM
   include_external_msproject:
-    pargs: "*"
+    pargs: "+"
+    kwargs:
+      TYPE:
+        nargs: 1
+      GUID:
+        nargs: 1
+      PLATFORM:
+        nargs: 1
   include_regular_expression:
     pargs: "+"
+  # Deprecated since CMake 3.0 — use install(FILES) instead.
   install_files:
     pargs: "*"
+  # Deprecated since CMake 3.0 — use install(PROGRAMS) instead.
   install_programs:
     pargs: "*"
+  # Deprecated since CMake 3.0 — use install(TARGETS) instead.
   install_targets:
     pargs: "*"
   link_directories:
@@ -1991,9 +2319,19 @@ commands:
       - optimized
       - general
   load_cache:
-    pargs: "*"
+    pargs: 1
+    kwargs:
+      READ_WITH_PREFIX:
+        nargs: "+"
+      EXCLUDE:
+        nargs: "+"
+      INCLUDE_INTERNALS:
+        nargs: "+"
+  # Deprecated since CMake 3.17 — was used to load custom command modules
+  # via dynamic linking; no longer supported.
   load_command:
     pargs: "*"
+  # Deprecated since CMake 3.0 — use file(MAKE_DIRECTORY) instead.
   make_directory:
     pargs: "*"
   mark_as_advanced:
@@ -2001,47 +2339,212 @@ commands:
     flags:
       - CLEAR
       - FORCE
+  # Deprecated since CMake 3.0 — was a heuristic dependency-tracker for
+  # makefile generators; superseded by built-in dependency scanning.
   output_required_files:
     pargs: "*"
   qt_wrap_cpp:
-    pargs: "*"
+    pargs: "+"
   qt_wrap_ui:
-    pargs: "*"
+    pargs: "+"
+  # Deprecated since CMake 3.0 — use list(REMOVE_ITEM) instead.
   remove:
     pargs: "*"
   remove_definitions:
     pargs: "*"
   separate_arguments:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - PROGRAM
+      - SEPARATE_ARGS
+      - UNIX_COMMAND
+      - WINDOWS_COMMAND
+      - NATIVE_COMMAND
   set_directory_properties:
-    pargs: "*"
+    pargs: 0
+    kwargs:
+      PROPERTIES:
+        nargs: "+"
   set_property:
-    pargs: "*"
+    pargs: 0
+    flags:
+      - GLOBAL
+      - APPEND
+      - APPEND_STRING
+    kwargs:
+      DIRECTORY:
+        nargs: "*"
+      TARGET:
+        nargs: "+"
+      FILE_SET:
+        nargs: "+"
+      SOURCE:
+        nargs: "+"
+      INSTALL:
+        nargs: "+"
+      TEST:
+        nargs: "+"
+      CACHE:
+        nargs: "+"
+      TARGET_DIRECTORY:
+        nargs: "+"
+      PROPERTY:
+        nargs: "+"
   set_source_files_properties:
-    pargs: "*"
+    pargs: "+"
+    kwargs:
+      DIRECTORY:
+        nargs: "+"
+      TARGET_DIRECTORY:
+        nargs: "+"
+      PROPERTIES:
+        nargs: "+"
   set_tests_properties:
-    pargs: "*"
+    pargs: "+"
+    kwargs:
+      DIRECTORY:
+        nargs: 1
+      PROPERTIES:
+        nargs: "+"
   site_name:
     pargs: 1
   source_group:
-    pargs: "*"
+    forms:
+      TREE:
+        pargs: 1
+        kwargs:
+          PREFIX:
+            nargs: 1
+          FILES:
+            nargs: "+"
+      DEFAULT:
+        pargs: 1
+        kwargs:
+          FILES:
+            nargs: "+"
+          REGULAR_EXPRESSION:
+            nargs: 1
+  # Deprecated since CMake 3.0 — was a no-op even in early CMake.
   subdir_depends:
     pargs: "*"
+  # Deprecated since CMake 3.0 — use add_subdirectory() instead.
   subdirs:
     pargs: "*"
   target_compile_features:
-    pargs: "*"
+    pargs: 1
+    kwargs:
+      INTERFACE:
+        nargs: "*"
+      PUBLIC:
+        nargs: "*"
+      PRIVATE:
+        nargs: "*"
   try_compile:
-    pargs: "*"
+    pargs: "+"
+    flags:
+      - NO_CACHE
+      - NO_LOG
+    kwargs:
+      PROJECT:
+        nargs: 1
+      SOURCE_DIR:
+        nargs: 1
+      BINARY_DIR:
+        nargs: 1
+      TARGET:
+        nargs: 1
+      LOG_DESCRIPTION:
+        nargs: 1
+      CMAKE_FLAGS:
+        nargs: "+"
+      OUTPUT_VARIABLE:
+        nargs: 1
+      SOURCES:
+        nargs: "+"
+      SOURCES_TYPE:
+        nargs: 1
+      SOURCE_FROM_CONTENT:
+        nargs: 2
+      SOURCE_FROM_VAR:
+        nargs: 2
+      SOURCE_FROM_FILE:
+        nargs: 2
+      COMPILE_DEFINITIONS:
+        nargs: "+"
+      LINK_OPTIONS:
+        nargs: "+"
+      LINK_LIBRARIES:
+        nargs: "+"
+      COPY_FILE:
+        nargs: 1
+      COPY_FILE_ERROR:
+        nargs: 1
+      C_STANDARD:
+        nargs: 1
+      C_STANDARD_REQUIRED:
+        nargs: 1
+      C_EXTENSIONS:
+        nargs: 1
+      CXX_STANDARD:
+        nargs: 1
+      CXX_STANDARD_REQUIRED:
+        nargs: 1
+      CXX_EXTENSIONS:
+        nargs: 1
   try_run:
-    pargs: "*"
+    pargs: 2
+    flags:
+      - NO_CACHE
+      - NO_LOG
+    kwargs:
+      SOURCES:
+        nargs: "+"
+      SOURCES_TYPE:
+        nargs: 1
+      SOURCE_FROM_CONTENT:
+        nargs: 2
+      SOURCE_FROM_VAR:
+        nargs: 2
+      SOURCE_FROM_FILE:
+        nargs: 2
+      LOG_DESCRIPTION:
+        nargs: 1
+      CMAKE_FLAGS:
+        nargs: "+"
+      COMPILE_DEFINITIONS:
+        nargs: "+"
+      LINK_OPTIONS:
+        nargs: "+"
+      LINK_LIBRARIES:
+        nargs: "+"
+      COMPILE_OUTPUT_VARIABLE:
+        nargs: 1
+      COPY_FILE:
+        nargs: 1
+      COPY_FILE_ERROR:
+        nargs: 1
+      RUN_OUTPUT_VARIABLE:
+        nargs: 1
+      RUN_OUTPUT_STDOUT_VARIABLE:
+        nargs: 1
+      RUN_OUTPUT_STDERR_VARIABLE:
+        nargs: 1
+      WORKING_DIRECTORY:
+        nargs: 1
+      ARGS:
+        nargs: "+"
+  # Deprecated since CMake 3.0 — Mesa name-mangling is no longer relevant.
   use_mangled_mesa:
     pargs: "*"
+  # Deprecated since CMake 3.0 — superseded by add_custom_command() and
+  # CMAKE_<lang>_COMPILER_LAUNCHER for cross-compilation tooling.
   utility_source:
     pargs: "*"
+  # Deprecated since CMake 3.0 — use if() with comparison operators instead.
   variable_requires:
     pargs: "*"
   variable_watch:
-    pargs: "*"
+    pargs: "+"
+  # Deprecated since CMake 3.0 — use file(WRITE) or file(APPEND) instead.
   write_file:
     pargs: "*"
