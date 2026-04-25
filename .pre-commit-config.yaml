@@ -28,7 +28,10 @@ repos:
     rev: v6.2.0
     hooks:
       - id: reuse
-        exclude: ^(\.pre-commit-cache/|benches/repos/)
+        # benches/cmakefmt-* is for locally-extracted prior-release binaries
+        # used for ad-hoc perf comparison (see benches/version-trend-datapoint.sh).
+        # They are not part of the repo and never tracked.
+        exclude: ^(\.pre-commit-cache/|benches/repos/|benches/cmakefmt-[^/]+/)
 
   - repo: local
     hooks:

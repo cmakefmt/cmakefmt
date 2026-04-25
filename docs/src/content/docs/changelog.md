@@ -126,15 +126,26 @@ This project follows a simple changelog discipline:
   examples on `CommandRegistry::merge_toml_overrides` /
   `merge_yaml_overrides`.
 
+### Performance
+
+- Faster startup. The embedded built-in command spec is now
+  pre-deserialised at build time (`build.rs` reads the YAML source
+  and emits a MessagePack blob into `OUT_DIR`); the runtime decodes
+  that blob via `rmp-serde` instead of parsing structured text on
+  every invocation. Single-file wall time on the 656-line
+  mariadb_server fixture drops from 7.0 ms (v1.1.0) to 6.6 ms,
+  with empty-file startup down to 5.5 ms. The improvement holds
+  even though the install() restructure grew the spec ~4×.
+
 ### Internal
 
 - Migrated the embedded built-in command spec from
-  `src/spec/builtins.toml` to `src/spec/builtins.yaml`. The file
-  shrank from 2433 to 2030 lines and the deeply-nested install
-  form hierarchy is now legible at a glance. User config and spec
-  override files still accept both TOML and YAML; only the
-  embedded baseline format changed. Parse errors on the embedded
-  spec now surface with YAML-native line/column metadata.
+  `src/spec/builtins.toml` to `src/spec/builtins.yaml` for
+  human-edit ergonomics, then pre-deserialises the YAML at build
+  time (see Performance, above). The runtime no longer parses
+  text at all; it decodes a MessagePack blob produced once during
+  `cargo build`. User config and spec override files still accept
+  both TOML and YAML — only the embedded baseline path changed.
 
 ## 1.1.0 — 2026-04-22
 

@@ -24,7 +24,10 @@ use super::{
 };
 
 const BUILTINS_PATH: &str = "src/spec/builtins.yaml";
-const BUILTINS_YAML: &str = include_str!("builtins.yaml");
+/// MessagePack blob produced by `build.rs` from the YAML source. Loading
+/// this is roughly 20× faster than parsing the YAML at runtime; the
+/// human-readable spec source is still `src/spec/builtins.yaml`.
+const BUILTINS_MSGPACK: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/builtins.msgpack"));
 
 /// Registry of known CMake command specifications used to guide formatting.
 ///
@@ -330,15 +333,14 @@ fn has_ascii_uppercase(s: &str) -> bool {
 }
 
 fn parse_builtins() -> Result<SpecFile> {
-    let mut spec: SpecFile = serde_yaml::from_str(BUILTINS_YAML).map_err(|source| {
-        let location = source.location();
+    let mut spec: SpecFile = rmp_serde::from_slice(BUILTINS_MSGPACK).map_err(|source| {
         Error::Spec(crate::error::SpecError {
             path: PathBuf::from(BUILTINS_PATH),
             details: crate::error::FileParseError {
-                format: "YAML",
+                format: "MessagePack",
                 message: source.to_string().into_boxed_str(),
-                line: location.as_ref().map(|loc| loc.line()),
-                column: location.as_ref().map(|loc| loc.column()),
+                line: None,
+                column: None,
             },
         })
     })?;

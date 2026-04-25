@@ -121,7 +121,7 @@ impl<'de> Deserialize<'de> for NArgs {
 // ── Fully specified command model ────────────────────────────────────────────
 
 /// Per-command-form layout hints that override global [`crate::Config`] values.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutOverrides {
     /// Override line width for this command form.
@@ -144,7 +144,7 @@ pub struct LayoutOverrides {
 }
 
 /// Specification for a keyword section and any nested sub-keywords it accepts.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct KwargSpec {
     /// Number of positional arguments accepted after the keyword itself.
@@ -163,7 +163,7 @@ pub struct KwargSpec {
 }
 
 /// One fully resolved command form.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CommandForm {
     /// Number of positional arguments before keyword/flag processing starts.
@@ -194,7 +194,7 @@ impl Default for CommandForm {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum CommandSpec {
     /// A command whose structure depends on a discriminator token,
@@ -248,7 +248,7 @@ fn has_ascii_lowercase(s: &str) -> bool {
     s.bytes().any(|byte| byte.is_ascii_lowercase())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
 pub(crate) struct SpecMetadata {
     /// Upstream CMake version the built-in spec was last audited against.
     #[serde(default)]
@@ -262,7 +262,7 @@ pub(crate) struct SpecMetadata {
 }
 
 /// Top-level spec file containing metadata plus command entries.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub(crate) struct SpecFile {
     /// Version and audit metadata for the built-in spec surface.
     #[serde(default)]

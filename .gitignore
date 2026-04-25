@@ -1,5 +1,8 @@
 /target
 /docs/dist
+# Locally-extracted prior-release binaries used for ad-hoc perf comparison
+# (e.g. benches/cmakefmt-1.1.0-aarch64-apple-darwin/). Not part of the repo.
+/benches/cmakefmt-*-*-*-*/
 /docs/.astro
 /docs/node_modules
 .cmakefmt-cache/
