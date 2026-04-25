@@ -17,6 +17,14 @@
 #
 # Usage:
 #   ./benches/run-all-benchmarks.sh
+#   SKIP_CMAKE_FORMAT=1 ./benches/run-all-benchmarks.sh
+#
+# Environment:
+#   SKIP_CMAKE_FORMAT  When set to 1, skip every `cmake-format` invocation
+#                      in phases 1 and 2. The summary table omits the
+#                      cmake-format column. Useful when iterating on
+#                      cmakefmt and the prior cmake-format numbers are
+#                      already trusted.
 #
 # Output:
 #   benches/results/per-file/*.json
@@ -35,10 +43,15 @@ WR_DIR="$SCRIPT_DIR/results/whole-repo"
 PARA_DIR="$SCRIPT_DIR/results/parallelism"
 FL_DIR="$WR_DIR/filelists"
 SUMMARY="$SCRIPT_DIR/results/summary.md"
+SKIP_CMAKE_FORMAT="${SKIP_CMAKE_FORMAT:-0}"
 
 # ── Preflight checks ────────────────────────────────────────────────────
 
-for cmd in "$CMAKEFMT" cmake-format hyperfine python3; do
+required=("$CMAKEFMT" hyperfine python3)
+if [[ "$SKIP_CMAKE_FORMAT" != "1" ]]; then
+  required+=(cmake-format)
+fi
+for cmd in "${required[@]}"; do
   if ! command -v "$cmd" &>/dev/null && [[ ! -x "$cmd" ]]; then
     echo "error: $cmd not found"
     exit 1
@@ -51,7 +64,11 @@ rm -rf "$PF_DIR" "$WR_DIR" "$PARA_DIR"
 mkdir -p "$PF_DIR" "$WR_DIR" "$FL_DIR" "$PARA_DIR"
 
 echo "cmakefmt:     $($CMAKEFMT --version 2>&1 | head -1)"
-echo "cmake-format: $(cmake-format --version 2>&1 | head -1)"
+if [[ "$SKIP_CMAKE_FORMAT" == "1" ]]; then
+  echo "cmake-format: skipped (SKIP_CMAKE_FORMAT=1)"
+else
+  echo "cmake-format: $(cmake-format --version 2>&1 | head -1)"
+fi
 echo "hyperfine:    $(hyperfine --version 2>&1)"
 echo ""
 
@@ -88,13 +105,16 @@ for entry in "${PF_FILES[@]}"; do
   lines=$(wc -l < "$filepath" | tr -d ' ')
   echo "  $name ($lines lines, $warmup warmup, $runs runs)..."
 
-  hyperfine \
-    --warmup "$warmup" \
-    --runs "$runs" \
-    --export-json "$PF_DIR/$name.json" \
-    --command-name "cmakefmt" "$CMAKEFMT $filepath" \
-    --command-name "cmake-format" "cmake-format $filepath" \
-    --ignore-failure
+  pf_args=(
+    --warmup "$warmup"
+    --runs "$runs"
+    --export-json "$PF_DIR/$name.json"
+    --command-name "cmakefmt" "$CMAKEFMT $filepath"
+  )
+  if [[ "$SKIP_CMAKE_FORMAT" != "1" ]]; then
+    pf_args+=(--command-name "cmake-format" "cmake-format $filepath")
+  fi
+  hyperfine "${pf_args[@]}" --ignore-failure
 
   echo ""
 done
@@ -125,14 +145,17 @@ for name in "${REPOS[@]}"; do
 
   echo "  $name ($count files)..."
 
-  hyperfine \
-    --warmup 3 \
-    --runs 10 \
-    --export-json "$WR_DIR/$name.json" \
-    --command-name "cmakefmt-parallel" "$CMAKEFMT --check $repo" \
-    --command-name "cmakefmt-serial" "$CMAKEFMT --check --parallel 1 $repo" \
-    --command-name "cmake-format" "xargs cmake-format --check < $filelist" \
-    --ignore-failure
+  wr_args=(
+    --warmup 3
+    --runs 10
+    --export-json "$WR_DIR/$name.json"
+    --command-name "cmakefmt-parallel" "$CMAKEFMT --check $repo"
+    --command-name "cmakefmt-serial" "$CMAKEFMT --check --parallel 1 $repo"
+  )
+  if [[ "$SKIP_CMAKE_FORMAT" != "1" ]]; then
+    wr_args+=(--command-name "cmake-format" "xargs cmake-format --check < $filelist")
+  fi
+  hyperfine "${wr_args[@]}" --ignore-failure
 
   echo ""
 done
@@ -233,10 +256,9 @@ labels = {
 out = []
 out.append("# Benchmark Results\n")
 out.append("## Per-File Benchmarks\n")
-out.append("| Project | Lines | `cmakefmt` (ms) | `cmake-format` (ms) | Speedup |")
-out.append("|---|---:|---:|---:|---:|")
 
 pf_rows = []
+pf_has_cf = False
 for fname in sorted(os.listdir(pf_dir)):
     if not fname.endswith(".json"):
         continue
@@ -245,35 +267,52 @@ for fname in sorted(os.listdir(pf_dir)):
     if os.path.getsize(fpath) == 0:
         continue
     data = json.load(open(fpath))
-    results = data["results"]
-    if len(results) < 2:
+    by_name = {r["command"]: r["mean"] * 1000 for r in data["results"]}
+    cmf = by_name.get("cmakefmt")
+    if cmf is None:
         continue
+    cf = by_name.get("cmake-format")
+    if cf is not None:
+        pf_has_cf = True
 
     path = file_paths.get(name, "")
     lines = sum(1 for _ in open(path)) if path and os.path.exists(path) else 0
-    cmf = results[0]["mean"] * 1000
-    cf = results[1]["mean"] * 1000
-    speedup = cf / cmf
     label = labels.get(name, name)
-    pf_rows.append((lines, label, cmf, cf, speedup))
+    pf_rows.append((lines, label, cmf, cf))
 
 pf_rows.sort()
+
+if pf_has_cf:
+    out.append("| Project | Lines | `cmakefmt` (ms) | `cmake-format` (ms) | Speedup |")
+    out.append("|---|---:|---:|---:|---:|")
+else:
+    out.append("| Project | Lines | `cmakefmt` (ms) |")
+    out.append("|---|---:|---:|")
+
 pf_speedups = []
-for lines, label, cmf, cf, sp in pf_rows:
-    out.append(f"| {label} | {lines:,} | {cmf:.1f} | {cf:.1f} | {sp:.1f}x |")
-    pf_speedups.append(sp)
+for lines, label, cmf, cf in pf_rows:
+    if pf_has_cf:
+        if cf is None:
+            out.append(f"| {label} | {lines:,} | {cmf:.1f} | — | — |")
+        else:
+            sp = cf / cmf
+            pf_speedups.append(sp)
+            out.append(f"| {label} | {lines:,} | {cmf:.1f} | {cf:.1f} | {sp:.1f}x |")
+    else:
+        out.append(f"| {label} | {lines:,} | {cmf:.1f} |")
 
 if pf_speedups:
     geo = math.exp(sum(math.log(s) for s in pf_speedups) / len(pf_speedups))
     out.append(f"\n**Geometric-mean speedup: {geo:.1f}x**\n")
+else:
+    out.append("")
 
 # ── Whole-repo ──────────────────────────────────────────────────────────
 
 out.append("## Whole-Repository Benchmarks\n")
-out.append("| Repository | Files | `cmakefmt` (parallel) | `cmakefmt` (serial) | `cmake-format` | Speedup (serial) | Speedup (parallel) |")
-out.append("|---|---:|---:|---:|---:|---:|---:|")
 
 wr_rows = []
+wr_has_cf = False
 for fname in sorted(os.listdir(wr_dir)):
     if not fname.endswith(".json"):
         continue
@@ -282,33 +321,51 @@ for fname in sorted(os.listdir(wr_dir)):
     if os.path.getsize(fpath) == 0:
         continue
     data = json.load(open(fpath))
-    results = data["results"]
-    if len(results) < 3:
+    by_name = {r["command"]: r["mean"] * 1000 for r in data["results"]}
+    par = by_name.get("cmakefmt-parallel")
+    ser = by_name.get("cmakefmt-serial")
+    if par is None or ser is None:
         continue
+    cf = by_name.get("cmake-format")
+    if cf is not None:
+        wr_has_cf = True
 
     fl_path = os.path.join(wr_dir, "filelists", f"{name}.txt")
     files = sum(1 for _ in open(fl_path)) if os.path.exists(fl_path) else 0
 
-    par = results[0]["mean"] * 1000
-    ser = results[1]["mean"] * 1000
-    cf = results[2]["mean"] * 1000
-    sp_ser = cf / ser
-    sp_par = cf / par
-    wr_rows.append((files, name, par, ser, cf, sp_ser, sp_par))
+    wr_rows.append((files, name, par, ser, cf))
 
 wr_rows.sort(key=lambda r: r[0])
+
+if wr_has_cf:
+    out.append("| Repository | Files | `cmakefmt` (parallel) | `cmakefmt` (serial) | `cmake-format` | Speedup (serial) | Speedup (parallel) |")
+    out.append("|---|---:|---:|---:|---:|---:|---:|")
+else:
+    out.append("| Repository | Files | `cmakefmt` (parallel) | `cmakefmt` (serial) |")
+    out.append("|---|---:|---:|---:|")
+
 wr_sp_ser = []
 wr_sp_par = []
-for files, name, par, ser, cf, sp_s, sp_p in wr_rows:
-    out.append(f"| {name} | {files:,} | {par:.0f}ms | {ser:.0f}ms | {cf:.0f}ms | {sp_s:.1f}x | {sp_p:.1f}x |")
-    wr_sp_ser.append(sp_s)
-    wr_sp_par.append(sp_p)
+for files, name, par, ser, cf in wr_rows:
+    if wr_has_cf:
+        if cf is None:
+            out.append(f"| {name} | {files:,} | {par:.0f}ms | {ser:.0f}ms | — | — | — |")
+        else:
+            sp_s = cf / ser
+            sp_p = cf / par
+            wr_sp_ser.append(sp_s)
+            wr_sp_par.append(sp_p)
+            out.append(f"| {name} | {files:,} | {par:.0f}ms | {ser:.0f}ms | {cf:.0f}ms | {sp_s:.1f}x | {sp_p:.1f}x |")
+    else:
+        out.append(f"| {name} | {files:,} | {par:.0f}ms | {ser:.0f}ms |")
 
 if wr_sp_ser:
     geo_s = math.exp(sum(math.log(s) for s in wr_sp_ser) / len(wr_sp_ser))
     geo_p = math.exp(sum(math.log(s) for s in wr_sp_par) / len(wr_sp_par))
     out.append(f"\n**Geometric-mean speedup (serial): {geo_s:.1f}x**")
     out.append(f"**Geometric-mean speedup (parallel): {geo_p:.1f}x**\n")
+else:
+    out.append("")
 
 # ── Parallel scaling ────────────────────────────────────────────────────
 
