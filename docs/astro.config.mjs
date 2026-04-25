@@ -58,6 +58,31 @@ export default defineConfig({
         },
       ],
       head: [
+        // Modern favicon link alongside Starlight's built-in
+        // `<link rel="shortcut icon">` (which is the legacy form).
+        // Helps browsers like Safari refetch when the icon changes.
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            type: "image/png",
+            sizes: "32x32",
+            href: "/favicon.png",
+          },
+        },
+        // Apple touch icon for iOS Safari "Add to Home Screen" and
+        // macOS Safari Reading List previews. Without this, Safari
+        // probes for /apple-touch-icon.png and falls back to a
+        // generic if the probe 404s, which can leak through as a
+        // mismatched icon.
+        {
+          tag: "link",
+          attrs: {
+            rel: "apple-touch-icon",
+            sizes: "180x180",
+            href: "/apple-touch-icon.png",
+          },
+        },
         {
           tag: "meta",
           attrs: { property: "og:type", content: "website" },
