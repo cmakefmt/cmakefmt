@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.2.0 — 2026-04-25
+
 ### Added
 
 - `continuation_align` config knob — controls how continuation lines

@@ -176,7 +176,7 @@ cmakefmt --path-regex 'src/.*' .   # format CMake files only under src/
 | Machine-readable CI output                  | `cmakefmt --check --report-format json .`        |
 | GitHub Actions annotations                  | `cmakefmt --check --report-format github .`      |
 | Checkstyle / JUnit / SARIF output           | `cmakefmt --check --report-format checkstyle .`  |
-| Pin the required binary version in CI       | `cmakefmt --required-version 1.1.0 --check .`    |
+| Pin the required binary version in CI       | `cmakefmt --required-version 1.2.0 --check .`    |
 | Speed up repeated large-repo checks         | `cmakefmt --cache --check .`                     |
 | Roll out formatting file-by-file            | `cmakefmt --require-pragma --check .`            |
 | Find project-specific commands              | `cmakefmt --list-unknown-commands .`             |
