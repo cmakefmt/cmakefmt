@@ -85,6 +85,19 @@ This project follows a simple changelog discipline:
   Round-tripping inline-only would have masked the fallback bug
   above.
 
+### Performance
+
+- Single-file wall time on the 656-line `mariadb_server` fixture
+  drops from 6.6 ms (v1.2.0) to 6.0 ms — a 9% improvement despite
+  the spec growing significantly with the Phase 47g coverage
+  additions. Build-time MessagePack pre-deserialisation
+  (introduced in v1.2.0) absorbs the larger spec at zero runtime
+  cost; the speedup comes from incidental optimisations in the
+  splitter and layout paths exercised by the new structural
+  awareness. Methodology unchanged from v1.2.0:
+  `hyperfine --shell=none --style basic --warmup 100 --runs 200`.
+  Release binary size unchanged at 4.7 MB.
+
 ## 1.2.0 — 2026-04-25
 
 ### Added
