@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.3.0 — 2026-04-25
+
 ### Added
 
 - Structurally-correct command specs for ~60 previously-stubbed CMake
