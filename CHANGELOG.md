@@ -116,14 +116,14 @@ This project follows a simple changelog discipline:
 ### Performance
 
 - Single-file wall time on the 656-line `mariadb_server` fixture
-  shifts from 6.0 ms (v1.3.0) to 6.5 ms — a small regression
-  (~8%) that reflects the spec growing significantly with the
-  Phase 54 module command additions. Build-time MessagePack
-  pre-deserialisation (Phase 47f) absorbs the parse cost, but the
-  larger spec means more entries in the lookup table and a slightly
-  larger MessagePack blob to decode at startup. The release binary
-  size is unchanged at 4.7 MB. Methodology unchanged from v1.2.0:
-  `hyperfine --shell=none --style basic --warmup 100 --runs 200`.
+  holds at 6.0 ms — unchanged from v1.3.0 despite the spec growing
+  significantly with the Phase 54 module command additions.
+  Build-time MessagePack pre-deserialisation (Phase 47f) continues
+  to absorb the parse cost; the larger lookup table and MessagePack
+  blob are decoded at startup with no measurable difference.
+  Release binary size is unchanged at 4.7 MB. Methodology unchanged
+  from v1.2.0: `hyperfine --shell=none --style basic --warmup 100
+  --runs 200`.
 
 ## 1.3.0 — 2026-04-25
 
