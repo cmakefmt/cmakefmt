@@ -1717,6 +1717,51 @@ fn fetchcontent_makeavailable_packs_positionals() {
 }
 
 #[test]
+fn check_ipo_supported_kwargs_recognized() {
+    let src = "check_ipo_supported(RESULT IPO_OK OUTPUT IPO_ERROR LANGUAGES C CXX Fortran)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(
+        formatted,
+        @"check_ipo_supported(RESULT IPO_OK OUTPUT IPO_ERROR LANGUAGES C CXX Fortran)"
+    );
+}
+
+#[test]
+fn cmake_push_check_state_recognizes_reset_flag() {
+    let src = "cmake_push_check_state(RESET)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @"cmake_push_check_state(RESET)");
+}
+
+#[test]
+fn find_dependency_kwargs_separate_when_wrapping() {
+    let src = "find_dependency(Boost 1.70 REQUIRED COMPONENTS filesystem system iostreams program_options OPTIONAL_COMPONENTS regex)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    find_dependency(
+      Boost 1.70
+      REQUIRED
+      COMPONENTS filesystem system iostreams program_options
+      OPTIONAL_COMPONENTS regex)
+    ");
+}
+
+#[test]
+fn gtest_discover_tests_kwargs_separate_when_wrapping() {
+    let src = "gtest_discover_tests(my_test EXTRA_ARGS --verbose --color=yes WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} TEST_PREFIX MyTest. PROPERTIES TIMEOUT 30 LABELS unit DISCOVERY_TIMEOUT 60)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    gtest_discover_tests(
+      my_test
+      EXTRA_ARGS --verbose --color=yes
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      TEST_PREFIX MyTest.
+      PROPERTIES TIMEOUT 30 LABELS unit
+      DISCOVERY_TIMEOUT 60)
+    ");
+}
+
+#[test]
 fn externalproject_get_property_takes_variadic_positionals() {
     let src = "ExternalProject_Get_Property(myExtProj SOURCE_DIR BINARY_DIR INSTALL_DIR)\n";
     let config = Config {

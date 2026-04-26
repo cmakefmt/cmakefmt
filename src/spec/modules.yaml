@@ -444,6 +444,395 @@ commands:
       BINARY_DIR:
         nargs: 1
 
+  # from CMake module: CMakeDependentOption
+  cmake_dependent_option:
+    pargs: 5
+
+  # from CMake module: CMakePackageConfigHelpers
+  configure_package_config_file:
+    pargs: 2
+    flags:
+      - NO_SET_AND_CHECK_MACRO
+      - NO_CHECK_REQUIRED_COMPONENTS_MACRO
+    kwargs:
+      INSTALL_DESTINATION:
+        nargs: 1
+      PATH_VARS:
+        nargs: "+"
+      INSTALL_PREFIX:
+        nargs: 1
+  write_basic_package_version_file:
+    pargs: 1
+    flags:
+      - ARCH_INDEPENDENT
+    kwargs:
+      VERSION:
+        nargs: 1
+      COMPATIBILITY:
+        nargs: 1
+  # CMake's `write_basic_config_version_file()` is the deprecated
+  # spelling kept around for backward compatibility — same shape as
+  # the modern name above.
+  write_basic_config_version_file:
+    pargs: 1
+    flags:
+      - ARCH_INDEPENDENT
+    kwargs:
+      VERSION:
+        nargs: 1
+      COMPATIBILITY:
+        nargs: 1
+
+  # from CMake module: CMakeParseArguments
+  cmake_parse_arguments:
+    pargs: "4+"
+
+  # from CMake module: CMakePrintHelpers
+  cmake_print_properties:
+    pargs: 0
+    kwargs:
+      TARGETS:
+        nargs: "*"
+      SOURCES:
+        nargs: "*"
+      DIRECTORIES:
+        nargs: "*"
+      TESTS:
+        nargs: "*"
+      CACHE_ENTRIES:
+        nargs: "*"
+      PROPERTIES:
+        nargs: "+"
+  cmake_print_variables:
+    pargs: "*"
+
+  # from CMake module: CMakePushCheckState
+  cmake_push_check_state:
+    pargs: 0
+    flags:
+      - RESET
+  cmake_reset_check_state:
+    pargs: 0
+  cmake_pop_check_state:
+    pargs: 0
+
+  # from CMake module: CheckLanguage
+  check_language:
+    pargs: 1
+
+  # from CMake module: CheckCompilerFlag (and per-language variants)
+  check_compiler_flag:
+    pargs: 3
+  check_c_compiler_flag:
+    pargs: 2
+  check_cxx_compiler_flag:
+    pargs: 2
+  check_fortran_compiler_flag:
+    pargs: 2
+  check_objc_compiler_flag:
+    pargs: 2
+  check_objcxx_compiler_flag:
+    pargs: 2
+
+  # from CMake modules: CheckIncludeFile, CheckIncludeFileCXX, CheckIncludeFiles
+  check_include_file:
+    pargs: "2+"
+  check_include_file_cxx:
+    pargs: "2+"
+  check_include_files:
+    pargs: "2+"
+
+  # from CMake modules: CheckFunctionExists, CheckLibraryExists,
+  # CheckSymbolExists, CheckTypeSize, CheckVariableExists
+  check_function_exists:
+    pargs: 2
+  check_library_exists:
+    pargs: 4
+  check_symbol_exists:
+    pargs: 3
+  check_type_size:
+    pargs: "2+"
+  check_variable_exists:
+    pargs: 2
+
+  # from CMake modules: CheckCSourceCompiles, CheckCXXSourceCompiles, etc.
+  check_c_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_c_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_cxx_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_cxx_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_fortran_function_exists:
+    pargs: 2
+  check_fortran_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_fortran_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objc_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objc_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objcxx_source_compiles:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_objcxx_source_runs:
+    pargs: 2
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+  check_source_compiles:
+    pargs: 3
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+      SRC_EXT:
+        nargs: 1
+  check_source_runs:
+    pargs: 3
+    kwargs:
+      FAIL_REGEX:
+        nargs: "+"
+      SRC_EXT:
+        nargs: 1
+
+  # from CMake modules: CheckLinkerFlag, CheckCXXSymbolExists,
+  # CheckPrototypeDefinition, CheckStructHasMember
+  check_linker_flag:
+    pargs: 3
+  check_cxx_symbol_exists:
+    pargs: 3
+  check_prototype_definition:
+    pargs: 5
+  check_struct_has_member:
+    pargs: 4
+    kwargs:
+      LANGUAGE:
+        nargs: 1
+
+  # from CMake modules: CheckIPOSupported, CheckPIESupported
+  check_ipo_supported:
+    pargs: 0
+    kwargs:
+      RESULT:
+        nargs: 1
+      OUTPUT:
+        nargs: 1
+      LANGUAGES:
+        nargs: "+"
+  check_pie_supported:
+    pargs: 0
+    kwargs:
+      OUTPUT_VARIABLE:
+        nargs: 1
+      LANGUAGES:
+        nargs: "+"
+
+  # from CMake module: CheckCXXCompilerFlag (legacy spelling)
+  check_cxx_accepts_flag:
+    pargs: 2
+
+  # from CMake module: CMakeFindDependencyMacro
+  find_dependency:
+    pargs: "1+"
+    flags:
+      - EXACT
+      - QUIET
+      - REQUIRED
+      - MODULE
+      - CONFIG
+      - NO_MODULE
+      - NO_POLICY_SCOPE
+      - BYPASS_PROVIDER
+      - GLOBAL
+      - UNWIND_INCLUDE
+    kwargs:
+      COMPONENTS:
+        nargs: "+"
+      HINTS:
+        nargs: "*"
+      NAMES:
+        nargs: "*"
+      OPTIONAL_COMPONENTS:
+        nargs: "+"
+      PATHS:
+        nargs: "*"
+      REGISTRY_VIEW:
+        nargs: 1
+      VERSION:
+        nargs: 1
+
+  # from CMake module: FindPackageHandleStandardArgs
+  find_package_handle_standard_args:
+    pargs: "1+"
+    flags:
+      - DEFAULT_MSG
+      - HANDLE_COMPONENTS
+      - CONFIG_MODE
+      - NAME_MISMATCHED
+      - HANDLE_VERSION_RANGE
+    kwargs:
+      FOUND_VAR:
+        nargs: 1
+      REQUIRED_VARS:
+        nargs: "+"
+      VERSION_VAR:
+        nargs: 1
+      FAIL_MESSAGE:
+        nargs: 1
+      REASON_FAILURE_MESSAGE:
+        nargs: 1
+  find_package_check_version:
+    pargs: 2
+    flags:
+      - HANDLE_VERSION_RANGE
+    kwargs:
+      RESULT_MESSAGE_VARIABLE:
+        nargs: 1
+  find_package_message:
+    pargs: 3
+
+  # from CMake module: GenerateExportHeader
+  generate_export_header:
+    pargs: 1
+    flags:
+      - DEFINE_NO_DEPRECATED
+    kwargs:
+      BASE_NAME:
+        nargs: 1
+      EXPORT_FILE_NAME:
+        nargs: 1
+      EXPORT_MACRO_NAME:
+        nargs: 1
+      NO_EXPORT_MACRO_NAME:
+        nargs: 1
+      DEPRECATED_MACRO_NAME:
+        nargs: 1
+      NO_DEPRECATED_MACRO_NAME:
+        nargs: 1
+      STATIC_DEFINE:
+        nargs: 1
+      PREFIX_NAME:
+        nargs: 1
+      CUSTOM_CONTENT_FROM_VARIABLE:
+        nargs: 1
+      INCLUDE_GUARD_NAME:
+        nargs: 1
+
+  # from CMake module: GoogleTest
+  gtest_add_tests:
+    pargs: 0
+    flags:
+      - SKIP_DEPENDENCY
+    kwargs:
+      TARGET:
+        nargs: 1
+      SOURCES:
+        nargs: "+"
+      EXTRA_ARGS:
+        nargs: "*"
+      WORKING_DIRECTORY:
+        nargs: 1
+      TEST_PREFIX:
+        nargs: 1
+      TEST_SUFFIX:
+        nargs: 1
+      TEST_LIST:
+        nargs: 1
+  gtest_discover_tests:
+    pargs: 1
+    flags:
+      - NO_PRETTY_TYPES
+      - NO_PRETTY_VALUES
+    kwargs:
+      EXTRA_ARGS:
+        nargs: "*"
+      WORKING_DIRECTORY:
+        nargs: 1
+      TEST_PREFIX:
+        nargs: 1
+      TEST_SUFFIX:
+        nargs: 1
+      TEST_FILTER:
+        nargs: 1
+      PROPERTIES:
+        nargs: "*"
+      TEST_LIST:
+        nargs: 1
+      DISCOVERY_TIMEOUT:
+        nargs: 1
+      XML_OUTPUT_DIR:
+        nargs: 1
+      DISCOVERY_MODE:
+        nargs: 1
+      DISCOVERY_EXTRA_ARGS:
+        nargs: "*"
+
+  # from CMake module: TestBigEndian
+  test_big_endian:
+    pargs: 1
+
+  # from CMake module: WriteCompilerDetectionHeader
+  #
+  # Deprecated since CMake 3.20 — kept for backward compatibility.
+  write_compiler_detection_header:
+    pargs: 0
+    flags:
+      - ALLOW_UNKNOWN_COMPILERS
+      - ALLOW_UNKNOWN_COMPILER_VERSIONS
+    kwargs:
+      FILE:
+        nargs: 1
+      PREFIX:
+        nargs: 1
+      COMPILERS:
+        nargs: "+"
+      FEATURES:
+        nargs: "+"
+      BARE_FEATURES:
+        nargs: "+"
+      VERSION:
+        nargs: 1
+      PROLOG:
+        nargs: 1
+      EPILOG:
+        nargs: 1
+
+  # from CMake module: ProcessorCount
+  processorcount:
+    pargs: 1
+
+  # from CMake module: SelectLibraryConfigurations
+  select_library_configurations:
+    pargs: 1
+
   # from CMake module: FindPkgConfig
   pkg_get_variable:
     pargs: 3
