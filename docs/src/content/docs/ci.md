@@ -15,49 +15,103 @@ the result.
 
 ## GitHub Actions
 
-The official `cmakefmt/cmakefmt-action` installs the right binary for the
-runner OS and adds it to `PATH`. No Rust toolchain required.
+The official [`cmakefmt/cmakefmt-action`](https://github.com/cmakefmt/cmakefmt-action)
+installs the correct binary for the runner OS, adds it to `PATH`, and runs
+`cmakefmt` with sensible defaults. No Rust toolchain or Python environment is
+required on the runner.
 
-### Check mode (recommended)
+The action exposes two high-level inputs that cover almost every workflow:
 
-Fail the workflow if any CMake files are not formatted:
+- `mode` selects what `cmakefmt` does: `check` (verify formatting), `diff`
+  (verify and print a unified diff), `fix` (reformat in place), or `setup`
+  (install only, do not run).
+- `scope` selects which files are processed: `all` (the whole repository),
+  `changed` (files modified since the base ref), or `staged` (Git-tracked
+  files in the index).
+
+The `paths`, `since`, `version`, and `working-directory` inputs cover the rest.
+Reach for `args` only when you need flags none of the structured inputs
+expose.
+
+### Strict whole-repo check (recommended starting point)
+
+The default behaviour: run `cmakefmt --check --report-format github .` over
+the entire repository. The job fails on the first file that would change, and
+inline annotations on the pull request show exactly where.
 
 ```yaml
+- uses: actions/checkout@v6
 - uses: cmakefmt/cmakefmt-action@v2
-  with:
-    args: '--check .'
 ```
 
-### Auto-format
+### Changed-file check for incremental rollout
 
-Format files in-place. Combine with a commit step to push the changes
-automatically:
+When adopting `cmakefmt` in an existing repository without reformatting every
+CMake file on day one, scope the check to files modified since the base ref:
 
 ```yaml
+- uses: actions/checkout@v6
+  with:
+    fetch-depth: 0   # required so the action can resolve the base ref
 - uses: cmakefmt/cmakefmt-action@v2
   with:
-    args: '--in-place .'
+    mode: diff
+    scope: changed
 ```
 
-### Install only
+On pull requests, `scope: changed` compares against
+`origin/${{ github.base_ref }}`. On push events, it compares against the
+push event's `before` commit. The `since` input lets you override the base
+ref when you want to compare against, for example, the most recent tag.
 
-Install `cmakefmt` without running it, then call it yourself with custom flags:
+### Auto-format and commit
+
+Reformat files on the runner and push the result back. Combine `mode: fix`
+with a commit step:
+
+```yaml
+- uses: actions/checkout@v6
+- uses: cmakefmt/cmakefmt-action@v2
+  with:
+    mode: fix
+- name: Commit any reformat
+  uses: stefanzweifel/git-auto-commit-action@v5
+  with:
+    commit_message: "chore: auto-format CMake files"
+```
+
+### Install only, run yourself
+
+When you want full control over the `cmakefmt` invocation, install the
+binary with `mode: setup` and run it directly:
 
 ```yaml
 - uses: cmakefmt/cmakefmt-action@v2
   with:
-    args: ''
-
-- run: cmakefmt --check --report-format github .
+    mode: setup
+- run: cmakefmt --check --report-format sarif . > cmakefmt.sarif
 ```
 
 ### Pin a specific version
 
+The action installs the latest release by default. To pin to a specific
+version (e.g. for reproducible CI on long-lived branches):
+
 ```yaml
 - uses: cmakefmt/cmakefmt-action@v2
   with:
-    version: '0.2.0'
-    args: '--check .'
+    version: "1.3.0"
+```
+
+### Monorepo subdirectory
+
+When CMake files live under a subdirectory rather than the repository root,
+point the action at it with `working-directory`:
+
+```yaml
+- uses: cmakefmt/cmakefmt-action@v2
+  with:
+    working-directory: cpp/
 ```
 
 ### Full example
@@ -71,11 +125,12 @@ jobs:
   cmakefmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@v6
       - uses: cmakefmt/cmakefmt-action@v2
-        with:
-          args: '--check .'
 ```
+
+The complete list of inputs and outputs is documented in the
+[`cmakefmt-action` README](https://github.com/cmakefmt/cmakefmt-action#readme).
 
 ## GitLab CI
 
@@ -170,7 +225,7 @@ cat CMakeLists.txt | docker run --rm -i ghcr.io/cmakefmt/cmakefmt -
 Pin a specific version:
 
 ```bash
-docker run --rm -v "$(pwd):/work" -w /work ghcr.io/cmakefmt/cmakefmt:0.4.0 --check .
+docker run --rm -v "$(pwd):/work" -w /work ghcr.io/cmakefmt/cmakefmt:1.3.0 --check .
 ```
 
 You can also build the image locally from the repository root:
