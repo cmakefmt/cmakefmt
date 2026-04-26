@@ -653,8 +653,6 @@ commands:
     pargs: "1+"
   fortrancinterface_verify:
     pargs: "*"
-  fetchcontent_setpopulated:
-    pargs: 3
   gnuinstalldirs_get_absolute_install_dir:
     pargs: "3+"
   find_jar:
@@ -853,37 +851,6 @@ commands:
         nargs: 1
       EPILOG:
         nargs: 1
-  fetchcontent_declare:
-    pargs: 1
-    flags:
-      - EXCLUDE_FROM_ALL
-      - SYSTEM
-      - OVERRIDE_FIND_PACKAGE
-    kwargs:
-      FIND_PACKAGE_ARGS:
-        nargs: "*"
-  fetchcontent_makeavailable:
-    pargs: "+"
-  fetchcontent_getproperties:
-    pargs: 1
-    kwargs:
-      SOURCE_DIR:
-        nargs: 1
-      BINARY_DIR:
-        nargs: 1
-      POPULATED:
-        nargs: 1
-  fetchcontent_populate:
-    pargs: 1
-    flags:
-      - QUIET
-    kwargs:
-      SUBBUILD_DIR:
-        nargs: 1
-      SOURCE_DIR:
-        nargs: 1
-      BINARY_DIR:
-        nargs: 1
   find_package_handle_standard_args:
     pargs: "1+"
     flags:
@@ -1038,41 +1005,6 @@ commands:
     kwargs:
       UPLOAD_DIRECTORY:
         nargs: 1
-  externalproject_add_step:
-    pargs: 2
-    kwargs:
-      COMMAND:
-        nargs: "+"
-      COMMENT:
-        nargs: 1
-      DEPENDEES:
-        nargs: "+"
-      DEPENDERS:
-        nargs: "+"
-      DEPENDS:
-        nargs: "*"
-      BYPRODUCTS:
-        nargs: "*"
-      ALWAYS:
-        nargs: 1
-      EXCLUDE_FROM_MAIN:
-        nargs: 1
-      WORKING_DIRECTORY:
-        nargs: 1
-      LOG:
-        nargs: 1
-      USES_TERMINAL:
-        nargs: 1
-      ENVIRONMENT_MODIFICATION:
-        nargs: "*"
-  externalproject_add_steptargets:
-    pargs: "2+"
-    flags:
-      - NO_DEPENDS
-  externalproject_add_stepdependencies:
-    pargs: "3+"
-  externalproject_get_property:
-    pargs: "2+"
   export:
     forms:
       EXPORT:

@@ -25,8 +25,391 @@
 
 commands:
   # from CMake module: ExternalProject
+  #
+  # Roughly 90 kwargs across the source-fetch, configure, build, install,
+  # and test phases. Most accept a single value (directory, bool, or
+  # opaque token); the ones that accept argument lists are marked
+  # `nargs: "+"`. The handful of mutually-exclusive source-fetch families
+  # (URL_*, GIT_*, SVN_*, HG_*, CVS_*, DOWNLOAD_COMMAND) are not
+  # validated here — the formatter only cares about layout structure.
+  ExternalProject_Add:
+    pargs: 1
+    kwargs:
+      # Directories
+      PREFIX:
+        nargs: 1
+      TMP_DIR:
+        nargs: 1
+      STAMP_DIR:
+        nargs: 1
+      LOG_DIR:
+        nargs: 1
+      DOWNLOAD_DIR:
+        nargs: 1
+      SOURCE_DIR:
+        nargs: 1
+      SOURCE_SUBDIR:
+        nargs: 1
+      BINARY_DIR:
+        nargs: 1
+      INSTALL_DIR:
+        nargs: 1
+      LIST_SEPARATOR:
+        nargs: 1
+      # Download — URL family
+      URL:
+        nargs: "+"
+      URL_HASH:
+        nargs: 1
+      URL_MD5:
+        nargs: 1
+      DOWNLOAD_NAME:
+        nargs: 1
+      DOWNLOAD_NO_EXTRACT:
+        nargs: 1
+      DOWNLOAD_NO_PROGRESS:
+        nargs: 1
+      DOWNLOAD_EXTRACT_TIMESTAMP:
+        nargs: 1
+      TIMEOUT:
+        nargs: 1
+      INACTIVITY_TIMEOUT:
+        nargs: 1
+      HTTP_USERNAME:
+        nargs: 1
+      HTTP_PASSWORD:
+        nargs: 1
+      HTTP_HEADER:
+        nargs: "+"
+      TLS_VERSION:
+        nargs: 1
+      TLS_VERIFY:
+        nargs: 1
+      TLS_CAINFO:
+        nargs: 1
+      NETRC:
+        nargs: 1
+      NETRC_FILE:
+        nargs: 1
+      # Download — Git family
+      GIT_REPOSITORY:
+        nargs: 1
+      GIT_TAG:
+        nargs: 1
+      GIT_REMOTE_NAME:
+        nargs: 1
+      GIT_SUBMODULES:
+        nargs: "+"
+      GIT_SUBMODULES_RECURSE:
+        nargs: 1
+      GIT_SHALLOW:
+        nargs: 1
+      GIT_PROGRESS:
+        nargs: 1
+      GIT_CONFIG:
+        nargs: "+"
+      GIT_REMOTE_UPDATE_STRATEGY:
+        nargs: 1
+      # Download — Subversion family
+      SVN_REPOSITORY:
+        nargs: 1
+      SVN_REVISION:
+        nargs: 1
+      SVN_USERNAME:
+        nargs: 1
+      SVN_PASSWORD:
+        nargs: 1
+      SVN_TRUST_CERT:
+        nargs: 1
+      # Download — Mercurial family
+      HG_REPOSITORY:
+        nargs: 1
+      HG_TAG:
+        nargs: 1
+      # Download — CVS family
+      CVS_REPOSITORY:
+        nargs: 1
+      CVS_MODULE:
+        nargs: 1
+      CVS_TAG:
+        nargs: 1
+      # Download — explicit override
+      DOWNLOAD_COMMAND:
+        nargs: "+"
+      # Update
+      UPDATE_COMMAND:
+        nargs: "+"
+      UPDATE_DISCONNECTED:
+        nargs: 1
+      # Patch
+      PATCH_COMMAND:
+        nargs: "+"
+      # Configure
+      CONFIGURE_COMMAND:
+        nargs: "+"
+      CMAKE_COMMAND:
+        nargs: 1
+      CMAKE_GENERATOR:
+        nargs: 1
+      CMAKE_GENERATOR_PLATFORM:
+        nargs: 1
+      CMAKE_GENERATOR_TOOLSET:
+        nargs: 1
+      CMAKE_GENERATOR_INSTANCE:
+        nargs: 1
+      CMAKE_ARGS:
+        nargs: "+"
+      CMAKE_CACHE_ARGS:
+        nargs: "+"
+      CMAKE_CACHE_DEFAULT_ARGS:
+        nargs: "+"
+      CONFIGURE_HANDLED_BY_BUILD:
+        nargs: 1
+      CONFIGURE_ENVIRONMENT_MODIFICATION:
+        nargs: "+"
+      # Build
+      BUILD_COMMAND:
+        nargs: "+"
+      BUILD_IN_SOURCE:
+        nargs: 1
+      BUILD_ALWAYS:
+        nargs: 1
+      BUILD_BYPRODUCTS:
+        nargs: "+"
+      BUILD_JOB_SERVER_AWARE:
+        nargs: 1
+      BUILD_ENVIRONMENT_MODIFICATION:
+        nargs: "+"
+      # Install
+      INSTALL_COMMAND:
+        nargs: "+"
+      INSTALL_BYPRODUCTS:
+        nargs: "+"
+      INSTALL_JOB_SERVER_AWARE:
+        nargs: 1
+      INSTALL_ENVIRONMENT_MODIFICATION:
+        nargs: "+"
+      # Test
+      TEST_COMMAND:
+        nargs: "+"
+      TEST_BEFORE_INSTALL:
+        nargs: 1
+      TEST_AFTER_INSTALL:
+        nargs: 1
+      TEST_EXCLUDE_FROM_MAIN:
+        nargs: 1
+      TEST_ENVIRONMENT_MODIFICATION:
+        nargs: "+"
+      # Output logging (per step)
+      LOG_DOWNLOAD:
+        nargs: 1
+      LOG_UPDATE:
+        nargs: 1
+      LOG_PATCH:
+        nargs: 1
+      LOG_CONFIGURE:
+        nargs: 1
+      LOG_BUILD:
+        nargs: 1
+      LOG_INSTALL:
+        nargs: 1
+      LOG_TEST:
+        nargs: 1
+      LOG_MERGED_STDOUTERR:
+        nargs: 1
+      LOG_OUTPUT_ON_FAILURE:
+        nargs: 1
+      # Terminal access (per step)
+      USES_TERMINAL_DOWNLOAD:
+        nargs: 1
+      USES_TERMINAL_UPDATE:
+        nargs: 1
+      USES_TERMINAL_PATCH:
+        nargs: 1
+      USES_TERMINAL_CONFIGURE:
+        nargs: 1
+      USES_TERMINAL_BUILD:
+        nargs: 1
+      USES_TERMINAL_INSTALL:
+        nargs: 1
+      USES_TERMINAL_TEST:
+        nargs: 1
+      # Target-level
+      DEPENDS:
+        nargs: "+"
+      EXCLUDE_FROM_ALL:
+        nargs: 1
+      STEP_TARGETS:
+        nargs: "+"
+      INDEPENDENT_STEP_TARGETS:
+        nargs: "+"
+      COMMAND:
+        nargs: "+"
+
+  # from CMake module: ExternalProject
+  ExternalProject_Add_Step:
+    pargs: 2
+    kwargs:
+      COMMAND:
+        nargs: "+"
+      COMMENT:
+        nargs: 1
+      DEPENDEES:
+        nargs: "+"
+      DEPENDERS:
+        nargs: "+"
+      DEPENDS:
+        nargs: "+"
+      ENVIRONMENT_MODIFICATION:
+        nargs: "+"
+      INDEPENDENT:
+        nargs: 1
+      BYPRODUCTS:
+        nargs: "+"
+      ALWAYS:
+        nargs: 1
+      JOB_SERVER_AWARE:
+        nargs: 1
+      EXCLUDE_FROM_MAIN:
+        nargs: 1
+      WORKING_DIRECTORY:
+        nargs: 1
+      LOG:
+        nargs: 1
+      USES_TERMINAL:
+        nargs: 1
+
+  # from CMake module: ExternalProject
+  ExternalProject_Add_StepTargets:
+    pargs: "2+"
+    flags:
+      - NO_DEPENDS
+
+  # from CMake module: ExternalProject
+  ExternalProject_Add_StepDependencies:
+    pargs: "3+"
+
+  # from CMake module: ExternalProject
   ExternalProject_Get_Property:
     pargs: "2+"
+
+  # from CMake module: FetchContent
+  #
+  # Source-fetch options are a subset of ExternalProject_Add's. The
+  # configure/build/install/test phases are explicitly disabled by
+  # FetchContent and any options for those phases are silently
+  # discarded — for layout purposes that is fine; the formatter still
+  # recognises them as kwargs and groups them. SOURCE_SUBDIR is the
+  # one configure-related option that is meaningfully accepted.
+  FetchContent_Declare:
+    pargs: 1
+    flags:
+      - EXCLUDE_FROM_ALL
+      - SYSTEM
+      - OVERRIDE_FIND_PACKAGE
+    kwargs:
+      FIND_PACKAGE_ARGS:
+        nargs: "+"
+      # Directories
+      SOURCE_DIR:
+        nargs: 1
+      SOURCE_SUBDIR:
+        nargs: 1
+      BINARY_DIR:
+        nargs: 1
+      DOWNLOAD_DIR:
+        nargs: 1
+      # URL family
+      URL:
+        nargs: "+"
+      URL_HASH:
+        nargs: 1
+      URL_MD5:
+        nargs: 1
+      DOWNLOAD_NAME:
+        nargs: 1
+      DOWNLOAD_NO_EXTRACT:
+        nargs: 1
+      DOWNLOAD_NO_PROGRESS:
+        nargs: 1
+      DOWNLOAD_EXTRACT_TIMESTAMP:
+        nargs: 1
+      TIMEOUT:
+        nargs: 1
+      INACTIVITY_TIMEOUT:
+        nargs: 1
+      HTTP_USERNAME:
+        nargs: 1
+      HTTP_PASSWORD:
+        nargs: 1
+      HTTP_HEADER:
+        nargs: "+"
+      TLS_VERSION:
+        nargs: 1
+      TLS_VERIFY:
+        nargs: 1
+      TLS_CAINFO:
+        nargs: 1
+      NETRC:
+        nargs: 1
+      NETRC_FILE:
+        nargs: 1
+      # Git family
+      GIT_REPOSITORY:
+        nargs: 1
+      GIT_TAG:
+        nargs: 1
+      GIT_REMOTE_NAME:
+        nargs: 1
+      GIT_SUBMODULES:
+        nargs: "+"
+      GIT_SUBMODULES_RECURSE:
+        nargs: 1
+      GIT_SHALLOW:
+        nargs: 1
+      GIT_PROGRESS:
+        nargs: 1
+      GIT_CONFIG:
+        nargs: "+"
+      GIT_REMOTE_UPDATE_STRATEGY:
+        nargs: 1
+      # Subversion family
+      SVN_REPOSITORY:
+        nargs: 1
+      SVN_REVISION:
+        nargs: 1
+      SVN_USERNAME:
+        nargs: 1
+      SVN_PASSWORD:
+        nargs: 1
+      SVN_TRUST_CERT:
+        nargs: 1
+      # Mercurial family
+      HG_REPOSITORY:
+        nargs: 1
+      HG_TAG:
+        nargs: 1
+      # CVS family
+      CVS_REPOSITORY:
+        nargs: 1
+      CVS_MODULE:
+        nargs: 1
+      CVS_TAG:
+        nargs: 1
+      # Explicit override
+      DOWNLOAD_COMMAND:
+        nargs: "+"
+      # Update / patch
+      UPDATE_COMMAND:
+        nargs: "+"
+      UPDATE_DISCONNECTED:
+        nargs: 1
+      PATCH_COMMAND:
+        nargs: "+"
+
+  # from CMake module: FetchContent
+  FetchContent_MakeAvailable:
+    pargs: "+"
 
   # from CMake module: FetchContent
   FetchContent_GetProperties:
@@ -37,6 +420,28 @@ commands:
       BINARY_DIR:
         nargs: 1
       POPULATED:
+        nargs: 1
+
+  # from CMake module: FetchContent
+  FetchContent_Populate:
+    pargs: 1
+    flags:
+      - QUIET
+    kwargs:
+      SUBBUILD_DIR:
+        nargs: 1
+      SOURCE_DIR:
+        nargs: 1
+      BINARY_DIR:
+        nargs: 1
+
+  # from CMake module: FetchContent
+  FetchContent_SetPopulated:
+    pargs: 1
+    kwargs:
+      SOURCE_DIR:
+        nargs: 1
+      BINARY_DIR:
         nargs: 1
 
   # from CMake module: FindPkgConfig

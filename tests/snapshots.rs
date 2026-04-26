@@ -1676,6 +1676,47 @@ fn pkg_get_variable_define_variables_kwarg_recognized() {
 }
 
 #[test]
+fn externalproject_add_kwargs_separate_when_wrapping() {
+    let src = "ExternalProject_Add(myExtProj GIT_REPOSITORY https://github.com/example/foo.git GIT_TAG v1.2.3 GIT_SHALLOW TRUE CMAKE_ARGS -DBUILD_SHARED_LIBS=ON BUILD_COMMAND ${CMAKE_COMMAND} --build . LOG_BUILD ON)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    externalproject_add(
+      myExtProj
+      GIT_REPOSITORY https://github.com/example/foo.git
+      GIT_TAG v1.2.3
+      GIT_SHALLOW TRUE
+      CMAKE_ARGS -DBUILD_SHARED_LIBS=ON
+      BUILD_COMMAND ${CMAKE_COMMAND} --build .
+      LOG_BUILD ON)
+    ");
+}
+
+#[test]
+fn fetchcontent_declare_recognizes_flags_and_kwargs() {
+    let src = "FetchContent_Declare(googletest GIT_REPOSITORY https://github.com/google/googletest.git GIT_TAG v1.14.0 SYSTEM EXCLUDE_FROM_ALL FIND_PACKAGE_ARGS NAMES GTest)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    fetchcontent_declare(
+      googletest
+      GIT_REPOSITORY https://github.com/google/googletest.git
+      GIT_TAG v1.14.0
+      SYSTEM
+      EXCLUDE_FROM_ALL
+      FIND_PACKAGE_ARGS NAMES GTest)
+    ");
+}
+
+#[test]
+fn fetchcontent_makeavailable_packs_positionals() {
+    let src = "FetchContent_MakeAvailable(googletest abseil fmt nlohmann_json)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(
+        formatted,
+        @"fetchcontent_makeavailable(googletest abseil fmt nlohmann_json)"
+    );
+}
+
+#[test]
 fn externalproject_get_property_takes_variadic_positionals() {
     let src = "ExternalProject_Get_Property(myExtProj SOURCE_DIR BINARY_DIR INSTALL_DIR)\n";
     let config = Config {
