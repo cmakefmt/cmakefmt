@@ -8,6 +8,7 @@ use std::process::Command;
 
 fn main() {
     pre_serialize_builtins_spec();
+    pre_serialize_modules_spec();
 
     // Skip git version embedding when cross-compiling for WASM.
     if env::var("TARGET").is_ok_and(|t| t.contains("wasm32")) {
@@ -39,14 +40,30 @@ fn main() {
 /// the `#[serde(untagged)]` `CommandSpec` enum which schema-based
 /// formats (e.g. `bincode`/`postcard`) cannot handle.
 fn pre_serialize_builtins_spec() {
-    println!("cargo:rerun-if-changed=src/spec/builtins.yaml");
-    let yaml = std::fs::read_to_string("src/spec/builtins.yaml").expect("read builtins.yaml");
-    let value: serde_yaml::Value =
-        serde_yaml::from_str(&yaml).expect("parse builtins.yaml as serde_yaml::Value");
-    let bytes = rmp_serde::to_vec(&value).expect("serialise builtins spec as MessagePack");
+    pre_serialize_yaml_spec("src/spec/builtins.yaml", "builtins.msgpack");
+}
+
+/// Same dance for `src/spec/modules.yaml`, the spec file covering
+/// commands defined in CMake's bundled modules (FetchContent,
+/// ExternalProject, GoogleTest, the Check* family, etc.) rather than
+/// the language builtins. Loaded alongside `builtins.msgpack` and
+/// merged at startup so the runtime sees a single command table.
+fn pre_serialize_modules_spec() {
+    pre_serialize_yaml_spec("src/spec/modules.yaml", "modules.msgpack");
+}
+
+fn pre_serialize_yaml_spec(yaml_path: &str, msgpack_filename: &str) {
+    println!("cargo:rerun-if-changed={yaml_path}");
+    let yaml =
+        std::fs::read_to_string(yaml_path).unwrap_or_else(|e| panic!("read {yaml_path}: {e}"));
+    let value: serde_yaml::Value = serde_yaml::from_str(&yaml)
+        .unwrap_or_else(|e| panic!("parse {yaml_path} as serde_yaml::Value: {e}"));
+    let bytes = rmp_serde::to_vec(&value)
+        .unwrap_or_else(|e| panic!("serialise {yaml_path} as MessagePack: {e}"));
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR set by cargo");
-    let out_path = PathBuf::from(out_dir).join("builtins.msgpack");
-    std::fs::write(&out_path, bytes).expect("write builtins.msgpack");
+    let out_path = PathBuf::from(out_dir).join(msgpack_filename);
+    std::fs::write(&out_path, bytes)
+        .unwrap_or_else(|e| panic!("write {}: {e}", out_path.display()));
 }
 
 fn git_sha() -> Option<String> {

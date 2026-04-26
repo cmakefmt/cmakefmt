@@ -1639,6 +1639,56 @@ fn cmake_path_absolute_path_form_kwargs_separate_when_wrapping() {
     ");
 }
 
+// --- Phase 54 module command coverage (Pass 1 of CMake module spec) ---
+
+#[test]
+fn fetchcontent_getproperties_kwargs_separate_when_wrapping() {
+    let src = "FetchContent_GetProperties(googletest SOURCE_DIR gtest_src BINARY_DIR gtest_build POPULATED gtest_done)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    fetchcontent_getproperties(
+      googletest
+      SOURCE_DIR gtest_src
+      BINARY_DIR gtest_build
+      POPULATED gtest_done)
+    ");
+}
+
+#[test]
+fn pkg_get_variable_define_variables_kwarg_recognized() {
+    let src = "pkg_get_variable(LIB_PREFIX libssl prefix DEFINE_VARIABLES PREFIX=/usr/local INCLUDEDIR=/usr/local/include)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    pkg_get_variable(
+      LIB_PREFIX libssl prefix
+      DEFINE_VARIABLES
+        PREFIX=/usr/local
+        INCLUDEDIR=/usr/local/include)
+    ");
+}
+
+#[test]
+fn externalproject_get_property_takes_variadic_positionals() {
+    let src = "ExternalProject_Get_Property(myExtProj SOURCE_DIR BINARY_DIR INSTALL_DIR)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    externalproject_get_property(
+      myExtProj SOURCE_DIR BINARY_DIR INSTALL_DIR)
+    ");
+}
+
 // --- Existing tests ---
 
 #[test]

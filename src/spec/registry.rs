@@ -23,11 +23,34 @@ use super::{
     SpecOverrideFile,
 };
 
+// The embedded command spec is split across two YAML files:
+//
+// * `builtins.yaml` covers commands documented by `cmake --help-command-list`
+//   — the CMake language itself (`if`, `add_executable`, `install`, etc.).
+// * `modules.yaml` covers commands defined in CMake's bundled modules
+//   (`FetchContent_Declare`, `ExternalProject_Add`, `find_dependency`, the
+//   `Check<X>` family, etc.) which become available after
+//   `include(<Module>)` or `find_package(<Module>)`.
+//
+// The two-file split mirrors the natural taxonomy users already use to
+// think about CMake commands and keeps `builtins.yaml` focused on the
+// language surface. The runtime loads both at startup and merges them
+// into a single command table; spec consumers see no difference.
+//
+// The pre-deserialised MessagePack blobs come from `build.rs`. Decoding
+// them with `rmp-serde` is roughly 20× faster than parsing YAML on every
+// process startup. The human-readable sources remain
+// `src/spec/builtins.yaml` and `src/spec/modules.yaml`.
+//
+// A future refactor could move modules to per-module YAML files under
+// `src/spec/modules/<Name>.yaml` if/when the formatter becomes aware
+// of which modules have actually been included earlier in the file
+// being formatted. Until then the single-file form is simpler and
+// equivalent.
 const BUILTINS_PATH: &str = "src/spec/builtins.yaml";
-/// MessagePack blob produced by `build.rs` from the YAML source. Loading
-/// this is roughly 20× faster than parsing the YAML at runtime; the
-/// human-readable spec source is still `src/spec/builtins.yaml`.
 const BUILTINS_MSGPACK: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/builtins.msgpack"));
+const MODULES_PATH: &str = "src/spec/modules.yaml";
+const MODULES_MSGPACK: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/modules.msgpack"));
 
 /// Registry of known CMake command specifications used to guide formatting.
 ///
@@ -87,13 +110,13 @@ impl CommandRegistry {
 
     #[cfg(any(target_arch = "wasm32", not(feature = "cli")))]
     fn load_builtins_impl() -> Result<Self> {
-        Ok(Self::from_spec_file(parse_builtins()?))
+        Ok(Self::from_spec_file(parse_embedded_spec()?))
     }
 
     /// Load the embedded built-ins and optionally merge a user override file.
     #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
     pub fn from_builtins_and_overrides(path: Option<impl AsRef<Path>>) -> Result<Self> {
-        let mut registry = Self::from_spec_file(parse_builtins()?);
+        let mut registry = Self::from_spec_file(parse_embedded_spec()?);
 
         if let Some(path) = path {
             registry.merge_override_file(path.as_ref())?;
@@ -332,10 +355,25 @@ fn has_ascii_uppercase(s: &str) -> bool {
     s.bytes().any(|byte| byte.is_ascii_uppercase())
 }
 
-fn parse_builtins() -> Result<SpecFile> {
-    let mut spec: SpecFile = rmp_serde::from_slice(BUILTINS_MSGPACK).map_err(|source| {
+/// Decode the embedded `builtins.yaml` blob and merge in the embedded
+/// `modules.yaml` blob, returning a single combined [`SpecFile`].
+///
+/// Metadata (e.g. the audited CMake version) is taken from the builtins
+/// blob; `modules.yaml` is expected to contribute only command entries.
+/// On a key collision between the two blobs, the modules entry wins —
+/// in practice this should never happen, since CMake's
+/// `--help-command-list` and `--help-module-list` are disjoint.
+fn parse_embedded_spec() -> Result<SpecFile> {
+    let mut spec = parse_msgpack_spec(BUILTINS_MSGPACK, BUILTINS_PATH)?;
+    let modules = parse_msgpack_spec(MODULES_MSGPACK, MODULES_PATH)?;
+    spec.commands.extend(modules.commands);
+    Ok(spec)
+}
+
+fn parse_msgpack_spec(bytes: &[u8], path: &str) -> Result<SpecFile> {
+    let mut spec: SpecFile = rmp_serde::from_slice(bytes).map_err(|source| {
         Error::Spec(crate::error::SpecError {
-            path: PathBuf::from(BUILTINS_PATH),
+            path: PathBuf::from(path),
             details: crate::error::FileParseError {
                 format: "MessagePack",
                 message: source.to_string().into_boxed_str(),

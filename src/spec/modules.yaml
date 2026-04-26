@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# CMake module command spec. Parsed once at startup via
+# CommandRegistry::builtins() and merged with builtins.yaml. Each entry
+# corresponds to a command defined in a CMake-bundled module that
+# becomes available after `include(<Module>)` or
+# `find_package(<Module>)` — these are not language builtins and so
+# don't appear in `cmake --help-command-list`. Authoritative signature
+# source is `cmake --help-module <Module>`.
+#
+# The formatter applies a spec entry whenever it sees the matching
+# command, regardless of whether the relevant module has actually been
+# included earlier in the file. In practice this is fine: code that
+# calls a module command without including its module wouldn't compile,
+# so the spec is only ever applied to genuinely-defined commands.
+#
+# This file is intentionally separate from builtins.yaml even though
+# the runtime merges them — the split mirrors the natural taxonomy
+# users already use (CMake language vs CMake bundled modules) and
+# keeps builtins.yaml focused on the language surface. Some module
+# commands were specced in builtins.yaml during earlier work; those
+# will migrate here incrementally as Phase 54 progresses.
+
+commands:
+  # from CMake module: ExternalProject
+  ExternalProject_Get_Property:
+    pargs: "2+"
+
+  # from CMake module: FetchContent
+  FetchContent_GetProperties:
+    pargs: 1
+    kwargs:
+      SOURCE_DIR:
+        nargs: 1
+      BINARY_DIR:
+        nargs: 1
+      POPULATED:
+        nargs: 1
+
+  # from CMake module: FindPkgConfig
+  pkg_get_variable:
+    pargs: 3
+    kwargs:
+      DEFINE_VARIABLES:
+        nargs: "+"
