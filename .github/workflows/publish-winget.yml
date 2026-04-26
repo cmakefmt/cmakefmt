@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+# Publish a new cmakefmt release to the Windows Package Manager
+# (winget-pkgs).
+#
+# This is downstream of release.yml: it fires only after a GitHub
+# Release has been fully published with all assets attached. It does
+# not block or affect the release itself — if winget submission fails
+# for any reason (network, manifest validation, moderator rejection),
+# the release stands and this workflow can be re-run manually via
+# workflow_dispatch.
+#
+# Note on the existing version gap: the winget manifest currently
+# tracks 0.3.0 while the project ships 1.3.0+. Microsoft moderators
+# may flag the first automated submission for the version jump. If
+# that happens, manually submit a 1.x manifest once to bridge, then
+# this workflow handles every subsequent release.
+
+name: Publish to winget
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to submit (e.g. v1.3.0). Required for manual runs."
+        required: true
+        type: string
+
+permissions: read-all
+
+env:
+  # Pre-bind workflow context to env vars so user-controlled inputs
+  # never get interpolated directly into action `with:` values or
+  # `run:` commands. Safer pattern recommended by GitHub's workflow
+  # injection guide.
+  RELEASE_TAG_FROM_INPUT: ${{ github.event.inputs.tag }}
+  RELEASE_TAG_FROM_EVENT: ${{ github.event.release.tag_name }}
+
+jobs:
+  publish:
+    name: Submit manifest to winget-pkgs
+    runs-on: windows-latest
+
+    # Skip prereleases — only stable versions go to winget. release.yml
+    # currently doesn't publish prereleases, but this is a defensive
+    # guard for the day it might.
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+
+    steps:
+      - name: Resolve release tag
+        id: resolve
+        shell: bash
+        run: |
+          if [ -n "$RELEASE_TAG_FROM_INPUT" ]; then
+            tag="$RELEASE_TAG_FROM_INPUT"
+          else
+            tag="$RELEASE_TAG_FROM_EVENT"
+          fi
+          # Guard against empty or non-tag-shaped values.
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([+-][A-Za-z0-9.+-]+)?$ ]]; then
+            echo "::error::Resolved tag '$tag' does not match expected vX.Y.Z shape"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Submit to winget-pkgs
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: cmakefmt.cmakefmt
+          release-tag: ${{ steps.resolve.outputs.tag }}
+          # The Windows asset uploaded by release.yml is a .zip, not an
+          # installer — the action's default regex would skip it.
+          installers-regex: "cmakefmt-.*-x86_64-pc-windows-msvc\\.zip$"
+          token: ${{ secrets.WINGET_PUBLISH_TOKEN }}
+          # Fork of microsoft/winget-pkgs lives under the cmakefmt org;
+          # this is the default but stated explicitly for clarity.
+          fork-user: cmakefmt
