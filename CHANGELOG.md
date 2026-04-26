@@ -8,6 +8,77 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- Structurally-correct command specs for ~50 commonly-used CMake
+  module commands — the commands defined in CMake-bundled modules
+  that become available after `include(<Module>)` or
+  `find_package(<Module>)`. These previously formatted as flat
+  positional lists; the formatter now recognises kwargs and flags
+  for layout, autosort eligibility, and pair-aware rendering.
+  Coverage spans:
+  - **FetchContent**: `FetchContent_Declare` (with the full source-fetch
+    surface plus `EXCLUDE_FROM_ALL` / `SYSTEM` /
+    `OVERRIDE_FIND_PACKAGE` flags and `FIND_PACKAGE_ARGS`),
+    `FetchContent_MakeAvailable`, `FetchContent_GetProperties`,
+    `FetchContent_Populate`, `FetchContent_SetPopulated` (corrected
+    from a 3-positional misspelling to the documented kwarg form).
+  - **ExternalProject**: `ExternalProject_Add` with all ~90 kwargs
+    across the source-fetch, configure, build, install, and test
+    phases — the largest single command spec in the project.
+    `ExternalProject_Add_Step`, `ExternalProject_Add_StepTargets`,
+    `ExternalProject_Add_StepDependencies`,
+    `ExternalProject_Get_Property`.
+  - **Check\* family**: `check_language`, `check_compiler_flag` and
+    its per-language variants, `check_include_file*`,
+    `check_function_exists`, `check_library_exists`,
+    `check_symbol_exists`, `check_cxx_symbol_exists`,
+    `check_type_size`, `check_variable_exists`, the
+    `check_<lang>_source_compiles`/`_runs` family,
+    `check_source_compiles`/`_runs`, `check_linker_flag`,
+    `check_prototype_definition`, `check_struct_has_member`,
+    `check_ipo_supported`, `check_pie_supported`,
+    `check_cxx_accepts_flag`.
+  - **CMakePushCheckState**: `cmake_push_check_state` (with `RESET`
+    flag), `cmake_pop_check_state`, `cmake_reset_check_state`.
+  - **CMakePackageConfigHelpers**: `configure_package_config_file`
+    (with `INSTALL_DESTINATION` / `PATH_VARS` / `INSTALL_PREFIX` and
+    `NO_SET_AND_CHECK_MACRO` / `NO_CHECK_REQUIRED_COMPONENTS_MACRO`
+    flags), `write_basic_package_version_file`,
+    `write_basic_config_version_file`.
+  - **GoogleTest**: `gtest_add_tests`, `gtest_discover_tests` (with
+    the full `EXTRA_ARGS` / `WORKING_DIRECTORY` / `TEST_PREFIX` /
+    `PROPERTIES` / `DISCOVERY_TIMEOUT` / `DISCOVERY_MODE` surface).
+  - **GenerateExportHeader**: `generate_export_header` (with all 10
+    macro-naming kwargs and `DEFINE_NO_DEPRECATED` flag).
+  - **CMakeFindDependencyMacro**: `find_dependency` (full forward
+    of `find_package`'s flag and kwarg surface).
+  - **FindPackageHandleStandardArgs**:
+    `find_package_handle_standard_args`,
+    `find_package_check_version`, `find_package_message`.
+  - **FindPkgConfig**: `pkg_check_modules`, `pkg_search_module`,
+    `pkg_get_variable`.
+  - **CMakeParseArguments**: `cmake_parse_arguments` (still
+    available alongside the builtin since 3.7).
+  - **CMakePrintHelpers**: `cmake_print_properties`,
+    `cmake_print_variables`.
+  - **Other**: `test_big_endian`, `write_compiler_detection_header`,
+    `cmake_dependent_option`, `processorcount`,
+    `select_library_configurations`.
+
+### Changed
+
+- The embedded command spec is now split across two YAML sources:
+  `src/spec/builtins.yaml` (commands listed by
+  `cmake --help-command-list`) and `src/spec/modules.yaml` (commands
+  defined in CMake-bundled modules). The runtime decodes both
+  MessagePack blobs and merges them into a single command table at
+  startup; spec consumers see no difference. The split mirrors the
+  natural taxonomy users already use to think about CMake commands
+  and keeps `builtins.yaml` focused on the language surface. Module
+  commands previously specced in `builtins.yaml` (the Check\* family
+  and friends) have been migrated verbatim to `modules.yaml`.
+
 ### Distribution
 
 - Automated winget submissions on each release. A new
@@ -41,6 +112,18 @@ This project follows a simple changelog discipline:
   releases slightly" hedge has been removed and the support-levels
   table promotes winget from "Community maintained" to "Officially
   maintained".
+
+### Performance
+
+- Single-file wall time on the 656-line `mariadb_server` fixture
+  shifts from 6.0 ms (v1.3.0) to 6.5 ms — a small regression
+  (~8%) that reflects the spec growing significantly with the
+  Phase 54 module command additions. Build-time MessagePack
+  pre-deserialisation (Phase 47f) absorbs the parse cost, but the
+  larger spec means more entries in the lookup table and a slightly
+  larger MessagePack blob to decode at startup. The release binary
+  size is unchanged at 4.7 MB. Methodology unchanged from v1.2.0:
+  `hyperfine --shell=none --style basic --warmup 100 --runs 200`.
 
 ## 1.3.0 — 2026-04-25
 

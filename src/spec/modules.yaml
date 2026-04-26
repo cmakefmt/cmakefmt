@@ -834,6 +834,24 @@ commands:
     pargs: 1
 
   # from CMake module: FindPkgConfig
+  pkg_check_modules:
+    pargs: "2+"
+    flags:
+      - QUIET
+      - REQUIRED
+      - NO_CMAKE_PATH
+      - NO_CMAKE_ENVIRONMENT_PATH
+      - IMPORTED_TARGET
+      - GLOBAL
+  pkg_search_module:
+    pargs: "2+"
+    flags:
+      - QUIET
+      - REQUIRED
+      - NO_CMAKE_PATH
+      - NO_CMAKE_ENVIRONMENT_PATH
+      - IMPORTED_TARGET
+      - GLOBAL
   pkg_get_variable:
     pargs: 3
     kwargs:
