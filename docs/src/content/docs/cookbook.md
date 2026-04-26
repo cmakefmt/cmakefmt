@@ -454,3 +454,51 @@ commands:
 
 See [My Custom Command Formats Poorly](/troubleshooting/#my-custom-command-formats-poorly)
 for a full before/after example.
+
+## I want to review formatting changes side-by-side in meld / vimdiff / kdiff3
+
+`cmakefmt --diff` emits a unified diff to stdout, which is the right
+format for terminal review and for piping into tools that consume
+unified-diff input (`delta`, `diff-so-fancy`). Side-by-side tools such as
+meld, vimdiff, and kdiff3 expect two file paths instead, and the formatter
+does not launch them directly. Use shell process substitution (Bash or
+Zsh) to feed `cmakefmt`'s formatted output to such tools as if it were a
+file:
+
+```bash
+# Open meld with the original on the left and the formatted output on the right
+meld CMakeLists.txt <(cmakefmt CMakeLists.txt)
+
+# Same idea with vimdiff
+vimdiff CMakeLists.txt <(cmakefmt CMakeLists.txt)
+
+# Or kdiff3
+kdiff3 CMakeLists.txt <(cmakefmt CMakeLists.txt)
+```
+
+To review every changed file in a directory in turn, combine
+`--list-changed-files` with a shell loop:
+
+```bash
+for f in $(cmakefmt --list-changed-files .); do
+  meld "$f" <(cmakefmt "$f")
+done
+```
+
+Visual Studio Code users get a built-in side-by-side diff with no shell
+dance:
+
+```bash
+code --diff CMakeLists.txt <(cmakefmt CMakeLists.txt)
+```
+
+Process substitution (`<(...)`) is a Bash and Zsh feature; POSIX `sh` and
+the Windows `cmd` shell do not support it. On Windows, use Git Bash, WSL,
+or PowerShell with a temporary file:
+
+```powershell
+$tmp = New-TemporaryFile
+cmakefmt CMakeLists.txt | Set-Content $tmp
+meld CMakeLists.txt $tmp
+Remove-Item $tmp
+```
