@@ -21,336 +21,110 @@
   <a href="https://api.reuse.software/info/github.com/cmakefmt/cmakefmt"><img src="https://api.reuse.software/badge/github.com/cmakefmt/cmakefmt" alt="REUSE status" /></a>&nbsp;<a href="https://securityscorecards.dev/viewer/?uri=github.com/cmakefmt/cmakefmt"><img src="https://api.securityscorecards.dev/projects/github.com/cmakefmt/cmakefmt/badge" alt="OpenSSF Scorecard" /></a>&nbsp;<a href="https://www.bestpractices.dev/projects/12392"><img src="https://www.bestpractices.dev/projects/12392/badge" alt="OpenSSF Best Practices" /></a>
 </p>
 
-**A lightning-fast, workflow-first CMake formatter — built in Rust, built to last.**
+**A fast, correct CMake formatter — `cmake-format`, reimagined in Rust.**
 
 ![cmakefmt demo](https://cmakefmt.dev/cmakefmt.gif)
 
-The above demo was generated with [VHS](https://github.com/charmbracelet/vhs).
-
-`cmakefmt` replaces the aging Python [`cmake-format`](https://github.com/cheshirekow/cmake_format) tool with a
-single native binary. Same spirit. No Python.
-
-* [crates.io](crates.io): `cmakefmt-rust`
-* CLI name: `cmakefmt`
-
-> [!NOTE]
->
-> This project is independent from other Rust implementations, including: [`azais-corentin/cmakefmt`](https://github.com/azais-corentin/cmakefmt) and [`yamadapc/cmakefmt`](https://github.com/yamadapc/cmakefmt).
-
 <h2>Contents</h2>
 
-* [Why `cmakefmt`?](#why-cmakefmt)
-* [Performance](#performance)
-* [Installation](#installation)
-* [Quick Start](#quick-start)
-* [Common Workflows](#common-workflows)
-* [Configuration](#configuration)
-* [Formatter Disable Regions](#formatter-disable-regions)
-* [Library Usage](#library-usage)
-* [Documentation](#documentation)
-* [Project Layout](#project-layout)
-* [Development](#development)
-* [Status](#status)
-* [License](#license)
+- [Why `cmakefmt`?](#why-cmakefmt)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [GitHub Action](#github-action)
+- [Documentation](#documentation)
+- [Status](#status)
+- [License](#license)
 
 ## Why `cmakefmt`?
 
-* **104× faster — not a typo.** Geometric-mean speedup of `104×` over `cmake-format` on real-world per-file corpora,
-  rising to **2,853×** on whole-repository runs. Pre-commit hooks that once made you wince now finish before you blink.
-* **Zero dependencies. One binary.** No Python environment, no virtualenv bootstrap, no dependency drift.
-  Drop it in CI and forget about it.
-* **Built for actual workflows.** `--check`, `--diff`, `--staged`, `--changed`, `--files-from`,
-  `--show-config`, `--explain-config`, semantic verification, JSON reporting — all first-class,
-  not scripted workarounds.
-* **Knows your commands.** Teach `cmakefmt` the argument structure of your project's custom CMake functions and macros.
-  No more generic token-wrapping for code *you* wrote.
-* **Errors that actually help.** Parse and config failures come with file/line context, source snippets,
-  and reproduction hints — not opaque parser noise.
-* **Designed for real repositories.** Comment preservation, disable-region passthrough, config discovery,
-  ignore files, Git-aware file selection, and opt-in parallelism are core features, not afterthoughts.
+- **Drop-in replacement for `cmake-format`.** A single native binary with the
+  same workflows and no Python environment to manage.
+- **100× faster.** Geometric-mean speedup over `cmake-format` across a corpus
+  of 14 large open-source repositories (see [Performance](https://cmakefmt.dev/performance/)).
+- **Workflow-first design.** `--check`, `--diff`, `--staged`, `--changed`,
+  semantic verification, JSON/SARIF/JUnit reports, an LSP server, and a
+  [GitHub Action](#github-action) are all first-class features rather than
+  scripted afterthoughts.
 
-## Performance
-
-| Fixture                          |  Lines | `cmakefmt` ms | `cmake-format` ms |   Speedup |
-|----------------------------------|-------:|--------------:|------------------:|----------:|
-| `opencv_flann/CMakeLists.txt`    |      2 |           6.3 |              55.8 |      8.9× |
-| `googletest/CMakeLists.txt`      |     36 |           5.4 |              68.2 |     12.6× |
-| `llvm_tablegen/CMakeLists.txt`   |     83 |           6.4 |              83.8 |     13.1× |
-| `abseil/CMakeLists.txt`          |    280 |           6.8 |             186.1 |     27.4× |
-| `spdlog/CMakeLists.txt`          |    413 |           7.7 |             239.1 |     31.1× |
-| `mariadb_server/CMakeLists.txt`  |    656 |           7.1 |             532.0 |     75.0× |
-| `xnnpack/CMakeLists.txt`         |  1,354 |           8.6 |           1,568.9 |    182.2× |
-| `opencv/CMakeLists.txt` (root)   |  2,039 |           9.8 |          43,158.4 |  4,417.2× |
-| `blender/CMakeLists.txt` (root)  |  2,650 |           8.6 |           2,922.7 |    338.5× |
-| `llvm/libc/.../CMakeLists.txt`   |  6,688 |           8.9 |           2,473.7 |    279.3× |
-| `grpc/CMakeLists.txt` (root)     | 54,834 |          39.4 |          84,489.2 |  2,146.2× |
-
-Geometric-mean per-file speedup: **`104×`**.
-Whole-repository parallel runs (across 14 large open-source repos including
-LLVM, blender, opencv, gRPC, and oomph-lib) average **`150×` faster than
-`cmake-format`** geo-mean (**`95×`** serial), with parallel mode delivering
-up to **`2.9×`** over `cmakefmt` serial on large repositories.
-
-Full methodology and profiler notes: [cmakefmt.dev/performance/](https://cmakefmt.dev/performance/).
-
-Update the pinned local corpus and generate local before/after review artifacts with:
+## Install
 
 ```bash
-python3 scripts/fetch-real-world-corpus.py
-scripts/review-real-world-corpus.sh
+brew install cmakefmt/cmakefmt/cmakefmt   # macOS / Linux (Homebrew)
+pip install cmakefmt                      # any platform with Python
+cargo install cmakefmt-rust               # any platform
+winget install cmakefmt.cmakefmt          # Windows
 ```
 
-## Installation
+Conda, Docker, pre-built binaries, and full setup notes are documented at
+[Installation](https://cmakefmt.dev/installation/).
 
-**Homebrew (macOS):**
+## Quick start
 
 ```bash
-brew install cmakefmt/cmakefmt/cmakefmt
+cmakefmt --in-place .   # format every CMake file in the project
 ```
 
-**Cargo (any platform):**
+The full CLI reference, configuration schema, editor integrations, and
+migration guide from `cmake-format` all live at
+[**cmakefmt.dev**](https://cmakefmt.dev).
 
-```bash
-cargo install cmakefmt-rust
-```
+## GitHub Action
 
-**pip (any platform with Python):**
-
-```bash
-pip install cmakefmt
-```
-
-**conda-forge:**
-
-```bash
-conda install -c conda-forge cmakefmt
-```
-
-**Pre-built binaries (Linux, macOS, and Windows):**
-
-Download the `.zip` / `.tar.gz` for your platform from
-[GitHub Releases](https://github.com/cmakefmt/cmakefmt/releases/latest),
-extract, and place the binary on your `PATH`.
-
-**Build from source:**
-
-```bash
-git clone https://github.com/cmakefmt/cmakefmt
-cd cmakefmt
-cargo install --path .
-```
-
-Verify:
-
-```bash
-cmakefmt --version
-```
-
-Release channels and support levels are documented at [cmakefmt.dev/release/](https://cmakefmt.dev/release/).
-Shell completion installation instructions are available at [cmakefmt.dev/install/](https://cmakefmt.dev/install/).
-
-## Quick Start
-
-```bash
-cmakefmt config init               # generate a starter .cmakefmt.yaml
-cmakefmt --check .                 # dry-run: just show which files would change
-cmakefmt .                         # dry-run: preview formatted output; changed lines shown in blue
-cmakefmt --diff .                  # dry-run: view a unified diff of what would change (like `git diff`)
-cmakefmt --in-place .              # apply formatting across the whole project
-cmakefmt --staged --check          # use in pre-commit hooks
-cmakefmt --path-regex 'src/.*' .   # format CMake files only under src/
-```
-
-## Common Workflows
-
-| Task                                        | Command                                          |
-|---------------------------------------------|--------------------------------------------------|
-| Format file to stdout                       | `cmakefmt CMakeLists.txt`                        |
-| Rewrite files in place                      | `cmakefmt --in-place .`                          |
-| CI check                                    | `cmakefmt --check .`                             |
-| Preview which files would change            | `cmakefmt --list-changed-files .`                |
-| See the exact patch                         | `cmakefmt --diff CMakeLists.txt`                 |
-| Verify semantics while formatting to stdout | `cmakefmt --verify CMakeLists.txt`               |
-| Pre-commit guard (staged files only)        | `cmakefmt --staged --check`                      |
-| PR-scoped check                             | `cmakefmt --changed --since origin/main --check` |
-| Machine-readable CI output                  | `cmakefmt --check --report-format json .`        |
-| GitHub Actions annotations                  | `cmakefmt --check --report-format github .`      |
-| Checkstyle / JUnit / SARIF output           | `cmakefmt --check --report-format checkstyle .`  |
-| Pin the required binary version in CI       | `cmakefmt --required-version 1.3.0 --check .`    |
-| Speed up repeated large-repo checks         | `cmakefmt --cache --check .`                     |
-| Roll out formatting file-by-file            | `cmakefmt --require-pragma --check .`            |
-| Find project-specific commands              | `cmakefmt --list-unknown-commands .`             |
-| Watch and auto-format on save               | `cmakefmt --watch .`                             |
-| Explain formatting decisions                | `cmakefmt --explain CMakeLists.txt`              |
-| Read from stdin                             | `cat CMakeLists.txt \| cmakefmt -`               |
-
-## Configuration
-
-`cmakefmt` searches upward from each file for `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`.
-YAML is recommended for larger configs.
-
-Example `.cmakefmt.yaml`:
+The official [`cmakefmt-action`](https://github.com/cmakefmt/cmakefmt-action)
+wraps the binary for use in CI workflows:
 
 ```yaml
-format:
-  line_width: 100
-  tab_size: 4
-
-style:
-  command_case: lower
-  keyword_case: upper
-
-markup:
-  enable_markup: true
+- uses: actions/checkout@v6
+- uses: cmakefmt/cmakefmt-action@v2
 ```
 
-Debug which config a file is actually using:
+That snippet is the strict whole-repo check: it fails the job and emits inline
+PR annotations for any file that would change under formatting. The action
+also supports other modes and file-selection scopes:
 
-```bash
-cmakefmt --show-config-path src/CMakeLists.txt
-cmakefmt --show-config src/CMakeLists.txt
-cmakefmt --explain-config
+```yaml
+- uses: cmakefmt/cmakefmt-action@v2
+  with:
+    mode: diff       # check, diff, fix, or setup
+    scope: changed   # all, changed, or staged
 ```
 
-Migrate from an existing `cmake-format` config:
-
-```bash
-cmakefmt --convert-legacy-config .cmake-format.py > .cmakefmt.yaml
-```
-
-Full config reference: [cmakefmt.dev/config/](https://cmakefmt.dev/config/).
-
-## Formatter Disable Regions
-
-Selectively opt out of formatting with barrier comments.
-
-There are three barrier styles:
-
-1. Legacy `cmake-format` directives:
-
-    ```cmake
-    # cmake-format: off
-    set(MESSY_THING  a   b   c)   # kept verbatim
-    # cmake-format: on
-    ```
-
-1. Native directive barriers, using either `cmakefmt` or the shorter `fmt` spelling:
-
-    ```cmake
-    # cmakefmt: off
-    set(MESSY_THING  a   b   c)   # kept verbatim
-    # cmakefmt: on
-
-    # fmt: off
-    set(MESSY_THING  a   b   c)   # kept verbatim
-    # fmt: on
-    ```
-
-1. Fence barriers, which toggle formatting on and off each time `# ~~~` appears:
-
-    ```cmake
-    # ~~~
-    set(MESSY_THING  a   b   c)   # kept verbatim
-    # ~~~
-    ```
-
-Use directive barriers when you want an explicit start/end marker, and fence
-barriers when you want a shorter toggle-style block.
-
-## Library Usage
-
-`cmakefmt` is also available as a Rust library:
-
-```rust
-use cmakefmt::{format_source, Config};
-
-fn main() -> Result<(), cmakefmt::Error> {
-    let src = r#"target_link_libraries(foo PUBLIC bar baz)"#;
-    let out = format_source(src, &Config::default())?;
-    println!("{out}");
-    Ok(())
-}
-```
-
-Full API docs: [cmakefmt.dev/api/](https://cmakefmt.dev/api/).
+For the complete list of inputs and recommended rollout patterns, see the
+[`cmakefmt-action` README](https://github.com/cmakefmt/cmakefmt-action#readme).
 
 ## Documentation
 
-Start here: [https://cmakefmt.dev](https://cmakefmt.dev).
+The full documentation lives at [**cmakefmt.dev**](https://cmakefmt.dev).
 
-| Doc                                                                  | Description                                                              |
-|----------------------------------------------------------------------|--------------------------------------------------------------------------|
-| [Install](https://cmakefmt.dev/install/)                             | Install options, first-project setup, CI wiring                          |
-| [Coverage](https://cmakefmt.dev/coverage/)                           | How coverage is measured, published, and interpreted                     |
-| [Release Channels](https://cmakefmt.dev/release/)                    | Release contract, support levels, and release artifacts                  |
-| [CLI Reference](https://cmakefmt.dev/cli/)                           | Every flag, exit code, and discovery rule                                |
-| [Config Reference](https://cmakefmt.dev/config/)                     | Full config schema with examples                                         |
-| [Formatter Behavior](https://cmakefmt.dev/behavior/)                 | How the formatter makes layout decisions                                 |
-| [Migration from `cmake-format`](https://cmakefmt.dev/migration/)     | Incremental rollout guide and CLI mapping                                |
-| [Library API](https://cmakefmt.dev/api/)                             | Embedding `cmakefmt` in your own Rust tools                              |
-| [Troubleshooting](https://cmakefmt.dev/troubleshooting/)             | Common issues and debug workflow                                         |
-| [Performance](https://cmakefmt.dev/performance/)                     | Benchmark methodology and profiler notes                                 |
-| [Contributing](CONTRIBUTING.md)                                      | How to contribute, run tests, and open PRs                               |
-| [Changelog](CHANGELOG.md)                                            | What's changed in each release                                           |
-
-Preview the full docs locally:
-
-```bash
-cd docs && npm install && npm run dev
-```
-
-## Project Layout
-
-```text
-cmakefmt/
-├── docs/        # Astro + Starlight source published to cmakefmt.dev
-├── src/         # CLI, library API, parser, config, spec, formatter
-├── tests/       # integration tests, snapshots, and fixtures
-├── benches/     # Criterion benchmarks
-├── scripts/     # repo maintenance and docs helpers
-└── .github/     # CI and Pages workflows
-```
-
-Key modules under `src/`:
-
-* `main.rs`: CLI entry point and workflow orchestration
-* `lib.rs`: public library API
-* `config/`: config loading, merging, and legacy conversion
-* `parser/`: hand-written parser, AST, and lowering pipeline
-* `spec/`: built-in and user-defined command registry
-* `formatter/`: AST-to-doc formatting logic and comment handling
-* `files.rs`: file discovery and ignore handling
-
-## Development
-
-```bash
-cargo fmt --check                          # formatting
-cargo clippy --all-targets -- -D warnings  # lints
-cargo test                                 # all tests
-cargo llvm-cov --workspace --all-targets   # coverage
-cargo bench                                # benchmarks
-```
-
-Install pre-commit hooks:
-
-```bash
-pre-commit install
-pre-commit install --hook-type pre-push
-```
+| Page                                                             | Description                           |
+|------------------------------------------------------------------|---------------------------------------|
+| [Getting Started](https://cmakefmt.dev/getting-started/)         | First format in under a minute        |
+| [Installation](https://cmakefmt.dev/installation/)               | Every install channel and setup notes |
+| [CLI Reference](https://cmakefmt.dev/cli/)                       | Every flag, subcommand, exit code     |
+| [Config Reference](https://cmakefmt.dev/config/)                 | Full config schema with examples      |
+| [Migration from `cmake-format`](https://cmakefmt.dev/migration/) | Incremental rollout guide             |
+| [Editor Integration](https://cmakefmt.dev/editors/)              | VS Code, Neovim, Helix, Zed, Emacs    |
+| [Comparison](https://cmakefmt.dev/comparison/)                   | vs `cmake-format` and `gersemi`       |
+| [Performance](https://cmakefmt.dev/performance/)                 | Benchmark methodology and numbers     |
+| [Library API](https://cmakefmt.dev/api/)                         | Embed `cmakefmt` in Rust code         |
+| [Troubleshooting](https://cmakefmt.dev/troubleshooting/)         | Common issues and debug workflow      |
+| [Playground](https://cmakefmt.dev/playground/)                   | Try `cmakefmt` in your browser        |
+| [Contributing](CONTRIBUTING.md) / [Changelog](CHANGELOG.md)      | How to help; what changed             |
 
 ## Status
 
-The repository is stable and actively maintained. `cmakefmt` is still
-pre-`1.0`, so release packaging, package-manager distribution, and some output
-or API details may continue to evolve. The built-in command registry is audited
-through CMake 4.3.1.
-
-Hit something unexpected? See [Troubleshooting](https://cmakefmt.dev/troubleshooting/) or run:
-
-```bash
-cmakefmt --debug --check path/to/CMakeLists.txt
-```
+`cmakefmt` is stable and actively maintained. The built-in command spec is
+audited against CMake 4.3.1. The release contract and per-channel support
+levels are documented at [Release](https://cmakefmt.dev/release/).
 
 ## License
 
-`cmakefmt` is dual-licensed under [MIT](LICENSES/MIT.txt) or [Apache-2.0](LICENSES/Apache-2.0.txt) at your option.
+`cmakefmt` is dual-licensed under [MIT](LICENSES/MIT.txt) or
+[Apache-2.0](LICENSES/Apache-2.0.txt), at your option.
+
+---
+
+<sub>This project is independent from other Rust crates of the same name —
+it is not affiliated with
+[`azais-corentin/cmakefmt`](https://github.com/azais-corentin/cmakefmt) or
+[`yamadapc/cmakefmt`](https://github.com/yamadapc/cmakefmt).</sub>
