@@ -67,6 +67,19 @@ conda install -c conda-forge cmakefmt
 Built from source by conda-forge. Future version bumps are handled
 automatically by the conda-forge autotick bot.
 
+### winget
+
+Recommended for Windows users — installs a native binary, no Rust
+toolchain or Python environment needed:
+
+```powershell
+winget install cmakefmt.cmakefmt
+```
+
+The package is published in the [`microsoft/winget-pkgs`](https://github.com/microsoft/winget-pkgs/tree/master/manifests/c/cmakefmt/cmakefmt)
+community repository. Version updates may lag behind GitHub Releases
+slightly while new manifests propagate.
+
 ### Pre-built Binaries
 
 Native binaries for Linux, macOS, and Windows are published to
@@ -97,9 +110,10 @@ what to trust:
 | `cargo install cmakefmt-rust` | Officially maintained | Reference install path for developers already using Rust. |
 | `pip install cmakefmt` | Officially maintained | Native binary via pre-built wheel. |
 | `conda install -c conda-forge cmakefmt` | Community maintained | Built from source; autotick bot tracks releases. |
+| `winget install cmakefmt.cmakefmt` | Community maintained | Recommended on Windows. Manifest lives in `microsoft/winget-pkgs`; version updates may lag releases slightly. |
 | GitHub Releases binaries | Officially maintained | Native binaries for Linux, macOS, and Windows. |
 | Docs site / CLI reference | Officially maintained | Stays in lock-step with each tagged release. |
-| `winget` / Scoop | Planned | Not published yet. First-party Windows package-manager channels planned after `v0.9.0`. |
+| Scoop | Planned | Not published yet. |
 | Additional package managers (AUR, Nix, containers, etc.) | Automated or best-effort | Useful channels, but not the first rollout priority. |
 
 ## Shell Completions
