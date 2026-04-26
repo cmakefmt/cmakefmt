@@ -16,6 +16,40 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Distribution
+
+- Automated winget submissions on each release. A new
+  `publish-winget.yml` workflow fires on `release: published` and
+  opens a PR against `microsoft/winget-pkgs` with the new manifest,
+  using a shared fork at `cmakefmt/winget-pkgs`. Manual retries are
+  available via `workflow_dispatch`. The first run closed the
+  pre-existing manifest gap (winget had been stuck at 0.3.0); from
+  v1.3.0 onward, `winget upgrade` tracks releases on the same
+  cadence as Homebrew.
+
+### Documentation
+
+- Overhauled the GitHub README. Trimmed from 356 lines to 130 by
+  removing content owned by the docs site (Common Workflows table,
+  Configuration section, Formatter Disable Regions, Library Usage
+  example, full performance fixture table, Project Layout, Development
+  commands). Added a focused GitHub Action section showcasing the new
+  `mode`/`scope` inputs. Each remaining sentence is a complete
+  thought rather than a colon-and-link fragment.
+- Rewrote the CI Integration page to use the new `cmakefmt-action`
+  surface. The `mode` input (`check`/`diff`/`fix`/`setup`) and `scope`
+  input (`all`/`changed`/`staged`) replace the older `args:`-based
+  examples throughout, with `paths`, `since`, `working-directory`,
+  and `version` covering the rest. Added a changed-file rollout
+  example, a monorepo example, and an auto-format-and-commit
+  example. Bumped the Docker tag pin from 0.4.0 to 1.3.0 to match
+  the current release.
+- Tightened the winget messaging in the installation page. With
+  manifest submission now automated, the "version updates may lag
+  releases slightly" hedge has been removed and the support-levels
+  table promotes winget from "Community maintained" to "Officially
+  maintained".
+
 ## 1.3.0 — 2026-04-25
 
 ### Added
