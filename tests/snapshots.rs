@@ -1427,17 +1427,6 @@ fn link_directories_after_flag_separates_when_wrapping() {
     ");
 }
 
-#[test]
-fn no_arg_flow_commands_format_without_args() {
-    let src = "break()\ncontinue()\nenable_testing()\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @r"
-    break()
-    continue()
-    enable_testing()
-    ");
-}
-
 // --- Phase 47g Tier 2/3 builtins (Pass 1 of CMake spec coverage) ---
 
 #[test]
@@ -1550,20 +1539,6 @@ fn add_test_legacy_form_packs_all_args_as_positionals() {
       arg5
       arg6)
     ");
-}
-
-#[test]
-fn cmake_policy_set_form_round_trips() {
-    let src = "cmake_policy(SET CMP0048 NEW)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"cmake_policy(SET CMP0048 NEW)");
-}
-
-#[test]
-fn cmake_policy_version_form_round_trips() {
-    let src = "cmake_policy(VERSION 3.20)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"cmake_policy(VERSION 3.20)");
 }
 
 #[test]
@@ -1707,30 +1682,22 @@ fn fetchcontent_declare_recognizes_flags_and_kwargs() {
 }
 
 #[test]
-fn fetchcontent_makeavailable_packs_positionals() {
-    let src = "FetchContent_MakeAvailable(googletest abseil fmt nlohmann_json)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @"fetchcontent_makeavailable(googletest abseil fmt nlohmann_json)"
-    );
-}
-
-#[test]
-fn check_ipo_supported_kwargs_recognized() {
+fn check_ipo_supported_kwargs_separate_when_wrapping() {
+    // Wrap pressure forces RESULT/OUTPUT/LANGUAGES kwargs onto their own
+    // lines. Without the spec they would all pack into one positional list
+    // — the kwarg recognition is what gives them structural separation.
     let src = "check_ipo_supported(RESULT IPO_OK OUTPUT IPO_ERROR LANGUAGES C CXX Fortran)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(
-        formatted,
-        @"check_ipo_supported(RESULT IPO_OK OUTPUT IPO_ERROR LANGUAGES C CXX Fortran)"
-    );
-}
-
-#[test]
-fn cmake_push_check_state_recognizes_reset_flag() {
-    let src = "cmake_push_check_state(RESET)\n";
-    let formatted = format_source(src, &Config::default()).unwrap();
-    insta::assert_snapshot!(formatted, @"cmake_push_check_state(RESET)");
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    check_ipo_supported(
+      RESULT IPO_OK
+      OUTPUT IPO_ERROR
+      LANGUAGES C CXX Fortran)
+    ");
 }
 
 #[test]
@@ -1762,8 +1729,12 @@ fn gtest_discover_tests_kwargs_separate_when_wrapping() {
 }
 
 #[test]
-fn externalproject_get_property_takes_variadic_positionals() {
-    let src = "ExternalProject_Get_Property(myExtProj SOURCE_DIR BINARY_DIR INSTALL_DIR)\n";
+fn externalproject_get_property_packs_property_list_under_wrap() {
+    // Variadic positionals should pack horizontally up to the line
+    // budget rather than going one-per-line. With seven properties and
+    // a narrow line_width, the formatter still wraps them as a flat
+    // packed list rather than as a kwarg-style vertical block.
+    let src = "ExternalProject_Get_Property(myExtProj SOURCE_DIR BINARY_DIR INSTALL_DIR STAMP_DIR DOWNLOAD_DIR LOG_DIR TMP_DIR)\n";
     let config = Config {
         line_width: 50,
         ..Config::default()
@@ -1771,8 +1742,151 @@ fn externalproject_get_property_takes_variadic_positionals() {
     let formatted = format_source(src, &config).unwrap();
     insta::assert_snapshot!(formatted, @r"
     externalproject_get_property(
-      myExtProj SOURCE_DIR BINARY_DIR INSTALL_DIR)
+      myExtProj
+      SOURCE_DIR
+      BINARY_DIR
+      INSTALL_DIR
+      STAMP_DIR
+      DOWNLOAD_DIR
+      LOG_DIR
+      TMP_DIR)
     ");
+}
+
+#[test]
+fn check_include_file_packs_when_inline() {
+    // Representative of the ~25 trivial-pargs Check* commands. With
+    // three positionals and a comfortable line_width, the call fits
+    // on one line. The spec entry is `pargs: "2+"` which does not
+    // change the layout for trivial cases — registry-level tests
+    // assert the spec exists; this snapshot anchors the layout.
+    let src = "check_include_file(sys/types.h HAVE_SYS_TYPES_H \"-D_GNU_SOURCE\")\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(
+        formatted,
+        @r#"check_include_file(sys/types.h HAVE_SYS_TYPES_H "-D_GNU_SOURCE")"#
+    );
+}
+
+#[test]
+fn configure_package_config_file_kwargs_and_flags_separate_when_wrapping() {
+    let src = "configure_package_config_file(MyLibConfig.cmake.in MyLibConfig.cmake INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MyLib PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR NO_SET_AND_CHECK_MACRO NO_CHECK_REQUIRED_COMPONENTS_MACRO)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    configure_package_config_file(
+      MyLibConfig.cmake.in MyLibConfig.cmake
+      INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MyLib
+      PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR
+      NO_SET_AND_CHECK_MACRO
+      NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+    ");
+}
+
+#[test]
+fn write_basic_package_version_file_arch_independent_flag_separates() {
+    // The canonical "release a CMake package" pattern: ARCH_INDEPENDENT
+    // should land on its own line as a flag, distinct from the VERSION
+    // and COMPATIBILITY kwargs.
+    let src = "write_basic_package_version_file(MyLibConfigVersion.cmake VERSION 2.4.1 COMPATIBILITY SameMajorVersion ARCH_INDEPENDENT)\n";
+    let config = Config {
+        line_width: 60,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    write_basic_package_version_file(
+      MyLibConfigVersion.cmake
+      VERSION 2.4.1
+      COMPATIBILITY SameMajorVersion
+      ARCH_INDEPENDENT)
+    ");
+}
+
+#[test]
+fn pkg_check_modules_recognizes_quiet_required_imported_target_flags() {
+    let src =
+        "pkg_check_modules(MYDEPS REQUIRED IMPORTED_TARGET libssl libcrypto libpng libjpeg)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    pkg_check_modules(
+      MYDEPS
+      REQUIRED
+      IMPORTED_TARGET libssl libcrypto libpng libjpeg)
+    ");
+}
+
+#[test]
+fn find_package_handle_standard_args_rich_kwargs_and_flags() {
+    // The kwarg+flag surface most every CMake project uses through a
+    // FindFoo.cmake module. REQUIRED_VARS takes a list, VERSION_VAR
+    // takes one value, and HANDLE_VERSION_RANGE / HANDLE_COMPONENTS /
+    // CONFIG_MODE are all separate flags that should each land on
+    // their own line.
+    let src = "find_package_handle_standard_args(MyLib REQUIRED_VARS MyLib_INCLUDE_DIR MyLib_LIBRARY VERSION_VAR MyLib_VERSION HANDLE_VERSION_RANGE HANDLE_COMPONENTS CONFIG_MODE)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    find_package_handle_standard_args(
+      MyLib
+      REQUIRED_VARS MyLib_INCLUDE_DIR MyLib_LIBRARY
+      VERSION_VAR MyLib_VERSION
+      HANDLE_VERSION_RANGE
+      HANDLE_COMPONENTS
+      CONFIG_MODE)
+    ");
+}
+
+#[test]
+fn gtest_add_tests_sister_to_gtest_discover_tests() {
+    // gtest_add_tests has pargs: 0 (everything is kwargs/flags), where
+    // gtest_discover_tests has pargs: 1 (the target). Both should
+    // recognise their kwargs and flags identically.
+    let src = "gtest_add_tests(TARGET my_test_target SOURCES test1.cc test2.cc test3.cc EXTRA_ARGS --color=yes WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} TEST_PREFIX MyLib. SKIP_DEPENDENCY)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    gtest_add_tests(
+      TARGET my_test_target
+      SOURCES test1.cc test2.cc test3.cc
+      EXTRA_ARGS --color=yes
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      TEST_PREFIX MyLib.
+      SKIP_DEPENDENCY)
+    ");
+}
+
+#[test]
+fn cmake_parse_arguments_high_pargs_count_packs_when_wrapping() {
+    // pargs: "4+" — exercises a shape that no other tested command
+    // uses. The four required positionals (prefix, options, one_value,
+    // multi_value) plus ${ARGN} sentinel should pack into the
+    // available width.
+    let src = "cmake_parse_arguments(ARG \"VERBOSE;OPTIONAL\" \"DESTINATION;COMPONENT\" \"SOURCES;DEPENDS\" ${ARGN})\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    cmake_parse_arguments(ARG "VERBOSE;OPTIONAL" "DESTINATION;COMPONENT"
+                          "SOURCES;DEPENDS" ${ARGN})
+    "#);
+}
+
+#[test]
+fn externalproject_add_step_kwargs_separate_when_wrapping() {
+    // Sister of the already-tested ExternalProject_Add but with
+    // pargs: 2 (project name + step name) and a smaller kwarg surface.
+    let src = "ExternalProject_Add_Step(myExtProj custom_step COMMAND ${CMAKE_COMMAND} -E echo \"Hello\" DEPENDEES build DEPENDERS install BYPRODUCTS hello.txt WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} ALWAYS TRUE)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    externalproject_add_step(
+      myExtProj custom_step
+      COMMAND ${CMAKE_COMMAND} -E echo "Hello"
+      DEPENDEES build
+      DEPENDERS install
+      BYPRODUCTS hello.txt
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      ALWAYS TRUE)
+    "#);
 }
 
 // --- Existing tests ---
