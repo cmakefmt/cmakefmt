@@ -748,27 +748,7 @@ fn format_command_vertical(
             }
         }
 
-        // Close the command.
-        if output.ends_with('\n') {
-            output.pop();
-        }
-        if cmd_config.dangle_parens() {
-            output.push('\n');
-            match cmd_config.dangle_align() {
-                DangleAlign::Prefix | DangleAlign::Close => output.push_str(&base_indent),
-                DangleAlign::Open => {
-                    output.push_str(&base_indent);
-                    output.push_str(&" ".repeat(name.len()));
-                }
-            }
-            output.push(')');
-        } else if last_output_line_has_comment(&output) {
-            output.push('\n');
-            output.push_str(&base_indent);
-            output.push(')');
-        } else {
-            output.push(')');
-        }
+        close_command_output(&mut output, cmd_config, &base_indent, &name);
         return Ok(output);
     }
 
@@ -869,27 +849,7 @@ fn format_command_vertical(
         }
     }
 
-    if output.ends_with('\n') {
-        output.pop();
-    }
-
-    if cmd_config.dangle_parens() {
-        output.push('\n');
-        match cmd_config.dangle_align() {
-            DangleAlign::Prefix | DangleAlign::Close => output.push_str(&base_indent),
-            DangleAlign::Open => {
-                output.push_str(&base_indent);
-                output.push_str(&" ".repeat(name.len()));
-            }
-        }
-        output.push(')');
-    } else if last_output_line_has_comment(&output) {
-        output.push('\n');
-        output.push_str(&base_indent);
-        output.push(')');
-    } else {
-        output.push(')');
-    }
+    close_command_output(&mut output, cmd_config, &base_indent, &name);
 
     Ok(output)
 }
@@ -1597,6 +1557,37 @@ fn close_multiline(
 
 fn last_output_line_has_comment(output: &str) -> bool {
     output.lines().last().is_some_and(|line| line.contains('#'))
+}
+
+/// Append the closing `)` to `output`, honouring dangle-paren config and
+/// avoiding a trailing comment swallowing the paren. Shared by both
+/// vertical-layout paths in `format_command_vertical`.
+fn close_command_output(
+    output: &mut String,
+    cmd_config: &CommandConfig<'_>,
+    base_indent: &str,
+    name: &str,
+) {
+    if output.ends_with('\n') {
+        output.pop();
+    }
+    if cmd_config.dangle_parens() {
+        output.push('\n');
+        match cmd_config.dangle_align() {
+            DangleAlign::Prefix | DangleAlign::Close => output.push_str(base_indent),
+            DangleAlign::Open => {
+                output.push_str(base_indent);
+                output.push_str(&" ".repeat(name.len()));
+            }
+        }
+        output.push(')');
+    } else if last_output_line_has_comment(output) {
+        output.push('\n');
+        output.push_str(base_indent);
+        output.push(')');
+    } else {
+        output.push(')');
+    }
 }
 
 fn argument_has_newline(argument: &Argument) -> bool {
