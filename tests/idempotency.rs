@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 
 use cmakefmt::{
     format_source, parser,
-    parser::ast::{Argument, File, Statement},
-    spec::{registry::CommandRegistry, CommandForm, KwargSpec},
+    parser::ast::{File, Statement},
+    semantic::{normalize_command_literals, normalize_keyword_args, normalize_line_endings},
+    spec::registry::CommandRegistry,
     Config,
 };
 use walkdir::WalkDir;
@@ -96,29 +97,6 @@ fn normalize_semantics(mut file: File, registry: &CommandRegistry) -> File {
     file
 }
 
-fn normalize_command_literals(command: &mut cmakefmt::parser::ast::CommandInvocation) {
-    // Strip trailing and inline comments — they have no CMake semantic meaning.
-    // Keep in sync with src/main.rs::normalize_command_literals.
-    command.trailing_comment = None;
-    command
-        .arguments
-        .retain(|a| !matches!(a, Argument::InlineComment(_)));
-
-    for argument in &mut command.arguments {
-        match argument {
-            Argument::Bracket(bracket) => normalize_line_endings(&mut bracket.raw),
-            Argument::Quoted(value) | Argument::Unquoted(value) => normalize_line_endings(value),
-            Argument::InlineComment(_) => unreachable!(),
-        }
-    }
-}
-
-fn normalize_line_endings(value: &mut String) {
-    if value.contains('\r') {
-        *value = value.replace("\r\n", "\n");
-    }
-}
-
 fn line_contains_comment(line: &str) -> bool {
     line.contains('#')
 }
@@ -129,54 +107,4 @@ fn line_has_unbreakable_literal(line: &str) -> bool {
         || line.contains("[=")
         || line.contains("$<")
         || line.trim_start().starts_with('(')
-}
-
-fn normalize_keyword_args(
-    command: &mut cmakefmt::parser::ast::CommandInvocation,
-    registry: &CommandRegistry,
-) {
-    let spec = registry.get(&command.name);
-    let first_arg = command.arguments.iter().find_map(first_arg_text);
-    let form = spec.form_for(first_arg);
-    let keyword_set = collect_keywords(form);
-
-    for arg in &mut command.arguments {
-        if let Argument::Unquoted(value) = arg {
-            let upper = value.to_ascii_uppercase();
-            if keyword_set.contains(upper.as_str()) {
-                *value = upper;
-            }
-        }
-    }
-}
-
-fn first_arg_text(argument: &Argument) -> Option<&str> {
-    match argument {
-        Argument::Quoted(_) | Argument::Bracket(_) | Argument::InlineComment(_) => None,
-        Argument::Unquoted(value) => Some(value.as_str()),
-    }
-}
-
-fn collect_keywords(form: &CommandForm) -> std::collections::BTreeSet<String> {
-    let mut keywords = std::collections::BTreeSet::new();
-    collect_form_keywords(form, &mut keywords);
-    keywords
-}
-
-fn collect_form_keywords(form: &CommandForm, keywords: &mut std::collections::BTreeSet<String>) {
-    keywords.extend(form.flags.iter().cloned());
-
-    for (name, spec) in &form.kwargs {
-        keywords.insert(name.clone());
-        collect_kwarg_keywords(spec, keywords);
-    }
-}
-
-fn collect_kwarg_keywords(spec: &KwargSpec, keywords: &mut std::collections::BTreeSet<String>) {
-    keywords.extend(spec.flags.iter().cloned());
-
-    for (name, child) in &spec.kwargs {
-        keywords.insert(name.clone());
-        collect_kwarg_keywords(child, keywords);
-    }
 }

@@ -73,6 +73,9 @@ pub mod error;
 pub mod formatter;
 /// CMake parser and AST definitions.
 pub mod parser;
+/// Semantic-level normalisation (strip comments, line endings,
+/// keyword casing) used by `--verify` and the idempotency tests.
+pub mod semantic;
 /// Built-in and user-extensible command specification registry.
 pub mod spec;
 

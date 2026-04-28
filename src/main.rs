@@ -20,7 +20,9 @@ use cmakefmt::{
     convert_legacy_config_files, default_config_template_for,
     files::{discover_cmake_files_with_options, is_cmake_file, matches_filter, DiscoveryOptions},
     format_source_with_registry, format_source_with_registry_debug, generate_json_schema, parser,
-    render_effective_config, CaseStyle, Config, DumpConfigFormat,
+    render_effective_config,
+    semantic::{normalize_command_literals, normalize_keyword_args, normalize_line_endings},
+    CaseStyle, Config, DumpConfigFormat,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use regex::Regex;
@@ -4096,82 +4098,6 @@ fn normalize_semantics(
     }
 
     file
-}
-
-fn normalize_command_literals(command: &mut parser::ast::CommandInvocation) {
-    // Strip trailing and inline comments — they have no CMake semantic meaning.
-    command.trailing_comment = None;
-    command
-        .arguments
-        .retain(|a| !matches!(a, parser::ast::Argument::InlineComment(_)));
-
-    for argument in &mut command.arguments {
-        match argument {
-            parser::ast::Argument::Bracket(bracket) => normalize_line_endings(&mut bracket.raw),
-            parser::ast::Argument::Quoted(value) | parser::ast::Argument::Unquoted(value) => {
-                normalize_line_endings(value)
-            }
-            parser::ast::Argument::InlineComment(_) => unreachable!(),
-        }
-    }
-}
-
-fn normalize_line_endings(value: &mut String) {
-    if value.contains('\r') {
-        *value = value.replace("\r\n", "\n");
-    }
-}
-
-fn normalize_keyword_args(
-    command: &mut parser::ast::CommandInvocation,
-    registry: &CommandRegistry,
-) {
-    let spec = registry.get(&command.name);
-    let first_arg = command.arguments.iter().find_map(first_arg_text);
-    let form = spec.form_for(first_arg);
-    let keyword_set = collect_keywords(form);
-
-    for arg in &mut command.arguments {
-        if let parser::ast::Argument::Unquoted(value) = arg {
-            let upper = value.to_ascii_uppercase();
-            if keyword_set.contains(upper.as_str()) {
-                *value = upper;
-            }
-        }
-    }
-}
-
-fn first_arg_text(argument: &parser::ast::Argument) -> Option<&str> {
-    match argument {
-        parser::ast::Argument::Quoted(_)
-        | parser::ast::Argument::Bracket(_)
-        | parser::ast::Argument::InlineComment(_) => None,
-        parser::ast::Argument::Unquoted(value) => Some(value.as_str()),
-    }
-}
-
-fn collect_keywords(form: &cmakefmt::spec::CommandForm) -> BTreeSet<String> {
-    let mut keywords = BTreeSet::new();
-    collect_form_keywords(form, &mut keywords);
-    keywords
-}
-
-fn collect_form_keywords(form: &cmakefmt::spec::CommandForm, keywords: &mut BTreeSet<String>) {
-    keywords.extend(form.flags.iter().cloned());
-
-    for (name, spec) in &form.kwargs {
-        keywords.insert(name.clone());
-        collect_kwarg_keywords(spec, keywords);
-    }
-}
-
-fn collect_kwarg_keywords(spec: &cmakefmt::spec::KwargSpec, keywords: &mut BTreeSet<String>) {
-    keywords.extend(spec.flags.iter().cloned());
-
-    for (name, child) in &spec.kwargs {
-        keywords.insert(name.clone());
-        collect_kwarg_keywords(child, keywords);
-    }
 }
 
 #[cfg(test)]
