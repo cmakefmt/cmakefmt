@@ -263,27 +263,23 @@ impl CommandRegistry {
                     source,
                     toml_err.span().map(|span| span.start),
                 );
-                Error::Spec(crate::error::SpecError {
-                    path: path.clone(),
-                    details: crate::error::FileParseError {
-                        format: format.as_str(),
-                        message: toml_err.to_string().into_boxed_str(),
-                        line,
-                        column,
-                    },
-                })
+                Error::Spec(crate::error::SpecError::new(
+                    path.clone(),
+                    format.as_str(),
+                    toml_err.to_string(),
+                    line,
+                    column,
+                ))
             })?,
             ConfigFileFormat::Yaml => serde_yaml::from_str(source).map_err(|yaml_err| {
                 let location = yaml_err.location();
-                Error::Spec(crate::error::SpecError {
-                    path: path.clone(),
-                    details: crate::error::FileParseError {
-                        format: format.as_str(),
-                        message: yaml_err.to_string().into_boxed_str(),
-                        line: location.as_ref().map(|loc| loc.line()),
-                        column: location.as_ref().map(|loc| loc.column()),
-                    },
-                })
+                Error::Spec(crate::error::SpecError::new(
+                    path.clone(),
+                    format.as_str(),
+                    yaml_err.to_string(),
+                    location.as_ref().map(|loc| loc.line()),
+                    location.as_ref().map(|loc| loc.column()),
+                ))
             })?,
         };
         normalize_override_file(&mut overrides);
@@ -368,15 +364,13 @@ fn parse_embedded_spec() -> Result<SpecFile> {
 
 fn parse_msgpack_spec(bytes: &[u8], path: &str) -> Result<SpecFile> {
     let mut spec: SpecFile = rmp_serde::from_slice(bytes).map_err(|source| {
-        Error::Spec(crate::error::SpecError {
-            path: PathBuf::from(path),
-            details: crate::error::FileParseError {
-                format: "MessagePack",
-                message: source.to_string().into_boxed_str(),
-                line: None,
-                column: None,
-            },
-        })
+        Error::Spec(crate::error::SpecError::new(
+            PathBuf::from(path),
+            "MessagePack",
+            source.to_string(),
+            None,
+            None,
+        ))
     })?;
     normalize_spec_file(&mut spec);
     Ok(spec)

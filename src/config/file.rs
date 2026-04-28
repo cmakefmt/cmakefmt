@@ -15,7 +15,7 @@ use crate::config::{
     CaseStyle, Config, ContinuationAlign, DangleAlign, Experimental, FractionalTabPolicy,
     LineEnding, PerCommandConfig,
 };
-use crate::error::{Error, FileParseError, Result};
+use crate::error::{Error, Result};
 
 /// The user-config file structure for `.cmakefmt.yaml`, `.cmakefmt.yml`, and
 /// `.cmakefmt.toml`.
@@ -810,29 +810,24 @@ pub(crate) struct ParsedYamlConfig {
 }
 
 fn parse_yaml_config(yaml: &str) -> Result<ParsedYamlConfig> {
+    let yaml_string_path = || std::path::PathBuf::from("<yaml-string>");
     let file_config: FileConfig = serde_yaml::from_str(yaml).map_err(|source| {
-        Error::Config(crate::error::ConfigError {
-            path: std::path::PathBuf::from("<yaml-string>"),
-            details: FileParseError {
-                format: "yaml",
-                message: source.to_string().into_boxed_str(),
-                line: source.location().map(|loc| loc.line()),
-                column: source.location().map(|loc| loc.column()),
-            },
-        })
+        Error::Config(crate::error::ConfigError::new(
+            yaml_string_path(),
+            "yaml",
+            source.to_string(),
+            source.location().map(|loc| loc.line()),
+            source.location().map(|loc| loc.column()),
+        ))
     })?;
     if !file_config.legacy_per_command.is_empty() {
-        return Err(Error::Config(crate::error::ConfigError {
-            path: std::path::PathBuf::from("<yaml-string>"),
-            details: FileParseError {
-                format: "yaml",
-                message: "`per_command` has been renamed to `per_command_overrides`"
-                    .to_owned()
-                    .into_boxed_str(),
-                line: None,
-                column: None,
-            },
-        }));
+        return Err(Error::Config(crate::error::ConfigError::new(
+            yaml_string_path(),
+            "yaml",
+            "`per_command` has been renamed to `per_command_overrides`",
+            None,
+            None,
+        )));
     }
     let commands_yaml = file_config
         .commands
@@ -843,15 +838,13 @@ fn parse_yaml_config(yaml: &str) -> Result<ParsedYamlConfig> {
     let mut config = Config::default();
     config.apply(file_config);
     config.validate_patterns().map_err(|msg| {
-        Error::Config(crate::error::ConfigError {
-            path: std::path::PathBuf::from("<yaml-string>"),
-            details: FileParseError {
-                format: "yaml",
-                message: msg.into_boxed_str(),
-                line: None,
-                column: None,
-            },
-        })
+        Error::Config(crate::error::ConfigError::new(
+            yaml_string_path(),
+            "yaml",
+            msg,
+            None,
+            None,
+        ))
     })?;
     Ok(ParsedYamlConfig {
         config,
@@ -866,16 +859,13 @@ fn serialize_commands_yaml(commands: &serde_yaml::Value) -> Result<Box<str>> {
     serde_yaml::to_string(&wrapper)
         .map(|yaml| yaml.into_boxed_str())
         .map_err(|source| {
-            Error::Config(crate::error::ConfigError {
-                path: std::path::PathBuf::from("<yaml-string>"),
-                details: FileParseError {
-                    format: "yaml",
-                    message: format!("failed to serialize commands overrides: {source}")
-                        .into_boxed_str(),
-                    line: None,
-                    column: None,
-                },
-            })
+            Error::Config(crate::error::ConfigError::new(
+                std::path::PathBuf::from("<yaml-string>"),
+                "yaml",
+                format!("failed to serialize commands overrides: {source}"),
+                None,
+                None,
+            ))
         })
 }
 
@@ -884,29 +874,23 @@ fn load_config_file(path: &Path) -> Result<FileConfig> {
     let config: FileConfig = match detect_config_format(path)? {
         ConfigFileFormat::Toml => toml::from_str(&contents).map_err(|source| {
             let (line, column) = toml_line_col(&contents, source.span().map(|span| span.start));
-            Error::Config(crate::error::ConfigError {
-                path: path.to_path_buf(),
-                details: FileParseError {
-                    format: ConfigFileFormat::Toml.as_str(),
-                    message: source.to_string().into_boxed_str(),
-                    line,
-                    column,
-                },
-            })
+            Error::Config(crate::error::ConfigError::new(
+                path.to_path_buf(),
+                ConfigFileFormat::Toml.as_str(),
+                source.to_string(),
+                line,
+                column,
+            ))
         }),
         ConfigFileFormat::Yaml => serde_yaml::from_str(&contents).map_err(|source| {
             let location = source.location();
-            let line = location.as_ref().map(|loc| loc.line());
-            let column = location.as_ref().map(|loc| loc.column());
-            Error::Config(crate::error::ConfigError {
-                path: path.to_path_buf(),
-                details: FileParseError {
-                    format: ConfigFileFormat::Yaml.as_str(),
-                    message: source.to_string().into_boxed_str(),
-                    line,
-                    column,
-                },
-            })
+            Error::Config(crate::error::ConfigError::new(
+                path.to_path_buf(),
+                ConfigFileFormat::Yaml.as_str(),
+                source.to_string(),
+                location.as_ref().map(|loc| loc.line()),
+                location.as_ref().map(|loc| loc.column()),
+            ))
         }),
     }?;
 

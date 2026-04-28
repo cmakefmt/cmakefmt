@@ -114,6 +114,29 @@ pub struct ConfigError {
     pub details: FileParseError,
 }
 
+impl ConfigError {
+    /// Build a `ConfigError` from its component parts. Used at the
+    /// many call sites that wrap `serde` parser errors into the
+    /// crate's structured error type.
+    pub(crate) fn new(
+        path: PathBuf,
+        format: &'static str,
+        message: impl Into<Box<str>>,
+        line: Option<usize>,
+        column: Option<usize>,
+    ) -> Self {
+        Self {
+            path,
+            details: FileParseError {
+                format,
+                message: message.into(),
+                line,
+                column,
+            },
+        }
+    }
+}
+
 /// Stable command-spec parse error returned by the public library API.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error("spec error in {path}: {details}")]
@@ -123,6 +146,28 @@ pub struct SpecError {
     pub path: PathBuf,
     /// Structured parser details for the failure.
     pub details: FileParseError,
+}
+
+impl SpecError {
+    /// Build a `SpecError` from its component parts. Mirror of
+    /// [`ConfigError::new`] for spec-file parse failures.
+    pub(crate) fn new(
+        path: PathBuf,
+        format: &'static str,
+        message: impl Into<Box<str>>,
+        line: Option<usize>,
+        column: Option<usize>,
+    ) -> Self {
+        Self {
+            path,
+            details: FileParseError {
+                format,
+                message: message.into(),
+                line,
+                column,
+            },
+        }
+    }
 }
 
 /// Errors that can be returned by parsing, config loading, spec loading, or
