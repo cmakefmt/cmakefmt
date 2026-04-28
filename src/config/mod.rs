@@ -736,7 +736,7 @@ impl CommandConfig<'_> {
     }
 }
 
-fn apply_case(style: CaseStyle, s: &str) -> String {
+pub(crate) fn apply_case(style: CaseStyle, s: &str) -> String {
     match style {
         CaseStyle::Lower => s.to_ascii_lowercase(),
         CaseStyle::Upper => s.to_ascii_uppercase(),

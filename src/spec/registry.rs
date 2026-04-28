@@ -18,8 +18,8 @@ use crate::config::file::{detect_config_format, ConfigFileFormat};
 use crate::error::{Error, Result};
 
 use super::{
-    CommandForm, CommandFormOverride, CommandSpec, CommandSpecOverride, KwargSpec,
-    KwargSpecOverride, LayoutOverrides, LayoutOverridesOverride, SpecFile, SpecMetadata,
+    has_ascii_uppercase, CommandForm, CommandFormOverride, CommandSpec, CommandSpecOverride,
+    KwargSpec, KwargSpecOverride, LayoutOverrides, LayoutOverridesOverride, SpecFile, SpecMetadata,
     SpecOverrideFile,
 };
 
@@ -349,10 +349,6 @@ impl CommandRegistry {
     pub fn audited_cmake_version(&self) -> &str {
         &self.metadata.cmake_version
     }
-}
-
-fn has_ascii_uppercase(s: &str) -> bool {
-    s.bytes().any(|byte| byte.is_ascii_uppercase())
 }
 
 /// Decode the embedded `builtins.yaml` blob and merge in the embedded

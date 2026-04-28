@@ -5,13 +5,13 @@
 //! Command-invocation formatting logic.
 
 use crate::config::{
-    CaseStyle, CommandConfig, CompiledPatterns, Config, DangleAlign, FractionalTabPolicy,
+    apply_case, CommandConfig, CompiledPatterns, Config, DangleAlign, FractionalTabPolicy,
 };
 use crate::error::Result;
 use crate::formatter::comment;
 use crate::parser::ast::{Argument, CommandInvocation};
 use crate::spec::registry::CommandRegistry;
-use crate::spec::{CommandForm, CommandSpec, NArgs};
+use crate::spec::{has_ascii_lowercase, CommandForm, CommandSpec, NArgs};
 
 use super::DebugLog;
 
@@ -1601,18 +1601,6 @@ fn last_output_line_has_comment(output: &str) -> bool {
 
 fn argument_has_newline(argument: &Argument) -> bool {
     argument.as_str().contains('\n') || argument.as_str().contains('\r')
-}
-
-fn apply_case(style: CaseStyle, s: &str) -> String {
-    match style {
-        CaseStyle::Lower => s.to_ascii_lowercase(),
-        CaseStyle::Upper => s.to_ascii_uppercase(),
-        CaseStyle::Unchanged => s.to_string(),
-    }
-}
-
-fn has_ascii_lowercase(s: &str) -> bool {
-    s.bytes().any(|byte| byte.is_ascii_lowercase())
 }
 
 fn lookup_kwarg<'a>(form: &'a CommandForm, token: &str) -> Option<&'a crate::spec::KwargSpec> {

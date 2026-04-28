@@ -244,8 +244,12 @@ impl CommandSpec {
     }
 }
 
-fn has_ascii_lowercase(s: &str) -> bool {
+pub(crate) fn has_ascii_lowercase(s: &str) -> bool {
     s.bytes().any(|byte| byte.is_ascii_lowercase())
+}
+
+pub(crate) fn has_ascii_uppercase(s: &str) -> bool {
+    s.bytes().any(|byte| byte.is_ascii_uppercase())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]

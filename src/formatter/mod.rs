@@ -32,6 +32,10 @@
 pub(crate) mod comment;
 pub(crate) mod node;
 
+// `dump.rs` is the only consumer of these re-exports and is itself
+// `#[cfg(feature = "cli")]`. Without the gate this `use` warns under
+// `--no-default-features` and `--features lsp` builds.
+#[cfg(feature = "cli")]
 pub(crate) use node::{split_sections, HeaderKind};
 
 use std::path::PathBuf;
