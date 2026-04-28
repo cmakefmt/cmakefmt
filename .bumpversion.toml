@@ -27,9 +27,6 @@ replace = """name = "cmakefmt-rust"
 version = "{new_version}\""""
 
 [[tool.bumpversion.files]]
-filename = "README.md"
-
-[[tool.bumpversion.files]]
 filename = "docs/src/content/docs/cli.md"
 
 [[tool.bumpversion.files]]
