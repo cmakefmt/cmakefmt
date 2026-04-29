@@ -328,10 +328,6 @@ pub struct Config {
     pub hashruler_min_length: usize,
     /// Normalize ruler comments when markup handling is enabled.
     pub canonicalize_hashrulers: bool,
-    /// Regex pattern that marks an inline comment as explicitly trailing its
-    /// preceding argument. Matching comments are rendered on the same line as
-    /// the preceding token rather than on their own line.
-    pub explicit_trailing_pattern: String,
 
     // ── Per-command overrides ────────────────────────────────────────────
     /// Per-command configuration overrides keyed by lowercase command name.
@@ -418,7 +414,6 @@ impl Default for Config {
             ruler_pattern: DEFAULT_RULER_PATTERN.to_string(),
             hashruler_min_length: 10,
             canonicalize_hashrulers: true,
-            explicit_trailing_pattern: DEFAULT_EXPLICIT_TRAILING_PATTERN.to_string(),
             per_command_overrides: HashMap::new(),
         }
     }
@@ -500,7 +495,6 @@ impl Config {
         }
         let patterns = [
             ("literal_comment_pattern", &self.literal_comment_pattern),
-            ("explicit_trailing_pattern", &self.explicit_trailing_pattern),
             ("fence_pattern", &self.fence_pattern),
             ("ruler_pattern", &self.ruler_pattern),
         ];
@@ -516,7 +510,6 @@ impl Config {
 
     fn has_default_regex_patterns(&self) -> bool {
         self.literal_comment_pattern.is_empty()
-            && self.explicit_trailing_pattern == DEFAULT_EXPLICIT_TRAILING_PATTERN
             && self.fence_pattern == DEFAULT_FENCE_PATTERN
             && self.ruler_pattern == DEFAULT_RULER_PATTERN
     }
@@ -529,12 +522,9 @@ impl Config {
         // Fast path for the common default configuration. Compiling the
         // default regex repeatedly is a measurable cost on whole-tree runs
         // that process many small files.
-        if self.literal_comment_pattern.is_empty()
-            && self.explicit_trailing_pattern == DEFAULT_EXPLICIT_TRAILING_PATTERN
-        {
+        if self.literal_comment_pattern.is_empty() {
             return Ok(CompiledPatterns {
                 literal_comment: None,
-                explicit_trailing: Some(default_explicit_trailing_regex().clone()),
             });
         }
         Ok(CompiledPatterns {
@@ -542,22 +532,12 @@ impl Config {
                 "literal_comment_pattern",
                 &self.literal_comment_pattern,
             )?,
-            explicit_trailing: compile_optional(
-                "explicit_trailing_pattern",
-                &self.explicit_trailing_pattern,
-            )?,
         })
     }
 }
 
-const DEFAULT_EXPLICIT_TRAILING_PATTERN: &str = "#<";
 const DEFAULT_FENCE_PATTERN: &str = r"^\s*[`~]{3}[^`\n]*$";
 const DEFAULT_RULER_PATTERN: &str = r"^[^\w\s]{3}.*[^\w\s]{3}$";
-
-fn default_explicit_trailing_regex() -> &'static Regex {
-    static CACHE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
-    CACHE.get_or_init(|| Regex::new(DEFAULT_EXPLICIT_TRAILING_PATTERN).expect("default regex"))
-}
 
 fn compile_optional(name: &str, pattern: &str) -> Result<Option<Regex>, String> {
     if pattern.is_empty() {
@@ -573,11 +553,6 @@ fn compile_optional(name: &str, pattern: &str) -> Result<Option<Regex>, String> 
 pub(crate) struct CompiledPatterns {
     /// Compiled `literal_comment_pattern`.
     pub(crate) literal_comment: Option<Regex>,
-    /// Compiled `explicit_trailing_pattern`. Currently unused by the
-    /// formatter (trailing comments are kept inline by width), but
-    /// retained for future use and config compatibility.
-    #[allow(dead_code)]
-    pub(crate) explicit_trailing: Option<Regex>,
 }
 
 /// A resolved config for formatting a specific command, with per-command
@@ -932,10 +907,6 @@ mod tests {
             config.literal_comment_pattern,
             defaults.literal_comment_pattern
         );
-        assert_eq!(
-            config.explicit_trailing_pattern,
-            defaults.explicit_trailing_pattern
-        );
         assert_eq!(config.fence_pattern, defaults.fence_pattern);
         assert_eq!(config.ruler_pattern, defaults.ruler_pattern);
         assert_eq!(config.line_width, defaults.line_width);
@@ -982,13 +953,6 @@ mod tests {
             compiled.literal_comment.is_none(),
             "empty literal_comment_pattern should produce None"
         );
-        let explicit = compiled
-            .explicit_trailing
-            .expect("default explicit_trailing_pattern should compile to Some");
-        assert!(
-            explicit.is_match("#<"),
-            "default explicit_trailing regex should match the default marker"
-        );
     }
 
     #[test]
@@ -1005,25 +969,6 @@ mod tests {
             .expect("custom literal_comment_pattern should compile to Some");
         assert!(literal.is_match("  TODO: fix me"));
         assert!(!literal.is_match("# regular comment"));
-    }
-
-    #[test]
-    fn compiled_patterns_compiles_custom_explicit_trailing() {
-        let config = Config {
-            explicit_trailing_pattern: r"^#>".to_string(),
-            ..Config::default()
-        };
-        let compiled = config
-            .compiled_patterns()
-            .expect("custom explicit_trailing_pattern must compile");
-        let explicit = compiled
-            .explicit_trailing
-            .expect("custom explicit_trailing_pattern should compile to Some");
-        assert!(explicit.is_match("#>"));
-        assert!(
-            !explicit.is_match("x#<"),
-            "custom pattern must not fall back to the cached default"
-        );
     }
 
     #[test]

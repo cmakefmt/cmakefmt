@@ -392,7 +392,6 @@ fn batch_scaling_benchmarks(c: &mut Criterion) {
 fn config_pattern_benchmarks(c: &mut Criterion) {
     let config = cmakefmt::Config {
         literal_comment_pattern: r"^#\s*NOLINT".to_string(),
-        explicit_trailing_pattern: "#<".to_string(),
         fence_pattern: r"^\s*[`~]{3}[^`\n]*$".to_string(),
         ruler_pattern: r"^[^\w\s]{3}.*[^\w\s]{3}$".to_string(),
         ..cmakefmt::Config::default()

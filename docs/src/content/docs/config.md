@@ -107,7 +107,6 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`ruler_pattern`](#ruler_pattern)
   - [`hashruler_min_length`](#hashruler_min_length)
   - [`canonicalize_hashrulers`](#canonicalize_hashrulers)
-  - [`explicit_trailing_pattern`](#explicit_trailing_pattern)
 - [`commands:` vs `per_command_overrides:` — Which One Do I Need?](#commands-vs-per_command_overrides--which-one-do-i-need)
 - [Per-command Overrides](#per-command-overrides)
 - [Custom Command Specs](#custom-command-specs)
@@ -161,7 +160,6 @@ markup:
   ruler_pattern: "^[^\\w\\s]{3}.*[^\\w\\s]{3}$"
   hashruler_min_length: 10
   canonicalize_hashrulers: true
-  explicit_trailing_pattern: "#<"
 ```
 
 ## Format Options
@@ -728,35 +726,6 @@ markup:
 
 If your project uses decorative comment rulers and wants them normalized
 consistently, keep this enabled.
-
-### `explicit_trailing_pattern`
-
-A regex pattern that identifies inline comments as _explicitly trailing_ their
-preceding argument. When a comment matches this pattern it is rendered on the
-same line as the preceding token rather than on its own indented line.
-
-```yaml
-markup:
-  explicit_trailing_pattern: "#<"
-```
-
-The default `#<` means that inline comments starting with `#<` are treated as
-trailing the immediately preceding argument.
-
-Example — given `explicit_trailing_pattern: "#<"`:
-
-```cmake
-target_sources(
-  mylib
-  PRIVATE
-    src/foo.cpp #< main module
-    src/bar.cpp #< helper
-)
-```
-
-Without this option the `#<` comments would each appear on their own line.
-
-Set to an empty string to disable explicit trailing comment detection entirely.
 
 ## `commands:` vs `per_command_overrides:` — Which One Do I Need?
 

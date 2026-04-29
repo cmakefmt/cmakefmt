@@ -126,8 +126,6 @@ struct MarkupSection {
     hashruler_min_length: Option<usize>,
     /// Normalize ruler comments when markup handling is enabled.
     canonicalize_hashrulers: Option<bool>,
-    /// Regex pattern for inline comments explicitly trailing their preceding argument. Default: `#<`.
-    explicit_trailing_pattern: Option<String>,
 }
 
 const CONFIG_FILE_NAME_TOML: &str = ".cmakefmt.toml";
@@ -288,9 +286,6 @@ fn default_config_template_toml() -> String {
             "hashruler_min_length = {hashruler_min_length}\n\n",
             "# Normalize ruler comments when markup handling is enabled.\n",
             "canonicalize_hashrulers = {canonicalize_hashrulers}\n\n",
-            "# Regex pattern for inline comments that are explicitly trailing their preceding\n",
-            "# argument (rendered on the same line). Default: '#<'.\n",
-            "# explicit_trailing_pattern = \"#<\"\n\n",
             "# Uncomment and edit a block like this to override formatting knobs\n",
             "# for a specific command. This changes layout behavior for that\n",
             "# command name only; it does not define new command syntax.\n",
@@ -406,7 +401,6 @@ struct EffectiveMarkupSection {
     ruler_pattern: String,
     hashruler_min_length: usize,
     canonicalize_hashrulers: bool,
-    explicit_trailing_pattern: String,
 }
 
 #[cfg(feature = "cli")]
@@ -450,7 +444,6 @@ impl From<&Config> for EffectiveConfigFile {
                 ruler_pattern: config.ruler_pattern.clone(),
                 hashruler_min_length: config.hashruler_min_length,
                 canonicalize_hashrulers: config.canonicalize_hashrulers,
-                explicit_trailing_pattern: config.explicit_trailing_pattern.clone(),
             },
             per_command_overrides: config.per_command_overrides.clone(),
         }
@@ -537,9 +530,6 @@ fn default_config_template_yaml() -> String {
             "  hashruler_min_length: {hashruler_min_length}\n\n",
             "  # Normalize ruler comments when markup handling is enabled.\n",
             "  canonicalize_hashrulers: {canonicalize_hashrulers}\n\n",
-            "  # Regex pattern for inline comments that are explicitly trailing their preceding\n",
-            "  # argument (rendered on the same line). Default: '#<'.\n",
-            "  # explicit_trailing_pattern: '#<'\n\n",
             "# Uncomment and edit a block like this to override formatting knobs\n",
             "# for a specific command. This changes layout behavior for that\n",
             "# command name only; it does not define new command syntax.\n",
@@ -783,9 +773,6 @@ impl Config {
         }
         if let Some(v) = fc.markup.canonicalize_hashrulers {
             self.canonicalize_hashrulers = v;
-        }
-        if let Some(v) = fc.markup.explicit_trailing_pattern {
-            self.explicit_trailing_pattern = v;
         }
 
         // Per-command overrides (merge, don't replace)

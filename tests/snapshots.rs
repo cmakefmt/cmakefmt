@@ -167,27 +167,6 @@ fn space_before_definition_paren_formats_function() {
 }
 
 #[test]
-fn explicit_trailing_pattern_keeps_comment_inline() {
-    // The default explicit_trailing_pattern is "#<" — a comment matching it
-    // stays on the same line as the preceding argument.
-    // Use max_pargs_hwrap=1 to force write_vertical_arguments for the PRIVATE
-    // section, which is where the explicit_trailing_pattern logic lives.
-    let src = "target_sources(foo\n  PRIVATE\n    a.cc #< keep\n    b.cc\n)\n";
-    let config = Config {
-        max_pargs_hwrap: 1,
-        ..Config::default()
-    };
-    let formatted = format_source(src, &config).unwrap();
-    let has_inline = formatted
-        .lines()
-        .any(|l| l.contains("a.cc") && l.contains("#<"));
-    assert!(
-        has_inline,
-        "explicit trailing comment should stay inline with preceding arg, got:\n{formatted}"
-    );
-}
-
-#[test]
 fn canonicalize_hashrulers_false_preserves_ruler() {
     let src = "# -----  uneven ruler  -----\nmessage(ok)\n";
     let config = Config {

@@ -738,8 +738,6 @@ struct OutputMarkupSection {
     hashruler_min_length: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     canonicalize_hashrulers: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    explicit_trailing_pattern: Option<String>,
 }
 
 impl OutputMarkupSection {
@@ -753,7 +751,6 @@ impl OutputMarkupSection {
             || self.ruler_pattern.is_some()
             || self.hashruler_min_length.is_some()
             || self.canonicalize_hashrulers.is_some()
-            || self.explicit_trailing_pattern.is_some()
     }
 }
 
@@ -885,9 +882,6 @@ fn merge_markup_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
             "ruler_pattern" => converted.markup.ruler_pattern = as_string(value),
             "hashruler_min_length" => converted.markup.hashruler_min_length = as_usize(value),
             "canonicalize_hashrulers" => converted.markup.canonicalize_hashrulers = as_bool(value),
-            "explicit_trailing_pattern" => {
-                converted.markup.explicit_trailing_pattern = as_string(value)
-            }
             unsupported => converted.note_unsupported(path, &format!("[markup].{unsupported}")),
         }
     }
@@ -1481,17 +1475,6 @@ markup:
 
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("max_rows_cmdline = 3"));
-    }
-
-    #[test]
-    fn converts_markup_explicit_trailing_pattern() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("legacy.yaml");
-        std::fs::write(&path, "markup:\n  explicit_trailing_pattern: '#<'\n").unwrap();
-
-        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
-        assert!(converted.contains("explicit_trailing_pattern"));
-        assert!(converted.contains("#<"));
     }
 
     // ── as_line_ending: auto variant ─────────────────────────────────────────
