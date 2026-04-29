@@ -233,15 +233,22 @@ impl CommandSpec {
                             .and_then(|normalized| forms.get(&normalized))
                     })
                     .or(fallback.as_ref())
-                    .unwrap_or_else(|| {
-                        forms
-                            .values()
-                            .next()
-                            .expect("discriminated spec has a form")
-                    })
+                    .or_else(|| forms.values().next())
+                    // Last-resort default for the ill-formed case where a
+                    // user-supplied override declares a `Discriminated`
+                    // spec with an empty `forms` map and no `fallback`.
+                    // Previously this branch panicked via `.expect()`,
+                    // making malformed override files crash the
+                    // formatter rather than degrade gracefully.
+                    .unwrap_or_else(|| empty_command_form())
             }
         }
     }
+}
+
+fn empty_command_form() -> &'static CommandForm {
+    static EMPTY: std::sync::OnceLock<CommandForm> = std::sync::OnceLock::new();
+    EMPTY.get_or_init(CommandForm::default)
 }
 
 pub(crate) fn has_ascii_lowercase(s: &str) -> bool {

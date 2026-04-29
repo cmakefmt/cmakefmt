@@ -171,13 +171,32 @@ fn handle_formatting(
     documents: &HashMap<String, String>,
     config: &Config,
 ) -> Option<Response> {
+    let id = req.id.clone();
     let (id, params): (_, lsp_types::DocumentFormattingParams) =
-        req.extract(lsp_types::request::Formatting::METHOD).ok()?;
+        match req.extract(lsp_types::request::Formatting::METHOD) {
+            Ok(v) => v,
+            Err(err) => {
+                return Some(Response::new_err(
+                    id,
+                    lsp_server::ErrorCode::InvalidParams as i32,
+                    format!("invalid formatting params: {err}"),
+                ));
+            }
+        };
     let text = documents.get(params.text_document.uri.as_str())?;
     let formatted = format_with_timeout(text, config)?;
 
     let edit = full_document_edit(text, formatted);
-    let result = serde_json::to_value(vec![edit]).ok()?;
+    let result = match serde_json::to_value(vec![edit]) {
+        Ok(v) => v,
+        Err(err) => {
+            return Some(Response::new_err(
+                id,
+                lsp_server::ErrorCode::InternalError as i32,
+                format!("failed to serialize formatting response: {err}"),
+            ));
+        }
+    };
     Some(Response::new_ok(id, result))
 }
 
@@ -186,9 +205,18 @@ fn handle_range_formatting(
     documents: &HashMap<String, String>,
     config: &Config,
 ) -> Option<Response> {
-    let (id, params): (_, lsp_types::DocumentRangeFormattingParams) = req
-        .extract(lsp_types::request::RangeFormatting::METHOD)
-        .ok()?;
+    let id = req.id.clone();
+    let (id, params): (_, lsp_types::DocumentRangeFormattingParams) =
+        match req.extract(lsp_types::request::RangeFormatting::METHOD) {
+            Ok(v) => v,
+            Err(err) => {
+                return Some(Response::new_err(
+                    id,
+                    lsp_server::ErrorCode::InvalidParams as i32,
+                    format!("invalid range formatting params: {err}"),
+                ));
+            }
+        };
     let text = documents.get(params.text_document.uri.as_str())?;
 
     let range = params.range;
@@ -220,14 +248,32 @@ fn handle_range_formatting(
         new_text: formatted,
     };
 
-    let result = serde_json::to_value(vec![edit]).ok()?;
+    let result = match serde_json::to_value(vec![edit]) {
+        Ok(v) => v,
+        Err(err) => {
+            return Some(Response::new_err(
+                id,
+                lsp_server::ErrorCode::InternalError as i32,
+                format!("failed to serialize range formatting response: {err}"),
+            ));
+        }
+    };
     Some(Response::new_ok(id, result))
 }
 
 fn handle_code_action(req: Request) -> Option<Response> {
-    let (id, params): (_, lsp_types::CodeActionParams) = req
-        .extract(lsp_types::request::CodeActionRequest::METHOD)
-        .ok()?;
+    let id = req.id.clone();
+    let (id, params): (_, lsp_types::CodeActionParams) =
+        match req.extract(lsp_types::request::CodeActionRequest::METHOD) {
+            Ok(v) => v,
+            Err(err) => {
+                return Some(Response::new_err(
+                    id,
+                    lsp_server::ErrorCode::InvalidParams as i32,
+                    format!("invalid code action params: {err}"),
+                ));
+            }
+        };
 
     let range = params.range;
     let uri = params.text_document.uri;
@@ -277,7 +323,16 @@ fn handle_code_action(req: Request) -> Option<Response> {
     };
 
     let actions = vec![lsp_types::CodeActionOrCommand::CodeAction(action)];
-    let result = serde_json::to_value(actions).ok()?;
+    let result = match serde_json::to_value(actions) {
+        Ok(v) => v,
+        Err(err) => {
+            return Some(Response::new_err(
+                id,
+                lsp_server::ErrorCode::InternalError as i32,
+                format!("failed to serialize code action response: {err}"),
+            ));
+        }
+    };
     Some(Response::new_ok(id, result))
 }
 

@@ -187,9 +187,25 @@ pub enum Error {
     #[error("{0}")]
     Spec(#[from] SpecError),
 
-    /// A filesystem or stream I/O failure.
+    /// A filesystem or stream I/O failure where no path is attached.
+    /// Use [`Error::io_at`] (or the [`IoResultExt::with_path`] adapter)
+    /// when reporting an error against a specific file — the
+    /// path-bearing variant is far more useful in user-facing
+    /// diagnostics.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+
+    /// A filesystem I/O failure annotated with the path that caused
+    /// it. Used at every site where we have a path in scope; far more
+    /// actionable than a bare `permission denied` from [`Error::Io`].
+    #[error("I/O error reading {path}: {source}")]
+    IoAt {
+        /// The file or directory that failed.
+        path: PathBuf,
+        /// The underlying I/O error.
+        #[source]
+        source: std::io::Error,
+    },
 
     /// A higher-level formatter or CLI error that does not fit another
     /// structured variant. In practice this covers: runtime regex
@@ -228,6 +244,34 @@ impl Error {
             Self::Parse(parse) => Self::Parse(parse.with_display_name(display_name)),
             other => other,
         }
+    }
+
+    /// Build an [`Error::IoAt`] variant from a path and an underlying
+    /// `io::Error`. Use this at every I/O call site where you have a
+    /// path in scope — [`Error::Io`] is reserved for streams (stdout,
+    /// stdin) and similar path-less I/O.
+    pub fn io_at(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
+        Self::IoAt {
+            path: path.into(),
+            source,
+        }
+    }
+}
+
+/// Extension trait for ergonomic conversion of `io::Result<T>` into
+/// the crate's path-bearing `Result<T>`. Reads at call sites as
+/// `std::fs::read_to_string(&path).with_path(&path)?` — one extra
+/// token compared to `.map_err(Error::Io)?`, with much better
+/// diagnostics on failure.
+pub trait IoResultExt<T> {
+    /// Wrap an `io::Error` with the path that produced it, returning
+    /// an [`Error::IoAt`] on failure.
+    fn with_path(self, path: impl Into<PathBuf>) -> Result<T>;
+}
+
+impl<T> IoResultExt<T> for std::io::Result<T> {
+    fn with_path(self, path: impl Into<PathBuf>) -> Result<T> {
+        self.map_err(|source| Error::io_at(path, source))
     }
 }
 

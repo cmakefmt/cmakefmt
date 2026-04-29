@@ -118,7 +118,7 @@ pub use config::{
 
 // ── Errors ───────────────────────────────────────────────────────────────────
 
-pub use error::{Error, Result};
+pub use error::{Error, IoResultExt, Result};
 
 // ── Formatting ───────────────────────────────────────────────────────────────
 

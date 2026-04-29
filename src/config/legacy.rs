@@ -18,7 +18,7 @@ use crate::config::{
     file::DumpConfigFormat, CaseStyle, DangleAlign, FractionalTabPolicy, LineEnding,
     PerCommandConfig,
 };
-use crate::error::{Error, Result};
+use crate::error::{Error, IoResultExt, Result};
 use crate::spec::{
     CommandFormOverride, CommandSpecOverride, KwargSpecOverride, LayoutOverridesOverride, NArgs,
 };
@@ -38,7 +38,7 @@ pub fn convert_legacy_config_files(paths: &[PathBuf], format: DumpConfigFormat) 
 
     let mut converted = ConvertedConfig::default();
     for path in paths {
-        let source = std::fs::read_to_string(path).map_err(Error::Io)?;
+        let source = std::fs::read_to_string(path).with_path(path)?;
         let root = parse_legacy_config(path, &source)?;
         merge_legacy_root(&mut converted, &root, path);
     }

@@ -22,7 +22,7 @@ use cmakefmt::{
     format_source_with_registry, format_source_with_registry_debug, generate_json_schema, parser,
     render_effective_config,
     semantic::{normalize_command_literals, normalize_keyword_args, normalize_line_endings},
-    CaseStyle, Config, DumpConfigFormat,
+    CaseStyle, Config, DumpConfigFormat, IoResultExt,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use regex::Regex;
@@ -684,6 +684,11 @@ Include the following in your report:
         Err(cmakefmt::Error::Io(ref e)) if e.kind() == std::io::ErrorKind::BrokenPipe => {
             ExitCode::from(EXIT_OK)
         }
+        Err(cmakefmt::Error::IoAt { ref source, .. })
+            if source.kind() == std::io::ErrorKind::BrokenPipe =>
+        {
+            ExitCode::from(EXIT_OK)
+        }
         Err(err) => {
             eprintln!("{}", render_cli_error(&err));
             ExitCode::from(EXIT_ERROR)
@@ -879,7 +884,7 @@ fn run_list_unknown_commands(cli: &Cli, targets: &[InputTarget]) -> Result<u8, c
                 ("<stdin>".to_owned(), buf)
             }
             InputTarget::Path(path) => {
-                let source = std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?;
+                let source = std::fs::read_to_string(path).with_path(path)?;
                 (path.display().to_string(), source)
             }
         };
@@ -1092,7 +1097,7 @@ fn watch_modified_time(path: &Path) -> Option<std::time::SystemTime> {
 }
 
 fn watch_format_file(cli: &Cli, path: &Path, colorize: bool) -> Result<String, cmakefmt::Error> {
-    let source = std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?;
+    let source = std::fs::read_to_string(path).with_path(path)?;
     let (config, registry, _) = build_context(cli, Some(path))?;
     let formatted = format_source_with_registry(&source, &config, &registry)
         .map_err(|e| e.with_display_name(path.display().to_string()))?;
@@ -1392,7 +1397,9 @@ fn error_display_name(err: &cmakefmt::Error) -> String {
             .unwrap_or("<unknown>")
             .trim()
             .to_owned(),
-        cmakefmt::Error::Io(_) | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
+        cmakefmt::Error::Io(_)
+        | cmakefmt::Error::IoAt { .. }
+        | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
         _ => "<unknown>".to_owned(),
     }
 }
@@ -1573,9 +1580,7 @@ fn run_dump_subcommand(
     file: Option<&Path>,
 ) -> Result<u8, cmakefmt::Error> {
     let source = match file {
-        Some(path) if path.as_os_str() != "-" => {
-            std::fs::read_to_string(path).map_err(cmakefmt::Error::Io)?
-        }
+        Some(path) if path.as_os_str() != "-" => std::fs::read_to_string(path).with_path(path)?,
         _ => {
             let mut buf = String::new();
             io::Read::read_to_string(&mut io::stdin(), &mut buf).map_err(cmakefmt::Error::Io)?;
@@ -1616,12 +1621,12 @@ fn install_git_hook() -> Result<u8, cmakefmt::Error> {
     let hook_content = "#!/bin/sh\n\
         # Installed by cmakefmt install-hook\n\
         cmakefmt --check --staged\n";
-    std::fs::write(&hook_path, hook_content).map_err(cmakefmt::Error::Io)?;
+    std::fs::write(&hook_path, hook_content).with_path(&hook_path)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&hook_path, std::fs::Permissions::from_mode(0o755))
-            .map_err(cmakefmt::Error::Io)?;
+            .with_path(&hook_path)?;
     }
     eprintln!("installed pre-commit hook: {}", hook_path.display());
     Ok(EXIT_OK)
@@ -2676,7 +2681,7 @@ fn source_signature(
 ) -> Result<String, cmakefmt::Error> {
     match cache_strategy {
         CacheStrategy::Metadata => {
-            let metadata = std::fs::metadata(path).map_err(cmakefmt::Error::Io)?;
+            let metadata = std::fs::metadata(path).with_path(path)?;
             let modified = metadata
                 .modified()
                 .ok()
@@ -2693,7 +2698,7 @@ fn read_cache_entry(cache: &CacheContext) -> Result<Option<CacheEntry>, cmakefmt
     let contents = match std::fs::read_to_string(&cache.cache_file) {
         Ok(contents) => contents,
         Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(err) => return Err(cmakefmt::Error::Io(err)),
+        Err(err) => return Err(cmakefmt::Error::io_at(&cache.cache_file, err)),
     };
 
     let entry: CacheEntry = match serde_json::from_str(&contents) {
@@ -2709,12 +2714,12 @@ fn read_cache_entry(cache: &CacheContext) -> Result<Option<CacheEntry>, cmakefmt
 
 fn write_cache_entry(cache: &CacheContext, entry: CacheEntry) -> Result<(), cmakefmt::Error> {
     if let Some(parent) = cache.cache_file.parent() {
-        std::fs::create_dir_all(parent).map_err(cmakefmt::Error::Io)?;
+        std::fs::create_dir_all(parent).with_path(parent)?;
     }
     let json = serde_json::to_string(&entry).map_err(|err| {
         cmakefmt::Error::Formatter(format!("failed to serialize cache entry: {err}"))
     })?;
-    std::fs::write(&cache.cache_file, json).map_err(cmakefmt::Error::Io)
+    std::fs::write(&cache.cache_file, json).with_path(&cache.cache_file)
 }
 
 fn stable_hash<T: Hash + ?Sized>(value: &T) -> String {
@@ -3347,11 +3352,10 @@ fn write_diff_to_stdout(result: &ProcessedTarget, colorize: bool) -> Result<(), 
 
 fn atomic_write(path: &Path, contents: &str) -> Result<(), cmakefmt::Error> {
     let dir = path.parent().unwrap_or(Path::new("."));
-    let mut tmp = tempfile::NamedTempFile::new_in(dir).map_err(cmakefmt::Error::Io)?;
-    tmp.write_all(contents.as_bytes())
-        .map_err(cmakefmt::Error::Io)?;
+    let mut tmp = tempfile::NamedTempFile::new_in(dir).with_path(dir)?;
+    tmp.write_all(contents.as_bytes()).with_path(path)?;
     tmp.persist(path)
-        .map_err(|e| cmakefmt::Error::Io(e.error))?;
+        .map_err(|e| cmakefmt::Error::io_at(path, e.error))?;
     Ok(())
 }
 
@@ -3640,6 +3644,9 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
         }
         cmakefmt::Error::Formatter(message) => render_formatter_error(message),
         cmakefmt::Error::Io(source) => format!("error: I/O failure: {source}"),
+        cmakefmt::Error::IoAt { path, source } => {
+            format!("error: I/O failure reading {}: {source}", path.display())
+        }
         cmakefmt::Error::LayoutTooWide {
             line_no,
             width,

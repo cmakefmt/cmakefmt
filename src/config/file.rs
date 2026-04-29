@@ -15,7 +15,7 @@ use crate::config::{
     CaseStyle, Config, ContinuationAlign, DangleAlign, FractionalTabPolicy, LineEnding,
     PerCommandConfig,
 };
-use crate::error::{Error, Result};
+use crate::error::{Error, IoResultExt, Result};
 
 /// The user-config file structure for `.cmakefmt.yaml`, `.cmakefmt.yml`, and
 /// `.cmakefmt.toml`.
@@ -850,7 +850,7 @@ fn serialize_commands_yaml(commands: &serde_yaml::Value) -> Result<Box<str>> {
 }
 
 fn load_config_file(path: &Path) -> Result<FileConfig> {
-    let contents = std::fs::read_to_string(path).map_err(Error::Io)?;
+    let contents = std::fs::read_to_string(path).with_path(path)?;
     let config: FileConfig = match detect_config_format(path)? {
         ConfigFileFormat::Toml => toml::from_str(&contents).map_err(|source| {
             let (line, column) = toml_line_col(&contents, source.span().map(|span| span.start));
