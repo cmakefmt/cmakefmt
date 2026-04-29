@@ -652,101 +652,17 @@ fn format_command_vertical(
             output.push('\n');
         }
 
-        // Remaining sections (keywords, flags).
-        for section in &sections[1..] {
-            match section.header {
-                None => {
-                    if section.arguments.len() > cmd_config.max_pargs_hwrap() {
-                        write_vertical_arguments(
-                            &mut output,
-                            &section.arguments,
-                            &paren_indent,
-                            cmd_config.global(),
-                            patterns,
-                        );
-                    } else {
-                        write_packed_arguments(
-                            &mut output,
-                            &section.arguments,
-                            &paren_indent,
-                            cmd_config.global(),
-                            patterns,
-                            cmd_config.line_width(),
-                        );
-                    }
-                }
-                Some(header_raw) => {
-                    let header = apply_case(cmd_config.keyword_case(), header_raw);
-                    let kw_nested = format!("{paren_indent}{}", cmd_config.indent_str());
-                    if section.arguments.is_empty() {
-                        output.push_str(&paren_indent);
-                        output.push_str(&header);
-                        output.push('\n');
-                        continue;
-                    }
-                    output.push_str(&paren_indent);
-                    output.push_str(&header);
-                    let parent_spec = lookup_kwarg(form, header_raw);
-                    let grouped_spec = parent_spec.filter(|s| !s.kwargs.is_empty());
-                    if section.arguments.len() > cmd_config.max_pargs_hwrap() {
-                        if let Some(spec) = grouped_spec {
-                            write_header_line_and_group(
-                                &mut output,
-                                &section.arguments,
-                                spec,
-                                &kw_nested,
-                                cmd_config.global(),
-                                patterns,
-                                cmd_config.line_width(),
-                                continuation_align,
-                            );
-                        } else {
-                            output.push('\n');
-                            write_vertical_arguments(
-                                &mut output,
-                                &section.arguments,
-                                &kw_nested,
-                                cmd_config.global(),
-                                patterns,
-                            );
-                        }
-                    } else if let Some(line) = format_section_inline(
-                        &header,
-                        section.header_kind,
-                        &section.arguments,
-                        &paren_indent,
-                        cmd_config.global(),
-                        patterns,
-                        cmd_config.line_width(),
-                    ) {
-                        output.truncate(output.len() - header.len());
-                        output.push_str(&line);
-                        output.push('\n');
-                    } else if let Some(spec) = grouped_spec {
-                        write_header_line_and_group(
-                            &mut output,
-                            &section.arguments,
-                            spec,
-                            &kw_nested,
-                            cmd_config.global(),
-                            patterns,
-                            cmd_config.line_width(),
-                            continuation_align,
-                        );
-                    } else {
-                        output.push('\n');
-                        write_packed_arguments(
-                            &mut output,
-                            &section.arguments,
-                            &kw_nested,
-                            cmd_config.global(),
-                            patterns,
-                            cmd_config.line_width(),
-                        );
-                    }
-                }
-            }
-        }
+        let kw_nested = format!("{paren_indent}{}", cmd_config.indent_str());
+        write_sections(
+            &mut output,
+            &sections[1..],
+            form,
+            cmd_config,
+            patterns,
+            continuation_align,
+            &paren_indent,
+            &kw_nested,
+        );
 
         close_command_output(&mut output, cmd_config, &base_indent, &name);
         return Ok(output);
@@ -754,22 +670,53 @@ fn format_command_vertical(
 
     output.push_str("(\n");
 
+    write_sections(
+        &mut output,
+        sections,
+        form,
+        cmd_config,
+        patterns,
+        continuation_align,
+        &indent,
+        &nested_indent,
+    );
+
+    close_command_output(&mut output, cmd_config, &base_indent, &name);
+
+    Ok(output)
+}
+
+/// Write a sequence of [`Section`]s into `output`, each indented by
+/// `section_indent` and (for keyword-headed sections that need to wrap)
+/// continued at `nested_indent`. Shared by the two vertical layouts in
+/// [`format_command_vertical`].
+#[allow(clippy::too_many_arguments)]
+fn write_sections(
+    output: &mut String,
+    sections: &[Section<'_>],
+    form: &CommandForm,
+    cmd_config: &CommandConfig<'_>,
+    patterns: &CompiledPatterns,
+    continuation_align: crate::config::ContinuationAlign,
+    section_indent: &str,
+    nested_indent: &str,
+) {
     for section in sections {
         match section.header {
             None => {
                 if section.arguments.len() > cmd_config.max_pargs_hwrap() {
                     write_vertical_arguments(
-                        &mut output,
+                        output,
                         &section.arguments,
-                        &indent,
+                        section_indent,
                         cmd_config.global(),
                         patterns,
                     );
                 } else {
                     write_packed_arguments(
-                        &mut output,
+                        output,
                         &section.arguments,
-                        &indent,
+                        section_indent,
                         cmd_config.global(),
                         patterns,
                         cmd_config.line_width(),
@@ -779,23 +726,23 @@ fn format_command_vertical(
             Some(header_raw) => {
                 let header = apply_case(cmd_config.keyword_case(), header_raw);
                 if section.arguments.is_empty() {
-                    output.push_str(&indent);
+                    output.push_str(section_indent);
                     output.push_str(&header);
                     output.push('\n');
                     continue;
                 }
 
-                output.push_str(&indent);
+                output.push_str(section_indent);
                 output.push_str(&header);
                 let parent_spec = lookup_kwarg(form, header_raw);
                 let grouped_spec = parent_spec.filter(|s| !s.kwargs.is_empty());
                 if section.arguments.len() > cmd_config.max_pargs_hwrap() {
                     if let Some(spec) = grouped_spec {
                         write_header_line_and_group(
-                            &mut output,
+                            output,
                             &section.arguments,
                             spec,
-                            &nested_indent,
+                            nested_indent,
                             cmd_config.global(),
                             patterns,
                             cmd_config.line_width(),
@@ -804,9 +751,9 @@ fn format_command_vertical(
                     } else {
                         output.push('\n');
                         write_vertical_arguments(
-                            &mut output,
+                            output,
                             &section.arguments,
-                            &nested_indent,
+                            nested_indent,
                             cmd_config.global(),
                             patterns,
                         );
@@ -815,7 +762,7 @@ fn format_command_vertical(
                     &header,
                     section.header_kind,
                     &section.arguments,
-                    &indent,
+                    section_indent,
                     cmd_config.global(),
                     patterns,
                     cmd_config.line_width(),
@@ -825,10 +772,10 @@ fn format_command_vertical(
                     output.push('\n');
                 } else if let Some(spec) = grouped_spec {
                     write_header_line_and_group(
-                        &mut output,
+                        output,
                         &section.arguments,
                         spec,
-                        &nested_indent,
+                        nested_indent,
                         cmd_config.global(),
                         patterns,
                         cmd_config.line_width(),
@@ -837,9 +784,9 @@ fn format_command_vertical(
                 } else {
                     output.push('\n');
                     write_packed_arguments(
-                        &mut output,
+                        output,
                         &section.arguments,
-                        &nested_indent,
+                        nested_indent,
                         cmd_config.global(),
                         patterns,
                         cmd_config.line_width(),
@@ -848,10 +795,6 @@ fn format_command_vertical(
             }
         }
     }
-
-    close_command_output(&mut output, cmd_config, &base_indent, &name);
-
-    Ok(output)
 }
 
 fn format_section_inline(
