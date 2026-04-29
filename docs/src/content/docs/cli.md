@@ -87,7 +87,6 @@ Ignore rules only affect:
 | `--cache` | Cache formatted file results for repeated runs on the same files. |
 | `--cache-location <PATH>` | Override the cache directory. Supplying it also enables caching. |
 | `--cache-strategy <metadata\|content>` | Choose whether cache invalidation tracks file metadata or file contents. |
-| `--preview` | Enable all experimental formatting options (equivalent to setting every `[experimental]` option). |
 | `--require-pragma` | Format only files that opt in with a `# cmakefmt: enable` style pragma. |
 | `-j`, `--parallel [JOBS]` | Set the number of parallel formatting jobs. Defaults to the available CPU count minus one. Pass `--parallel 1` to force serial. |
 | `-p`, `--progress-bar` | Show a progress bar on stderr during multi-file runs. Automatically suppressed when stdout streams to the terminal. |

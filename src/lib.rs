@@ -50,7 +50,7 @@
 //! | [`format_parsed_file`] | Format an already-parsed [`parser::ast::File`] |
 //! | [`format_source_with_debug`] / [`format_source_with_registry_debug`] | Format + collect debug decision log |
 //! | [`Config`], [`CommandConfig`], [`PerCommandConfig`] | Runtime configuration |
-//! | [`CaseStyle`], [`DangleAlign`], [`LineEnding`], [`FractionalTabPolicy`], [`Experimental`] | Config enums |
+//! | [`CaseStyle`], [`DangleAlign`], [`LineEnding`], [`FractionalTabPolicy`] | Config enums |
 //! | [`CommandRegistry`] | Built-in + user-override command specs |
 //! | [`Error`], [`Result`] | Crate-level error types |
 //!
@@ -103,8 +103,8 @@ pub mod wasm;
 // ── Configuration ────────────────────────────────────────────────────────────
 
 pub use config::{
-    CaseStyle, CommandConfig, Config, ContinuationAlign, DangleAlign, Experimental,
-    FractionalTabPolicy, LineEnding, PerCommandConfig,
+    CaseStyle, CommandConfig, Config, ContinuationAlign, DangleAlign, FractionalTabPolicy,
+    LineEnding, PerCommandConfig,
 };
 
 pub use config::default_config_template;
