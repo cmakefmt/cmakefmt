@@ -66,8 +66,45 @@ This project follows a simple changelog discipline:
     `cmake_dependent_option`, `processorcount`,
     `select_library_configurations`.
 
+### Removed
+
+- The `--preview` CLI flag and the `[experimental]` config section
+  (and its underlying `Experimental` struct) have been dropped. Both
+  were no-ops on every release that exposed them — the formatter has
+  no preview-gated behaviour at the moment, so passing the flag or
+  populating the section did nothing. Removing them keeps the public
+  surface honest. If a future release introduces opt-in preview
+  behaviour, the gate will return; until then there is nothing for it
+  to gate.
+- The `[markup] explicit_trailing_pattern` config option has been
+  removed. It was wired into the config schema but never consulted by
+  the formatter — no path read the user-supplied regex, so a custom
+  pattern produced no observable effect. Removing the dead surface
+  prevents config drift where users would set it and silently get the
+  default behaviour.
+
+### Fixed
+
+- The Language Server Protocol entry points
+  (`textDocument/formatting`, `textDocument/rangeFormatting`,
+  `textDocument/codeAction`) now return proper error responses for
+  malformed requests instead of silently dropping them. Failed
+  parameter extraction surfaces as `InvalidParams`; failed JSON
+  serialisation surfaces as `InternalError`. Editors and LSP test
+  harnesses that wait for a response no longer hang on these paths.
+- A user-supplied command override declaring a `Discriminated` spec
+  with an empty `forms` map and no `fallback` no longer crashes the
+  formatter. The lookup now degrades to a static empty
+  `CommandForm` rather than panicking via `.expect()`.
+
 ### Changed
 
+- Filesystem error messages now include the offending path. Failures
+  reading config files, source files, the cache, install-hook
+  destinations, or atomic-write tempfiles render as
+  `error: I/O failure reading <path>: <reason>` instead of a bare
+  `<reason>`. Streaming I/O (stdin/stdout) is unaffected and continues
+  to surface its native error.
 - The embedded command spec is now split across two YAML sources:
   `src/spec/builtins.yaml` (commands listed by
   `cmake --help-command-list`) and `src/spec/modules.yaml` (commands
@@ -117,8 +154,8 @@ This project follows a simple changelog discipline:
 
 - Single-file wall time on the 656-line `mariadb_server` fixture
   holds at 6.0 ms — unchanged from v1.3.0 despite the spec growing
-  significantly with the Phase 54 module command additions.
-  Build-time MessagePack pre-deserialisation (Phase 47f) continues
+  significantly with the new module command coverage. Build-time
+  MessagePack pre-deserialisation (introduced in v1.2.0) continues
   to absorb the parse cost; the larger lookup table and MessagePack
   blob are decoded at startup with no measurable difference.
   Release binary size is unchanged at 4.7 MB. Methodology unchanged
