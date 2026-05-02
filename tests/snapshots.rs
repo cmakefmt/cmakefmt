@@ -1868,6 +1868,88 @@ fn externalproject_add_step_kwargs_separate_when_wrapping() {
     "#);
 }
 
+#[test]
+fn cpack_add_component_recognizes_flags_and_kwargs() {
+    // cpack_add_component carries four flags (HIDDEN, REQUIRED, DISABLED,
+    // DOWNLOADED) alongside seven kwargs. Without the spec, the flags
+    // would pack into the positional list; with it, they each get their
+    // own line under wrap pressure.
+    let src = "cpack_add_component(my_component DISPLAY_NAME \"My Component\" DESCRIPTION \"An example component\" GROUP runtime DEPENDS core utils INSTALL_TYPES Full Developer DOWNLOADED ARCHIVE_FILE my_component.zip)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    cpack_add_component(
+      my_component
+      DISPLAY_NAME "My Component"
+      DESCRIPTION "An example component"
+      GROUP runtime
+      DEPENDS core utils
+      INSTALL_TYPES Full Developer
+      DOWNLOADED
+      ARCHIVE_FILE my_component.zip)
+    "#);
+}
+
+#[test]
+fn cpack_ifw_configure_component_kwargs_separate_when_wrapping() {
+    // CPackIFW's configure_component has a large surface (5 flags, 18
+    // kwargs). This test exercises a representative slice and confirms
+    // the spec recognises the COMMON / ESSENTIAL / VIRTUAL flags
+    // alongside the NAME / VERSION / DEPENDENCIES kwargs.
+    let src = "cpack_ifw_configure_component(my_component COMMON ESSENTIAL NAME my.component VERSION 1.2.3 DEPENDENCIES core utils SCRIPT install.qs)\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    cpack_ifw_configure_component(
+      my_component
+      COMMON
+      ESSENTIAL
+      NAME my.component
+      VERSION 1.2.3
+      DEPENDENCIES core utils
+      SCRIPT install.qs)
+    ");
+}
+
+#[test]
+fn fixup_bundle_recognizes_ignore_item_kwarg() {
+    // fixup_bundle takes three positionals (app, libs, dirs) plus an
+    // optional IGNORE_ITEM kwarg. The kwarg should break to its own
+    // line under wrap pressure even when the positionals fit packed.
+    let src = "fixup_bundle(${MY_APP} \"plugin1.dylib;plugin2.dylib\" \"/usr/local/lib;/opt/lib\" IGNORE_ITEM vcredist_x86.exe vcredist_x64.exe)\n";
+    let config = Config {
+        line_width: 50,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    fixup_bundle(
+      ${MY_APP} "plugin1.dylib;plugin2.dylib"
+      "/usr/local/lib;/opt/lib"
+      IGNORE_ITEM vcredist_x86.exe vcredist_x64.exe)
+    "#);
+}
+
+#[test]
+fn android_add_test_data_kwargs_separate_when_wrapping() {
+    // android_add_test_data has seven kwargs, including the variadic
+    // FILES / LIBS / NO_LINK_REGEX. Wrap pressure should give each
+    // section its own header line.
+    let src = "android_add_test_data(my_test FILES data1.txt data2.txt LIBS foo.so bar.so DEVICE_OBJECT_STORE /sdcard/data DEVICE_TEST_DIR /sdcard/test NO_LINK_REGEX .*\\.so)\n";
+    let config = Config {
+        line_width: 60,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    android_add_test_data(
+      my_test
+      FILES data1.txt data2.txt
+      LIBS foo.so bar.so
+      DEVICE_OBJECT_STORE /sdcard/data
+      DEVICE_TEST_DIR /sdcard/test
+      NO_LINK_REGEX .*\.so)
+    ");
+}
+
 // --- Existing tests ---
 
 #[test]

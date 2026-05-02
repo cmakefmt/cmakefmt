@@ -62,6 +62,15 @@ This project follows a simple changelog discipline:
     available alongside the builtin since 3.7).
   - **CMakePrintHelpers**: `cmake_print_properties`,
     `cmake_print_variables`.
+  - **CPackComponent**: `cpack_add_component`,
+    `cpack_add_component_group`, `cpack_add_install_type`,
+    `cpack_configure_downloads`.
+  - **CPackIFW**: `cpack_ifw_configure_component`,
+    `cpack_ifw_configure_component_group`, `cpack_ifw_add_repository`,
+    `cpack_ifw_update_repository`, `cpack_ifw_add_package_resources`.
+  - **CPackIFWConfigureFile**: `cpack_ifw_configure_file`.
+  - **BundleUtilities**: `fixup_bundle`, `verify_app`.
+  - **AndroidTestUtilities**: `android_add_test_data`.
   - **Other**: `test_big_endian`, `write_compiler_detection_header`,
     `cmake_dependent_option`, `processorcount`,
     `select_library_configurations`.

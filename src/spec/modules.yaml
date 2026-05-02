@@ -857,3 +857,212 @@ commands:
     kwargs:
       DEFINE_VARIABLES:
         nargs: "+"
+
+  # from CMake module: BundleUtilities
+  fixup_bundle:
+    pargs: 3
+    kwargs:
+      IGNORE_ITEM:
+        nargs: "+"
+  verify_app:
+    pargs: 1
+    kwargs:
+      IGNORE_ITEM:
+        nargs: "+"
+
+  # from CMake module: CPackComponent
+  cpack_add_component:
+    pargs: 1
+    kwargs:
+      DISPLAY_NAME:
+        nargs: 1
+      DESCRIPTION:
+        nargs: 1
+      GROUP:
+        nargs: 1
+      DEPENDS:
+        nargs: "+"
+      INSTALL_TYPES:
+        nargs: "+"
+      ARCHIVE_FILE:
+        nargs: 1
+      PLIST:
+        nargs: 1
+    flags:
+      - HIDDEN
+      - REQUIRED
+      - DISABLED
+      - DOWNLOADED
+  cpack_add_component_group:
+    pargs: 1
+    kwargs:
+      DISPLAY_NAME:
+        nargs: 1
+      DESCRIPTION:
+        nargs: 1
+      PARENT_GROUP:
+        nargs: 1
+    flags:
+      - EXPANDED
+      - BOLD_TITLE
+  cpack_add_install_type:
+    pargs: 1
+    kwargs:
+      DISPLAY_NAME:
+        nargs: 1
+  cpack_configure_downloads:
+    pargs: 1
+    kwargs:
+      UPLOAD_DIRECTORY:
+        nargs: 1
+    flags:
+      - ALL
+      - ADD_REMOVE
+      - NO_ADD_REMOVE
+
+  # from CMake module: CPackIFW
+  cpack_ifw_configure_component:
+    pargs: 1
+    kwargs:
+      NAME:
+        nargs: 1
+      DISPLAY_NAME:
+        nargs: 1
+      DESCRIPTION:
+        nargs: 1
+      UPDATE_TEXT:
+        nargs: 1
+      VERSION:
+        nargs: 1
+      RELEASE_DATE:
+        nargs: 1
+      SCRIPT:
+        nargs: 1
+      PRIORITY:
+        nargs: 1
+      SORTING_PRIORITY:
+        nargs: 1
+      DEPENDS:
+        nargs: "+"
+      DEPENDENCIES:
+        nargs: "+"
+      AUTO_DEPEND_ON:
+        nargs: "+"
+      LICENSES:
+        nargs: "+"
+      DEFAULT:
+        nargs: 1
+      USER_INTERFACES:
+        nargs: "+"
+      TRANSLATIONS:
+        nargs: "+"
+      REPLACES:
+        nargs: "+"
+      CHECKABLE:
+        nargs: 1
+    flags:
+      - COMMON
+      - ESSENTIAL
+      - VIRTUAL
+      - FORCED_INSTALLATION
+      - REQUIRES_ADMIN_RIGHTS
+  cpack_ifw_configure_component_group:
+    pargs: 1
+    kwargs:
+      NAME:
+        nargs: 1
+      DISPLAY_NAME:
+        nargs: 1
+      DESCRIPTION:
+        nargs: 1
+      UPDATE_TEXT:
+        nargs: 1
+      VERSION:
+        nargs: 1
+      RELEASE_DATE:
+        nargs: 1
+      SCRIPT:
+        nargs: 1
+      PRIORITY:
+        nargs: 1
+      SORTING_PRIORITY:
+        nargs: 1
+      DEPENDS:
+        nargs: "+"
+      DEPENDENCIES:
+        nargs: "+"
+      AUTO_DEPEND_ON:
+        nargs: "+"
+      LICENSES:
+        nargs: "+"
+      DEFAULT:
+        nargs: 1
+      USER_INTERFACES:
+        nargs: "+"
+      TRANSLATIONS:
+        nargs: "+"
+      REPLACES:
+        nargs: "+"
+      CHECKABLE:
+        nargs: 1
+    flags:
+      - VIRTUAL
+      - FORCED_INSTALLATION
+      - REQUIRES_ADMIN_RIGHTS
+  cpack_ifw_add_repository:
+    pargs: 1
+    kwargs:
+      URL:
+        nargs: 1
+      USERNAME:
+        nargs: 1
+      PASSWORD:
+        nargs: 1
+      DISPLAY_NAME:
+        nargs: 1
+    flags:
+      - DISABLED
+  cpack_ifw_update_repository:
+    pargs: 1
+    kwargs:
+      URL:
+        nargs: 1
+      OLD_URL:
+        nargs: 1
+      NEW_URL:
+        nargs: 1
+      USERNAME:
+        nargs: 1
+      PASSWORD:
+        nargs: 1
+      DISPLAY_NAME:
+        nargs: 1
+    flags:
+      - ADD
+      - REMOVE
+      - REPLACE
+  cpack_ifw_add_package_resources:
+    pargs: "+"
+
+  # from CMake module: CPackIFWConfigureFile
+  cpack_ifw_configure_file:
+    pargs: 2
+
+  # from CMake module: AndroidTestUtilities
+  android_add_test_data:
+    pargs: 1
+    kwargs:
+      FILES:
+        nargs: "+"
+      FILES_DEST:
+        nargs: 1
+      LIBS:
+        nargs: "+"
+      LIBS_DEST:
+        nargs: 1
+      DEVICE_OBJECT_STORE:
+        nargs: 1
+      DEVICE_TEST_DIR:
+        nargs: 1
+      NO_LINK_REGEX:
+        nargs: "+"
