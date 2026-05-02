@@ -52,7 +52,7 @@
 //! | [`Config`], [`CommandConfig`], [`PerCommandConfig`] | Runtime configuration |
 //! | [`CaseStyle`], [`DangleAlign`], [`LineEnding`], [`FractionalTabPolicy`] | Config enums |
 //! | [`CommandRegistry`] | Built-in + user-override command specs |
-//! | [`Error`], [`Result`] | Crate-level error types |
+//! | [`Error`], [`Result`], [`IoResultExt`] | Crate-level error types and the path-context adapter for `io::Result` |
 //!
 //! # Features
 //!

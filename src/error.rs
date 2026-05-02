@@ -236,9 +236,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl Error {
     /// Attach a human-facing source name (e.g. a file path) to a
     /// contextual [`ParseError`]. No-op for any other variant —
-    /// `Config`, `Spec`, `Io`, `Formatter`, and `LayoutTooWide`
-    /// already carry the context they need and are returned
-    /// unchanged.
+    /// `Config`, `Spec`, `Io`, `IoAt`, `Formatter`, and
+    /// `LayoutTooWide` already carry the context they need and are
+    /// returned unchanged.
     pub fn with_display_name(self, display_name: impl Into<String>) -> Self {
         match self {
             Self::Parse(parse) => Self::Parse(parse.with_display_name(display_name)),
