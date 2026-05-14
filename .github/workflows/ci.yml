@@ -37,14 +37,11 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - name: Prepend Cargo bin to PATH
-        shell: bash
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-bin: "false"
 
       - name: Check formatting
         run: cargo fmt --check
@@ -102,14 +99,11 @@ jobs:
           toolchain: stable
           components: clippy
 
-      - name: Prepend Cargo bin to PATH
-        shell: bash
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
         with:
           save-if: false
+          cache-bin: "false"
 
       - name: Install clippy-sarif and sarif-fmt
         uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4  # v2.78.0

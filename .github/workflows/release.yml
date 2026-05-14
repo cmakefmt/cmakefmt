@@ -106,15 +106,12 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Prepend Cargo bin to PATH
-        shell: bash
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           key: ${{ matrix.target }}
           save-if: false
+          cache-bin: "false"
 
       - name: Install musl toolchain
         if: matrix.target == 'x86_64-unknown-linux-musl'
@@ -243,12 +240,10 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Prepend Cargo bin to PATH
-        shell: bash
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          cache-bin: "false"
 
       - name: Run tests
         run: cargo test --locked
@@ -268,12 +263,10 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Prepend Cargo bin to PATH
-        shell: bash
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          cache-bin: "false"
 
       - name: Download packaged artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -368,12 +361,10 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Prepend Cargo bin to PATH
-        shell: bash
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          cache-bin: "false"
 
       - name: Publish crate to crates.io
         run: cargo publish --locked
@@ -491,12 +482,10 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Prepend Cargo bin to PATH
-        shell: bash
-        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          cache-bin: "false"
 
       - name: Dry-run crate publish
         run: cargo publish --locked --dry-run
