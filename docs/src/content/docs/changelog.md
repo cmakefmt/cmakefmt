@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.4.1 — 2026-05-14
+
 ### Fixed
 
 - Linux wheels now install on glibc ≥ 2.28 (RHEL 8/9, Ubuntu 22.04+,
