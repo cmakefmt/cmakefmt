@@ -34,6 +34,10 @@ jobs:
           toolchain: stable
           targets: wasm32-unknown-unknown
 
+      - name: Prepend Cargo bin to PATH
+        shell: bash
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1
         with:
