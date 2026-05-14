@@ -8,6 +8,18 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- Linux wheels now install on glibc ≥ 2.28 (RHEL 8/9, Ubuntu 22.04+,
+  Debian 11+, SLES 15) instead of requiring glibc ≥ 2.39, which had
+  excluded every in-support enterprise distro. Wheels are now built
+  inside a `manylinux_2_28` container. (#47)
+- Lowered `requires-python` from `>=3.11` to `>=3.8`. The published
+  wheel is a standalone Rust binary with no Python runtime
+  dependency, so the previous floor was preventing installs on
+  systems whose Python happened to be older even though nothing
+  about the package needed 3.11. (#47)
+
 ## 1.4.0 — 2026-05-02
 
 ### Added
