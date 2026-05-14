@@ -57,7 +57,9 @@ jobs:
 
       - name: Install cargo-audit
         if: matrix.os == 'ubuntu-latest'
-        uses: taiki-e/install-action@76bf6d08592ed7dfa264dc3fd083ede228bbb8c2  # cargo-audit
+        uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4  # v2.78.0
+        with:
+          tool: cargo-audit
 
       - name: Security audit
         if: matrix.os == 'ubuntu-latest'
@@ -65,7 +67,9 @@ jobs:
 
       - name: Install cargo-deny
         if: matrix.os == 'ubuntu-latest'
-        uses: taiki-e/install-action@a3d6a13b75a275d9e17d817beabc60eda99da897  # cargo-deny
+        uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4  # v2.78.0
+        with:
+          tool: cargo-deny
 
       - name: Dependency licences, bans, and advisories
         if: matrix.os == 'ubuntu-latest'
@@ -100,7 +104,7 @@ jobs:
           save-if: false
 
       - name: Install clippy-sarif and sarif-fmt
-        uses: taiki-e/install-action@76bf6d08592ed7dfa264dc3fd083ede228bbb8c2  # v2
+        uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4  # v2.78.0
         with:
           tool: clippy-sarif,sarif-fmt
 

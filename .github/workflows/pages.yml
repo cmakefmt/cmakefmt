@@ -40,7 +40,9 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install wasm-pack
-        uses: taiki-e/install-action@5f1ae50917e4c25bbe1c151c70643032ffe2a16a  # wasm-pack
+        uses: taiki-e/install-action@e1c4cd42111751368541a7cb5db3522bd1f846a4  # v2.78.0
+        with:
+          tool: wasm-pack
 
       - name: Build WASM playground module
         run: bash scripts/build-wasm.sh
