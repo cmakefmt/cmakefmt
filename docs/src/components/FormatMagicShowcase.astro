@@ -128,7 +128,7 @@ endif()
       before={before}
       after={after}
       lang="cmake"
-      trigger="click"
+      trigger="none"
       duration={2200}
       stagger={0.18}
       class="format-magic-move"
@@ -140,96 +140,46 @@ endif()
   const AUTO_PLAY_DELAY_MS = 1000;
   const PANEL_READY_TIMEOUT_MS = 5000;
   const RESET_DELAY_MS = 70;
+  const STEP_SETTLE_FALLBACK_MS = 2600;
   const showcaseScriptStart = performance.now();
 
   type MagicMovePanel = HTMLElement & {
-    animateToStep?: (step: number) => Promise<void> | void;
-    currentStep?: number;
     step?: number;
     totalSteps?: number;
-    _currentStep?: number;
-    _steps?: unknown[];
-    renderer?: { replace: (step: unknown) => void; isFirstRender?: boolean };
-    steps?: unknown[];
+    isReady?: boolean;
   };
 
-  const getPanelSteps = (panel: MagicMovePanel) => {
-    if (Array.isArray(panel.steps)) {
-      return panel.steps;
-    }
-
-    if (Array.isArray(panel._steps)) {
-      return panel._steps;
-    }
-
-    return null;
-  };
-
-  const getPanelStepCount = (panel: MagicMovePanel) => {
-    const steps = getPanelSteps(panel);
-    if (steps) {
-      return steps.length;
-    }
-
-    return typeof panel.totalSteps === "number" ? panel.totalSteps : 0;
-  };
+  const getPanelStepCount = (panel: MagicMovePanel) =>
+    typeof panel.totalSteps === "number" ? panel.totalSteps : 0;
 
   const getPanelCurrentStep = (panel: MagicMovePanel) => {
-    if (typeof panel.currentStep === "number") {
-      return panel.currentStep;
-    }
-
     if (typeof panel.step === "number") {
       return panel.step;
-    }
-
-    if (typeof panel._currentStep === "number") {
-      return panel._currentStep;
     }
 
     return 0;
   };
 
-  const setPanelCurrentStep = (panel: MagicMovePanel, step: number) => {
-    if ("currentStep" in panel) {
-      panel.currentStep = step;
-    }
-
-    if ("_currentStep" in panel) {
-      panel._currentStep = step;
-    }
-  };
-
   const waitForMagicMovePanel = async (panel: MagicMovePanel) => {
     await customElements.whenDefined("magic-move");
 
-    const deadline = performance.now() + PANEL_READY_TIMEOUT_MS;
-    while (performance.now() < deadline) {
-      if (
-        typeof panel.animateToStep === "function" &&
-        getPanelStepCount(panel) > 0 &&
-        typeof panel.renderer?.replace === "function"
-      ) {
-        return true;
-      }
-
-      await new Promise((resolve) => window.setTimeout(resolve, 50));
+    if (panel.isReady === true && getPanelStepCount(panel) > 0) {
+      return true;
     }
 
-    return false;
-  };
+    return new Promise<boolean>((resolve) => {
+      const timeout = window.setTimeout(() => {
+        panel.removeEventListener("magic-move:ready", onReady);
+        resolve(panel.isReady === true && getPanelStepCount(panel) > 0);
+      }, PANEL_READY_TIMEOUT_MS);
 
-  const prepareMagicMovePanel = (panel: MagicMovePanel) => {
-    const steps = getPanelSteps(panel);
-    const renderer = panel.renderer;
-    if (!Array.isArray(steps) || steps.length === 0 || !renderer) {
-      return;
-    }
+      const onReady = () => {
+        window.clearTimeout(timeout);
+        resolve(getPanelStepCount(panel) > 0);
+      };
 
-    // Prime the initial frame so the first visible autoplay matches replay.
-    renderer.replace(steps[0]);
-    renderer.isFirstRender = false;
-    setPanelCurrentStep(panel, 0);
+      panel.addEventListener("magic-move:ready", onReady, { once: true });
+    });
   };
 
   const initFormatShowcase = (showcase: Element) => {
@@ -300,7 +250,6 @@ endif()
             return false;
           }
 
-          prepareMagicMovePanel(panel);
           isPanelPrepared = true;
           currentStep = getPanelCurrentStep(panel);
           updateControls(Math.max(currentStep, 0));
@@ -324,34 +273,44 @@ endif()
       replay.disabled = animating;
     };
 
-    const animateToStep = async (step: number) => {
-      if (!(await ensurePanelReady())) {
-        return;
-      }
-
-      if (currentStep === step || typeof panel.animateToStep !== "function") {
-        return;
-      }
-
-      await panel.animateToStep(step);
-      currentStep = getPanelCurrentStep(panel) ?? step;
-    };
-
-    const snapToStep = async (step: number) => {
+    const setPanelStep = async (step: number) => {
       if (!(await ensurePanelReady())) {
         return false;
       }
 
-      const steps = getPanelSteps(panel);
-      const renderer = panel.renderer;
-      if (!Array.isArray(steps) || !renderer || step < 0 || step >= steps.length) {
-        return false;
+      if (currentStep === step) {
+        return true;
       }
 
-      renderer.replace(steps[step]);
-      setPanelCurrentStep(panel, step);
-      updateControls(step);
-      return true;
+      return new Promise<boolean>((resolve) => {
+        let settled = false;
+
+        const finish = (didReachStep: boolean) => {
+          if (settled) {
+            return;
+          }
+
+          settled = true;
+          window.clearTimeout(timeout);
+          panel.removeEventListener("magic-move:step", onStep);
+          currentStep = getPanelCurrentStep(panel);
+          resolve(didReachStep);
+        };
+
+        const onStep = ((event: CustomEvent) => {
+          const nextStep = Number(event.detail?.step ?? getPanelCurrentStep(panel));
+          if (nextStep === step) {
+            finish(true);
+          }
+        }) as EventListener;
+
+        const timeout = window.setTimeout(() => {
+          finish(getPanelCurrentStep(panel) === step);
+        }, STEP_SETTLE_FALLBACK_MS);
+
+        panel.addEventListener("magic-move:step", onStep);
+        panel.step = step;
+      });
     };
 
     const animateForward = async () => {
@@ -363,12 +322,15 @@ endif()
 
       try {
         if (currentStep > 0) {
-          await snapToStep(0);
+          showcase.dataset.resetting = "true";
+          await setPanelStep(0);
           await new Promise((resolve) => window.setTimeout(resolve, RESET_DELAY_MS));
+          delete showcase.dataset.resetting;
         }
 
-        await animateToStep(1);
+        await setPanelStep(1);
       } finally {
+        delete showcase.dataset.resetting;
         setAnimating(false);
       }
     };
@@ -376,17 +338,6 @@ endif()
     panel.addEventListener("magic-move:step", ((event: CustomEvent) => {
       updateControls(Number(event.detail?.step ?? 0));
     }) as EventListener);
-
-    // Disable the library's built-in click trigger so only autoplay and the
-    // explicit replay button start the animation.
-    panel.addEventListener(
-      "click",
-      (event) => {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      },
-      { capture: true },
-    );
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -431,7 +382,7 @@ endif()
 
         hasUserInteracted = true;
         clearAutoPlayTimeout();
-        void snapToStep(Number(tab.dataset.step ?? "0"));
+        void setPanelStep(Number(tab.dataset.step ?? "0"));
       });
     });
 
@@ -712,6 +663,11 @@ endif()
 
   .format-showcase[data-animating="true"] .format-showcase-replay {
     opacity: 0.82;
+  }
+
+  .format-showcase[data-resetting="true"] :global(.format-magic-move) {
+    opacity: 0;
+    transition: opacity 0.08s ease;
   }
 
   .format-showcase :global(.format-magic-move) {

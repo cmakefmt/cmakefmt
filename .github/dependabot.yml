@@ -25,13 +25,3 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 10
-    ignore:
-      # astro-magic-move 0.x bumps have repeatedly broken our integration by
-      # privatising internals that FormatMagicShowcase relies on (0.4.0 made
-      # #renderer/#steps/#currentStep hard-private with the # syntax, losing
-      # animateToStep and snap-to-step access). Pin until the showcase is
-      # refactored to use the public step/totalSteps API only.
-      - dependency-name: "astro-magic-move"
-        update-types:
-          - "version-update:semver-minor"
-          - "version-update:semver-major"
