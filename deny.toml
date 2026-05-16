@@ -45,9 +45,32 @@ confidence-threshold = 0.8
 # ---------------------------------------------------------------------------
 [bans]
 # Deny multiple versions of the same crate in the dependency graph.
-multiple-versions = "warn"
+# Known-acceptable transitive duplicates are listed in `skip` below so
+# a new duplicate (which would usually mean a Cargo.toml mistake or an
+# avoidable dep bump) fails CI instead of being silently warned about.
+multiple-versions = "deny"
 # Deny wildcard dependencies.
 wildcards = "deny"
+
+# Allowlist of crates whose duplicates we accept because they come in
+# via transitive dependencies we don't control. Each entry should be
+# revisited periodically — if the ecosystem converges, we should
+# drop the entry so future duplications go back to failing.
+skip = [
+  # `bitflags` v1 / v2 split: many crates have migrated to v2 but a
+  # long tail (notably some `windows-*` and `regex-*` transitives)
+  # still pull v1. Tracked upstream; nothing we can fix here.
+  { name = "bitflags" },
+  # `windows-sys` v0.5x / v0.6x split: `tempfile`, `notify*`, and
+  # `criterion` are typically on different majors than `clap`. Will
+  # converge as the ecosystem catches up.
+  { name = "windows-sys" },
+  # `wit-bindgen` v0.51 / v0.57 split: `getrandom` v0.3 vs v0.4
+  # pull `wasip2` and `wasip3` respectively, which in turn pull
+  # different `wit-bindgen` majors. This is a WASI ecosystem split,
+  # not something a single crate can resolve.
+  { name = "wit-bindgen" },
+]
 
 # ---------------------------------------------------------------------------
 # Sources — only crates.io and this repository
