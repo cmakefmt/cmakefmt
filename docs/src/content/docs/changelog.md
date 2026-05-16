@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.4.2 — 2026-05-16
+
 ### Fixed
 
 - `set_property(... PROPERTY <name> <values…>)` and the

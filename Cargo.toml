@@ -1,6 +1,6 @@
 [package]
 name = "cmakefmt-rust"
-version = "1.4.1"
+version = "1.4.2"
 edition = "2021"
 description = "A fast, correct CMake formatter"
 license = "MIT OR Apache-2.0"

@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "cmakefmt-rust"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "clap",
  "clap_complete",
