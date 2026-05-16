@@ -283,8 +283,13 @@ jobs:
 
       - name: Generate SBOM
         shell: bash
+        # Pin cargo-cyclonedx so the SBOM tool itself isn't a floating
+        # dependency. Bumping is a deliberate one-line edit; an
+        # uncoordinated upstream release won't silently change SBOM
+        # output between two consecutive runs on the same code.
+        # Update by setting `--version` to the latest crates.io release.
         run: |
-          cargo install cargo-cyclonedx --locked --quiet
+          cargo install cargo-cyclonedx --locked --quiet --version 0.5.9
           cargo cyclonedx --format json
           cp cmakefmt-rust.cdx.json dist/cmakefmt.cdx.json
 
