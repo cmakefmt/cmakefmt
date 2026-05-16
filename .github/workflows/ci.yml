@@ -49,6 +49,25 @@ jobs:
       - name: Lint
         run: cargo clippy --all-targets -- -D warnings
 
+      # Fetch the pinned real-world CMake corpus (Abseil, Catch2, etc.
+      # — see tests/fixtures/real_world/manifest.toml) so the
+      # `tests/real_world.rs` checks exercise actual upstream
+      # CMakeLists.txt files on every PR, not just on the weekly
+      # cron in real-world.yml. The fetch is cheap (~1 MB total) and
+      # SHA-pinned; Linux-only because the corpus content is
+      # platform-independent and the existing skip-when-absent
+      # behaviour in real_world.rs handles the other matrix legs
+      # gracefully.
+      - name: Set up Python (for corpus fetcher)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
+        with:
+          python-version: "3.x"
+
+      - name: Fetch real-world CMake corpus
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 scripts/fetch-real-world-corpus.py
+
       - name: Test
         run: cargo test
 
