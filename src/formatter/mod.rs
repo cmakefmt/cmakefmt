@@ -331,7 +331,22 @@ fn format_source_impl(
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
 ) -> Result<(String, usize)> {
+    // Preserve a leading UTF-8 BOM if the input had one. The parser
+    // strips the BOM before parsing, so without re-prepending it here
+    // the formatter would silently drop encoding markers used by some
+    // editors (notably MSVC on Windows) to identify the file as UTF-8.
+    // Strip the BOM from the source we feed to the line-by-line loop
+    // so it doesn't end up duplicated on the first emitted line.
+    const BOM: char = '\u{feff}';
+    let (had_bom, source) = match source.strip_prefix(BOM) {
+        Some(rest) => (true, rest),
+        None => (false, source),
+    };
+
     let mut output = String::new();
+    if had_bom {
+        output.push(BOM);
+    }
     let mut enabled_chunk = String::new();
     let mut total_statements = 0usize;
     let mut mode = BarrierMode::Enabled;
@@ -639,5 +654,25 @@ mod tests {
             }
             other => panic!("expected config error, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn format_source_preserves_leading_utf8_bom() {
+        let source = "\u{feff}set(FOO bar)\n";
+        let formatted = format_source(source, &Config::default()).unwrap();
+        assert!(
+            formatted.starts_with('\u{feff}'),
+            "BOM was stripped from output: {formatted:?}"
+        );
+    }
+
+    #[test]
+    fn format_source_does_not_add_a_bom() {
+        let source = "set(FOO bar)\n";
+        let formatted = format_source(source, &Config::default()).unwrap();
+        assert!(
+            !formatted.starts_with('\u{feff}'),
+            "BOM was added to output without one in input: {formatted:?}"
+        );
     }
 }
