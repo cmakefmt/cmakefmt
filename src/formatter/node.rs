@@ -28,6 +28,51 @@ pub(crate) struct Section<'a> {
     pub(crate) arguments: Vec<&'a Argument>,
 }
 
+/// Bundle of per-command-invariant parameters that every writer
+/// function in this module needs.
+///
+/// Before this struct existed, the writer chain
+/// (`format_command_vertical` → `write_sections` →
+/// `write_packed_arguments_with_continuation` /
+/// `write_grouped_arguments` / `write_header_line_and_group`) each
+/// took its own 7-9-arg signature threading the same
+/// `(cmd_config, patterns, continuation_align)` tuple — five
+/// functions all carried `#[allow(clippy::too_many_arguments)]`.
+///
+/// A single `&WriteCtx<'a>` argument carries those invariants and
+/// lets each writer take just the per-call data
+/// (`output`, `arguments`, `indent`, …) plus the context.
+///
+/// Indent strings vary per call and stay as separate parameters;
+/// they're data being formatted, not context.
+struct WriteCtx<'a> {
+    cmd_config: &'a CommandConfig<'a>,
+    patterns: &'a CompiledPatterns,
+    continuation_align: crate::config::ContinuationAlign,
+}
+
+impl<'a> WriteCtx<'a> {
+    fn new(
+        cmd_config: &'a CommandConfig<'a>,
+        patterns: &'a CompiledPatterns,
+        continuation_align: crate::config::ContinuationAlign,
+    ) -> Self {
+        Self {
+            cmd_config,
+            patterns,
+            continuation_align,
+        }
+    }
+
+    fn config(&self) -> &Config {
+        self.cmd_config.global()
+    }
+
+    fn line_width(&self) -> usize {
+        self.cmd_config.line_width()
+    }
+}
+
 /// Format a single parsed command invocation.
 ///
 /// The formatter chooses between inline, hanging-wrap, and vertical layouts
@@ -83,6 +128,8 @@ pub(crate) fn format_command(
     let spec_continuation = form.layout.as_ref().and_then(|l| l.continuation_align);
     let continuation_align = cmd_config.continuation_align(spec_continuation);
 
+    let ctx = WriteCtx::new(&cmd_config, patterns, continuation_align);
+
     let output = if force_vertical {
         debug.log(format!(
             "formatter: command {} layout=vertical (always_wrap)",
@@ -92,11 +139,9 @@ pub(crate) fn format_command(
             command,
             &sections,
             form,
-            &cmd_config,
-            patterns,
+            &ctx,
             block_depth,
             wrap_after_first_arg,
-            continuation_align,
         )?
     } else if let Some(inline) = try_format_inline(
         command,
@@ -144,11 +189,9 @@ pub(crate) fn format_command(
             command,
             &sections,
             form,
-            &cmd_config,
-            patterns,
+            &ctx,
             block_depth,
             wrap_after_first_arg,
-            continuation_align,
         )?
     };
 
@@ -544,17 +587,15 @@ fn try_format_hanging(
     ))
 }
 
-#[allow(clippy::too_many_arguments)]
 fn format_command_vertical(
     command: &CommandInvocation,
     sections: &[Section<'_>],
     form: &CommandForm,
-    cmd_config: &CommandConfig<'_>,
-    patterns: &CompiledPatterns,
+    ctx: &WriteCtx<'_>,
     block_depth: usize,
     wrap_after_first_arg: bool,
-    continuation_align: crate::config::ContinuationAlign,
 ) -> Result<String> {
+    let cmd_config = ctx.cmd_config;
     let base_indent = cmd_config.indent_str().repeat(block_depth);
     let indent = format!("{base_indent}{}", cmd_config.indent_str());
     let nested_indent = format!("{indent}{}", cmd_config.indent_str());
@@ -642,18 +683,11 @@ fn format_command_vertical(
                         &mut output,
                         remaining,
                         &paren_indent,
-                        cmd_config.global(),
-                        patterns,
+                        ctx.config(),
+                        ctx.patterns,
                     );
                 } else {
-                    write_packed_arguments(
-                        &mut output,
-                        remaining,
-                        &paren_indent,
-                        cmd_config.global(),
-                        patterns,
-                        cmd_config.line_width(),
-                    );
+                    write_packed_arguments(&mut output, remaining, &paren_indent, ctx);
                 }
             }
         } else if sections.len() > 1 {
@@ -665,9 +699,7 @@ fn format_command_vertical(
             &mut output,
             &sections[1..],
             form,
-            cmd_config,
-            patterns,
-            continuation_align,
+            ctx,
             &paren_indent,
             &kw_nested,
         );
@@ -678,16 +710,7 @@ fn format_command_vertical(
 
     output.push_str("(\n");
 
-    write_sections(
-        &mut output,
-        sections,
-        form,
-        cmd_config,
-        patterns,
-        continuation_align,
-        &indent,
-        &nested_indent,
-    );
+    write_sections(&mut output, sections, form, ctx, &indent, &nested_indent);
 
     close_command_output(&mut output, cmd_config, &base_indent, &name);
 
@@ -698,17 +721,15 @@ fn format_command_vertical(
 /// `section_indent` and (for keyword-headed sections that need to wrap)
 /// continued at `nested_indent`. Shared by the two vertical layouts in
 /// [`format_command_vertical`].
-#[allow(clippy::too_many_arguments)]
 fn write_sections(
     output: &mut String,
     sections: &[Section<'_>],
     form: &CommandForm,
-    cmd_config: &CommandConfig<'_>,
-    patterns: &CompiledPatterns,
-    continuation_align: crate::config::ContinuationAlign,
+    ctx: &WriteCtx<'_>,
     section_indent: &str,
     nested_indent: &str,
 ) {
+    let cmd_config = ctx.cmd_config;
     for section in sections {
         match section.header {
             None => {
@@ -717,18 +738,11 @@ fn write_sections(
                         output,
                         &section.arguments,
                         section_indent,
-                        cmd_config.global(),
-                        patterns,
+                        ctx.config(),
+                        ctx.patterns,
                     );
                 } else {
-                    write_packed_arguments(
-                        output,
-                        &section.arguments,
-                        section_indent,
-                        cmd_config.global(),
-                        patterns,
-                        cmd_config.line_width(),
-                    );
+                    write_packed_arguments(output, &section.arguments, section_indent, ctx);
                 }
             }
             Some(header_raw) => {
@@ -751,10 +765,7 @@ fn write_sections(
                             &section.arguments,
                             spec,
                             nested_indent,
-                            cmd_config.global(),
-                            patterns,
-                            cmd_config.line_width(),
-                            continuation_align,
+                            ctx,
                         );
                     } else {
                         output.push('\n');
@@ -762,17 +773,17 @@ fn write_sections(
                             output,
                             &section.arguments,
                             nested_indent,
-                            cmd_config.global(),
-                            patterns,
+                            ctx.config(),
+                            ctx.patterns,
                         );
                     }
                 } else if let Some(line) = format_section_inline(
                     &header,
                     &section.arguments,
                     section_indent,
-                    cmd_config.global(),
-                    patterns,
-                    cmd_config.line_width(),
+                    ctx.config(),
+                    ctx.patterns,
+                    ctx.line_width(),
                 ) {
                     output.truncate(output.len() - header.len());
                     output.push_str(&line);
@@ -783,21 +794,11 @@ fn write_sections(
                         &section.arguments,
                         spec,
                         nested_indent,
-                        cmd_config.global(),
-                        patterns,
-                        cmd_config.line_width(),
-                        continuation_align,
+                        ctx,
                     );
                 } else {
                     output.push('\n');
-                    write_packed_arguments(
-                        output,
-                        &section.arguments,
-                        nested_indent,
-                        cmd_config.global(),
-                        patterns,
-                        cmd_config.line_width(),
-                    );
+                    write_packed_arguments(output, &section.arguments, nested_indent, ctx);
                 }
             }
         }
@@ -881,13 +882,9 @@ fn write_packed_arguments(
     output: &mut String,
     arguments: &[&Argument],
     indent: &str,
-    config: &Config,
-    patterns: &CompiledPatterns,
-    line_width: usize,
+    ctx: &WriteCtx<'_>,
 ) {
-    write_packed_arguments_with_continuation(
-        output, arguments, indent, indent, config, patterns, line_width,
-    );
+    write_packed_arguments_with_continuation(output, arguments, indent, indent, ctx);
 }
 
 /// Same as [`write_packed_arguments`], but uses a separate indent for
@@ -897,16 +894,16 @@ fn write_packed_arguments(
 /// [`crate::config::ContinuationAlign::UnderFirstValue`] — continuation
 /// lines align under the first value column after the subkwarg, rather
 /// than at the subkwarg's own indent.
-#[allow(clippy::too_many_arguments)]
 fn write_packed_arguments_with_continuation(
     output: &mut String,
     arguments: &[&Argument],
     first_indent: &str,
     continuation_indent: &str,
-    config: &Config,
-    patterns: &CompiledPatterns,
-    line_width: usize,
+    ctx: &WriteCtx<'_>,
 ) {
+    let config = ctx.config();
+    let patterns = ctx.patterns;
+    let line_width = ctx.line_width();
     let mut current = String::new();
     let mut used_first_line = false;
 
@@ -1039,16 +1036,12 @@ fn write_packed_arguments_with_continuation(
 /// subgroups). Each nested kwarg and its forced-nargs value(s) are
 /// rendered as a single logical line so that `COMPONENT Runtime` and
 /// `NAMELINK_COMPONENT Development` never split across lines.
-#[allow(clippy::too_many_arguments)]
 fn write_grouped_arguments(
     output: &mut String,
     arguments: &[&Argument],
     indent: &str,
     parent_spec: &crate::spec::KwargSpec,
-    config: &Config,
-    patterns: &CompiledPatterns,
-    line_width: usize,
-    continuation_align: crate::config::ContinuationAlign,
+    ctx: &WriteCtx<'_>,
 ) {
     let mut i = 0;
     while i < arguments.len() {
@@ -1056,14 +1049,7 @@ fn write_grouped_arguments(
         if argument.is_comment() || argument_has_newline(argument) {
             // Defer non-token arguments to the packed writer one at a time
             // so existing comment and multi-line handling still applies.
-            write_packed_arguments(
-                output,
-                std::slice::from_ref(&arguments[i]),
-                indent,
-                config,
-                patterns,
-                line_width,
-            );
+            write_packed_arguments(output, std::slice::from_ref(&arguments[i]), indent, ctx);
             i += 1;
             continue;
         }
@@ -1074,7 +1060,7 @@ fn write_grouped_arguments(
         // Under UnderFirstValue, wrap lines of a subkwarg group land
         // aligned under the column of the first value after the
         // subkwarg token: `indent + subkwarg + " "`.
-        let hanging_indent = (continuation_align
+        let hanging_indent = (ctx.continuation_align
             == crate::config::ContinuationAlign::UnderFirstValue
             && group.len() > 1
             && lookup_nested_kwarg_in(parent_spec, group[0].as_str()).is_some())
@@ -1084,17 +1070,9 @@ fn write_grouped_arguments(
         });
 
         if let Some(continuation) = hanging_indent.as_deref() {
-            write_packed_arguments_with_continuation(
-                output,
-                group,
-                indent,
-                continuation,
-                config,
-                patterns,
-                line_width,
-            );
+            write_packed_arguments_with_continuation(output, group, indent, continuation, ctx);
         } else {
-            write_packed_arguments(output, group, indent, config, patterns, line_width);
+            write_packed_arguments(output, group, indent, ctx);
         }
         i = end;
     }
@@ -1154,17 +1132,16 @@ fn current_line_char_count(output: &str) -> usize {
 /// extends to end-of-line in CMake, so placing a positional token
 /// after one would make CMake parse the positional as comment text
 /// and silently change the command's semantics.
-#[allow(clippy::too_many_arguments)]
 fn write_header_line_and_group(
     output: &mut String,
     arguments: &[&Argument],
     spec: &crate::spec::KwargSpec,
     inner_indent: &str,
-    config: &Config,
-    patterns: &CompiledPatterns,
-    line_width: usize,
-    continuation_align: crate::config::ContinuationAlign,
+    ctx: &WriteCtx<'_>,
 ) {
+    let config = ctx.config();
+    let patterns = ctx.patterns;
+    let line_width = ctx.line_width();
     let positional_count = header_positional_count(spec);
 
     // Walk the prefix that would naturally live on the header line,
@@ -1244,16 +1221,7 @@ fn write_header_line_and_group(
         output.push('\n');
     }
     if !rest.is_empty() {
-        write_grouped_arguments(
-            output,
-            rest,
-            inner_indent,
-            spec,
-            config,
-            patterns,
-            line_width,
-            continuation_align,
-        );
+        write_grouped_arguments(output, rest, inner_indent, spec, ctx);
     }
 }
 
