@@ -16,8 +16,35 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- New `cmakefmt manpage` subcommand that prints the roff man page
+  to stdout, replacing the older `--generate-man-page` flag at
+  the top-level CLI surface. The flag remains accepted as a
+  hidden deprecated alias so existing release scripts and
+  distribution recipes keep working during the transition;
+  packagers should migrate to `cmakefmt manpage > cmakefmt.1`
+  when convenient.
+
+### Changed
+
+- `--fast` is now a hidden alias of `--no-verify` instead of a
+  visible one. Both flags continue to work; only the canonical
+  `--no-verify` is documented in `--help` output and the CLI
+  reference. Matches the "deprecated alias" framing the docs
+  have used since v1.3.x.
+
 ### Fixed
 
+- Files that begin with a UTF-8 byte-order mark (commonly
+  written by MSVC / Visual Studio on Windows) now round-trip
+  through the formatter with the BOM preserved. Previously the
+  parser stripped the BOM during parsing and the formatter never
+  re-prepended it, so every format pass silently changed the
+  file's leading bytes — invisible to most editors but enough
+  to trip strict file-content checks or break a build's
+  encoding-detection step. Files without a BOM are unaffected
+  (no BOM is ever added).
 - `set_package_properties(PACKAGE … PROPERTIES <k> <v> …)` is now
   exempt from the autosort heuristic, completing the v1.4.2 sweep
   across the property-family commands. The kwarg has the same
