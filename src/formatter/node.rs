@@ -768,7 +768,6 @@ fn write_sections(
                     }
                 } else if let Some(line) = format_section_inline(
                     &header,
-                    section.header_kind,
                     &section.arguments,
                     section_indent,
                     cmd_config.global(),
@@ -807,7 +806,6 @@ fn write_sections(
 
 fn format_section_inline(
     header: &str,
-    header_kind: Option<HeaderKind>,
     arguments: &[&Argument],
     indent: &str,
     config: &Config,
@@ -863,9 +861,6 @@ fn format_section_inline(
                     line_width_count + 1 + token_width
                 };
                 if indent_width + candidate_width > line_width {
-                    if matches!(header_kind, Some(HeaderKind::Flag)) && arguments.len() == 1 {
-                        return None;
-                    }
                     return None;
                 }
                 if line.is_empty() {
