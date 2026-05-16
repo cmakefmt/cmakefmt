@@ -65,6 +65,17 @@ jobs:
         shell: bash
         run: cargo generate-lockfile
 
+      # Smoke-test the version-bumped tree before producing the tag.
+      # Without this, a compile or test failure on the bumped sources
+      # surfaces only in release.yml *after* the tag is already pushed,
+      # leaving an orphan tag that crates.io / PyPI cannot accept
+      # without manual cleanup. Cheap insurance — `cargo test --locked`
+      # against the just-rewritten Cargo.lock catches the lion's share
+      # of regressions before they reach a tag.
+      - name: Smoke-test the bumped tree
+        shell: bash
+        run: cargo test --locked --workspace
+
       - name: Verify docs checks
         shell: bash
         run: bash scripts/check-docs.sh
