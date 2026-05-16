@@ -75,14 +75,14 @@ endif()
 
 ## I want to use tabs instead of spaces
 
-**Option:** [`use_tabchars`](/config/#use_tabchars) (default: `false`)
+**Option:** [`use_tabs`](/config/#use_tabs) (default: `false`)
 
 Some projects prefer tab characters for indentation so that each
 developer's editor can display them at their preferred width.
 
 ```yaml
 format:
-  use_tabchars: true
+  use_tabs: true
 ```
 
 Indentation uses tab characters instead of spaces. The visual width is
@@ -176,14 +176,14 @@ target_link_libraries(
 
 ## I want a space before `(` in `if()` / `foreach()`
 
-**Option:** [`separate_ctrl_name_with_space`](/config/#separate_ctrl_name_with_space) (default: `false`)
+**Option:** [`space_before_control_paren`](/config/#space_before_control_paren) (default: `false`)
 
 Some style guides prefer `if (CONDITION)` over `if(CONDITION)` to
 visually distinguish control-flow statements from function calls.
 
 ```yaml
 format:
-  separate_ctrl_name_with_space: true
+  space_before_control_paren: true
 ```
 
 Before:
@@ -452,7 +452,7 @@ set(FOO bar)
 
 ## I want to teach cmakefmt my custom commands
 
-**Section:** [`commands`](/config/#custom-commands)
+**Section:** [`commands`](/config/#custom-command-specs)
 
 Without a spec, custom commands format as flat token lists. With a spec,
 keywords and flags are recognized and arguments are grouped properly:

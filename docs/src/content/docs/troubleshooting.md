@@ -224,8 +224,8 @@ cmakefmt --required-version 1.4.2 --check .
   the parsed CMake semantics change.
 - `--required-version` makes scripts fail fast when the installed binary is not
   the exact version they expect.
-- `--in-place` already performs semantic verification by default; add `--fast`
-  only when you explicitly want to skip that extra check.
+- `--in-place` already performs semantic verification by default; add
+  `--no-verify` only when you explicitly want to skip that extra check.
 
 ## I Suspect A Performance Regression
 

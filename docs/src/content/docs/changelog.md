@@ -16,6 +16,65 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- `set_package_properties(PACKAGE … PROPERTIES <k> <v> …)` is now
+  exempt from the autosort heuristic, completing the v1.4.2 sweep
+  across the property-family commands. The kwarg has the same
+  `<key> <value>` pair structure as `set_target_properties`; the
+  v1.4.2 fix missed it because it lives in the `FeatureSummary`
+  module spec rather than the core property commands. As before,
+  the previous behaviour produced syntactically valid CMake with
+  corrupted semantics.
+
+### Changed
+
+- Annotated several public spec and config-enum types with
+  `#[non_exhaustive]` so future field/variant additions stay
+  patch-safe rather than breaking downstream consumers using
+  exhaustive struct-literal construction or `match` arms:
+  `KwargSpec`, `CommandForm`, `LayoutOverrides`, `NArgs`,
+  `CommandSpec`, `CaseStyle`, `LineEnding`, `FractionalTabPolicy`,
+  `ContinuationAlign`, `DangleAlign`, plus per-variant on
+  `Error::IoAt` and `Error::LayoutTooWide`. The `Config`,
+  `PerCommandConfig`, and AST node types (`CommandInvocation`,
+  `BracketArgument`, `File`, `Statement`, `Argument`, `Comment`)
+  intentionally stay un-annotated for now because external
+  callers (tests, benchmarks, downstream tools) construct them
+  via struct literals; their hardening is tracked on the roadmap
+  for a later release that pairs the annotation with a builder
+  API.
+
+### Internal
+
+- Removed a dead conditional in `formatter::node::format_section_inline`
+  whose two arms returned identical values; the `header_kind`
+  parameter became unused and was dropped from the signature.
+  No behaviour change.
+
+### Documentation
+
+- The Formatting Cookbook no longer recommends the renamed-away
+  config keys `use_tabchars` and `separate_ctrl_name_with_space`;
+  these are accepted as legacy aliases but the current spellings
+  are `use_tabs` and `space_before_control_paren`. The recipe link
+  to the custom-commands section of the config reference also got
+  a corrected anchor (`#custom-command-specs`).
+- The FAQ no longer references a nonexistent `--command-spec` CLI
+  flag (custom commands live in the `commands:` section of the
+  config file); the editor-integration link now points to the
+  correct `/editors/` page; the FAQ is now reachable from the
+  sidebar under Reference.
+- The Playground page now includes a short description of the
+  source presets, config presets, shareable URLs, and auto-refresh
+  behaviour, so the new feature surface is discoverable from
+  outside the component itself.
+- Bumped pinned-version examples in the CI guide from `1.3.0` to
+  `1.4.2`, and updated the JSON-LD `softwareVersion` blob on the
+  homepage to match the latest release.
+- Troubleshooting guide now references `--no-verify` instead of
+  the deprecated `--fast` alias.
+
 ## 1.4.2 — 2026-05-16
 
 ### Fixed

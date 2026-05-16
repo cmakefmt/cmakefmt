@@ -147,6 +147,7 @@ export default defineConfig({
             { label: "Config Reference", slug: "config" },
             { label: "Formatter Behavior", slug: "behavior" },
             { label: "Glossary", slug: "glossary" },
+            { label: "FAQ", slug: "faq" },
           ],
         },
         {

@@ -49,7 +49,9 @@ Use `# cmakefmt: off` and `# cmakefmt: on` barrier comments. The aliases
 ## Does `cmakefmt` support custom commands?
 
 Yes. Define command specs in the `commands:` section of your
-`.cmakefmt.yaml`, or in a separate YAML file passed via `--command-spec`.
+`.cmakefmt.yaml` (or `.cmakefmt.toml`). See the
+[custom command specs](/config/#custom-command-specs) section of the
+config reference for the spec schema and worked examples.
 
 ## Can I use `cmakefmt` in CI?
 
@@ -61,7 +63,7 @@ the official [GitHub Action](https://github.com/marketplace/actions/cmakefmt)
 
 Yes. Run `cmakefmt lsp` to start a stdio LSP server that provides
 format-on-save and range formatting in any editor with LSP support. See the
-[editor integration](/guide/editors/) page for setup instructions.
+[editor integration](/editors/) page for setup instructions.
 
 ## Where can I get help?
 

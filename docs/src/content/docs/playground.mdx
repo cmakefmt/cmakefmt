@@ -9,3 +9,24 @@ import Playground from '@/components/Playground.astro';
 <div class="not-content">
   <Playground />
 </div>
+
+## What you can do here
+
+The playground runs the same Rust formatter as the CLI, compiled to
+WebAssembly and executed entirely in your browser. Nothing is sent
+to a server.
+
+- **Source presets** — pick a starter snippet from the dropdown to
+  explore common formatter scenarios (long argument lists, comment
+  reflow, custom keyword groupings, etc.).
+- **Config presets** — switch between the default config, a
+  cmake-format-style preset, a wide-line preset, and a
+  custom-command preset to see how each knob shapes the output.
+- **Shareable URLs** — the URL updates as you edit, so you can link
+  to a specific source/config state in bug reports or discussions.
+- **Auto-refresh** — output recomputes as you type; no manual
+  "Format" click needed.
+
+For documentation on what each option does, see the
+[Config Reference](/config/) and the
+[Formatting Cookbook](/cookbook/).
