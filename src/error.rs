@@ -199,6 +199,7 @@ pub enum Error {
     /// it. Used at every site where we have a path in scope; far more
     /// actionable than a bare `permission denied` from [`Error::Io`].
     #[error("I/O error reading {path}: {source}")]
+    #[non_exhaustive]
     IoAt {
         /// The file or directory that failed.
         path: PathBuf,
@@ -220,6 +221,7 @@ pub enum Error {
     #[error(
         "line {line_no} is {width} characters wide, exceeding the configured limit of {limit}"
     )]
+    #[non_exhaustive]
     LayoutTooWide {
         /// 1-based line number in the formatted output.
         line_no: usize,

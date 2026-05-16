@@ -41,6 +41,7 @@ use std::fmt;
 ///   - `"?"`                      → `Optional`
 ///   - `"N+"` e.g. `"2+"`         → `AtLeast(2)`
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub enum NArgs {
     /// Exactly `n` positional arguments. `Fixed(0)` means a
     /// keyword-only marker (no values of its own).
@@ -123,6 +124,7 @@ impl<'de> Deserialize<'de> for NArgs {
 /// Per-command-form layout hints that override global [`crate::Config`] values.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
+#[non_exhaustive]
 pub struct LayoutOverrides {
     /// Override line width for this command form.
     pub line_width: Option<usize>,
@@ -146,6 +148,7 @@ pub struct LayoutOverrides {
 /// Specification for a keyword section and any nested sub-keywords it accepts.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
+#[non_exhaustive]
 pub struct KwargSpec {
     /// Number of positional arguments accepted after the keyword itself.
     #[serde(default)]
@@ -174,6 +177,7 @@ pub struct KwargSpec {
 /// One fully resolved command form.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
+#[non_exhaustive]
 pub struct CommandForm {
     /// Number of positional arguments before keyword/flag processing starts.
     #[serde(default)]
@@ -205,6 +209,7 @@ impl Default for CommandForm {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
+#[non_exhaustive]
 pub enum CommandSpec {
     /// A command whose structure depends on a discriminator token,
     /// usually the first positional argument. `file(...)`,

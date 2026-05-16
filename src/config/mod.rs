@@ -49,6 +49,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum CaseStyle {
     /// Force lowercase output.
     Lower,
@@ -63,6 +64,7 @@ pub enum CaseStyle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum LineEnding {
     /// Unix-style LF (`\n`). The default.
     #[default]
@@ -78,6 +80,7 @@ pub enum LineEnding {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum FractionalTabPolicy {
     /// Leave fractional spaces as-is (utf-8 0x20). The default.
     #[default]
@@ -118,6 +121,7 @@ pub enum FractionalTabPolicy {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum ContinuationAlign {
     /// Continuation lines wrap at the same indent as the keyword
     /// itself. Consistent with how the rest of the formatter wraps
@@ -158,6 +162,7 @@ pub enum ContinuationAlign {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum DangleAlign {
     /// Align with the start of the command name.
     #[default]

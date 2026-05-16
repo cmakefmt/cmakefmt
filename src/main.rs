@@ -3644,13 +3644,14 @@ fn render_cli_error(err: &cmakefmt::Error) -> String {
         }
         cmakefmt::Error::Formatter(message) => render_formatter_error(message),
         cmakefmt::Error::Io(source) => format!("error: I/O failure: {source}"),
-        cmakefmt::Error::IoAt { path, source } => {
+        cmakefmt::Error::IoAt { path, source, .. } => {
             format!("error: I/O failure reading {}: {source}", path.display())
         }
         cmakefmt::Error::LayoutTooWide {
             line_no,
             width,
             limit,
+            ..
         } => format!(
             "error: line {line_no} is {width} characters wide, exceeding the limit of {limit}\n\
              hint: set line_width = {width} (or higher), add the command to always_wrap, or disable require_valid_layout"
