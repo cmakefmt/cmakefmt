@@ -1303,11 +1303,7 @@ fn lookup_nested_kwarg_in<'a>(
     parent: &'a crate::spec::KwargSpec,
     token: &str,
 ) -> Option<&'a crate::spec::KwargSpec> {
-    parent.kwargs.get(token).or_else(|| {
-        has_ascii_lowercase(token)
-            .then(|| token.to_ascii_uppercase())
-            .and_then(|normalized| parent.kwargs.get(&normalized))
-    })
+    ci_get(&parent.kwargs, token)
 }
 
 fn write_vertical_arguments(
@@ -1508,50 +1504,46 @@ fn argument_has_newline(argument: &Argument) -> bool {
     argument.as_str().contains('\n') || argument.as_str().contains('\r')
 }
 
-fn lookup_kwarg<'a>(form: &'a CommandForm, token: &str) -> Option<&'a crate::spec::KwargSpec> {
-    form.kwargs.get(token).or_else(|| {
+/// Case-insensitive lookup into an `IndexMap<String, T>` whose keys are
+/// canonically uppercase. Tries an exact-case lookup first (the fast
+/// path when the source already uses the canonical casing), then falls
+/// back to one upper-case conversion only if the token actually has
+/// lowercase characters to convert. Used uniformly across the four
+/// kwarg/flag lookup sites in this module so they all agree on the
+/// case-fold rule.
+fn ci_get<'a, T>(map: &'a indexmap::IndexMap<String, T>, token: &str) -> Option<&'a T> {
+    map.get(token).or_else(|| {
         has_ascii_lowercase(token)
             .then(|| token.to_ascii_uppercase())
-            .and_then(|normalized| form.kwargs.get(&normalized))
+            .and_then(|normalized| map.get(&normalized))
     })
 }
 
-/// Classify a token as a keyword, flag, or positional in a single pass.
-/// Avoids redundant case conversion by uppercasing at most once.
+/// Case-insensitive `contains` over an `IndexSet<String>`. Same
+/// rule as [`ci_get`]: exact first, upper-case fallback once if the
+/// token has any lowercase.
+fn ci_set_contains(set: &indexmap::IndexSet<String>, token: &str) -> bool {
+    set.contains(token) || (has_ascii_lowercase(token) && set.contains(&token.to_ascii_uppercase()))
+}
+
+fn lookup_kwarg<'a>(form: &'a CommandForm, token: &str) -> Option<&'a crate::spec::KwargSpec> {
+    ci_get(&form.kwargs, token)
+}
+
+/// Classify a token as a keyword or flag of the surrounding command form.
 fn classify_token(form: &CommandForm, token: &str) -> Option<HeaderKind> {
-    // Fast path: try exact-case lookup first.
-    if form.kwargs.contains_key(token) {
+    if ci_get(&form.kwargs, token).is_some() {
         return Some(HeaderKind::Keyword);
     }
-    if form.flags.contains(token) {
+    if ci_set_contains(&form.flags, token) {
         return Some(HeaderKind::Flag);
     }
-
-    // Slow path: normalize case once, check both.
-    if has_ascii_lowercase(token) {
-        let upper = token.to_ascii_uppercase();
-        if form.kwargs.contains_key(&upper) {
-            return Some(HeaderKind::Keyword);
-        }
-        if form.flags.contains(&upper) {
-            return Some(HeaderKind::Flag);
-        }
-    }
-
     None
 }
 
-/// Check if a token is a nested keyword or flag in a single pass,
-/// uppercasing at most once.
+/// Check whether `token` is a nested keyword or flag inside `spec`.
 fn is_nested_keyword_or_flag(spec: &crate::spec::KwargSpec, token: &str) -> bool {
-    if spec.kwargs.contains_key(token) || spec.flags.contains(token) {
-        return true;
-    }
-    if has_ascii_lowercase(token) {
-        let upper = token.to_ascii_uppercase();
-        return spec.kwargs.contains_key(&upper) || spec.flags.contains(&upper);
-    }
-    false
+    ci_get(&spec.kwargs, token).is_some() || ci_set_contains(&spec.flags, token)
 }
 
 fn is_condition_command(name: &str) -> bool {
