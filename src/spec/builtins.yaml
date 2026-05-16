@@ -263,6 +263,7 @@ commands:
     kwargs:
       PROPERTIES:
         nargs: "*"
+        no_autosort: true
   find_package:
     pargs: "1+"
     flags:
@@ -2066,6 +2067,7 @@ commands:
     kwargs:
       PROPERTIES:
         nargs: "+"
+        no_autosort: true
   set_property:
     pargs: 0
     flags:
@@ -2091,6 +2093,7 @@ commands:
         nargs: "+"
       PROPERTY:
         nargs: "+"
+        no_autosort: true
   set_source_files_properties:
     pargs: "+"
     kwargs:
@@ -2100,6 +2103,7 @@ commands:
         nargs: "+"
       PROPERTIES:
         nargs: "+"
+        no_autosort: true
   set_tests_properties:
     pargs: "+"
     kwargs:
@@ -2107,6 +2111,7 @@ commands:
         nargs: 1
       PROPERTIES:
         nargs: "+"
+        no_autosort: true
   site_name:
     pargs: 1
   source_group:

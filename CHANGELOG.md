@@ -8,6 +8,33 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- `set_property(... PROPERTY <name> <values…>)` and the
+  `set_target_properties` / `set_source_files_properties` /
+  `set_directory_properties` / `set_tests_properties` commands are now
+  exempt from the autosort heuristic. Previously, with `autosort`
+  enabled, the formatter would flat-sort the tokens inside `PROPERTY`
+  and `PROPERTIES` value lists — silently moving the property name out
+  of its positional slot in `set_property`, and scrambling `<key>
+  <value>` pairs in the `*_properties` family. The reordered output
+  was still valid CMake syntax but changed the command's semantics.
+  These commands now round-trip unchanged regardless of `autosort`.
+- Decorative banner comments composed entirely of `#` characters
+  (e.g. `########################################`) are preserved
+  verbatim instead of being collapsed to a single `#` line by the
+  comment reflow logic.
+
+### Documentation
+
+- The browser playground now includes source presets for common formatter
+  scenarios, config presets that keep the full default configuration visible,
+  shareable URLs for the current source/config state, and automatic output
+  refresh when switching presets.
+- The homepage formatter animation now uses `astro-magic-move`'s public
+  `step` / `totalSteps` API, so the dependency can track upstream releases
+  without relying on private component internals.
+
 ## 1.4.1 — 2026-05-14
 
 ### Fixed

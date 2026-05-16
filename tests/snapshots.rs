@@ -7,7 +7,8 @@ use std::path::PathBuf;
 
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
-    format_source, CaseStyle, Config, ContinuationAlign, DangleAlign, PerCommandConfig,
+    format_source, format_source_with_registry, CaseStyle, Config, ContinuationAlign, DangleAlign,
+    PerCommandConfig,
 };
 use cmakefmt::{formatter, parser};
 
@@ -492,6 +493,278 @@ fn install_targets_pair_aware_wrap_at_narrow_width() {
 }
 
 #[test]
+fn install_targets_playground_preset_keeps_artifact_subkwargs_grouped() {
+    let src = "\
+cmake_minimum_required(VERSION 3.25)
+project(InstallDemo LANGUAGES CXX)
+
+add_library(widget SHARED src/widget.cpp src/platform.cpp)
+
+install(TARGETS widget EXPORT WidgetTargets
+  RUNTIME DESTINATION bin COMPONENT Runtime
+  LIBRARY DESTINATION lib COMPONENT Runtime NAMELINK_COMPONENT Development
+  ARCHIVE DESTINATION lib COMPONENT Development
+  PUBLIC_HEADER DESTINATION include/widget COMPONENT Development
+  FILE_SET HEADERS DESTINATION include/widget COMPONENT Development
+)
+";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    cmake_minimum_required(VERSION 3.25)
+    project(InstallDemo LANGUAGES CXX)
+
+    add_library(widget SHARED src/widget.cpp src/platform.cpp)
+
+    install(
+      TARGETS widget
+      EXPORT WidgetTargets
+      RUNTIME DESTINATION bin COMPONENT Runtime
+      LIBRARY DESTINATION lib COMPONENT Runtime NAMELINK_COMPONENT Development
+      ARCHIVE DESTINATION lib COMPONENT Development
+      PUBLIC_HEADER DESTINATION include/widget COMPONENT Development
+      FILE_SET HEADERS DESTINATION include/widget COMPONENT Development)
+    ");
+}
+
+#[test]
+fn comments_playground_preset_preserves_barriers_and_reflows_comments() {
+    let src = "\
+# Project-level note that is intentionally long enough to reflow when markup handling is enabled and the configured line width is tight.
+cmake_minimum_required(VERSION 3.20)
+project(CommentDemo)
+
+#[=[
+This bracket comment should stay attached to the following target.
+]=]
+add_library(commented src/main.cpp src/detail.cpp) # trailing note that will wrap under the comment column
+
+# cmakefmt: off
+set(KEEP_THIS   exactly    as-written)
+# cmakefmt: on
+
+########################################
+# Generated sources
+########################################
+target_sources(commented PRIVATE generated/a.cpp generated/b.cpp)
+";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @"
+    # Project-level note that is intentionally long enough to reflow when markup
+    # handling is enabled and the configured line width is tight.
+    cmake_minimum_required(VERSION 3.20)
+    project(CommentDemo)
+
+    #[=[
+    This bracket comment should stay attached to the following target.
+    ]=]
+    add_library(commented src/main.cpp src/detail.cpp) # trailing note that will
+                                                       # wrap under the comment
+                                                       # column
+
+    # cmakefmt: off
+    set(KEEP_THIS   exactly    as-written)
+    # cmakefmt: on
+
+    ########################################
+    # Generated sources
+    ########################################
+    target_sources(commented PRIVATE generated/a.cpp generated/b.cpp)
+    ");
+}
+
+#[test]
+fn wrapping_playground_preset_shows_default_wrap_behavior() {
+    let src = "\
+cmake_minimum_required(VERSION 3.24)
+project(WrapDemo)
+
+target_link_libraries(wrapdemo
+  PUBLIC Boost::filesystem Boost::system fmt::fmt spdlog::spdlog range-v3::range-v3
+  PRIVATE project_warnings project_options vendor::long_dependency_name
+)
+
+set_property(TARGET wrapdemo PROPERTY
+  INTERFACE_COMPILE_FEATURES cxx_std_20 cxx_constexpr cxx_lambdas cxx_variadic_templates)
+";
+    let formatted = format_source(src, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    cmake_minimum_required(VERSION 3.24)
+    project(WrapDemo)
+
+    target_link_libraries(
+      wrapdemo
+      PUBLIC
+        Boost::filesystem Boost::system fmt::fmt spdlog::spdlog range-v3::range-v3
+      PRIVATE project_warnings project_options vendor::long_dependency_name)
+
+    set_property(
+      TARGET wrapdemo
+      PROPERTY
+        INTERFACE_COMPILE_FEATURES cxx_std_20 cxx_constexpr cxx_lambdas
+        cxx_variadic_templates)
+    ");
+}
+
+#[test]
+fn wide_config_playground_preset_keeps_wrapping_example_more_compact() {
+    let src = "\
+cmake_minimum_required(VERSION 3.24)
+project(WrapDemo)
+
+target_link_libraries(wrapdemo
+  PUBLIC Boost::filesystem Boost::system fmt::fmt spdlog::spdlog range-v3::range-v3
+  PRIVATE project_warnings project_options vendor::long_dependency_name
+)
+
+set_property(TARGET wrapdemo PROPERTY
+  INTERFACE_COMPILE_FEATURES cxx_std_20 cxx_constexpr cxx_lambdas cxx_variadic_templates)
+";
+    let config = Config {
+        line_width: 100,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    cmake_minimum_required(VERSION 3.24)
+    project(WrapDemo)
+
+    target_link_libraries(
+      wrapdemo
+      PUBLIC Boost::filesystem Boost::system fmt::fmt spdlog::spdlog range-v3::range-v3
+      PRIVATE project_warnings project_options vendor::long_dependency_name)
+
+    set_property(
+      TARGET wrapdemo
+      PROPERTY INTERFACE_COMPILE_FEATURES cxx_std_20 cxx_constexpr cxx_lambdas cxx_variadic_templates)
+    ");
+}
+
+#[test]
+fn cmake_format_config_playground_preset_dangles_wrapped_parens() {
+    let src = "\
+cmake_minimum_required(VERSION 3.24)
+project(WrapDemo)
+
+target_link_libraries(wrapdemo
+  PUBLIC Boost::filesystem Boost::system fmt::fmt spdlog::spdlog range-v3::range-v3
+  PRIVATE project_warnings project_options vendor::long_dependency_name
+)
+
+set_property(TARGET wrapdemo PROPERTY
+  INTERFACE_COMPILE_FEATURES cxx_std_20 cxx_constexpr cxx_lambdas cxx_variadic_templates)
+";
+    let config = Config {
+        continuation_align: ContinuationAlign::UnderFirstValue,
+        dangle_parens: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    cmake_minimum_required(VERSION 3.24)
+    project(WrapDemo)
+
+    target_link_libraries(
+      wrapdemo
+      PUBLIC
+        Boost::filesystem Boost::system fmt::fmt spdlog::spdlog range-v3::range-v3
+      PRIVATE project_warnings project_options vendor::long_dependency_name
+    )
+
+    set_property(
+      TARGET wrapdemo
+      PROPERTY
+        INTERFACE_COMPILE_FEATURES cxx_std_20 cxx_constexpr cxx_lambdas
+        cxx_variadic_templates
+    )
+    ");
+}
+
+#[test]
+fn custom_command_config_playground_preset_groups_project_command_kwargs() {
+    let src = "\
+CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
+PROJECT(MyProject LANGUAGES CXX)
+
+find_package(Boost REQUIRED COMPONENTS filesystem system)
+
+add_library(mylib STATIC
+  src/main.cpp
+  src/utils.cpp
+  src/helper.cpp
+)
+
+target_link_libraries(mylib PUBLIC Boost::filesystem Boost::system)
+target_include_directories(mylib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Custom function defined by the project
+my_add_test(
+  NAME mylib_test
+  SOURCES tests/test_main.cpp tests/test_utils.cpp
+  LIBRARIES mylib
+  TIMEOUT 30
+  VERBOSE
+)
+
+if(BUILD_TESTING)
+  enable_testing()
+  add_test(NAME integration COMMAND mylib_test --verbose)
+endif()
+";
+    let mut registry = CommandRegistry::load().unwrap();
+    registry
+        .merge_yaml_overrides(
+            "\
+commands:
+  my_add_test:
+    pargs: 0
+    flags:
+      - VERBOSE
+    kwargs:
+      NAME:
+        nargs: 1
+      SOURCES:
+        nargs: \"+\"
+      LIBRARIES:
+        nargs: \"+\"
+      TIMEOUT:
+        nargs: 1
+",
+        )
+        .unwrap();
+    let formatted = format_source_with_registry(src, &Config::default(), &registry).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    cmake_minimum_required(VERSION 3.20)
+    project(MyProject LANGUAGES CXX)
+
+    find_package(Boost REQUIRED COMPONENTS filesystem system)
+
+    add_library(mylib STATIC src/main.cpp src/utils.cpp src/helper.cpp)
+
+    target_link_libraries(mylib PUBLIC Boost::filesystem Boost::system)
+    target_include_directories(mylib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+    # Custom function defined by the project
+    my_add_test(
+      NAME mylib_test
+      SOURCES tests/test_main.cpp tests/test_utils.cpp
+      LIBRARIES mylib
+      TIMEOUT 30
+      VERBOSE)
+
+    if(BUILD_TESTING)
+      enable_testing()
+      add_test(NAME integration COMMAND mylib_test --verbose)
+    endif()
+    ");
+}
+
+#[test]
 fn install_targets_three_nested_subkwargs_wrap_vertically() {
     // With three subkwargs in a single artifact-kind subgroup, at a width
     // that cannot fit them all inline, each pair lands on its own line.
@@ -724,6 +997,47 @@ fn autosort_does_not_scramble_structural_kwarg_sections() {
     insta::assert_snapshot!(
         formatted,
         @"install(TARGETS foo FILE_SET HEADERS DESTINATION include COMPONENT Development)"
+    );
+}
+
+#[test]
+fn autosort_does_not_reorder_property_label_sections() {
+    // `set_property(... PROPERTY <name> <values…>)` has positional
+    // semantics: the first token after PROPERTY is the property name,
+    // the rest are its values. Autosort must not flat-sort across
+    // that boundary — doing so would silently change the command's
+    // meaning by promoting a value into the property-name slot.
+    let src = "set_property(TARGET wrapdemo PROPERTY INTERFACE_COMPILE_FEATURES cxx_std_20 cxx_constexpr cxx_lambdas cxx_variadic_templates)\n";
+    let config = Config {
+        enable_sort: true,
+        autosort: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.contains("PROPERTY\n    INTERFACE_COMPILE_FEATURES")
+            || formatted.contains("PROPERTY INTERFACE_COMPILE_FEATURES"),
+        "INTERFACE_COMPILE_FEATURES must remain the first token after PROPERTY; got:\n{formatted}"
+    );
+}
+
+#[test]
+fn autosort_does_not_reorder_set_target_properties_pairs() {
+    // `set_target_properties(... PROPERTIES <k1> <v1> <k2> <v2> …)`
+    // has pair semantics. Flat sorting would scramble keys and values
+    // across pair boundaries.
+    let src = "set_target_properties(mylib PROPERTIES CXX_STANDARD 20 VERSION 1.2.3 SOVERSION 1)\n";
+    let config = Config {
+        enable_sort: true,
+        autosort: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.contains("CXX_STANDARD 20")
+            && formatted.contains("VERSION 1.2.3")
+            && formatted.contains("SOVERSION 1"),
+        "PROPERTIES key/value pairs must stay paired; got:\n{formatted}"
     );
 }
 

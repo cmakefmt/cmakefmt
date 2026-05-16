@@ -160,6 +160,15 @@ pub struct KwargSpec {
     /// lexicographically if `enable_sort` is enabled in the config.
     #[serde(default)]
     pub sortable: bool,
+    /// When `true`, the autosort heuristic must never reorder
+    /// arguments in this section. Use for kwargs whose value list has
+    /// positional semantics that flat sorting would corrupt — e.g.
+    /// `PROPERTY <name> <values…>` in `set_property` or the
+    /// `<name> <value>` pair structure under `PROPERTIES`. The spec's
+    /// `sortable: true` setting still wins over this — if a section is
+    /// explicitly marked sortable, that's a deliberate opt-in.
+    #[serde(default)]
+    pub no_autosort: bool,
 }
 
 /// One fully resolved command form.
@@ -329,6 +338,9 @@ pub(crate) struct KwargSpecOverride {
     /// Mark this keyword section as sortable.
     #[serde(default)]
     pub sortable: bool,
+    /// Mark this keyword section as exempt from autosort.
+    #[serde(default)]
+    pub no_autosort: bool,
 }
 
 /// Partial override for a command form.
@@ -431,6 +443,7 @@ impl KwargSpecOverride {
                 .map(|flag| flag.to_ascii_uppercase())
                 .collect(),
             sortable: self.sortable,
+            no_autosort: self.no_autosort,
         }
     }
 }

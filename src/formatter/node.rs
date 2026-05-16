@@ -356,9 +356,17 @@ fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: boo
         // Check if the spec marks this keyword section as sortable.
         let spec_sortable = header_spec.is_some_and(|kwarg| kwarg.sortable);
 
+        // Some kwargs have positional semantics inside their value list
+        // (e.g. `PROPERTY <name> <values…>` in `set_property`, or the
+        // `<name> <value>` pair structure under `PROPERTIES`). Flat
+        // sorting would silently corrupt those commands, so the spec
+        // can opt them out of the autosort heuristic. An explicit
+        // `sortable: true` still wins — that's a deliberate opt-in.
+        let spec_no_autosort = header_spec.is_some_and(|kwarg| kwarg.no_autosort);
+
         let should_sort = if spec_sortable {
             true
-        } else if autosort {
+        } else if autosort && !spec_no_autosort {
             // Heuristic: all non-comment arguments are simple unquoted tokens
             // (no variables, generator expressions, or quoted strings).
             section

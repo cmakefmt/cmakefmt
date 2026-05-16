@@ -99,6 +99,10 @@ fn should_preserve_comment_verbatim(text: &str, patterns: &CompiledPatterns) -> 
         return true;
     }
 
+    if trimmed.chars().all(|c| c == '#') {
+        return true;
+    }
+
     if trimmed.starts_with("# ~~~")
         || trimmed.contains("cmake-format:")
         || trimmed.contains("cmakefmt:")
@@ -152,6 +156,16 @@ mod tests {
         let config = reflow_config();
         let patterns = config.compiled_patterns().unwrap();
         let original = "# cmake-format: off".to_owned();
+        let comment = Comment::Line(original.clone());
+        let lines = format_comment_lines(&comment, &config, &patterns, 0, 8);
+        assert_eq!(lines, vec![original]);
+    }
+
+    #[test]
+    fn line_comment_preserves_hash_banner() {
+        let config = reflow_config();
+        let patterns = config.compiled_patterns().unwrap();
+        let original = "########################################".to_owned();
         let comment = Comment::Line(original.clone());
         let lines = format_comment_lines(&comment, &config, &patterns, 0, 8);
         assert_eq!(lines, vec![original]);
