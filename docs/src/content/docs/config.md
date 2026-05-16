@@ -487,6 +487,27 @@ format:
   autosort: true
 ```
 
+Some keyword sections have positional semantics inside their value list
+that flat sorting would silently corrupt — for example, the property name
+in `set_property(... PROPERTY <name> <values…>)`, or the `<key> <value>`
+pair structure under `PROPERTIES` in `set_target_properties` and the
+related `set_*_properties` commands. The built-in specs for these
+commands mark the affected sections with `no_autosort: true`, so
+autosort skips them. An explicit `sortable: true` on a custom spec
+still takes precedence — `no_autosort` only protects against the
+heuristic.
+
+To opt one of your own custom-spec sections out of autosort:
+
+```yaml
+commands:
+  my_cmd:
+    kwargs:
+      PROPERTY:
+        nargs: "+"
+        no_autosort: true
+```
+
 ### `dangle_parens`
 
 Place the closing `)` on its own line when a call wraps.

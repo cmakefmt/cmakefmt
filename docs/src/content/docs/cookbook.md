@@ -256,6 +256,23 @@ commands:
         sortable: true
 ```
 
+If a section's value list has positional semantics that sorting
+would corrupt — for example, a label-then-values shape like
+`set_property(... PROPERTY <name> <values…>)` — opt it out of the
+autosort heuristic with `no_autosort: true`. The built-in specs for
+`set_property`, `set_target_properties`, `set_source_files_properties`,
+`set_directory_properties`, and `set_tests_properties` already carry
+this marker. For your own custom specs:
+
+```yaml
+commands:
+  my_cmd:
+    kwargs:
+      PROPERTY:
+        nargs: "+"
+        no_autosort: true
+```
+
 ## I want to keep the variable name on the `set()` line
 
 **Option:** [`wrap_after_first_arg`](/config/#wrap_after_first_arg) (default for `set()`: `true`)
