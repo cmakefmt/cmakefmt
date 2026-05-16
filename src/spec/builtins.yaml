@@ -500,6 +500,7 @@ commands:
     kwargs:
       PROPERTIES:
         nargs: "*"
+        no_autosort: true
   add_feature_info:
     pargs: 3
   print_enabled_features:
