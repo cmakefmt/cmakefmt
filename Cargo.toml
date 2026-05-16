@@ -92,6 +92,7 @@ codspeed-criterion-compat = { version = "4.4", features = ["html_reports"] }
 tempfile = "3"
 pest = "2"
 pest_derive = "2"
+proptest = "1"
 
 [[bench]]
 name = "formatter"
