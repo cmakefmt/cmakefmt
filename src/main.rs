@@ -114,7 +114,7 @@ struct Cli {
     /// Rewrite files on disk instead of printing formatted output.
     ///
     /// Semantic verification is enabled by default for in-place rewrites.
-    /// Use `--fast` to skip it.
+    /// Use `--no-verify` to skip it.
     #[arg(
         short = 'i',
         long = "in-place",
@@ -465,9 +465,11 @@ struct Cli {
     /// Skip semantic verification, even for in-place rewrites.
     ///
     /// Improves throughput on trusted inputs at the cost of safety.
+    /// `--fast` is a deprecated hidden alias retained for
+    /// backwards compatibility; new usage should write `--no-verify`.
     #[arg(
         long = "no-verify",
-        visible_alias = "fast",
+        alias = "fast",
         help_heading = "Execution",
         conflicts_with = "verify"
     )]
@@ -1423,7 +1425,7 @@ fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
 
     if cli.verify && cli.no_verify {
         return Err(cmakefmt::Error::Formatter(
-            "--verify cannot be combined with --fast".to_owned(),
+            "--verify cannot be combined with --no-verify".to_owned(),
         ));
     }
 
