@@ -2226,7 +2226,11 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains(".cmakefmt.yml"));
     assert!(stdout.contains(".cmakefmt.toml"));
     assert!(stdout.contains("--color <COLOR>"));
-    assert!(stdout.contains("--generate-man-page"));
+    // The man-page generator is now a subcommand (`cmakefmt manpage`);
+    // the `--generate-man-page` flag remains as a hidden deprecated
+    // alias and intentionally no longer appears in the top-level
+    // help output.
+    assert!(stdout.contains("manpage"));
     assert!(stdout.contains("--required-version <VERSION>"));
     assert!(stdout.contains("--verify"));
     assert!(stdout.contains("--no-verify"));

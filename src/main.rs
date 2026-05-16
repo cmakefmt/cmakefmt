@@ -211,8 +211,11 @@ struct Cli {
     #[arg(long, help_heading = "Input Selection")]
     sorted: bool,
 
-    /// Generate a roff man page and print it to stdout.
-    #[arg(long = "generate-man-page", help_heading = "Release And Packaging")]
+    /// Deprecated. Use `cmakefmt manpage` instead. Hidden to keep
+    /// help output focused on the canonical subcommand form; the flag
+    /// remains accepted so existing release scripts (e.g.
+    /// `cmakefmt --generate-man-page > cmakefmt.1`) keep working.
+    #[arg(long = "generate-man-page", hide = true)]
     generate_man_page: bool,
 
     /// Print detailed discovery, config, and formatter diagnostics to stderr.
@@ -496,6 +499,14 @@ enum CliCommand {
         #[arg(value_enum)]
         shell: Shell,
     },
+    /// Generate a roff man page and print it to stdout.
+    ///
+    /// Use with packaging:
+    ///
+    ///     cmakefmt manpage > cmakefmt.1
+    ///
+    /// Replaces the deprecated `--generate-man-page` flag.
+    Manpage,
     /// Install a git pre-commit hook that runs `cmakefmt --check` on staged
     /// CMake files.
     InstallHook,
@@ -712,6 +723,9 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
             generate(*shell, &mut command, "cmakefmt", &mut io::stdout());
             return Ok(EXIT_OK);
         }
+        Some(CliCommand::Manpage) => {
+            return render_man_page();
+        }
         Some(CliCommand::InstallHook) => {
             return install_git_hook();
         }
@@ -725,11 +739,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
     }
 
     if cli.generate_man_page {
-        let command = Cli::command();
-        clap_mangen::Man::new(command)
-            .render(&mut io::stdout())
-            .map_err(cmakefmt::Error::Io)?;
-        return Ok(EXIT_OK);
+        return render_man_page();
     }
 
     validate_cli(cli)?;
@@ -1603,6 +1613,18 @@ fn run_dump_subcommand(
     };
 
     print!("{tree}");
+    Ok(EXIT_OK)
+}
+
+/// Render the clap-derived CLI as a roff man page and write it to
+/// stdout. Shared between the `Manpage` subcommand and the
+/// deprecated `--generate-man-page` flag so both forms emit
+/// byte-identical output during the transition window.
+fn render_man_page() -> Result<u8, cmakefmt::Error> {
+    let command = Cli::command();
+    clap_mangen::Man::new(command)
+        .render(&mut io::stdout())
+        .map_err(cmakefmt::Error::Io)?;
     Ok(EXIT_OK)
 }
 

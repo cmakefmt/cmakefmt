@@ -59,7 +59,7 @@ You can preview the packaging helper outputs from a local build:
 ```bash
 cmakefmt completions bash > cmakefmt.bash
 cmakefmt completions zsh > _cmakefmt
-cmakefmt --generate-man-page > cmakefmt.1
+cmakefmt manpage > cmakefmt.1
 ```
 
 ## Version Output

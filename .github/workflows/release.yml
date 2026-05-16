@@ -131,7 +131,7 @@ jobs:
           "${BIN}" --version
           "${BIN}" --help >/dev/null
           "${BIN}" completions bash >/dev/null
-          "${BIN}" --generate-man-page >/dev/null
+          "${BIN}" manpage >/dev/null
           printf '%s\n' 'project(foo  )' > /tmp/CMakeLists.txt
           "${BIN}" /tmp/CMakeLists.txt >/tmp/CMakeLists.formatted
           grep -Fxq 'project(foo)' /tmp/CMakeLists.formatted
@@ -144,7 +144,7 @@ jobs:
           & $Bin --version
           & $Bin --help | Out-Null
           & $Bin completions bash | Out-Null
-          & $Bin --generate-man-page | Out-Null
+          & $Bin manpage | Out-Null
           Set-Content -Path CMakeLists.txt -Value "project(foo  )`n"
           & $Bin CMakeLists.txt | Out-File -Encoding utf8 CMakeLists.formatted
           $Formatted = Get-Content -Raw CMakeLists.formatted
@@ -179,7 +179,7 @@ jobs:
           "target/${{ matrix.target }}/release/cmakefmt" completions bash > "${STAGE}/cmakefmt.bash"
           "target/${{ matrix.target }}/release/cmakefmt" completions zsh > "${STAGE}/_cmakefmt"
           "target/${{ matrix.target }}/release/cmakefmt" completions fish > "${STAGE}/cmakefmt.fish"
-          "target/${{ matrix.target }}/release/cmakefmt" --generate-man-page > "${STAGE}/cmakefmt.1"
+          "target/${{ matrix.target }}/release/cmakefmt" manpage > "${STAGE}/cmakefmt.1"
           tar -czf "${STAGE}.tar.gz" "${STAGE}"
 
       - name: Package release archive (Windows)
@@ -196,7 +196,7 @@ jobs:
           & "target/${{ matrix.target }}/release/cmakefmt.exe" completions bash | Out-File -Encoding utf8 "$Stage/cmakefmt.bash"
           & "target/${{ matrix.target }}/release/cmakefmt.exe" completions zsh | Out-File -Encoding utf8 "$Stage/_cmakefmt"
           & "target/${{ matrix.target }}/release/cmakefmt.exe" completions fish | Out-File -Encoding utf8 "$Stage/cmakefmt.fish"
-          & "target/${{ matrix.target }}/release/cmakefmt.exe" --generate-man-page | Out-File -Encoding utf8 "$Stage/cmakefmt.1"
+          & "target/${{ matrix.target }}/release/cmakefmt.exe" manpage | Out-File -Encoding utf8 "$Stage/cmakefmt.1"
           Compress-Archive -Path $Stage -DestinationPath "$Stage.zip"
 
       - name: Install cosign

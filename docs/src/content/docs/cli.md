@@ -110,11 +110,11 @@ Ignore rules only affect:
 | `cmakefmt dump ast <FILE>` | Print the raw parser AST as a tree. |
 | `cmakefmt dump parse <FILE>` | Print the spec-resolved parse tree with keyword/flag grouping and flow-control nesting. |
 
-## Other Flags
+## Other Subcommands
 
-| Flag | Meaning |
+| Subcommand | Meaning |
 | --- | --- |
-| `--generate-man-page` | Print a roff man page for packagers and Unix-like installs. |
+| `cmakefmt manpage` | Print a roff man page for packagers and Unix-like installs. (`--generate-man-page` is a deprecated hidden alias retained for backwards compatibility with existing release scripts.) |
 
 ## Config Override Flags
 
