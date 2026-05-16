@@ -65,6 +65,13 @@ Every user-facing change must have an entry in `CHANGELOG.md` under the
 Internal-only changes (refactors, CI tweaks, test-only changes) do not need a
 changelog entry unless they affect the user experience.
 
+## Releasing
+
+If you need to cut a release, see [`RELEASING.md`](RELEASING.md) at the
+repository root. It documents the prepare-release / release-on-tag workflow
+split, the required secrets and GitHub Environments, and which sibling
+repositories the release pipeline writes to.
+
 ## If You Add Or Change A CLI Flag
 
 Update the CLI implementation in `src/main.rs`.
