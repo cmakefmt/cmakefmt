@@ -97,13 +97,13 @@ struct Cli {
     input_selection: InputSelectionArgs,
 
     #[command(flatten)]
-    output_modes: OutputModeArgs,
+    output_modes: OutputModesArgs,
 
     #[command(flatten)]
     execution: ExecutionArgs,
 
     #[command(flatten)]
-    config_overrides: ConfigOverrideArgs,
+    config_overrides: ConfigOverridesArgs,
 
     /// Subcommand (e.g. `cmakefmt config dump`).
     #[command(subcommand)]
@@ -214,7 +214,7 @@ struct InputSelectionArgs {
 }
 
 #[derive(Args, Debug, Clone)]
-struct OutputModeArgs {
+struct OutputModesArgs {
     /// Rewrite files on disk instead of printing formatted output.
     ///
     /// Semantic verification is enabled by default for in-place rewrites.
@@ -465,7 +465,7 @@ struct ExecutionArgs {
 }
 
 #[derive(Args, Debug, Clone)]
-struct ConfigOverrideArgs {
+struct ConfigOverridesArgs {
     /// Use one or more explicit config files instead of config discovery.
     ///
     /// Later files override earlier ones.
