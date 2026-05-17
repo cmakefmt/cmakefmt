@@ -476,8 +476,9 @@ When formatting results surprise you rather than hard-failing, reach for
 
 ## Parse Tree Dump
 
-`cmakefmt dump` provides two tree views for debugging parser and
-formatter behavior.
+`cmakefmt dump` provides three introspection views: two tree
+views for debugging parser and formatter behavior (`ast`, `parse`)
+and one registry coverage report (`spec-coverage`).
 
 ### `dump ast` — Raw Parser AST
 
