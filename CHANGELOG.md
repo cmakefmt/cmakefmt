@@ -8,6 +8,31 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Internal
+
+- Split `src/main.rs` (~4500 lines) into focused submodules
+  under `src/cli/`. The `Cli` definition, the four `Args`
+  sub-structs (`InputSelectionArgs`, `OutputModesArgs`,
+  `ExecutionArgs`, `ConfigOverridesArgs`), the subcommand enums
+  (`CliCommand`, `ConfigAction`, `DumpAction`), `main()`, and
+  the top-level `run()` dispatcher stay in `main.rs` (now under
+  1200 lines). Per-concern code moves to named submodules:
+  `cli/process.rs` (path discovery, `process_path`,
+  `process_stdin`), `cli/report.rs` (per-format builders for
+  JSON / SARIF / Checkstyle / JUnit / GitHub / Edit reports),
+  `cli/commands.rs` (subcommand handlers and watch mode),
+  `cli/runtime.rs` (`validate_cli`, run-loop helpers,
+  completion handling), `cli/errors.rs` (`render_cli_error` and
+  the parse / file / formatter renderers), `cli/summary.rs`
+  (human + stat summary rendering with co-located tests), and
+  `cli/diff.rs` (diff and highlight helpers,
+  `apply_line_ranges`). Three function signatures narrowed from
+  `&Cli` to specific `Args` group references where the call
+  sites already destructured. No behaviour change; all 610
+  tests still pass, clippy strict still clean, codspeed will
+  verify no perf regression. The Cli flatten refactor shipped
+  in v1.5.0 was a deliberate precondition for this split.
+
 ## 1.5.0 — 2026-05-17
 
 ### Added
