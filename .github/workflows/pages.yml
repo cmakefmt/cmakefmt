@@ -5,6 +5,16 @@ on:
   push:
     branches:
       - main
+    # Also trigger on release tags so the playground at cmakefmt.dev
+    # gets the WASM bundle rebuilt from the tagged commit at release
+    # time. Without this, a tag pushed by `prepare-release.yml`
+    # didn't fire pages.yml — pages.yml only fired on the preceding
+    # main-branch push of the Release commit, and if any non-release
+    # commit landed on main between then and the user visiting the
+    # playground, the playground would silently advertise the new
+    # behaviour while the latest release didn't ship it.
+    tags:
+      - 'v*'
   pull_request:
 
 permissions:
@@ -73,6 +83,9 @@ jobs:
           path: docs/dist
 
       - name: Deploy to GitHub Pages
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        # Deploy from main and from release tags. Workflow_dispatch
+        # also deploys — manual triggers are intentional and rare.
+        # Pull requests skip via the explicit not-PR check.
+        if: ${{ github.event_name != 'pull_request' }}
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0
