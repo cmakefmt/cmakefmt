@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+# Fuzzing harness for cmakefmt.
+#
+# This crate is intentionally NOT part of the main workspace: cargo-fuzz
+# projects require nightly Rust and sanitizer flags that would otherwise
+# leak into the stable build of the parent crate. The empty `[workspace]`
+# table below is the standard cargo-fuzz pattern that detaches this crate
+# from any ancestor workspace.
+
+[package]
+name = "cmakefmt-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.cmakefmt]
+package = "cmakefmt-rust"
+path = ".."
+
+# Detach from any parent workspace so cargo-fuzz can operate independently.
+[workspace]
+
+# Each fuzz target is its own binary.
+[[bin]]
+name = "parse"
+path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "format_roundtrip"
+path = "fuzz_targets/format_roundtrip.rs"
+test = false
+doc = false
+bench = false

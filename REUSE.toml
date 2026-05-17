@@ -14,6 +14,10 @@ SPDX-License-Identifier = "MIT"
 path = [
   ".github/ISSUE_TEMPLATE/*.md",
   "fuzz/Cargo.toml",
+  "fuzz/Cargo.lock",
+  "fuzz/.gitignore",
+  "fuzz/corpus/parse/*",
+  "fuzz/corpus/format_roundtrip/*",
   ".github/workflows/*.yml",
   ".gitignore",
   "docs/.gitignore",
