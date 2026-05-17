@@ -25,6 +25,21 @@ This project follows a simple changelog discipline:
   `--no-verify` is documented in `--help` output and the CLI
   reference. Matches the "deprecated alias" framing the docs
   have used since v1.3.x.
+- Annotated several public spec and config-enum types with
+  `#[non_exhaustive]` so future field/variant additions stay
+  patch-safe rather than breaking downstream consumers using
+  exhaustive struct-literal construction or `match` arms:
+  `KwargSpec`, `CommandForm`, `LayoutOverrides`, `NArgs`,
+  `CommandSpec`, `CaseStyle`, `LineEnding`, `FractionalTabPolicy`,
+  `ContinuationAlign`, `DangleAlign`, plus per-variant on
+  `Error::IoAt` and `Error::LayoutTooWide`. The `Config`,
+  `PerCommandConfig`, and AST node types (`CommandInvocation`,
+  `BracketArgument`, `File`, `Statement`, `Argument`, `Comment`)
+  intentionally stay un-annotated for now because external
+  callers (tests, benchmarks, downstream tools) construct them
+  via struct literals; their hardening is tracked on the roadmap
+  for a later release that pairs the annotation with a builder
+  API.
 
 ### Fixed
 
@@ -60,24 +75,6 @@ This project follows a simple changelog discipline:
   module spec rather than the core property commands. As before,
   the previous behaviour produced syntactically valid CMake with
   corrupted semantics.
-
-### Changed
-
-- Annotated several public spec and config-enum types with
-  `#[non_exhaustive]` so future field/variant additions stay
-  patch-safe rather than breaking downstream consumers using
-  exhaustive struct-literal construction or `match` arms:
-  `KwargSpec`, `CommandForm`, `LayoutOverrides`, `NArgs`,
-  `CommandSpec`, `CaseStyle`, `LineEnding`, `FractionalTabPolicy`,
-  `ContinuationAlign`, `DangleAlign`, plus per-variant on
-  `Error::IoAt` and `Error::LayoutTooWide`. The `Config`,
-  `PerCommandConfig`, and AST node types (`CommandInvocation`,
-  `BracketArgument`, `File`, `Statement`, `Argument`, `Comment`)
-  intentionally stay un-annotated for now because external
-  callers (tests, benchmarks, downstream tools) construct them
-  via struct literals; their hardening is tracked on the roadmap
-  for a later release that pairs the annotation with a builder
-  API.
 
 ### Internal
 
