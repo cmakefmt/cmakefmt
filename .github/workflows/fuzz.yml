@@ -1,0 +1,80 @@
+# SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+# Weekly coverage-guided fuzzing for cmakefmt's parser and
+# parse→format→parse round-trip.
+#
+# This workflow is intentionally ADVISORY: it never blocks merges. The
+# goal is the long-running "we have a fuzzer that's been running for
+# months and never found anything" reassurance. After a stabilisation
+# period the gate can be promoted to required by removing the
+# `continue-on-error` flags below.
+
+name: Fuzz
+
+on:
+  schedule:
+    # Weekly on Saturday at 04:00 UTC — off-peak, doesn't clash with the
+    # Monday real-world cron.
+    - cron: '0 4 * * 6'
+  workflow_dispatch:
+    inputs:
+      max_total_time:
+        description: 'Seconds to run each fuzz target for'
+        required: false
+        default: '300'
+
+permissions: read-all
+
+jobs:
+  fuzz:
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - parse
+          - format_roundtrip
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Install nightly Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable action, pinned toolchain below
+        with:
+          toolchain: nightly
+
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@3771e22aa892e03fd35585fae288baad1755695c  # v2.78.2
+        with:
+          tool: cargo-fuzz
+
+      - name: Run fuzz target
+        id: fuzz_run
+        continue-on-error: true
+        working-directory: fuzz
+        env:
+          # Surface inputs through env to keep them out of the run: shell
+          # template — defence-in-depth against script-injection even
+          # though these inputs are restricted to repo collaborators.
+          FUZZ_TARGET: ${{ matrix.target }}
+          MAX_TOTAL_TIME: ${{ github.event.inputs.max_total_time || '300' }}
+        run: |
+          set -euo pipefail
+          echo "Running fuzz target '${FUZZ_TARGET}' for ${MAX_TOTAL_TIME}s"
+          cargo +nightly fuzz run "${FUZZ_TARGET}" \
+            -- -max_total_time="${MAX_TOTAL_TIME}"
+
+      - name: Upload crash artifacts
+        if: always() && steps.fuzz_run.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v5
+        env:
+          FUZZ_TARGET: ${{ matrix.target }}
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}
+          path: |
+            fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore
+          retention-days: 7
