@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.6.0 — 2026-05-17
+
 ### Added
 
 - New `cmakefmt dump spec-coverage` subcommand that introspects
