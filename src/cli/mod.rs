@@ -10,6 +10,7 @@
 //! library crate — keep visibility limited to `pub(crate)` so the split stays
 //! an implementation detail of the binary.
 
+pub(crate) mod commands;
 pub(crate) mod diff;
 pub(crate) mod errors;
 pub(crate) mod process;
