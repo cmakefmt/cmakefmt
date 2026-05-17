@@ -16,4 +16,5 @@ pub(crate) mod errors;
 pub(crate) mod process;
 pub(crate) mod report;
 pub(crate) mod runtime;
+pub(crate) mod spec_coverage;
 pub(crate) mod summary;

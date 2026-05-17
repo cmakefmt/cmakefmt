@@ -23,6 +23,7 @@ use crate::cli::process::{
     resolve_config_probe_target, InputTarget,
 };
 use crate::cli::runtime::atomic_write;
+use crate::cli::spec_coverage::run_spec_coverage;
 use crate::{
     should_colorize_stderr, should_colorize_stdout, Cli, ConfigAction, DumpAction, EXIT_ERROR,
     EXIT_OK,
@@ -375,6 +376,14 @@ pub(crate) fn run_dump_subcommand(
     action: &DumpAction,
     file: Option<&Path>,
 ) -> Result<u8, cmakefmt::Error> {
+    // `dump spec-coverage` is a read-only introspection of the
+    // formatter's built-in registry — no source input is needed, so
+    // skip the file/stdin read that the source-consuming variants
+    // share.
+    if let DumpAction::SpecCoverage { format, status } = action {
+        return run_spec_coverage(*format, *status);
+    }
+
     let source = match file {
         Some(path) if path.as_os_str() != "-" => std::fs::read_to_string(path).with_path(path)?,
         _ => {
@@ -394,6 +403,7 @@ pub(crate) fn run_dump_subcommand(
             let (_, registry, _) = build_context(cli, config_path)?;
             cmakefmt::dump::dump_parse(&parsed, &registry, color)
         }
+        DumpAction::SpecCoverage { .. } => unreachable!("handled above"),
     };
 
     print!("{tree}");

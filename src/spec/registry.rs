@@ -345,6 +345,15 @@ impl CommandRegistry {
     pub fn audited_cmake_version(&self) -> &str {
         &self.metadata.cmake_version
     }
+
+    /// Iterate over the names of every built-in command in the
+    /// registry. Yields the lowercase canonical form; user-merged
+    /// override commands are excluded. Intended for tooling that
+    /// wants to introspect the spec surface (e.g.
+    /// `cmakefmt dump spec-coverage`).
+    pub fn builtin_command_names(&self) -> impl Iterator<Item = &str> {
+        self.builtin_commands.iter().map(String::as_str)
+    }
 }
 
 /// Decode the embedded `builtins.yaml` blob and merge in the embedded

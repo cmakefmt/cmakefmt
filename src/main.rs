@@ -601,6 +601,52 @@ enum DumpAction {
     Ast,
     /// Print the formatted parse tree (not yet implemented).
     Parse,
+    /// Report spec coverage for every CMake command the formatter knows
+    /// about (and every documented CMake command it doesn't).
+    ///
+    /// Cross-references the formatter's built-in `CommandRegistry`
+    /// against a snapshot of the upstream CMake command list and
+    /// classifies each entry as `missing`, `stub`, `partial`, or
+    /// `full`:
+    ///
+    /// * `missing` — the command is not in the registry; cmakefmt
+    ///   treats it as user-defined and uses the default flat layout.
+    /// * `stub`    — the command is in the registry but has no kwargs
+    ///   or flags modelled (just a positional shape).
+    /// * `partial` — has some structure (1..=3 kwargs+flags total).
+    /// * `full`    — has substantive coverage (>3 kwargs+flags total).
+    ///
+    /// The 3-vs-4 split is heuristic; it gives a useful three-tier
+    /// signal at the cost of occasional close-call misclassification.
+    /// Exit code is always 0 — this is informational, not a check.
+    SpecCoverage {
+        /// Output format.
+        #[arg(long, value_enum, default_value = "human")]
+        format: SpecCoverageFormat,
+        /// Restrict output to commands with a given coverage status.
+        #[arg(long, value_enum)]
+        status: Option<SpecCoverageStatusFilter>,
+    },
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum SpecCoverageFormat {
+    /// Human-friendly aligned table.
+    Human,
+    /// Machine-readable JSON document.
+    Json,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum SpecCoverageStatusFilter {
+    /// Commands absent from the registry.
+    Missing,
+    /// Commands with no kwargs or flags modelled.
+    Stub,
+    /// Commands with 1..=3 kwargs+flags modelled.
+    Partial,
+    /// Commands with >3 kwargs+flags modelled.
+    Full,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
