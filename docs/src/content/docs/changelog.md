@@ -36,6 +36,21 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- The winget submission workflow (`publish-winget.yml`) now
+  actually fires on each tagged release. Previously the
+  `release.yml` job that publishes the GitHub Release used the
+  default `GITHUB_TOKEN`, and GitHub's recursion guard prevents
+  events emitted by `GITHUB_TOKEN` from triggering downstream
+  workflows — so every release since `v0.8.0` published a
+  GitHub Release without ever firing the winget submission.
+  Confirmed against the workflow history: 10+ releases
+  published, exactly one `publish-winget.yml` run, which was a
+  manual `workflow_dispatch` from 2026-04-26 against `v1.3.0`.
+  `release.yml` now passes `RELEASE_WORKFLOW_TOKEN` to the
+  `softprops/action-gh-release` step, so the release-publish
+  event comes from a PAT and downstream workflows trigger as
+  intended. The token's scope requirements are documented in
+  `RELEASING.md`.
 - Files that begin with a UTF-8 byte-order mark (commonly
   written by MSVC / Visual Studio on Windows) now round-trip
   through the formatter with the BOM preserved. Previously the

@@ -83,7 +83,7 @@ with `*: secret not configured` errors.
 | Secret | Used by | Scope |
 |---|---|---|
 | `CRATES_IO_API_TOKEN` | `release.yml` → `publish-crate` | crates.io API publish |
-| `RELEASE_WORKFLOW_TOKEN` | `prepare-release.yml` | Push commit+tag from the bot |
+| `RELEASE_WORKFLOW_TOKEN` | `prepare-release.yml`, `release.yml` (publish-github-release) | Push commit+tag from the bot **and** publish the GitHub Release. Must be a PAT (or GitHub App token), not `GITHUB_TOKEN` — `GITHUB_TOKEN` cannot trigger downstream workflows like `publish-winget.yml`. Needs `contents: write` (or `repo` on a classic PAT). |
 | `HOMEBREW_TAP_TOKEN` | `release.yml` → `publish-homebrew` | Push to `cmakefmt/homebrew-cmakefmt` |
 | `VSCODE_CMAKEFMT_TOKEN` | `release.yml` → `publish-vscode-extension` | Push to `cmakefmt/vscode-cmakefmt` + Marketplace |
 | `WINGET_PUBLISH_TOKEN` | `publish-winget.yml` | Push manifest PR to the winget-pkgs fork |
