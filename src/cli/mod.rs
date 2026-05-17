@@ -11,5 +11,7 @@
 //! an implementation detail of the binary.
 
 pub(crate) mod diff;
+pub(crate) mod errors;
 pub(crate) mod process;
 pub(crate) mod report;
+pub(crate) mod summary;

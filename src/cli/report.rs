@@ -10,9 +10,10 @@ use std::fmt::Write as _;
 use serde::Serialize;
 
 use crate::cli::process::{FailedTarget, ProcessedTarget};
+use crate::cli::summary::render_human_summary;
 use crate::{
-    render_human_summary, ExecutionArgs, OutputModesArgs, ReportFormat, RunSummary,
-    EXIT_CHECK_FAILED, EXIT_ERROR, EXIT_OK,
+    ExecutionArgs, OutputModesArgs, ReportFormat, RunSummary, EXIT_CHECK_FAILED, EXIT_ERROR,
+    EXIT_OK,
 };
 
 #[derive(Debug, Serialize)]
