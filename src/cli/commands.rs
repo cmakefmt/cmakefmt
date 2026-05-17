@@ -25,8 +25,7 @@ use crate::cli::process::{
 use crate::cli::runtime::atomic_write;
 use crate::cli::spec_coverage::run_spec_coverage;
 use crate::{
-    should_colorize_stderr, should_colorize_stdout, Cli, ConfigAction, DumpAction, EXIT_ERROR,
-    EXIT_OK,
+    should_colorize_stderr, should_colorize_stdout, Cli, ConfigAction, DumpAction, EXIT_OK,
 };
 
 pub(crate) fn run_list_unknown_commands(
@@ -304,8 +303,7 @@ pub(crate) fn run_config_subcommand(
         ConfigAction::Show { format, path } => {
             if let Some(p) = path {
                 if !Path::new(p).exists() {
-                    eprintln!("error: file not found: {p}");
-                    return Ok(EXIT_ERROR);
+                    return Err(cmakefmt::Error::cli_arg(format!("file not found: {p}")));
                 }
             }
             let target = path
@@ -323,8 +321,7 @@ pub(crate) fn run_config_subcommand(
         ConfigAction::Path { path } => {
             if let Some(p) = path {
                 if !Path::new(p).exists() {
-                    eprintln!("error: file not found: {p}");
-                    return Ok(EXIT_ERROR);
+                    return Err(cmakefmt::Error::cli_arg(format!("file not found: {p}")));
                 }
             }
             let target = path
@@ -340,8 +337,7 @@ pub(crate) fn run_config_subcommand(
         ConfigAction::Explain { path } => {
             if let Some(p) = path {
                 if !Path::new(p).exists() {
-                    eprintln!("error: file not found: {p}");
-                    return Ok(EXIT_ERROR);
+                    return Err(cmakefmt::Error::cli_arg(format!("file not found: {p}")));
                 }
             }
             let target = path.as_deref().map(Path::new).unwrap_or(Path::new("."));
@@ -360,8 +356,7 @@ pub(crate) fn run_config_subcommand(
         ConfigAction::Init => {
             let path = Path::new(".cmakefmt.yaml");
             if path.exists() {
-                eprintln!(".cmakefmt.yaml already exists");
-                return Ok(EXIT_ERROR);
+                return Err(cmakefmt::Error::cli_arg(".cmakefmt.yaml already exists"));
             }
             std::fs::write(path, default_config_template_for(DumpConfigFormat::Yaml))
                 .map_err(cmakefmt::Error::Io)?;
@@ -425,16 +420,16 @@ pub(crate) fn render_man_page() -> Result<u8, cmakefmt::Error> {
 pub(crate) fn install_git_hook() -> Result<u8, cmakefmt::Error> {
     let hooks_dir = Path::new(".git/hooks");
     if !hooks_dir.exists() {
-        eprintln!("error: not a git repository (no .git/hooks directory)");
-        return Ok(EXIT_ERROR);
+        return Err(cmakefmt::Error::cli_arg(
+            "not a git repository (no .git/hooks directory)",
+        ));
     }
     let hook_path = hooks_dir.join("pre-commit");
     if hook_path.exists() {
-        eprintln!(
-            "error: {} already exists; remove it first or add cmakefmt manually",
+        return Err(cmakefmt::Error::cli_arg(format!(
+            "{} already exists; remove it first or add cmakefmt manually",
             hook_path.display()
-        );
-        return Ok(EXIT_ERROR);
+        )));
     }
     let hook_content = "#!/bin/sh\n\
         # Installed by cmakefmt install-hook\n\
@@ -454,24 +449,22 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
     if !path_arg.is_empty() {
         let path = Path::new(path_arg);
         if !path.exists() {
-            eprintln!("config file not found: {}", path.display());
-            return Ok(EXIT_ERROR);
+            return Err(cmakefmt::Error::cli_arg(format!(
+                "config file not found: {}",
+                path.display()
+            )));
         }
         match Config::from_files(&[path.to_path_buf()]) {
             Ok(_) => {
                 println!("config is valid: {}", path.display());
                 Ok(EXIT_OK)
             }
-            Err(err) => {
-                eprintln!("{err}");
-                Ok(EXIT_ERROR)
-            }
+            Err(err) => Err(err),
         }
     } else {
         let context = resolve_config_context(cli, Some(Path::new(".")));
         if context.sources.is_empty() {
-            eprintln!("no config file found");
-            return Ok(EXIT_ERROR);
+            return Err(cmakefmt::Error::cli_arg("no config file found"));
         }
         match Config::from_files(&context.sources) {
             Ok(_) => {
@@ -480,10 +473,7 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
                 }
                 Ok(EXIT_OK)
             }
-            Err(err) => {
-                eprintln!("{err}");
-                Ok(EXIT_ERROR)
-            }
+            Err(err) => Err(err),
         }
     }
 }
