@@ -230,9 +230,21 @@ loading, registry loading, and formatting:
 | `Error::Parse` | the input was not valid CMake under the current grammar, with crate-owned source and location diagnostics |
 | `Error::Config` | a user config file failed to parse or validate |
 | `Error::Spec` | a command-spec override or built-in spec failed to parse |
-| `Error::Io` | file I/O failed |
-| `Error::Formatter` | a formatter-layer invariant or unsupported case was hit |
+| `Error::Io` | file I/O failed without an associated path (e.g. stdin/stdout streams) |
+| `Error::IoAt` | file I/O failed with the offending path attached |
+| `Error::CliArg` | a CLI argument validation failed — incompatible flag combinations, missing required arguments, conflicting overrides |
+| `Error::InvalidRegex` | a regex pattern from the user (CLI flag, config file, or spec override) failed to compile; carries the underlying `regex::Error` via `#[source]` |
+| `Error::Render` | failure rendering a `Config`, `Spec`, or report (JSON / SARIF / Checkstyle / JUnit / Edit) to text |
+| `Error::LegacyMigration` | failure during legacy cmake-format config migration (parsing, converting, or writing the modernised file); carries the source path |
+| `Error::Formatter` | residual catch-all for genuinely miscellaneous CLI/runtime conditions; most v1.5 sites have migrated to one of the structured variants above |
 | `Error::LayoutTooWide` | the debug layout renderer exceeded the configured line width |
+
+All variants are `#[non_exhaustive]`, so further sub-splitting in future
+releases stays patch-safe. The `IoAt`, `InvalidRegex`, and `LegacyMigration`
+variants all carry contextual data (path, regex source, file path
+respectively) — the `InvalidRegex` `regex::Error` chain via `#[source]`
+means `std::error::Error::source()` walks into the underlying regex
+parser failure for cleaner diagnostics.
 
 For parse, config, and spec errors, the library retains crate-owned path and
 location context so callers can surface useful diagnostics without depending on

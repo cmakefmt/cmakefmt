@@ -31,3 +31,14 @@ filename = "docs/src/content/docs/cli.md"
 
 [[tool.bumpversion.files]]
 filename = "docs/src/content/docs/troubleshooting.md"
+
+# The homepage's JSON-LD `softwareVersion` and the CI guide's pinned-version
+# examples lag the release otherwise — humans forget to bump them and the
+# audit catches it every minor. Driving from bumpversion keeps them honest.
+[[tool.bumpversion.files]]
+filename = "docs/src/content/docs/index.mdx"
+search = '"softwareVersion": "{current_version}"'
+replace = '"softwareVersion": "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "docs/src/content/docs/ci.md"

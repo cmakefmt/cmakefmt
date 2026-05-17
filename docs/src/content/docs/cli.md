@@ -109,6 +109,7 @@ Ignore rules only affect:
 | `cmakefmt config init` | Write a starter `.cmakefmt.yaml` to the current directory. |
 | `cmakefmt dump ast <FILE>` | Print the raw parser AST as a tree. |
 | `cmakefmt dump parse <FILE>` | Print the spec-resolved parse tree with keyword/flag grouping and flow-control nesting. |
+| `cmakefmt dump spec-coverage [--format human\|json] [--status missing\|stub\|partial\|full]` | Report which CMake commands the formatter has built-in specs for, classified by completeness. |
 
 ## Other Subcommands
 
@@ -565,6 +566,45 @@ suppress ANSI codes when piping:
 ```bash
 cmakefmt --color never dump ast CMakeLists.txt > tree.txt
 ```
+
+### `dump spec-coverage` — Registry Coverage Report
+
+Lists every documented CMake command (snapshot at `src/spec/cmake_commands.txt`
+for the audited CMake version) and reports how thoroughly the formatter's
+built-in spec models it. Useful for "what does cmakefmt actually know about
+the command I'm reporting a layout surprise about?" before filing a bug.
+
+```bash
+cmakefmt dump spec-coverage
+```
+
+Classifications:
+
+| Status | Meaning |
+| --- | --- |
+| `missing` | name absent from the registry — the formatter treats it as user-defined and falls back to a flat positional layout |
+| `stub` | registered but has no kwargs and no flags declared |
+| `partial` | 1–3 kwargs+flags total — the formatter recognises some structure but the spec is clearly incomplete |
+| `full` | more than 3 kwargs+flags — substantive spec coverage |
+
+Output formats:
+
+```bash
+# Human table (default)
+cmakefmt dump spec-coverage
+
+# Machine-readable JSON
+cmakefmt dump spec-coverage --format json
+
+# Filter to one classification
+cmakefmt dump spec-coverage --status missing
+cmakefmt dump spec-coverage --status stub
+```
+
+The reference snapshot at `src/spec/cmake_commands.txt` tracks a specific
+CMake version (recorded in the file header). Refresh it locally with
+`cmake --help-command-list > src/spec/cmake_commands.txt` against a fresh
+CMake install when bumping spec coverage to a newer reference.
 
 ## Related Reading
 
