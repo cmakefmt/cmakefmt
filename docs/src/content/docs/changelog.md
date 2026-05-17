@@ -16,6 +16,40 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- New `cmakefmt dump spec-coverage` subcommand that introspects
+  the formatter's command registry and reports, for every
+  documented CMake command, how thoroughly it's modelled.
+  Classifications: **missing** (not in registry), **stub**
+  (registered but no kwargs/flags), **partial** (1-3
+  kwargs+flags), **full** (>3 kwargs+flags). Supports
+  `--format human|json` and `--status missing|stub|partial|full`
+  for filtering. Reference list of CMake commands snapshot is at
+  `src/spec/cmake_commands.txt` (CMake 4.3.1). Useful for
+  introspecting "what does cmakefmt actually know about my CMake
+  code?" before reporting a layout surprise as a bug, and for
+  spec-completeness work tracked on the roadmap.
+
+### Changed
+
+- The `Error::Formatter(String)` catch-all variant has been split
+  into four structured sub-variants — `Error::CliArg`,
+  `Error::InvalidRegex` (carrying the underlying `regex::Error`
+  via a `#[source]` chain), `Error::Render`, and
+  `Error::LegacyMigration`. Most prior `Error::Formatter` sites
+  in the codebase migrated to one of the structured variants
+  (the original variant remains for genuinely miscellaneous
+  CLI/runtime conditions). Downstream Rust consumers matching on
+  `Error` can now programmatically distinguish CLI-argument
+  conflicts, regex compile failures, render failures, and legacy
+  cmake-format migration errors instead of parsing message
+  strings. All five variants are `#[non_exhaustive]` so further
+  sub-splitting in future phases is patch-safe. Exit codes and
+  user-facing error text are unchanged for all but `InvalidRegex`,
+  which now renders the underlying `regex::Error` source chain
+  for clearer diagnostics.
+
 ### Internal
 
 - Split `src/main.rs` (~4500 lines) into focused submodules
