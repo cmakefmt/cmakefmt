@@ -202,6 +202,39 @@ via `wasm-bindgen`:
 Config is validated through `Config::from_yaml_str()` so the playground rejects
 invalid fields the same way the CLI does.
 
+## CLI (`src/main.rs` + `src/cli/`)
+
+The binary entry point and its argument-parsing surface stay in
+`src/main.rs` — the `Cli` struct with its four `#[derive(Args)]`
+sub-groups (`InputSelectionArgs`, `OutputModesArgs`, `ExecutionArgs`,
+`ConfigOverridesArgs`), the subcommand enums (`CliCommand`,
+`ConfigAction`, `DumpAction`), `main()` itself, and the top-level
+`run()` dispatcher. Per-concern implementation code lives under
+`src/cli/`:
+
+- **`cli/process.rs`** -- path discovery, `process_path` /
+  `process_stdin`, cache, target collection.
+- **`cli/report.rs`** -- per-format report builders (JSON, SARIF,
+  Checkstyle, JUnit, GitHub, Edit).
+- **`cli/commands.rs`** -- non-formatting subcommand handlers
+  (`config`, `dump`, `manpage`, `install-hook`, `watch`,
+  `list-unknown-commands`).
+- **`cli/runtime.rs`** -- `validate_cli`, run-loop helpers,
+  per-target completion handling, `RunState`.
+- **`cli/errors.rs`** -- `render_cli_error` and the parse / file /
+  formatter / hint renderers; the single canonical error envelope
+  for the binary.
+- **`cli/summary.rs`** -- human + stat summary rendering with
+  co-located tests.
+- **`cli/diff.rs`** -- unified diff, syntax highlighting,
+  `apply_line_ranges`.
+- **`cli/spec_coverage.rs`** -- backs the `dump spec-coverage`
+  subcommand; reads the CMake-commands snapshot from
+  `src/spec/cmake_commands.txt` and classifies registry coverage.
+
+Modules under `cli/` are `pub(crate)` only; nothing escapes the
+binary as a public API surface.
+
 ## Where to Start
 
 | Task | Start here |
@@ -210,7 +243,11 @@ invalid fields the same way the CLI does.
 | Add a new config option | `src/config/mod.rs` |
 | Change the parser | `src/parser/{scanner,grammar,lower}.rs` |
 | Add or update a built-in command spec | `src/spec/builtins.yaml` |
-| Add a new CLI flag | `src/main.rs` |
+| Add a new CLI flag | `Cli` struct in `src/main.rs` (pick the right `Args` sub-group) |
+| Add a new subcommand | `CliCommand` enum in `src/main.rs` + handler in `src/cli/commands.rs` |
+| Add a new report format | `src/cli/report.rs` |
+| Touch the run loop or per-file processing | `src/cli/process.rs` / `src/cli/runtime.rs` |
+| Improve a CLI error message or hint | `src/cli/errors.rs` |
 | Modify LSP behavior | `src/lsp/mod.rs` |
 | Add a new error variant | `src/error.rs` |
 | Change file discovery or ignore logic | `src/files.rs` |
