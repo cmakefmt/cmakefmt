@@ -528,45 +528,88 @@ install(TARGETS widget EXPORT WidgetTargets
 }
 
 #[test]
-fn comments_playground_preset_preserves_barriers_and_reflows_comments() {
+fn playground_preset_long_standalone_comment_reflows() {
+    // A long standalone `#` comment above a command reflows to fit
+    // `line_width` under the default markup-enabled config. Comment
+    // content before vs after is identical modulo wrapping.
     let src = "\
 # Project-level note that is intentionally long enough to reflow when markup handling is enabled and the configured line width is tight.
 cmake_minimum_required(VERSION 3.20)
-project(CommentDemo)
+";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    # Project-level note that is intentionally long enough to reflow when markup
+    # handling is enabled and the configured line width is tight.
+    cmake_minimum_required(VERSION 3.20)
+    ");
+}
 
+#[test]
+fn playground_preset_bracket_comment_stays_attached_to_following_command() {
+    // `#[=[ ... ]=]` bracket comments are preserved verbatim
+    // (no reflow, no indentation change) and remain attached to
+    // the command they precede.
+    let src = "\
 #[=[
 This bracket comment should stay attached to the following target.
 ]=]
-add_library(commented src/main.cpp src/detail.cpp) # trailing note that will wrap under the comment column
+add_library(commented src/main.cpp src/detail.cpp)
+";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    #[=[
+    This bracket comment should stay attached to the following target.
+    ]=]
+    add_library(commented src/main.cpp src/detail.cpp)
+    ");
+}
 
+#[test]
+fn playground_preset_long_trailing_comment_wraps_under_comment_column() {
+    // A trailing `# …` comment on a command line that's already wide
+    // wraps onto continuation lines aligned to the column the first
+    // `#` occupied.
+    let src = "add_library(commented src/main.cpp src/detail.cpp) # trailing note that will wrap under the comment column\n";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    add_library(commented src/main.cpp src/detail.cpp) # trailing note that will
+                                                       # wrap under the comment
+                                                       # column
+    ");
+}
+
+#[test]
+fn playground_preset_cmakefmt_off_block_preserves_source_verbatim() {
+    // `# cmakefmt: off` / `# cmakefmt: on` brackets a region that the
+    // formatter must emit byte-identical to the source — including
+    // any internal indentation or spacing the user chose.
+    let src = "\
 # cmakefmt: off
 set(KEEP_THIS   exactly    as-written)
 # cmakefmt: on
+";
+    let formatted = format_source(src, &Config::default()).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    # cmakefmt: off
+    set(KEEP_THIS   exactly    as-written)
+    # cmakefmt: on
+    ");
+}
 
+#[test]
+fn playground_preset_hash_banner_is_preserved_verbatim() {
+    // Lines composed entirely of `#` characters are decorative
+    // banners and must be preserved verbatim — not reflowed and not
+    // collapsed to a single `#`. (Regression coverage for the bug
+    // fixed in v1.4.3.)
+    let src = "\
 ########################################
 # Generated sources
 ########################################
 target_sources(commented PRIVATE generated/a.cpp generated/b.cpp)
 ";
     let formatted = format_source(src, &Config::default()).unwrap();
-
-    insta::assert_snapshot!(formatted, @"
-    # Project-level note that is intentionally long enough to reflow when markup
-    # handling is enabled and the configured line width is tight.
-    cmake_minimum_required(VERSION 3.20)
-    project(CommentDemo)
-
-    #[=[
-    This bracket comment should stay attached to the following target.
-    ]=]
-    add_library(commented src/main.cpp src/detail.cpp) # trailing note that will
-                                                       # wrap under the comment
-                                                       # column
-
-    # cmakefmt: off
-    set(KEEP_THIS   exactly    as-written)
-    # cmakefmt: on
-
+    insta::assert_snapshot!(formatted, @r"
     ########################################
     # Generated sources
     ########################################
