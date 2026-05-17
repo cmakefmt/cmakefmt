@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.5.0 — 2026-05-17
+
 ### Added
 
 - New `cmakefmt manpage` subcommand that prints the roff man page
