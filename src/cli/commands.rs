@@ -22,9 +22,10 @@ use crate::cli::process::{
     build_context, describe_cli_overrides, describe_config_mode, resolve_config_context,
     resolve_config_probe_target, InputTarget,
 };
+use crate::cli::runtime::atomic_write;
 use crate::{
-    atomic_write, should_colorize_stderr, should_colorize_stdout, Cli, ConfigAction, DumpAction,
-    EXIT_ERROR, EXIT_OK,
+    should_colorize_stderr, should_colorize_stdout, Cli, ConfigAction, DumpAction, EXIT_ERROR,
+    EXIT_OK,
 };
 
 pub(crate) fn run_list_unknown_commands(

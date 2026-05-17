@@ -27,7 +27,8 @@ use crate::cli::diff::{
     apply_line_ranges, build_unified_diff, changed_formatted_line_numbers, highlight_changed_lines,
     split_lines_with_endings,
 };
-use crate::{log_debug, needs_debug_lines, CacheStrategy, Cli, ReportFormat};
+use crate::cli::runtime::{log_debug, needs_debug_lines};
+use crate::{CacheStrategy, Cli, ReportFormat};
 
 #[derive(Clone)]
 pub(crate) enum InputTarget {
