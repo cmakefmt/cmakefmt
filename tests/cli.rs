@@ -4506,3 +4506,103 @@ fn dump_parse_reads_stdin() {
         "stdin dump parse should resolve keywords, got:\n{stdout}"
     );
 }
+
+// ── dump spec-coverage ─────────────────────────────────────────────────────
+
+#[test]
+fn dump_spec_coverage_human_has_table_and_summary() {
+    let output = cmakefmt().args(["dump", "spec-coverage"]).output().unwrap();
+    assert!(
+        output.status.success(),
+        "dump spec-coverage should succeed, stderr: {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Command") && stdout.contains("Status"),
+        "should have a header row, got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("target_link_libraries") && stdout.contains("project"),
+        "should list well-known commands, got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Summary:"),
+        "should print summary line, got:\n{stdout}"
+    );
+    assert!(
+        stdout.contains("Reference: CMake "),
+        "should print reference CMake version, got:\n{stdout}"
+    );
+}
+
+#[test]
+fn dump_spec_coverage_json_has_summary_and_commands() {
+    let output = cmakefmt()
+        .args(["dump", "spec-coverage", "--format", "json"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "dump spec-coverage --format json should succeed"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parsed: Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("output is not valid JSON: {e}\n{stdout}"));
+    assert!(parsed["cmake_version_reference"].is_string());
+    let summary = &parsed["summary"];
+    for key in ["full", "partial", "stub", "missing"] {
+        assert!(
+            summary.get(key).and_then(Value::as_u64).is_some(),
+            "summary.{key} missing or non-integer"
+        );
+    }
+    let commands = parsed["commands"]
+        .as_array()
+        .expect("commands should be an array");
+    assert!(
+        commands
+            .iter()
+            .any(|c| c["name"] == "target_link_libraries"),
+        "should include target_link_libraries"
+    );
+}
+
+#[test]
+fn dump_spec_coverage_status_filter_only_emits_matching_rows() {
+    let output = cmakefmt()
+        .args([
+            "dump",
+            "spec-coverage",
+            "--status",
+            "full",
+            "--format",
+            "json",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let parsed: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let commands = parsed["commands"].as_array().unwrap();
+    assert!(
+        !commands.is_empty(),
+        "full status should match at least one command"
+    );
+    for c in commands {
+        assert_eq!(c["status"].as_str().unwrap(), "full");
+    }
+}
+
+#[test]
+fn dump_spec_coverage_no_config_flag_is_honoured() {
+    // --no-config should be a no-op for this subcommand and must not error.
+    let output = cmakefmt()
+        .args(["--no-config", "dump", "spec-coverage", "--format", "json"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "should succeed with --no-config, stderr: {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+}
