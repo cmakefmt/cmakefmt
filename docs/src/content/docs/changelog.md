@@ -50,8 +50,44 @@ This project follows a simple changelog discipline:
   which now renders the underlying `regex::Error` source chain
   for clearer diagnostics.
 
+### Fixed
+
+- The playground at cmakefmt.dev now reliably reflects the
+  latest released version after a tag push, instead of whatever
+  was on `main` at the most recent `pages.yml` run. Previously,
+  a non-release commit landing on `main` between the Release
+  commit and the tag could leave the playground silently
+  advertising in-development formatter behaviour while the
+  latest tagged release didn't ship it. `pages.yml` now fires
+  on tag pushes too, so the post-release playground deploy is
+  rebuilt from the tagged commit's source. (Phase 60.)
+
 ### Internal
 
+- Added a `cargo-fuzz` harness at `fuzz/` with two targets:
+  `parse` (asserts the parser doesn't panic on arbitrary bytes)
+  and `format_roundtrip` (asserts `parser::parse → format_source
+  → parser::parse` completes without crashing). A weekly
+  advisory cron in `.github/workflows/fuzz.yml` exercises each
+  target for 5 minutes by default, configurable via
+  `workflow_dispatch` input. Crash artifacts upload with 7-day
+  retention. Coverage-guided fuzzing complements the existing
+  proptest harness; together they form a defence-in-depth
+  safety net for the parser's hand-written scanner/grammar
+  surface. (Phase 58.)
+- `run_config_subcommand` and `install_git_hook` now report
+  failures through `Err(cmakefmt::Error::cli_arg(...))` instead
+  of the older `eprintln! + Ok(EXIT_ERROR)` pair, so every
+  error path in the binary routes through the same
+  `render_cli_error` envelope. User-facing message format
+  unchanged; exit codes unchanged. (Phase 63 polish.)
+- Split the `comments_playground_preset_preserves_barriers_and_reflows_comments`
+  megablob snapshot in `tests/snapshots.rs` into five focused
+  per-behaviour tests (long-comment reflow, bracket-comment
+  attachment, trailing-comment wrap, `# cmakefmt: off` block
+  preservation, hash-banner preservation). Diff readability
+  during review improves; behaviour coverage is unchanged.
+  (Phase 58 cleanup.)
 - Split `src/main.rs` (~4500 lines) into focused submodules
   under `src/cli/`. The `Cli` definition, the four `Args`
   sub-structs (`InputSelectionArgs`, `OutputModesArgs`,
