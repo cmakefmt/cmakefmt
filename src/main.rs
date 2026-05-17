@@ -13,7 +13,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
 
-use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
@@ -93,6 +93,25 @@ fn cli_styles() -> clap::builder::Styles {
     styles = cli_styles(),
 )]
 struct Cli {
+    #[command(flatten)]
+    input_selection: InputSelectionArgs,
+
+    #[command(flatten)]
+    output_modes: OutputModeArgs,
+
+    #[command(flatten)]
+    execution: ExecutionArgs,
+
+    #[command(flatten)]
+    config_overrides: ConfigOverrideArgs,
+
+    /// Subcommand (e.g. `cmakefmt config dump`).
+    #[command(subcommand)]
+    command: Option<CliCommand>,
+}
+
+#[derive(Args, Debug, Clone)]
+struct InputSelectionArgs {
     /// Files or directories to format. Use `-` for stdin.
     ///
     /// If omitted, `cmakefmt` recursively finds CMake files under the current
@@ -111,6 +130,91 @@ struct Cli {
     )]
     files_from: Vec<String>,
 
+    /// Filter recursively discovered CMake paths with a regex.
+    ///
+    /// This only affects discovery from directories or Git/file-list driven
+    /// inputs. Direct file arguments are always kept.
+    #[arg(
+        long = "path-regex",
+        value_name = "REGEX",
+        help_heading = "Input Selection"
+    )]
+    file_regex: Option<String>,
+
+    /// Add one or more extra ignore files during recursive discovery.
+    ///
+    /// This only affects discovered files, not direct file arguments.
+    #[arg(
+        long = "ignore-path",
+        value_name = "PATH",
+        help_heading = "Input Selection"
+    )]
+    ignore_paths: Vec<PathBuf>,
+
+    /// Ignore `.gitignore` files during recursive discovery.
+    ///
+    /// By default, cmakefmt honours `.gitignore` rules when discovering
+    /// files from directories.
+    #[arg(long = "no-gitignore", help_heading = "Input Selection")]
+    no_gitignore: bool,
+
+    /// Sort discovered files by path before processing.
+    ///
+    /// Guarantees alphabetical output order regardless of filesystem
+    /// discovery order. Direct file arguments are sorted too.
+    #[arg(long, help_heading = "Input Selection")]
+    sorted: bool,
+
+    /// Select modified Git-tracked files instead of explicit input paths.
+    ///
+    /// Use `--since` to compare against a specific base ref; otherwise
+    /// `cmakefmt` compares the working tree against `HEAD`.
+    #[arg(long, help_heading = "Input Selection", conflicts_with = "staged")]
+    changed: bool,
+
+    /// Select staged Git-tracked files instead of explicit input paths.
+    ///
+    /// Useful for pre-commit hooks that should only check files in the
+    /// current changeset.
+    #[arg(long, help_heading = "Input Selection", conflicts_with = "changed")]
+    staged: bool,
+
+    /// Git base ref used together with `--changed`.
+    ///
+    /// Without this flag, `--changed` compares against `HEAD`.
+    #[arg(
+        long,
+        requires = "changed",
+        value_name = "REF",
+        help_heading = "Input Selection"
+    )]
+    since: Option<String>,
+
+    /// Virtual path used for config discovery and diagnostics when reading stdin.
+    ///
+    /// This does not read from disk; it only gives stdin formatting a real
+    /// project-relative path to work from.
+    #[arg(
+        long = "stdin-path",
+        value_name = "PATH",
+        help_heading = "Input Selection"
+    )]
+    stdin_path: Option<PathBuf>,
+
+    /// Restrict formatting to one or more 1-based inclusive line ranges.
+    ///
+    /// This is intended for editor integrations and only works on a single
+    /// formatting target.
+    #[arg(
+        long = "lines",
+        value_name = "START:END",
+        help_heading = "Input Selection"
+    )]
+    line_ranges: Vec<LineRange>,
+}
+
+#[derive(Args, Debug, Clone)]
+struct OutputModeArgs {
     /// Rewrite files on disk instead of printing formatted output.
     ///
     /// Semantic verification is enabled by default for in-place rewrites.
@@ -176,52 +280,6 @@ struct Cli {
     )]
     list_unknown_commands: bool,
 
-    /// Filter recursively discovered CMake paths with a regex.
-    ///
-    /// This only affects discovery from directories or Git/file-list driven
-    /// inputs. Direct file arguments are always kept.
-    #[arg(
-        long = "path-regex",
-        value_name = "REGEX",
-        help_heading = "Input Selection"
-    )]
-    file_regex: Option<String>,
-
-    /// Add one or more extra ignore files during recursive discovery.
-    ///
-    /// This only affects discovered files, not direct file arguments.
-    #[arg(
-        long = "ignore-path",
-        value_name = "PATH",
-        help_heading = "Input Selection"
-    )]
-    ignore_paths: Vec<PathBuf>,
-
-    /// Ignore `.gitignore` files during recursive discovery.
-    ///
-    /// By default, cmakefmt honours `.gitignore` rules when discovering
-    /// files from directories.
-    #[arg(long = "no-gitignore", help_heading = "Input Selection")]
-    no_gitignore: bool,
-
-    /// Sort discovered files by path before processing.
-    ///
-    /// Guarantees alphabetical output order regardless of filesystem
-    /// discovery order. Direct file arguments are sorted too.
-    #[arg(long, help_heading = "Input Selection")]
-    sorted: bool,
-
-    /// Deprecated. Use `cmakefmt manpage` instead. Hidden to keep
-    /// help output focused on the canonical subcommand form; the flag
-    /// remains accepted so existing release scripts (e.g.
-    /// `cmakefmt --generate-man-page > cmakefmt.1`) keep working.
-    #[arg(long = "generate-man-page", hide = true)]
-    generate_man_page: bool,
-
-    /// Print detailed discovery, config, and formatter diagnostics to stderr.
-    #[arg(long, help_heading = "Execution")]
-    debug: bool,
-
     /// Show a per-file status summary instead of formatted output.
     ///
     /// Prints a status line for each file to stderr with change details,
@@ -229,27 +287,6 @@ struct Cli {
     /// `--in-place`, or `--diff`), formatted output is suppressed.
     #[arg(short, long, help_heading = "Output Modes", conflicts_with = "quiet")]
     summary: bool,
-
-    /// Suppress per-file output and emit only end-of-run summaries.
-    ///
-    /// In stdout mode, formatted output is suppressed. In `--check` mode,
-    /// "would be reformatted" lines are suppressed. Errors and the summary
-    /// line are always printed.
-    #[arg(short, long, help_heading = "Execution")]
-    quiet: bool,
-
-    /// Print a git-style summary after formatting (e.g. "3 files changed, 12 lines reformatted").
-    ///
-    /// This works with all output modes (`--check`, `--diff`, `--in-place`, and
-    /// stdout). When combined with `--quiet`, the stat line is still printed.
-    #[arg(long, help_heading = "Execution")]
-    stat: bool,
-
-    /// Continue processing other files after a file-level parse or format error.
-    ///
-    /// Without this flag, human runs still fail at the first file error.
-    #[arg(long = "keep-going", help_heading = "Execution")]
-    keep_going: bool,
 
     /// Print a unified diff instead of the full formatted output.
     #[arg(
@@ -277,6 +314,60 @@ struct Cli {
         conflicts_with = "progress_bar"
     )]
     explain: bool,
+
+    /// Choose the output report format.
+    #[arg(
+        long = "report-format",
+        value_enum,
+        default_value_t = ReportFormat::Human,
+        help_heading = "Output Modes"
+    )]
+    report_format: ReportFormat,
+
+    /// Control ANSI color output.
+    #[arg(
+        long = "color",
+        alias = "colour",
+        value_enum,
+        default_value_t = ColorChoice::Auto,
+        help_heading = "Output Modes"
+    )]
+    color: ColorChoice,
+}
+
+#[derive(Args, Debug, Clone)]
+struct ExecutionArgs {
+    /// Deprecated. Use `cmakefmt manpage` instead. Hidden to keep
+    /// help output focused on the canonical subcommand form; the flag
+    /// remains accepted so existing release scripts (e.g.
+    /// `cmakefmt --generate-man-page > cmakefmt.1`) keep working.
+    #[arg(long = "generate-man-page", hide = true)]
+    generate_man_page: bool,
+
+    /// Print detailed discovery, config, and formatter diagnostics to stderr.
+    #[arg(long, help_heading = "Execution")]
+    debug: bool,
+
+    /// Suppress per-file output and emit only end-of-run summaries.
+    ///
+    /// In stdout mode, formatted output is suppressed. In `--check` mode,
+    /// "would be reformatted" lines are suppressed. Errors and the summary
+    /// line are always printed.
+    #[arg(short, long, help_heading = "Execution")]
+    quiet: bool,
+
+    /// Print a git-style summary after formatting (e.g. "3 files changed, 12 lines reformatted").
+    ///
+    /// This works with all output modes (`--check`, `--diff`, `--in-place`, and
+    /// stdout). When combined with `--quiet`, the stat line is still printed.
+    #[arg(long, help_heading = "Execution")]
+    stat: bool,
+
+    /// Continue processing other files after a file-level parse or format error.
+    ///
+    /// Without this flag, human runs still fail at the first file error.
+    #[arg(long = "keep-going", help_heading = "Execution")]
+    keep_going: bool,
 
     /// Watch for file changes and reformat automatically.
     ///
@@ -320,72 +411,6 @@ struct Cli {
     )]
     cache_strategy: CacheStrategy,
 
-    /// Select modified Git-tracked files instead of explicit input paths.
-    ///
-    /// Use `--since` to compare against a specific base ref; otherwise
-    /// `cmakefmt` compares the working tree against `HEAD`.
-    #[arg(long, help_heading = "Input Selection", conflicts_with = "staged")]
-    changed: bool,
-
-    /// Select staged Git-tracked files instead of explicit input paths.
-    ///
-    /// Useful for pre-commit hooks that should only check files in the
-    /// current changeset.
-    #[arg(long, help_heading = "Input Selection", conflicts_with = "changed")]
-    staged: bool,
-
-    /// Git base ref used together with `--changed`.
-    ///
-    /// Without this flag, `--changed` compares against `HEAD`.
-    #[arg(
-        long,
-        requires = "changed",
-        value_name = "REF",
-        help_heading = "Input Selection"
-    )]
-    since: Option<String>,
-
-    /// Virtual path used for config discovery and diagnostics when reading stdin.
-    ///
-    /// This does not read from disk; it only gives stdin formatting a real
-    /// project-relative path to work from.
-    #[arg(
-        long = "stdin-path",
-        value_name = "PATH",
-        help_heading = "Input Selection"
-    )]
-    stdin_path: Option<PathBuf>,
-
-    /// Restrict formatting to one or more 1-based inclusive line ranges.
-    ///
-    /// This is intended for editor integrations and only works on a single
-    /// formatting target.
-    #[arg(
-        long = "lines",
-        value_name = "START:END",
-        help_heading = "Input Selection"
-    )]
-    line_ranges: Vec<LineRange>,
-
-    /// Choose the output report format.
-    #[arg(
-        long = "report-format",
-        value_enum,
-        default_value_t = ReportFormat::Human,
-        help_heading = "Output Modes"
-    )]
-    report_format: ReportFormat,
-
-    /// Control ANSI color output.
-    #[arg(
-        long = "color",
-        alias = "colour",
-        value_enum,
-        default_value_t = ColorChoice::Auto,
-        help_heading = "Output Modes"
-    )]
-    color: ColorChoice,
-
     /// Set the number of parallel formatting jobs.
     ///
     /// Defaults to the available CPU count minus one (minimum 1). Pass an
@@ -406,6 +431,41 @@ struct Cli {
     #[arg(short, long = "progress-bar", help_heading = "Execution")]
     progress_bar: bool,
 
+    /// Refuse to run unless the current cmakefmt version matches exactly.
+    ///
+    /// Useful for pinned CI and editor wrappers that need a specific version.
+    #[arg(long, value_name = "VERSION", help_heading = "Execution")]
+    required_version: Option<String>,
+
+    /// Verify that formatting preserves the parsed CMake semantics.
+    ///
+    /// In-place rewrites verify semantics by default; use this flag to enable
+    /// the same safety check in stdout, diff, and check modes.
+    #[arg(long, help_heading = "Execution", conflicts_with = "no_verify")]
+    verify: bool,
+
+    /// Skip semantic verification, even for in-place rewrites.
+    ///
+    /// Improves throughput on trusted inputs at the cost of safety.
+    /// `--fast` is a deprecated hidden alias retained for
+    /// backwards compatibility; new usage should write `--no-verify`.
+    #[arg(
+        long = "no-verify",
+        alias = "fast",
+        help_heading = "Execution",
+        conflicts_with = "verify"
+    )]
+    no_verify: bool,
+
+    /// Format only files that opt in with a `# cmakefmt: enable` style pragma.
+    ///
+    /// Useful for gradually rolling out formatting across a large codebase.
+    #[arg(long, help_heading = "Execution")]
+    require_pragma: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+struct ConfigOverrideArgs {
     /// Use one or more explicit config files instead of config discovery.
     ///
     /// Later files override earlier ones.
@@ -451,42 +511,6 @@ struct Cli {
     /// Place closing paren on its own line when wrapping.
     #[arg(long, help_heading = "Config Overrides")]
     dangle_parens: Option<bool>,
-
-    /// Refuse to run unless the current cmakefmt version matches exactly.
-    ///
-    /// Useful for pinned CI and editor wrappers that need a specific version.
-    #[arg(long, value_name = "VERSION", help_heading = "Execution")]
-    required_version: Option<String>,
-
-    /// Verify that formatting preserves the parsed CMake semantics.
-    ///
-    /// In-place rewrites verify semantics by default; use this flag to enable
-    /// the same safety check in stdout, diff, and check modes.
-    #[arg(long, help_heading = "Execution", conflicts_with = "no_verify")]
-    verify: bool,
-
-    /// Skip semantic verification, even for in-place rewrites.
-    ///
-    /// Improves throughput on trusted inputs at the cost of safety.
-    /// `--fast` is a deprecated hidden alias retained for
-    /// backwards compatibility; new usage should write `--no-verify`.
-    #[arg(
-        long = "no-verify",
-        alias = "fast",
-        help_heading = "Execution",
-        conflicts_with = "verify"
-    )]
-    no_verify: bool,
-
-    /// Format only files that opt in with a `# cmakefmt: enable` style pragma.
-    ///
-    /// Useful for gradually rolling out formatting across a large codebase.
-    #[arg(long, help_heading = "Execution")]
-    require_pragma: bool,
-
-    /// Subcommand (e.g. `cmakefmt config dump`).
-    #[command(subcommand)]
-    command: Option<CliCommand>,
 }
 
 #[derive(Clone, Debug, Subcommand)]
@@ -738,48 +762,51 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         None => {}
     }
 
-    if cli.generate_man_page {
+    if cli.execution.generate_man_page {
         return render_man_page();
     }
 
     validate_cli(cli)?;
 
     let stdout_mode = is_stdout_mode(cli);
-    let colorize_stdout = stdout_mode && should_colorize_stdout(cli.color);
-    let file_filter = compile_file_filter(cli.file_regex.as_deref())?;
+    let colorize_stdout = stdout_mode && should_colorize_stdout(cli.output_modes.color);
+    let file_filter = compile_file_filter(cli.input_selection.file_regex.as_deref())?;
     let mut targets = collect_targets(cli, file_filter.as_ref())?;
-    if cli.sorted {
+    if cli.input_selection.sorted {
         targets.sort_by(|a, b| {
-            a.display_name(cli.stdin_path.as_deref())
-                .cmp(&b.display_name(cli.stdin_path.as_deref()))
+            a.display_name(cli.input_selection.stdin_path.as_deref())
+                .cmp(&b.display_name(cli.input_selection.stdin_path.as_deref()))
         });
     }
-    if cli.list_input_files {
+    if cli.output_modes.list_input_files {
         for target in &targets {
-            println!("{}", target.display_name(cli.stdin_path.as_deref()));
+            println!(
+                "{}",
+                target.display_name(cli.input_selection.stdin_path.as_deref())
+            );
         }
         return Ok(EXIT_OK);
     }
-    if cli.list_unknown_commands {
+    if cli.output_modes.list_unknown_commands {
         return run_list_unknown_commands(cli, &targets);
     }
-    if cli.explain && targets.len() != 1 {
+    if cli.output_modes.explain && targets.len() != 1 {
         return Err(cmakefmt::Error::Formatter(
             "--explain requires exactly one formatting target".to_owned(),
         ));
     }
-    if cli.watch {
+    if cli.execution.watch {
         return run_watch(cli, &targets, file_filter.as_ref());
     }
-    if !cli.line_ranges.is_empty() && targets.len() != 1 {
+    if !cli.input_selection.line_ranges.is_empty() && targets.len() != 1 {
         return Err(cmakefmt::Error::Formatter(
             "--lines requires exactly one formatting target".to_owned(),
         ));
     }
-    let parallel_jobs = resolve_parallel_jobs(cli.parallel)?;
+    let parallel_jobs = resolve_parallel_jobs(cli.execution.parallel)?;
     let stdout_is_terminal = io::stdout().is_terminal();
     let stderr_is_terminal = io::stderr().is_terminal();
-    let colorize_stderr = should_colorize_stderr(cli.color);
+    let colorize_stderr = should_colorize_stderr(cli.output_modes.color);
 
     if let Some(reason) =
         progress_bar_suppressed_reason(cli, targets.len(), stdout_is_terminal, stderr_is_terminal)
@@ -795,7 +822,7 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         targets.len(),
     );
 
-    if cli.debug {
+    if cli.execution.debug {
         log_debug(format!(
             "discovered {} target(s){}",
             targets.len(),
@@ -839,16 +866,16 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         ..
     } = state;
 
-    if cli.in_place {
+    if cli.output_modes.in_place {
         write_in_place_updates(&results)?;
     }
 
-    if cli.report_format != ReportFormat::Human {
+    if cli.output_modes.report_format != ReportFormat::Human {
         // Emit the unified diff for report formats that don't embed it in
         // their structured output. GitHub annotations are line-prefixed and
         // coexist safely with diff text; JSON/Checkstyle/JUnit/SARIF would
         // be corrupted by raw text prepended to the structured output.
-        if cli.diff && cli.report_format == ReportFormat::Github {
+        if cli.output_modes.diff && cli.output_modes.report_format == ReportFormat::Github {
             for result in &results {
                 if result.would_change {
                     write_diff_to_stdout(result, colorize_stdout)?;
@@ -863,17 +890,22 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         progress.eprintln(&render_human_summary(&summary))?;
     }
 
-    if cli.stat {
+    if cli.execution.stat {
         progress.eprintln(&render_stat_summary(&summary))?;
     }
 
-    if cli.check && !cli.quiet && summary.changed > 0 && cli.report_format == ReportFormat::Human {
+    if cli.output_modes.check
+        && !cli.execution.quiet
+        && summary.changed > 0
+        && cli.output_modes.report_format == ReportFormat::Human
+    {
         progress.eprintln("hint: run `cmakefmt --in-place .` to fix formatting")?;
     }
 
     if !failures.is_empty() {
         Ok(EXIT_ERROR)
-    } else if (cli.check || cli.list_changed_files) && summary.changed > 0 {
+    } else if (cli.output_modes.check || cli.output_modes.list_changed_files) && summary.changed > 0
+    {
         Ok(EXIT_CHECK_FAILED)
     } else {
         Ok(EXIT_OK)
@@ -905,7 +937,7 @@ fn run_list_unknown_commands(cli: &Cli, targets: &[InputTarget]) -> Result<u8, c
             cli,
             match target {
                 InputTarget::Path(p) => Some(p.as_path()),
-                InputTarget::Stdin => cli.stdin_path.as_deref().map(Path::new),
+                InputTarget::Stdin => cli.input_selection.stdin_path.as_deref().map(Path::new),
             },
         )?;
 
@@ -959,7 +991,7 @@ fn run_watch(
     use std::sync::Arc;
     use std::time::Duration;
 
-    let colorize_stderr = should_colorize_stderr(cli.color);
+    let colorize_stderr = should_colorize_stderr(cli.output_modes.color);
 
     // Collect directories to watch from the initial targets.
     let mut watch_roots = Vec::new();
@@ -1091,8 +1123,8 @@ fn collect_watch_candidates(
             root,
             DiscoveryOptions {
                 file_filter,
-                honor_gitignore: !cli.no_gitignore,
-                explicit_ignore_paths: &cli.ignore_paths,
+                honor_gitignore: !cli.input_selection.no_gitignore,
+                explicit_ignore_paths: &cli.input_selection.ignore_paths,
             },
         ) {
             candidates.insert(path);
@@ -1133,23 +1165,26 @@ fn watch_format_file(cli: &Cli, path: &Path, colorize: bool) -> Result<String, c
 }
 
 fn is_stdout_mode(cli: &Cli) -> bool {
-    !cli.list_changed_files && !cli.list_input_files && !cli.check && !cli.in_place
+    !cli.output_modes.list_changed_files
+        && !cli.output_modes.list_input_files
+        && !cli.output_modes.check
+        && !cli.output_modes.in_place
 }
 
 fn needs_debug_lines(cli: &Cli) -> bool {
-    cli.debug || cli.explain
+    cli.execution.debug || cli.output_modes.explain
 }
 
 fn streams_stdout_during_run(cli: &Cli) -> bool {
-    if cli.report_format != ReportFormat::Human {
+    if cli.output_modes.report_format != ReportFormat::Human {
         return false;
     }
 
-    if cli.list_changed_files || cli.diff {
+    if cli.output_modes.list_changed_files || cli.output_modes.diff {
         return true;
     }
 
-    is_stdout_mode(cli) && !cli.summary && !cli.quiet
+    is_stdout_mode(cli) && !cli.output_modes.summary && !cli.execution.quiet
 }
 
 fn should_enable_progress_bar(
@@ -1158,7 +1193,7 @@ fn should_enable_progress_bar(
     stdout_is_terminal: bool,
     stderr_is_terminal: bool,
 ) -> bool {
-    cli.progress_bar
+    cli.execution.progress_bar
         && total > 1
         && stderr_is_terminal
         && (!streams_stdout_during_run(cli) || !stdout_is_terminal)
@@ -1172,7 +1207,7 @@ fn progress_bar_suppressed_reason(
     stdout_is_terminal: bool,
     stderr_is_terminal: bool,
 ) -> Option<&'static str> {
-    if !cli.progress_bar
+    if !cli.execution.progress_bar
         || should_enable_progress_bar(cli, total, stdout_is_terminal, stderr_is_terminal)
     {
         return None;
@@ -1228,7 +1263,10 @@ where
             &mut on_result,
         )
     } else {
-        if cli.debug && parallel_jobs > 1 && targets.iter().any(|target| !target.is_path()) {
+        if cli.execution.debug
+            && parallel_jobs > 1
+            && targets.iter().any(|target| !target.is_path())
+        {
             log_debug("parallel mode ignored because stdin input must run serially");
         }
         process_targets_serial(targets, cli, colorize_stdout, progress, &mut on_result)
@@ -1254,11 +1292,11 @@ fn handle_completed_target(
                 state.summary.unchanged += 1;
             }
 
-            if cli.summary && cli.report_format == ReportFormat::Human {
+            if cli.output_modes.summary && cli.output_modes.report_format == ReportFormat::Human {
                 progress.eprintln(&render_summary_line(&result, colorize_stderr))?;
             }
 
-            if cli.report_format == ReportFormat::Human {
+            if cli.output_modes.report_format == ReportFormat::Human {
                 emit_human_result(
                     &result,
                     cli,
@@ -1272,7 +1310,7 @@ fn handle_completed_target(
             Ok(())
         }
         Err(err) => {
-            if !cli.keep_going {
+            if !cli.execution.keep_going {
                 return Err(err);
             }
 
@@ -1282,14 +1320,14 @@ fn handle_completed_target(
                 rendered_error: render_cli_error(&err),
             };
 
-            if cli.summary && cli.report_format == ReportFormat::Human {
+            if cli.output_modes.summary && cli.output_modes.report_format == ReportFormat::Human {
                 progress.eprintln(&render_summary_failed_line(
                     &failure.display_name,
                     colorize_stderr,
                 ))?;
             }
 
-            if cli.report_format == ReportFormat::Human {
+            if cli.output_modes.report_format == ReportFormat::Human {
                 emit_human_failure(&failure, progress)?;
             }
 
@@ -1306,25 +1344,25 @@ fn emit_human_result(
     progress: &ProgressReporter,
     human_output: &mut HumanOutputState,
 ) -> Result<(), cmakefmt::Error> {
-    if cli.debug {
+    if cli.execution.debug {
         for line in &result.debug_lines {
             progress.eprintln(&format!("debug: {line}"))?;
         }
     }
 
-    if cli.explain {
+    if cli.output_modes.explain {
         render_explain_output(result, progress)?;
         return Ok(());
     }
 
     if result.skipped {
-        if is_stdout_mode(cli) && !cli.quiet && !cli.summary {
+        if is_stdout_mode(cli) && !cli.execution.quiet && !cli.output_modes.summary {
             write_stdout_result(result, colorize_stdout, human_output)?;
         }
         return Ok(());
     }
 
-    if cli.list_changed_files {
+    if cli.output_modes.list_changed_files {
         if result.would_change {
             writeln!(io::stdout(), "{}", result.display_name).map_err(cmakefmt::Error::Io)?;
             flush_stdout()?;
@@ -1332,24 +1370,24 @@ fn emit_human_result(
         return Ok(());
     }
 
-    if cli.check {
+    if cli.output_modes.check {
         if result.would_change {
-            if cli.diff {
+            if cli.output_modes.diff {
                 write_diff_to_stdout(result, colorize_stdout)?;
                 flush_stdout()?;
             }
-            if !cli.quiet && !cli.summary {
+            if !cli.execution.quiet && !cli.output_modes.summary {
                 progress.eprintln(&format!("{} would be reformatted", result.display_name))?;
             }
         }
         return Ok(());
     }
 
-    if cli.in_place {
+    if cli.output_modes.in_place {
         return Ok(());
     }
 
-    if cli.diff {
+    if cli.output_modes.diff {
         if result.would_change {
             write_diff_to_stdout(result, colorize_stdout)?;
             flush_stdout()?;
@@ -1357,7 +1395,7 @@ fn emit_human_result(
         return Ok(());
     }
 
-    if !cli.summary && !cli.quiet {
+    if !cli.output_modes.summary && !cli.execution.quiet {
         write_stdout_result(result, colorize_stdout, human_output)?;
     }
 
@@ -1427,73 +1465,77 @@ fn write_stdout_header(display_name: &str, colorize: bool) -> Result<(), cmakefm
 }
 
 fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
-    if cli.no_config && !cli.config_paths.is_empty() {
+    if cli.config_overrides.no_config && !cli.config_overrides.config_paths.is_empty() {
         return Err(cmakefmt::Error::Formatter(
             "--no-config cannot be combined with --config-file".to_owned(),
         ));
     }
 
-    if cli.verify && cli.no_verify {
+    if cli.execution.verify && cli.execution.no_verify {
         return Err(cmakefmt::Error::Formatter(
             "--verify cannot be combined with --no-verify".to_owned(),
         ));
     }
 
-    if (cli.staged || cli.changed) && (!cli.files.is_empty() || !cli.files_from.is_empty()) {
+    if (cli.input_selection.staged || cli.input_selection.changed)
+        && (!cli.input_selection.files.is_empty() || !cli.input_selection.files_from.is_empty())
+    {
         return Err(cmakefmt::Error::Formatter(
             "--staged/--changed cannot be combined with explicit input paths or --files-from"
                 .to_owned(),
         ));
     }
 
-    if cli.stdin_path.is_some() && !cli.files.iter().any(|file| file == "-") {
+    if cli.input_selection.stdin_path.is_some()
+        && !cli.input_selection.files.iter().any(|file| file == "-")
+    {
         return Err(cmakefmt::Error::Formatter(
             "--stdin-path requires stdin input via `cmakefmt -`".to_owned(),
         ));
     }
 
-    if cli.generate_man_page
-        && (!cli.files.is_empty()
-            || !cli.files_from.is_empty()
-            || !cli.config_paths.is_empty()
-            || cli.no_config
-            || cli.debug
-            || cli.quiet
-            || cli.keep_going
-            || cli.diff
-            || cli.check
-            || cli.in_place
-            || cli.list_changed_files
-            || cli.list_input_files
-            || cli.staged
-            || cli.changed
-            || cli.stdin_path.is_some()
-            || !cli.line_ranges.is_empty())
+    if cli.execution.generate_man_page
+        && (!cli.input_selection.files.is_empty()
+            || !cli.input_selection.files_from.is_empty()
+            || !cli.config_overrides.config_paths.is_empty()
+            || cli.config_overrides.no_config
+            || cli.execution.debug
+            || cli.execution.quiet
+            || cli.execution.keep_going
+            || cli.output_modes.diff
+            || cli.output_modes.check
+            || cli.output_modes.in_place
+            || cli.output_modes.list_changed_files
+            || cli.output_modes.list_input_files
+            || cli.input_selection.staged
+            || cli.input_selection.changed
+            || cli.input_selection.stdin_path.is_some()
+            || !cli.input_selection.line_ranges.is_empty())
     {
         return Err(cmakefmt::Error::Formatter(
             "completion/man-page generation cannot be combined with formatting or config-introspection inputs".to_owned(),
         ));
     }
 
-    if cli.diff && cli.list_changed_files {
+    if cli.output_modes.diff && cli.output_modes.list_changed_files {
         return Err(cmakefmt::Error::Formatter(
             "--diff cannot be combined with --list-changed-files".to_owned(),
         ));
     }
 
-    if cli.list_input_files && cli.report_format != ReportFormat::Human {
+    if cli.output_modes.list_input_files && cli.output_modes.report_format != ReportFormat::Human {
         return Err(cmakefmt::Error::Formatter(
             "--list-input-files only supports human output".to_owned(),
         ));
     }
 
-    if cli.list_input_files && !cli.line_ranges.is_empty() {
+    if cli.output_modes.list_input_files && !cli.input_selection.line_ranges.is_empty() {
         return Err(cmakefmt::Error::Formatter(
             "--list-input-files cannot be combined with --lines".to_owned(),
         ));
     }
 
-    if cli.watch && cli.files.iter().any(|f| f == "-") {
+    if cli.execution.watch && cli.input_selection.files.iter().any(|f| f == "-") {
         return Err(cmakefmt::Error::Formatter(
             "--watch cannot read from stdin".to_owned(),
         ));
@@ -1601,7 +1643,7 @@ fn run_dump_subcommand(
     };
 
     let parsed = parser::parse(&source)?;
-    let color = should_colorize_stdout(cli.color);
+    let color = should_colorize_stdout(cli.output_modes.color);
 
     let tree = match action {
         DumpAction::Ast => cmakefmt::dump::dump_ast(&parsed, color),
@@ -1720,39 +1762,44 @@ fn explain_config(cli: &Cli, path: &Path) -> Result<u8, cmakefmt::Error> {
 }
 
 fn resolve_config_probe_target(cli: &Cli) -> Result<Option<PathBuf>, cmakefmt::Error> {
-    if cli.files.is_empty() {
+    if cli.input_selection.files.is_empty() {
         return Ok(Some(PathBuf::from(".")));
     }
 
-    if cli.files.len() != 1 {
+    if cli.input_selection.files.len() != 1 {
         return Err(cmakefmt::Error::Formatter(
             "config introspection expects exactly one explicit path".to_owned(),
         ));
     }
 
-    if cli.files[0] == "-" {
-        return cli.stdin_path.clone().map(Some).ok_or_else(|| {
-            cmakefmt::Error::Formatter(
-                "stdin config introspection requires --stdin-path".to_owned(),
-            )
-        });
+    if cli.input_selection.files[0] == "-" {
+        return cli
+            .input_selection
+            .stdin_path
+            .clone()
+            .map(Some)
+            .ok_or_else(|| {
+                cmakefmt::Error::Formatter(
+                    "stdin config introspection requires --stdin-path".to_owned(),
+                )
+            });
     }
 
-    Ok(Some(PathBuf::from(&cli.files[0])))
+    Ok(Some(PathBuf::from(&cli.input_selection.files[0])))
 }
 
 fn resolve_config_context(cli: &Cli, file_path: Option<&Path>) -> ConfigContext {
-    if cli.no_config {
+    if cli.config_overrides.no_config {
         return ConfigContext {
             mode: ConfigSourceMode::Disabled,
             sources: Vec::new(),
         };
     }
 
-    if !cli.config_paths.is_empty() {
+    if !cli.config_overrides.config_paths.is_empty() {
         return ConfigContext {
             mode: ConfigSourceMode::Explicit,
-            sources: cli.config_paths.clone(),
+            sources: cli.config_overrides.config_paths.clone(),
         };
     }
 
@@ -1797,7 +1844,7 @@ fn collect_targets(
     cli: &Cli,
     file_filter: Option<&Regex>,
 ) -> Result<Vec<InputTarget>, cmakefmt::Error> {
-    if cli.debug {
+    if cli.execution.debug {
         log_discovery_context(cli, file_filter);
     }
 
@@ -1823,8 +1870,8 @@ fn collect_targets(
                 &path,
                 DiscoveryOptions {
                     file_filter: None,
-                    honor_gitignore: !cli.no_gitignore,
-                    explicit_ignore_paths: &cli.ignore_paths,
+                    honor_gitignore: !cli.input_selection.no_gitignore,
+                    explicit_ignore_paths: &cli.input_selection.ignore_paths,
                 },
             );
             let filtered = if file_filter.is_some() {
@@ -1832,15 +1879,15 @@ fn collect_targets(
                     &path,
                     DiscoveryOptions {
                         file_filter,
-                        honor_gitignore: !cli.no_gitignore,
-                        explicit_ignore_paths: &cli.ignore_paths,
+                        honor_gitignore: !cli.input_selection.no_gitignore,
+                        explicit_ignore_paths: &cli.input_selection.ignore_paths,
                     },
                 )
             } else {
                 all_cmake.clone()
             };
 
-            if cli.debug && file_filter.is_some() {
+            if cli.execution.debug && file_filter.is_some() {
                 let filtered_set: BTreeSet<_> = filtered.iter().collect();
                 for skipped in &all_cmake {
                     if !filtered_set.contains(skipped) {
@@ -1865,24 +1912,24 @@ fn collect_targets(
 }
 
 fn log_discovery_context(cli: &Cli, file_filter: Option<&Regex>) {
-    if cli.staged {
+    if cli.input_selection.staged {
         log_debug("discovery mode: --staged (git staged files only)");
-    } else if cli.changed {
-        let since = cli.since.as_deref().unwrap_or("HEAD");
+    } else if cli.input_selection.changed {
+        let since = cli.input_selection.since.as_deref().unwrap_or("HEAD");
         log_debug(format!("discovery mode: --changed --since {since}"));
     }
-    if !cli.no_gitignore {
+    if !cli.input_selection.no_gitignore {
         log_debug("discovery: .gitignore rules active (use --no-gitignore to disable)");
     }
-    if !cli.ignore_paths.is_empty() {
-        for p in &cli.ignore_paths {
+    if !cli.input_selection.ignore_paths.is_empty() {
+        for p in &cli.input_selection.ignore_paths {
             log_debug(format!("discovery: explicit ignore path: {}", p.display()));
         }
     }
     if let Some(re) = file_filter {
         log_debug(format!("discovery: --path-regex filter active: {re}"));
     }
-    if cli.require_pragma {
+    if cli.execution.require_pragma {
         log_debug("discovery: --require-pragma active (files without pragma will be skipped)");
     }
 }
@@ -1893,20 +1940,20 @@ fn collect_input_arguments(
 ) -> Result<Vec<String>, cmakefmt::Error> {
     let mut inputs = Vec::new();
 
-    if cli.staged {
+    if cli.input_selection.staged {
         inputs.extend(collect_git_paths(GitSelectionMode::Staged, file_filter)?);
-    } else if cli.changed {
+    } else if cli.input_selection.changed {
         inputs.extend(collect_git_paths(
-            GitSelectionMode::Changed(cli.since.as_deref()),
+            GitSelectionMode::Changed(cli.input_selection.since.as_deref()),
             file_filter,
         )?);
     }
 
-    for files_from in &cli.files_from {
+    for files_from in &cli.input_selection.files_from {
         inputs.extend(read_files_from(files_from)?);
     }
 
-    inputs.extend(cli.files.clone());
+    inputs.extend(cli.input_selection.files.clone());
 
     if inputs.is_empty() {
         inputs.push(".".to_owned());
@@ -2043,7 +2090,9 @@ fn build_context(
     }
 
     // Apply .editorconfig fallback when no cmakefmt config file was found.
-    if matches!(config_context.mode, ConfigSourceMode::DefaultsOnly) && !cli.no_editorconfig {
+    if matches!(config_context.mode, ConfigSourceMode::DefaultsOnly)
+        && !cli.config_overrides.no_editorconfig
+    {
         if let Some(path) = file_path {
             let ec = cmakefmt::config::editorconfig::read_editorconfig(path);
             if let Some(use_tabs) = ec.use_tabs {
@@ -2052,7 +2101,7 @@ fn build_context(
             if let Some(tab_size) = ec.tab_size {
                 config.tab_size = tab_size;
             }
-            if cli.debug && ec.has_any() {
+            if cli.execution.debug && ec.has_any() {
                 log_debug(format!(
                     "editorconfig fallback: tab_size={}, use_tabs={}",
                     ec.tab_size
@@ -2064,19 +2113,19 @@ fn build_context(
         }
     }
 
-    if let Some(v) = cli.line_width {
+    if let Some(v) = cli.config_overrides.line_width {
         config.line_width = v;
     }
-    if let Some(v) = cli.tab_size {
+    if let Some(v) = cli.config_overrides.tab_size {
         config.tab_size = v;
     }
-    if let Some(v) = cli.command_case {
+    if let Some(v) = cli.config_overrides.command_case {
         config.command_case = v;
     }
-    if let Some(v) = cli.keyword_case {
+    if let Some(v) = cli.config_overrides.keyword_case {
         config.keyword_case = v;
     }
-    if let Some(v) = cli.dangle_parens {
+    if let Some(v) = cli.config_overrides.dangle_parens {
         config.dangle_parens = v;
     }
 
@@ -2261,7 +2310,7 @@ where
         while let Ok((index, result)) = rx.recv() {
             // Cancel workers immediately on errors, even if we can't
             // emit them yet due to ordering.
-            if first_error.is_none() && result.is_err() && !cli.keep_going {
+            if first_error.is_none() && result.is_err() && !cli.execution.keep_going {
                 cancelled.store(true, Ordering::Relaxed);
             }
 
@@ -2312,17 +2361,17 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         .read_to_string(&mut source)
         .map_err(cmakefmt::Error::Io)?;
 
-    let stdin_path = cli.stdin_path.as_deref();
+    let stdin_path = cli.input_selection.stdin_path.as_deref();
     let display_name = stdin_path
         .map(|path| path.display().to_string())
         .unwrap_or_else(|| "<stdin>".to_owned());
-    if cli.require_pragma && !has_enable_pragma(&source) {
+    if cli.execution.require_pragma && !has_enable_pragma(&source) {
         return Ok(skipped_target(
             stdin_path.map(Path::to_path_buf),
             display_name,
             source,
             "missing format opt-in pragma".to_owned(),
-            cli.debug,
+            cli.execution.debug,
         ));
     }
     let (config, registry, config_context) = build_context(cli, stdin_path)?;
@@ -2359,7 +2408,12 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         }
     }
 
-    let formatted = apply_line_ranges(&source, &formatted, &cli.line_ranges, &display_name)?;
+    let formatted = apply_line_ranges(
+        &source,
+        &formatted,
+        &cli.input_selection.line_ranges,
+        &display_name,
+    )?;
 
     let would_change = formatted != source;
     let source_lines = source.lines().count();
@@ -2411,13 +2465,13 @@ fn process_path(
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
     let source = std::fs::read_to_string(path)
         .map_err(|err| cmakefmt::Error::Formatter(format!("{}: {err}", path.display())))?;
-    if cli.require_pragma && !has_enable_pragma(&source) {
+    if cli.execution.require_pragma && !has_enable_pragma(&source) {
         return Ok(skipped_target(
             Some(path.to_path_buf()),
             path.display().to_string(),
             source,
             "missing format opt-in pragma".to_owned(),
-            cli.debug,
+            cli.execution.debug,
         ));
     }
     let (config, registry, config_context) = build_context(cli, Some(path))?;
@@ -2431,14 +2485,14 @@ fn process_path(
     } else {
         Vec::new()
     };
-    let cache_context = if cli.cache || cli.cache_location.is_some() {
+    let cache_context = if cli.execution.cache || cli.execution.cache_location.is_some() {
         Some(cache_context(
             path,
             &source,
             &config,
             &config_context,
-            cli.cache_location.as_deref(),
-            cli.cache_strategy,
+            cli.execution.cache_location.as_deref(),
+            cli.execution.cache_strategy,
         )?)
     } else {
         None
@@ -2504,7 +2558,7 @@ fn process_path(
     let formatted = apply_line_ranges(
         &source,
         &formatted,
-        &cli.line_ranges,
+        &cli.input_selection.line_ranges,
         &path.display().to_string(),
     )?;
     let would_change = formatted != source;
@@ -2568,26 +2622,26 @@ fn process_path(
 
 fn needs_changed_lines(cli: &Cli, colorize_stdout: bool) -> bool {
     colorize_stdout
-        || !cli.line_ranges.is_empty()
-        || cli.debug
-        || cli.summary
-        || cli.stat
-        || cli.report_format != ReportFormat::Human
+        || !cli.input_selection.line_ranges.is_empty()
+        || cli.execution.debug
+        || cli.output_modes.summary
+        || cli.execution.stat
+        || cli.output_modes.report_format != ReportFormat::Human
 }
 
 /// Check whether the current CLI invocation actually needs a unified diff.
 /// Computing the diff (Myers algorithm via `similar`) is expensive on large
 /// files — only pay for it when the result will be consumed.
 fn needs_unified_diff(cli: &Cli) -> bool {
-    cli.diff
+    cli.output_modes.diff
         || matches!(
-            cli.report_format,
+            cli.output_modes.report_format,
             ReportFormat::Junit | ReportFormat::Checkstyle
         )
 }
 
 fn verification_mode(cli: &Cli) -> VerificationMode {
-    if cli.verify || (cli.in_place && !cli.no_verify) {
+    if cli.execution.verify || (cli.output_modes.in_place && !cli.execution.no_verify) {
         VerificationMode::Enabled
     } else {
         VerificationMode::Disabled
@@ -2753,7 +2807,7 @@ fn stable_hash<T: Hash + ?Sized>(value: &T) -> String {
 }
 
 fn check_required_version(cli: &Cli) -> Result<(), cmakefmt::Error> {
-    let Some(required) = &cli.required_version else {
+    let Some(required) = &cli.execution.required_version else {
         return Ok(());
     };
 
@@ -3066,15 +3120,15 @@ fn build_json_report(
     summary: &RunSummary,
     cli: &Cli,
 ) -> JsonReport {
-    let mode = if cli.in_place {
+    let mode = if cli.output_modes.in_place {
         "in-place"
-    } else if cli.check {
+    } else if cli.output_modes.check {
         "check"
-    } else if cli.list_changed_files {
+    } else if cli.output_modes.list_changed_files {
         "list-changed-files"
-    } else if cli.list_input_files {
+    } else if cli.output_modes.list_input_files {
         "list-input-files"
-    } else if cli.diff {
+    } else if cli.output_modes.diff {
         "diff"
     } else {
         "stdout"
@@ -3100,23 +3154,27 @@ fn build_json_report(
                 skipped: result.skipped,
                 skip_reason: result.skip_reason.clone(),
                 changed_lines: result.changed_lines.clone(),
-                formatted: (!cli.in_place
-                    && !cli.check
-                    && !cli.list_changed_files
-                    && !cli.list_input_files
-                    && !cli.diff)
+                formatted: (!cli.output_modes.in_place
+                    && !cli.output_modes.check
+                    && !cli.output_modes.list_changed_files
+                    && !cli.output_modes.list_input_files
+                    && !cli.output_modes.diff)
                     .then(|| result.formatted.clone()),
                 diff: cli
+                    .output_modes
                     .diff
                     .then(|| result.unified_diff.clone().unwrap_or_default()),
-                debug_lines: if cli.debug {
+                debug_lines: if cli.execution.debug {
                     result.debug_lines.clone()
                 } else {
                     Vec::new()
                 },
-                elapsed_ms: cli.summary.then_some(result.elapsed.as_millis() as u64),
-                source_lines: cli.summary.then_some(result.source_lines),
-                formatted_lines: cli.summary.then_some(result.formatted_lines),
+                elapsed_ms: cli
+                    .output_modes
+                    .summary
+                    .then_some(result.elapsed.as_millis() as u64),
+                source_lines: cli.output_modes.summary.then_some(result.source_lines),
+                formatted_lines: cli.output_modes.summary.then_some(result.formatted_lines),
             })
             .collect(),
         errors: failures
@@ -3340,7 +3398,9 @@ fn machine_mode_exit_code(
 ) -> Result<u8, cmakefmt::Error> {
     if !failures.is_empty() {
         Ok(EXIT_ERROR)
-    } else if (cli.check || cli.list_changed_files) && results.iter().any(|r| r.would_change) {
+    } else if (cli.output_modes.check || cli.output_modes.list_changed_files)
+        && results.iter().any(|r| r.would_change)
+    {
         Ok(EXIT_CHECK_FAILED)
     } else {
         Ok(EXIT_OK)
@@ -3389,7 +3449,7 @@ fn print_non_human_report(
     failures: &[FailedTarget],
     summary: &RunSummary,
 ) -> Result<(), cmakefmt::Error> {
-    match cli.report_format {
+    match cli.output_modes.report_format {
         ReportFormat::Human => Ok(()),
         ReportFormat::Json => {
             println!(
@@ -3456,24 +3516,24 @@ fn should_print_human_summary(
     failures: &[FailedTarget],
     successful_results: usize,
 ) -> bool {
-    if cli.report_format != ReportFormat::Human {
+    if cli.output_modes.report_format != ReportFormat::Human {
         return false;
     }
 
-    let stdout_mode = !cli.list_changed_files
-        && !cli.list_input_files
-        && !cli.check
-        && !cli.in_place
-        && !cli.diff;
+    let stdout_mode = !cli.output_modes.list_changed_files
+        && !cli.output_modes.list_input_files
+        && !cli.output_modes.check
+        && !cli.output_modes.in_place
+        && !cli.output_modes.diff;
     if stdout_mode {
-        return cli.quiet || cli.summary || !failures.is_empty();
+        return cli.execution.quiet || cli.output_modes.summary || !failures.is_empty();
     }
 
-    cli.quiet
+    cli.execution.quiet
         || !failures.is_empty()
-        || cli.check
-        || cli.in_place
-        || (cli.diff && successful_results > 1)
+        || cli.output_modes.check
+        || cli.output_modes.in_place
+        || (cli.output_modes.diff && successful_results > 1)
         || summary.selected > 1
 }
 
@@ -3617,19 +3677,19 @@ fn describe_config_context(config_context: &ConfigContext) -> String {
 
 fn describe_cli_overrides(cli: &Cli) -> String {
     let mut parts = Vec::new();
-    if let Some(line_width) = cli.line_width {
+    if let Some(line_width) = cli.config_overrides.line_width {
         parts.push(format!("line_width={line_width}"));
     }
-    if let Some(tab_size) = cli.tab_size {
+    if let Some(tab_size) = cli.config_overrides.tab_size {
         parts.push(format!("tab_size={tab_size}"));
     }
-    if let Some(command_case) = cli.command_case {
+    if let Some(command_case) = cli.config_overrides.command_case {
         parts.push(format!("command_case={command_case:?}"));
     }
-    if let Some(keyword_case) = cli.keyword_case {
+    if let Some(keyword_case) = cli.config_overrides.keyword_case {
         parts.push(format!("keyword_case={keyword_case:?}"));
     }
-    if let Some(dangle_parens) = cli.dangle_parens {
+    if let Some(dangle_parens) = cli.config_overrides.dangle_parens {
         parts.push(format!("dangle_parens={dangle_parens}"));
     }
 
