@@ -816,8 +816,10 @@ fn invalid_file_regex_returns_exit_2() {
     let output = cmakefmt().args(["--path-regex", "("]).output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("invalid file regex"));
-    assert!(stderr.contains("--path-regex"));
+    assert!(stderr.contains("invalid regex"));
+    // The structured `Error::InvalidRegex` rendering quotes the offending
+    // pattern and includes the underlying `regex::Error` source chain.
+    assert!(stderr.contains("\"(\""));
 }
 
 #[test]

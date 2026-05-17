@@ -183,11 +183,13 @@ pub fn default_config_template_for(format: DumpConfigFormat) -> String {
 pub fn render_effective_config(config: &Config, format: DumpConfigFormat) -> Result<String> {
     let view = EffectiveConfigFile::from(config);
     match format {
-        DumpConfigFormat::Yaml => serde_yaml::to_string(&view).map_err(|err| {
-            Error::Formatter(format!("failed to render effective config as YAML: {err}"))
+        DumpConfigFormat::Yaml => serde_yaml::to_string(&view).map_err(|err| Error::Render {
+            format: "effective config (YAML)".to_owned(),
+            message: err.to_string(),
         }),
-        DumpConfigFormat::Toml => toml::to_string_pretty(&view).map_err(|err| {
-            Error::Formatter(format!("failed to render effective config as TOML: {err}"))
+        DumpConfigFormat::Toml => toml::to_string_pretty(&view).map_err(|err| Error::Render {
+            format: "effective config (TOML)".to_owned(),
+            message: err.to_string(),
         }),
     }
 }
@@ -638,7 +640,7 @@ impl Config {
             let file_config = load_config_file(path)?;
             config.apply(file_config);
         }
-        config.validate_patterns().map_err(Error::Formatter)?;
+        config.validate_patterns_structured()?;
         Ok(config)
     }
 
@@ -875,9 +877,12 @@ fn load_config_file(path: &Path) -> Result<FileConfig> {
     }?;
 
     if !config.legacy_per_command.is_empty() {
-        return Err(Error::Formatter(format!(
-            "{}: `per_command` has been renamed to `per_command_overrides`",
-            path.display()
+        return Err(Error::Config(crate::error::ConfigError::new(
+            path.to_path_buf(),
+            detect_config_format(path)?.as_str(),
+            "`per_command` has been renamed to `per_command_overrides`",
+            None,
+            None,
         )));
     }
 

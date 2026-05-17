@@ -31,9 +31,9 @@ use crate::spec::{
 /// comments.
 pub fn convert_legacy_config_files(paths: &[PathBuf], format: DumpConfigFormat) -> Result<String> {
     if paths.is_empty() {
-        return Err(Error::Formatter(
-            "cmakefmt config convert requires at least one input path".to_owned(),
-        ));
+        return Err(Error::CliArg {
+            message: "cmakefmt config convert requires at least one input path".to_owned(),
+        });
     }
 
     let mut converted = ConvertedConfig::default();
@@ -45,13 +45,15 @@ pub fn convert_legacy_config_files(paths: &[PathBuf], format: DumpConfigFormat) 
 
     let rendered = match format {
         DumpConfigFormat::Toml => {
-            toml::to_string_pretty(&converted.as_config_file()).map_err(|err| {
-                Error::Formatter(format!("failed to render converted config as TOML: {err}"))
+            toml::to_string_pretty(&converted.as_config_file()).map_err(|err| Error::Render {
+                format: "converted config (TOML)".to_owned(),
+                message: err.to_string(),
             })?
         }
         DumpConfigFormat::Yaml => {
-            serde_yaml::to_string(&converted.as_config_file()).map_err(|err| {
-                Error::Formatter(format!("failed to render converted config as YAML: {err}"))
+            serde_yaml::to_string(&converted.as_config_file()).map_err(|err| Error::Render {
+                format: "converted config (YAML)".to_owned(),
+                message: err.to_string(),
             })?
         }
     };
@@ -113,26 +115,26 @@ enum LegacyFormat {
 fn parse_legacy_config(path: &Path, source: &str) -> Result<BTreeMap<String, LegacyValue>> {
     let root = match detect_legacy_format(path)? {
         LegacyFormat::Json => legacy_from_json(serde_json::from_str(source).map_err(|err| {
-            Error::Formatter(format!(
-                "{}: invalid JSON legacy config: {err}",
-                path.display()
-            ))
+            Error::LegacyMigration {
+                path: path.to_path_buf(),
+                message: format!("invalid JSON legacy config: {err}"),
+            }
         })?),
         LegacyFormat::Yaml => legacy_from_yaml(serde_yaml::from_str(source).map_err(|err| {
-            Error::Formatter(format!(
-                "{}: invalid YAML legacy config: {err}",
-                path.display()
-            ))
+            Error::LegacyMigration {
+                path: path.to_path_buf(),
+                message: format!("invalid YAML legacy config: {err}"),
+            }
         })?),
         LegacyFormat::Python => parse_python_legacy_config(path, source)?,
     };
 
     match root {
         LegacyValue::Table(table) => Ok(table),
-        _ => Err(Error::Formatter(format!(
-            "{}: legacy config root must be a mapping/object",
-            path.display()
-        ))),
+        _ => Err(Error::LegacyMigration {
+            path: path.to_path_buf(),
+            message: "legacy config root must be a mapping/object".to_owned(),
+        }),
     }
 }
 
@@ -153,10 +155,10 @@ fn detect_legacy_format(path: &Path) -> Result<LegacyFormat> {
         return Ok(LegacyFormat::Python);
     }
 
-    Err(Error::Formatter(format!(
-        "{}: unsupported legacy config format; expected .json, .yaml, .yml, or .py",
-        path.display()
-    )))
+    Err(Error::LegacyMigration {
+        path: path.to_path_buf(),
+        message: "unsupported legacy config format; expected .json, .yaml, .yml, or .py".to_owned(),
+    })
 }
 
 fn legacy_from_json(value: serde_json::Value) -> LegacyValue {
@@ -261,10 +263,10 @@ impl<'a> PythonLegacyParser<'a> {
                     .entry(section_name.clone())
                     .or_insert_with(|| LegacyValue::Table(BTreeMap::new()));
                 let Some(table) = section.as_table_mut() else {
-                    return Err(Error::Formatter(format!(
-                        "{}: section {section_name:?} is not a table",
-                        self.path.display()
-                    )));
+                    return Err(Error::LegacyMigration {
+                        path: self.path.to_path_buf(),
+                        message: format!("section {section_name:?} is not a table"),
+                    });
                 };
                 table.insert(key.to_owned(), value);
             } else {
@@ -400,11 +402,13 @@ fn parse_python_literal(path: &Path, input: &str) -> Result<LegacyValue> {
     let value = parser.parse_value()?;
     parser.skip_ws();
     if parser.index != parser.chars.len() {
-        return Err(Error::Formatter(format!(
-            "{}: unsupported trailing content in python config literal: {}",
-            path.display(),
-            input.trim()
-        )));
+        return Err(Error::LegacyMigration {
+            path: path.to_path_buf(),
+            message: format!(
+                "unsupported trailing content in python config literal: {}",
+                input.trim()
+            ),
+        });
     }
     Ok(value)
 }
@@ -594,7 +598,10 @@ impl PythonLiteralParser<'_> {
     }
 
     fn error(&self, message: impl AsRef<str>) -> Error {
-        Error::Formatter(format!("{}: {}", self.path.display(), message.as_ref()))
+        Error::LegacyMigration {
+            path: self.path.to_path_buf(),
+            message: message.as_ref().to_owned(),
+        }
     }
 }
 

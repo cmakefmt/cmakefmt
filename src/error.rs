@@ -16,8 +16,21 @@
 //! - [`Error::Spec`] — a `commands:` override file (or string)
 //!   failed to deserialise, or the built-in spec file itself did.
 //! - [`Error::Io`] — filesystem or stream I/O failure.
-//! - [`Error::Formatter`] — higher-level formatter or CLI failure
-//!   that doesn't fit another variant.
+//! - [`Error::CliArg`] — a CLI argument validation failure
+//!   (incompatible flag combinations, missing required arguments,
+//!   conflicting overrides).
+//! - [`Error::InvalidRegex`] — a regex pattern from the user (CLI
+//!   flag, config file, or spec override) failed to compile.
+//! - [`Error::Render`] — a failure rendering a Config or Spec to
+//!   text (TOML / YAML / JSON), or building a machine-format
+//!   report (SARIF / Checkstyle / JUnit / JSON edit).
+//! - [`Error::LegacyMigration`] — a failure during legacy
+//!   `cmake-format` config migration.
+//! - [`Error::Formatter`] — miscellaneous higher-level formatter
+//!   or CLI failure that does not fit any of the structured
+//!   sub-variants above. Prefer [`Error::CliArg`],
+//!   [`Error::InvalidRegex`], [`Error::Render`], or
+//!   [`Error::LegacyMigration`] when applicable.
 //! - [`Error::LayoutTooWide`] — *only* produced when
 //!   [`crate::Config::require_valid_layout`] is enabled and a
 //!   formatted line exceeded the configured width. Not a bug in the
@@ -209,12 +222,64 @@ pub enum Error {
     },
 
     /// A higher-level formatter or CLI error that does not fit another
-    /// structured variant. In practice this covers: runtime regex
-    /// validation failures on a programmatically-built [`crate::Config`]
-    /// (before the config is saved to disk), CLI argument validation
-    /// failures, and rendering failures in the config/spec pretty-printers.
+    /// structured variant. Prefer [`Error::CliArg`], [`Error::InvalidRegex`],
+    /// [`Error::Render`], [`Error::LegacyMigration`], or [`Error::IoAt`]
+    /// when the failure mode is one of those — `Error::Formatter` is the
+    /// catch-all for the small set of cases that legitimately don't fit
+    /// any of those categories (e.g. LSP runtime failures, semantic
+    /// verification failures, watch-loop infrastructure, git subprocess
+    /// failures, spec parsing from in-memory strings without a path).
     #[error("formatter error: {0}")]
     Formatter(String),
+
+    /// A CLI argument validation failure — incompatible flag combinations,
+    /// missing required arguments, conflicting overrides.
+    #[error("{message}")]
+    #[non_exhaustive]
+    CliArg {
+        /// Human-readable description of what argument combination is
+        /// invalid.
+        message: String,
+    },
+
+    /// A regex pattern from the user (CLI flag, config file, or spec
+    /// override) failed to compile or apply.
+    #[error("invalid regex {pattern:?}: {source}")]
+    #[non_exhaustive]
+    InvalidRegex {
+        /// The pattern (or named config slot) that failed to compile.
+        pattern: String,
+        /// The underlying `regex` crate error.
+        #[source]
+        source: regex::Error,
+    },
+
+    /// A failure rendering a [`crate::Config`] or spec to text (TOML /
+    /// YAML / JSON), or building a machine-format report (SARIF /
+    /// Checkstyle / JUnit / JSON edit). The `format` field names the
+    /// target format.
+    #[error("failed to render {format}: {message}")]
+    #[non_exhaustive]
+    Render {
+        /// Name of the target format (`"YAML"`, `"TOML"`, `"JSON"`,
+        /// `"SARIF"`, etc.).
+        format: String,
+        /// Human-readable detail of what went wrong.
+        message: String,
+    },
+
+    /// A failure during legacy `cmake-format` config migration —
+    /// parsing the old format, converting it, or writing the
+    /// modernised file. The `path` field carries the legacy file the
+    /// user was trying to migrate.
+    #[error("legacy migration failed for {}: {message}", path.display())]
+    #[non_exhaustive]
+    LegacyMigration {
+        /// The legacy config file being migrated.
+        path: PathBuf,
+        /// Human-readable description of the migration failure.
+        message: String,
+    },
 
     /// A formatted line exceeded the configured line width and
     /// `require_valid_layout` is enabled.
@@ -238,7 +303,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl Error {
     /// Attach a human-facing source name (e.g. a file path) to a
     /// contextual [`ParseError`]. No-op for any other variant —
-    /// `Config`, `Spec`, `Io`, `IoAt`, `Formatter`, and
+    /// `Config`, `Spec`, `Io`, `IoAt`, `Formatter`, `CliArg`,
+    /// `InvalidRegex`, `Render`, `LegacyMigration`, and
     /// `LayoutTooWide` already carry the context they need and are
     /// returned unchanged.
     pub fn with_display_name(self, display_name: impl Into<String>) -> Self {
@@ -256,6 +322,41 @@ impl Error {
         Self::IoAt {
             path: path.into(),
             source,
+        }
+    }
+
+    /// Build an [`Error::CliArg`] variant from a human-readable
+    /// description of the invalid argument combination.
+    pub fn cli_arg(message: impl Into<String>) -> Self {
+        Self::CliArg {
+            message: message.into(),
+        }
+    }
+
+    /// Build an [`Error::InvalidRegex`] variant from the pattern that
+    /// failed to compile and the underlying [`regex::Error`].
+    pub fn invalid_regex(pattern: impl Into<String>, source: regex::Error) -> Self {
+        Self::InvalidRegex {
+            pattern: pattern.into(),
+            source,
+        }
+    }
+
+    /// Build an [`Error::Render`] variant from the target format name
+    /// and a human-readable failure message.
+    pub fn render(format: impl Into<String>, message: impl Into<String>) -> Self {
+        Self::Render {
+            format: format.into(),
+            message: message.into(),
+        }
+    }
+
+    /// Build an [`Error::LegacyMigration`] variant from the legacy
+    /// config path and a human-readable failure message.
+    pub fn legacy_migration(path: impl Into<PathBuf>, message: impl Into<String>) -> Self {
+        Self::LegacyMigration {
+            path: path.into(),
+            message: message.into(),
         }
     }
 }
@@ -366,6 +467,53 @@ mod tests {
     fn error_formatter_display() {
         let err = Error::Formatter("something went wrong".to_owned());
         assert!(err.to_string().contains("something went wrong"));
+    }
+
+    #[test]
+    fn error_cli_arg_display() {
+        let err = Error::CliArg {
+            message: "--foo cannot be combined with --bar".to_owned(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("--foo"));
+        assert!(msg.contains("--bar"));
+    }
+
+    #[test]
+    fn error_invalid_regex_display() {
+        // Build a bad regex pattern at runtime so clippy's
+        // `invalid_regex` lint doesn't trip on the literal.
+        let bad_pattern = ["[", "invalid", "("].concat();
+        let source = regex::Regex::new(&bad_pattern).unwrap_err();
+        let err = Error::InvalidRegex {
+            pattern: bad_pattern.clone(),
+            source,
+        };
+        let msg = err.to_string();
+        assert!(msg.contains(&bad_pattern));
+        assert!(msg.contains("invalid regex"));
+    }
+
+    #[test]
+    fn error_render_display() {
+        let err = Error::Render {
+            format: "YAML".to_owned(),
+            message: "unsupported type".to_owned(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("YAML"));
+        assert!(msg.contains("unsupported type"));
+    }
+
+    #[test]
+    fn error_legacy_migration_display() {
+        let err = Error::LegacyMigration {
+            path: std::path::PathBuf::from("legacy.py"),
+            message: "section is not a table".to_owned(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("legacy.py"));
+        assert!(msg.contains("section is not a table"));
     }
 
     #[test]

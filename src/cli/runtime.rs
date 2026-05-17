@@ -210,8 +210,12 @@ fn error_display_name(err: &cmakefmt::Error) -> String {
             .unwrap_or("<unknown>")
             .trim()
             .to_owned(),
+        cmakefmt::Error::IoAt { path, .. } => path.display().to_string(),
+        cmakefmt::Error::LegacyMigration { path, .. } => path.display().to_string(),
         cmakefmt::Error::Io(_)
-        | cmakefmt::Error::IoAt { .. }
+        | cmakefmt::Error::CliArg { .. }
+        | cmakefmt::Error::InvalidRegex { .. }
+        | cmakefmt::Error::Render { .. }
         | cmakefmt::Error::LayoutTooWide { .. } => "<unknown>".to_owned(),
         _ => "<unknown>".to_owned(),
     }
@@ -373,7 +377,7 @@ pub(crate) fn check_required_version(cli: &Cli) -> Result<(), cmakefmt::Error> {
     if required == current {
         Ok(())
     } else {
-        Err(cmakefmt::Error::Formatter(format!(
+        Err(cmakefmt::Error::cli_arg(format!(
             "required cmakefmt version {required} does not match current version {current}"
         )))
     }
@@ -397,31 +401,30 @@ pub(crate) fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, c
 
 pub(crate) fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
     if cli.config_overrides.no_config && !cli.config_overrides.config_paths.is_empty() {
-        return Err(cmakefmt::Error::Formatter(
-            "--no-config cannot be combined with --config-file".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--no-config cannot be combined with --config-file",
         ));
     }
 
     if cli.execution.verify && cli.execution.no_verify {
-        return Err(cmakefmt::Error::Formatter(
-            "--verify cannot be combined with --no-verify".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--verify cannot be combined with --no-verify",
         ));
     }
 
     if (cli.input_selection.staged || cli.input_selection.changed)
         && (!cli.input_selection.files.is_empty() || !cli.input_selection.files_from.is_empty())
     {
-        return Err(cmakefmt::Error::Formatter(
-            "--staged/--changed cannot be combined with explicit input paths or --files-from"
-                .to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--staged/--changed cannot be combined with explicit input paths or --files-from",
         ));
     }
 
     if cli.input_selection.stdin_path.is_some()
         && !cli.input_selection.files.iter().any(|file| file == "-")
     {
-        return Err(cmakefmt::Error::Formatter(
-            "--stdin-path requires stdin input via `cmakefmt -`".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--stdin-path requires stdin input via `cmakefmt -`",
         ));
     }
 
@@ -443,33 +446,31 @@ pub(crate) fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
             || cli.input_selection.stdin_path.is_some()
             || !cli.input_selection.line_ranges.is_empty())
     {
-        return Err(cmakefmt::Error::Formatter(
-            "completion/man-page generation cannot be combined with formatting or config-introspection inputs".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "completion/man-page generation cannot be combined with formatting or config-introspection inputs",
         ));
     }
 
     if cli.output_modes.diff && cli.output_modes.list_changed_files {
-        return Err(cmakefmt::Error::Formatter(
-            "--diff cannot be combined with --list-changed-files".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--diff cannot be combined with --list-changed-files",
         ));
     }
 
     if cli.output_modes.list_input_files && cli.output_modes.report_format != ReportFormat::Human {
-        return Err(cmakefmt::Error::Formatter(
-            "--list-input-files only supports human output".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--list-input-files only supports human output",
         ));
     }
 
     if cli.output_modes.list_input_files && !cli.input_selection.line_ranges.is_empty() {
-        return Err(cmakefmt::Error::Formatter(
-            "--list-input-files cannot be combined with --lines".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--list-input-files cannot be combined with --lines",
         ));
     }
 
     if cli.execution.watch && cli.input_selection.files.iter().any(|f| f == "-") {
-        return Err(cmakefmt::Error::Formatter(
-            "--watch cannot read from stdin".to_owned(),
-        ));
+        return Err(cmakefmt::Error::cli_arg("--watch cannot read from stdin"));
     }
 
     Ok(())

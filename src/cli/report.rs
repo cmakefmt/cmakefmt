@@ -366,9 +366,7 @@ pub(crate) fn print_non_human_report(
                     output_modes,
                     execution,
                 ))
-                .map_err(|err| {
-                    cmakefmt::Error::Formatter(format!("failed to build JSON report: {err}"))
-                })?
+                .map_err(|err| cmakefmt::Error::render("JSON report", err.to_string()))?
             );
             Ok(())
         }
@@ -387,20 +385,16 @@ pub(crate) fn print_non_human_report(
         ReportFormat::Sarif => {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&build_sarif_report(results, failures)).map_err(
-                    |err| cmakefmt::Error::Formatter(format!(
-                        "failed to build SARIF report: {err}"
-                    ))
-                )?
+                serde_json::to_string_pretty(&build_sarif_report(results, failures))
+                    .map_err(|err| cmakefmt::Error::render("SARIF report", err.to_string()))?
             );
             Ok(())
         }
         ReportFormat::Edit => {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&build_edit_report(results)).map_err(|err| {
-                    cmakefmt::Error::Formatter(format!("failed to build edit report: {err}"))
-                })?
+                serde_json::to_string_pretty(&build_edit_report(results))
+                    .map_err(|err| cmakefmt::Error::render("edit report", err.to_string()))?
             );
             Ok(())
         }

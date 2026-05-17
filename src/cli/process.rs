@@ -410,8 +410,7 @@ fn process_path(
     cli: &Cli,
     colorize_stdout: bool,
 ) -> Result<ProcessedTarget, cmakefmt::Error> {
-    let source = std::fs::read_to_string(path)
-        .map_err(|err| cmakefmt::Error::Formatter(format!("{}: {err}", path.display())))?;
+    let source = std::fs::read_to_string(path).with_path(path)?;
     if cli.execution.require_pragma && !has_enable_pragma(&source) {
         return Ok(skipped_target(
             Some(path.to_path_buf()),
@@ -741,9 +740,8 @@ fn write_cache_entry(cache: &CacheContext, entry: CacheEntry) -> Result<(), cmak
     if let Some(parent) = cache.cache_file.parent() {
         std::fs::create_dir_all(parent).with_path(parent)?;
     }
-    let json = serde_json::to_string(&entry).map_err(|err| {
-        cmakefmt::Error::Formatter(format!("failed to serialize cache entry: {err}"))
-    })?;
+    let json = serde_json::to_string(&entry)
+        .map_err(|err| cmakefmt::Error::render("cache entry (JSON)", err.to_string()))?;
     std::fs::write(&cache.cache_file, json).with_path(&cache.cache_file)
 }
 
@@ -807,9 +805,7 @@ fn normalize_semantics(
 pub(crate) fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmakefmt::Error> {
     pattern
         .map(|pattern| {
-            Regex::new(pattern).map_err(|err| {
-                cmakefmt::Error::Formatter(format!("invalid file regex {pattern:?}: {err}"))
-            })
+            Regex::new(pattern).map_err(|source| cmakefmt::Error::invalid_regex(pattern, source))
         })
         .transpose()
 }
@@ -876,10 +872,10 @@ pub(crate) fn collect_targets(
             continue;
         }
 
-        return Err(cmakefmt::Error::Formatter(format!(
-            "{}: no such file or directory",
-            path.display()
-        )));
+        return Err(cmakefmt::Error::io_at(
+            path.clone(),
+            io::Error::new(io::ErrorKind::NotFound, "no such file or directory"),
+        ));
     }
 
     Ok(targets)
@@ -996,8 +992,7 @@ fn read_files_from(source: &str) -> Result<Vec<String>, cmakefmt::Error> {
             .map_err(cmakefmt::Error::Io)?;
         stdin
     } else {
-        std::fs::read_to_string(source)
-            .map_err(|err| cmakefmt::Error::Formatter(format!("{source}: {err}")))?
+        std::fs::read_to_string(source).with_path(source)?
     };
 
     let entries = if contents.contains('\0') {
@@ -1175,8 +1170,8 @@ pub(crate) fn resolve_config_probe_target(cli: &Cli) -> Result<Option<PathBuf>, 
     }
 
     if cli.input_selection.files.len() != 1 {
-        return Err(cmakefmt::Error::Formatter(
-            "config introspection expects exactly one explicit path".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "config introspection expects exactly one explicit path",
         ));
     }
 
@@ -1187,9 +1182,7 @@ pub(crate) fn resolve_config_probe_target(cli: &Cli) -> Result<Option<PathBuf>, 
             .clone()
             .map(Some)
             .ok_or_else(|| {
-                cmakefmt::Error::Formatter(
-                    "stdin config introspection requires --stdin-path".to_owned(),
-                )
+                cmakefmt::Error::cli_arg("stdin config introspection requires --stdin-path")
             });
     }
 

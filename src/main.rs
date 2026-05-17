@@ -791,16 +791,16 @@ fn run(cli: &Cli) -> Result<u8, cmakefmt::Error> {
         return run_list_unknown_commands(cli, &targets);
     }
     if cli.output_modes.explain && targets.len() != 1 {
-        return Err(cmakefmt::Error::Formatter(
-            "--explain requires exactly one formatting target".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--explain requires exactly one formatting target",
         ));
     }
     if cli.execution.watch {
         return run_watch(cli, &targets, file_filter.as_ref());
     }
     if !cli.input_selection.line_ranges.is_empty() && targets.len() != 1 {
-        return Err(cmakefmt::Error::Formatter(
-            "--lines requires exactly one formatting target".to_owned(),
+        return Err(cmakefmt::Error::cli_arg(
+            "--lines requires exactly one formatting target",
         ));
     }
     let parallel_jobs = resolve_parallel_jobs(cli.execution.parallel)?;

@@ -22,6 +22,21 @@ pub(crate) fn render_cli_error(err: &cmakefmt::Error) -> String {
         }
         cmakefmt::Error::Spec(spec) => render_file_parse_error("spec", &spec.path, &spec.details),
         cmakefmt::Error::Formatter(message) => render_formatter_error(message),
+        cmakefmt::Error::CliArg { message, .. } => format!("error: {message}"),
+        cmakefmt::Error::InvalidRegex {
+            pattern, source, ..
+        } => format!(
+            "error: invalid regex {pattern:?}: {source}\n\
+             hint: Rust regex syntax does not support every PCRE feature; \
+             see https://docs.rs/regex for the supported grammar"
+        ),
+        cmakefmt::Error::Render {
+            format, message, ..
+        } => format!("error: failed to render {format}: {message}"),
+        cmakefmt::Error::LegacyMigration { path, message, .. } => format!(
+            "error: legacy migration failed for {}: {message}",
+            path.display()
+        ),
         cmakefmt::Error::Io(source) => format!("error: I/O failure: {source}"),
         cmakefmt::Error::IoAt { path, source, .. } => {
             format!("error: I/O failure reading {}: {source}", path.display())
@@ -161,20 +176,7 @@ fn render_file_parse_error(
 }
 
 fn render_formatter_error(message: &str) -> String {
-    let mut rendered = String::new();
-    let _ = writeln!(rendered, "error: {message}");
-    if let Some(pattern) = extract_invalid_regex_pattern(message) {
-        let _ = writeln!(
-            rendered,
-            "hint: check the --path-regex pattern {pattern:?}; Rust regex syntax does not support every PCRE feature"
-        );
-    } else if message.contains("no such file or directory") {
-        let _ = writeln!(
-            rendered,
-            "hint: pass an existing file or directory, or omit input paths to recurse from the current working directory"
-        );
-    }
-    rendered.trim_end().to_owned()
+    format!("error: {message}")
 }
 
 /// Scan `source` for the last unmatched opening parenthesis, skipping
@@ -431,11 +433,4 @@ fn renamed_config_key(key: &str) -> Option<&'static str> {
         "separate_fn_name_with_space" => Some("space_before_definition_paren"),
         _ => None,
     }
-}
-
-fn extract_invalid_regex_pattern(message: &str) -> Option<&str> {
-    let tail = message.strip_prefix("invalid file regex ")?;
-    let start = tail.find('"')?;
-    let end = tail[start + 1..].find('"')?;
-    Some(&tail[start..=start + end + 1])
 }

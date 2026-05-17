@@ -189,7 +189,7 @@ pub(crate) fn apply_line_ranges(
     if outside.is_empty() {
         Ok(formatted.to_owned())
     } else {
-        Err(cmakefmt::Error::Formatter(format!(
+        Err(cmakefmt::Error::cli_arg(format!(
             "{display_name}: selected line ranges would affect lines outside the requested ranges ({})",
             outside
                 .into_iter()

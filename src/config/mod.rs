@@ -489,8 +489,19 @@ impl Config {
     /// Validate that all regex patterns in the config are valid.
     ///
     /// Returns `Ok(())` if all patterns compile, or an error message
-    /// identifying the first invalid pattern.
+    /// identifying the first invalid pattern. Internal callers that
+    /// want a structured error chain should use
+    /// [`Config::validate_patterns_structured`] instead.
     pub fn validate_patterns(&self) -> Result<(), String> {
+        self.validate_patterns_structured()
+            .map_err(|err| err.to_string())
+    }
+
+    /// Validate that all regex patterns in the config are valid,
+    /// returning a structured [`enum@crate::Error`] on failure so
+    /// callers can surface the underlying [`regex::Error`] source
+    /// chain.
+    pub(crate) fn validate_patterns_structured(&self) -> crate::error::Result<()> {
         // Fast path for defaults — the built-in pattern strings are known
         // to be valid. Avoids compiling three regexes on every
         // format_source() call, which dominates per-file overhead on
@@ -505,8 +516,11 @@ impl Config {
         ];
         for (name, pattern) in &patterns {
             if !pattern.is_empty() {
-                if let Err(err) = Regex::new(pattern) {
-                    return Err(format!("invalid regex in {name}: {err}"));
+                if let Err(source) = Regex::new(pattern) {
+                    return Err(crate::error::Error::InvalidRegex {
+                        pattern: format!("{name} = {pattern:?}"),
+                        source,
+                    });
                 }
             }
         }

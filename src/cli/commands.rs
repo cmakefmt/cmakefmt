@@ -348,8 +348,8 @@ pub(crate) fn run_config_subcommand(
         }
         ConfigAction::Convert { paths, format } => {
             if paths.is_empty() {
-                return Err(cmakefmt::Error::Formatter(
-                    "cmakefmt config convert requires at least one config file path".to_owned(),
+                return Err(cmakefmt::Error::cli_arg(
+                    "cmakefmt config convert requires at least one config file path",
                 ));
             }
             let output = convert_legacy_config_files(paths, *format)?;
