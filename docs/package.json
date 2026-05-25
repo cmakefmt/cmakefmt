@@ -22,7 +22,7 @@
     "@codemirror/view": "^6.42.1",
     "@lezer/highlight": "^1.2.3",
     "@tailwindcss/vite": "^4.3.0",
-    "astro": "^6.3.5",
+    "astro": "^6.3.7",
     "astro-magic-move": "^0.4.0",
     "chart.js": "^4.5.1",
     "codemirror": "^6.0.2",
