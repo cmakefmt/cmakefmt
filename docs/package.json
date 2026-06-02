@@ -13,7 +13,7 @@
     "clean": "rm -rf node_modules .astro dist"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.2",
+    "@astrojs/sitemap": "^3.7.3",
     "@astrojs/starlight": "^0.39.2",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/lang-yaml": "^6.1.3",
