@@ -50,6 +50,13 @@ This project follows a simple changelog discipline:
   write left the file with the temp file's restrictive `0o600` mode,
   silently dropping group/other or executable bits from files that had a
   more permissive mode.
+
+- Subcommand and machine-readable output (`config dump`/`schema`/`show`,
+  `dump spec-coverage`, and the `--report-format` JSON/GitHub/Checkstyle/
+  JUnit/SARIF/edit writers) no longer panic with a broken-pipe error when
+  their output is piped into a command that closes early, such as `head`.
+  These paths now write through a checked stdout handle and exit cleanly,
+  matching the main formatting output.
 ## 1.6.0 — 2026-05-17
 
 ### Added

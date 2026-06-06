@@ -8,6 +8,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 use std::io;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use clap::CommandFactory;
@@ -91,9 +92,9 @@ pub(crate) fn run_list_unknown_commands(
     }
 
     for (name, locations) in &unknown {
-        println!("{name}");
+        writeln!(io::stdout(), "{name}").map_err(cmakefmt::Error::Io)?;
         for (file, line) in locations {
-            println!("  {file}:{line}");
+            writeln!(io::stdout(), "  {file}:{line}").map_err(cmakefmt::Error::Io)?;
         }
     }
 
@@ -289,11 +290,12 @@ pub(crate) fn run_config_subcommand(
 ) -> Result<u8, cmakefmt::Error> {
     match action {
         ConfigAction::Dump { format } => {
-            print!("{}", default_config_template_for(*format));
+            write!(io::stdout(), "{}", default_config_template_for(*format))
+                .map_err(cmakefmt::Error::Io)?;
             Ok(EXIT_OK)
         }
         ConfigAction::Schema => {
-            println!("{}", generate_json_schema());
+            writeln!(io::stdout(), "{}", generate_json_schema()).map_err(cmakefmt::Error::Io)?;
             Ok(EXIT_OK)
         }
         ConfigAction::Check { path } => {
@@ -312,9 +314,9 @@ pub(crate) fn run_config_subcommand(
                 .or_else(|| resolve_config_probe_target(cli).ok().flatten());
             let (config, _, _) = build_context(cli, target.as_deref())?;
             let rendered = render_effective_config(&config, *format)?;
-            print!("{rendered}");
+            write!(io::stdout(), "{rendered}").map_err(cmakefmt::Error::Io)?;
             if !rendered.ends_with('\n') {
-                println!();
+                writeln!(io::stdout()).map_err(cmakefmt::Error::Io)?;
             }
             Ok(EXIT_OK)
         }
@@ -330,7 +332,7 @@ pub(crate) fn run_config_subcommand(
                 .or_else(|| resolve_config_probe_target(cli).ok().flatten());
             let config_context = resolve_config_context(cli, target.as_deref());
             for p in &config_context.sources {
-                println!("{}", p.display());
+                writeln!(io::stdout(), "{}", p.display()).map_err(cmakefmt::Error::Io)?;
             }
             Ok(EXIT_OK)
         }
@@ -350,7 +352,7 @@ pub(crate) fn run_config_subcommand(
                 ));
             }
             let output = convert_legacy_config_files(paths, *format)?;
-            print!("{output}");
+            write!(io::stdout(), "{output}").map_err(cmakefmt::Error::Io)?;
             Ok(EXIT_OK)
         }
         ConfigAction::Init => {
@@ -401,7 +403,7 @@ pub(crate) fn run_dump_subcommand(
         DumpAction::SpecCoverage { .. } => unreachable!("handled above"),
     };
 
-    print!("{tree}");
+    write!(io::stdout(), "{tree}").map_err(cmakefmt::Error::Io)?;
     Ok(EXIT_OK)
 }
 
@@ -456,7 +458,8 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
         }
         match Config::from_files(&[path.to_path_buf()]) {
             Ok(_) => {
-                println!("config is valid: {}", path.display());
+                writeln!(io::stdout(), "config is valid: {}", path.display())
+                    .map_err(cmakefmt::Error::Io)?;
                 Ok(EXIT_OK)
             }
             Err(err) => Err(err),
@@ -469,7 +472,8 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
         match Config::from_files(&context.sources) {
             Ok(_) => {
                 for source in &context.sources {
-                    println!("config is valid: {}", source.display());
+                    writeln!(io::stdout(), "config is valid: {}", source.display())
+                        .map_err(cmakefmt::Error::Io)?;
                 }
                 Ok(EXIT_OK)
             }

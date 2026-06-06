@@ -6,6 +6,7 @@
 //! shared machine-mode exit-code/print dispatcher.
 
 use std::fmt::Write as _;
+use std::io::Write as _;
 
 use serde::Serialize;
 
@@ -354,50 +355,46 @@ pub(crate) fn print_non_human_report(
     failures: &[FailedTarget],
     summary: &RunSummary,
 ) -> Result<(), cmakefmt::Error> {
+    // Write through a locked stdout handle and propagate I/O errors instead of
+    // using the `print!`/`println!` macros, which panic on a broken pipe (e.g.
+    // `cmakefmt --report-format json | head`). `main` maps a `BrokenPipe`
+    // `Error::Io` to a clean exit instead.
+    let mut out = std::io::stdout().lock();
     match output_modes.report_format {
         ReportFormat::Human => Ok(()),
-        ReportFormat::Json => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&build_json_report(
-                    results,
-                    failures,
-                    summary,
-                    output_modes,
-                    execution,
-                ))
-                .map_err(|err| cmakefmt::Error::render("JSON report", err.to_string()))?
-            );
-            Ok(())
-        }
-        ReportFormat::Github => {
-            print!("{}", build_github_report(results, failures, summary));
-            Ok(())
-        }
-        ReportFormat::Checkstyle => {
-            print!("{}", build_checkstyle_report(results, failures));
-            Ok(())
-        }
-        ReportFormat::Junit => {
-            print!("{}", build_junit_report(results, failures, summary));
-            Ok(())
-        }
-        ReportFormat::Sarif => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&build_sarif_report(results, failures))
-                    .map_err(|err| cmakefmt::Error::render("SARIF report", err.to_string()))?
-            );
-            Ok(())
-        }
-        ReportFormat::Edit => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&build_edit_report(results))
-                    .map_err(|err| cmakefmt::Error::render("edit report", err.to_string()))?
-            );
-            Ok(())
-        }
+        ReportFormat::Json => writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(&build_json_report(
+                results,
+                failures,
+                summary,
+                output_modes,
+                execution,
+            ))
+            .map_err(|err| cmakefmt::Error::render("JSON report", err.to_string()))?
+        )
+        .map_err(cmakefmt::Error::Io),
+        ReportFormat::Github => write!(out, "{}", build_github_report(results, failures, summary))
+            .map_err(cmakefmt::Error::Io),
+        ReportFormat::Checkstyle => write!(out, "{}", build_checkstyle_report(results, failures))
+            .map_err(cmakefmt::Error::Io),
+        ReportFormat::Junit => write!(out, "{}", build_junit_report(results, failures, summary))
+            .map_err(cmakefmt::Error::Io),
+        ReportFormat::Sarif => writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(&build_sarif_report(results, failures))
+                .map_err(|err| cmakefmt::Error::render("SARIF report", err.to_string()))?
+        )
+        .map_err(cmakefmt::Error::Io),
+        ReportFormat::Edit => writeln!(
+            out,
+            "{}",
+            serde_json::to_string_pretty(&build_edit_report(results))
+                .map_err(|err| cmakefmt::Error::render("edit report", err.to_string()))?
+        )
+        .map_err(cmakefmt::Error::Io),
     }
 }
 
