@@ -37,6 +37,13 @@ This project follows a simple changelog discipline:
   directory. Files in a multi-root workspace are now formatted with
   their own project's config. Unsaved or non-`file:` documents continue
   to use the workspace/default config.
+
+- `cmakefmt config convert` now carries over the `enable_sort`,
+  `autosort`, `wrap_after_first_arg`, and `continuation_align` format
+  options (and `wrap_after_first_arg`/`continuation_align` in per-command
+  `layout` overrides) from legacy cmake-format configs. Previously these
+  were silently dropped and reported as unsupported options even though
+  cmakefmt supports them.
 ## 1.6.0 — 2026-05-17
 
 ### Added

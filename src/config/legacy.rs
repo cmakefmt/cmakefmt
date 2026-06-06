@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::config::{
-    file::DumpConfigFormat, CaseStyle, DangleAlign, FractionalTabPolicy, LineEnding,
-    PerCommandConfig,
+    file::DumpConfigFormat, CaseStyle, ContinuationAlign, DangleAlign, FractionalTabPolicy,
+    LineEnding, PerCommandConfig,
 };
 use crate::error::{Error, IoResultExt, Result};
 use crate::spec::{
@@ -697,6 +697,14 @@ struct OutputFormatSection {
     command_case: Option<CaseStyle>,
     #[serde(skip_serializing_if = "Option::is_none")]
     keyword_case: Option<CaseStyle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    enable_sort: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    autosort: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wrap_after_first_arg: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    continuation_align: Option<ContinuationAlign>,
 }
 
 impl OutputFormatSection {
@@ -722,6 +730,10 @@ impl OutputFormatSection {
             || self.space_before_definition_paren.is_some()
             || self.command_case.is_some()
             || self.keyword_case.is_some()
+            || self.enable_sort.is_some()
+            || self.autosort.is_some()
+            || self.wrap_after_first_arg.is_some()
+            || self.continuation_align.is_some()
     }
 }
 
@@ -862,6 +874,12 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
             }
             "keyword_case" => {
                 converted.format.keyword_case = convert_case_style(path, converted, key, value)
+            }
+            "enable_sort" => converted.format.enable_sort = as_bool(value),
+            "autosort" => converted.format.autosort = as_bool(value),
+            "wrap_after_first_arg" => converted.format.wrap_after_first_arg = as_bool(value),
+            "continuation_align" => {
+                converted.format.continuation_align = as_continuation_align(value)
             }
             unsupported => converted.note_unsupported(path, &format!("[format].{unsupported}")),
         }
@@ -1115,6 +1133,8 @@ fn convert_layout_overrides(value: &LegacyValue) -> Option<LayoutOverridesOverri
             "dangle_parens" => layout.dangle_parens = as_bool(value),
             "always_wrap" => layout.always_wrap = as_bool(value),
             "max_pargs_hwrap" => layout.max_pargs_hwrap = as_usize(value),
+            "wrap_after_first_arg" => layout.wrap_after_first_arg = as_bool(value),
+            "continuation_align" => layout.continuation_align = as_continuation_align(value),
             _ => {}
         }
     }
@@ -1209,6 +1229,14 @@ fn as_dangle_align(value: &LegacyValue) -> Option<DangleAlign> {
         "prefix" => Some(DangleAlign::Prefix),
         "open" => Some(DangleAlign::Open),
         "close" => Some(DangleAlign::Close),
+        _ => None,
+    }
+}
+
+fn as_continuation_align(value: &LegacyValue) -> Option<ContinuationAlign> {
+    match value.as_str()?.to_ascii_lowercase().as_str() {
+        "same-indent" => Some(ContinuationAlign::SameIndent),
+        "under-first-value" => Some(ContinuationAlign::UnderFirstValue),
         _ => None,
     }
 }
@@ -1848,5 +1876,45 @@ misc:
 
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("space_before_definition_paren = false"));
+    }
+
+    #[test]
+    fn converts_format_enable_sort() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  enable_sort: true\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("enable_sort = true"));
+    }
+
+    #[test]
+    fn converts_format_autosort() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  autosort: true\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("autosort = true"));
+    }
+
+    #[test]
+    fn converts_format_wrap_after_first_arg() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  wrap_after_first_arg: true\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("wrap_after_first_arg = true"));
+    }
+
+    #[test]
+    fn converts_format_continuation_align() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(&path, "format:\n  continuation_align: same-indent\n").unwrap();
+
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
+        assert!(converted.contains("continuation_align = \"same-indent\""));
     }
 }
