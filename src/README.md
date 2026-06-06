@@ -21,7 +21,7 @@ This directory contains the implementation of `cmakefmt`.
 - `config/`
   - runtime config model, config-file loading, default config template
 - `parser/`
-  - Pest grammar, AST conversion, and parser tests
+  - hand-written scanner/grammar, AST lowering, and parser tests
 - `formatter/`
   - AST-to-text formatting logic, comments, barriers, wrapping, and layout
 - `spec/`
