@@ -276,17 +276,29 @@ fn handle_range_formatting(
     let start_line = range.start.line as usize;
     let end_line = range.end.line as usize;
 
-    // Collect the lines in range (0-based, inclusive).
+    // Collect the lines in range (0-based, inclusive). Stale editor requests
+    // can refer to lines past EOF after a document shrinks; those ranges are
+    // no-ops rather than protocol errors.
     let all_lines: Vec<&str> = text.lines().collect();
+    if all_lines.is_empty() || start_line >= all_lines.len() {
+        return Some(Response::new_ok(id, serde_json::json!([])));
+    }
     let clamped_end = end_line.min(all_lines.len().saturating_sub(1));
+    if start_line > clamped_end {
+        return Some(Response::new_ok(id, serde_json::json!([])));
+    }
     let slice_lines = &all_lines[start_line..=clamped_end];
     let slice_text = slice_lines.join("\n") + "\n";
 
     let doc_config = config_for_document(params.text_document.uri.as_str(), config);
     let formatted = format_with_timeout(&slice_text, &doc_config)?;
 
-    // Compute the end character position within the range.
-    let last_char = slice_lines.last().map(|l: &&str| l.len()).unwrap_or(0) as u32;
+    // Compute the end character position within the range. LSP
+    // `Position.character` is in UTF-16 code units, not UTF-8 bytes.
+    let last_char = slice_lines
+        .last()
+        .map(|l: &&str| l.encode_utf16().count())
+        .unwrap_or(0) as u32;
 
     let edit = lsp_types::TextEdit {
         range: lsp_types::Range {
@@ -394,7 +406,13 @@ fn handle_code_action(req: Request) -> Option<Response> {
 fn full_document_edit(original: &str, formatted: String) -> lsp_types::TextEdit {
     let lines: Vec<&str> = original.lines().collect();
     let last_line = lines.len().saturating_sub(1);
-    let last_char = lines.last().map(|l: &&str| l.len()).unwrap_or(0) as u32;
+    // LSP `Position.character` is measured in UTF-16 code units by default, so
+    // count UTF-16 units rather than UTF-8 bytes — otherwise a non-ASCII last
+    // line produces an end column that overshoots the real text.
+    let last_char = lines
+        .last()
+        .map(|l: &&str| l.encode_utf16().count())
+        .unwrap_or(0) as u32;
     lsp_types::TextEdit {
         range: lsp_types::Range {
             start: lsp_types::Position {
@@ -499,6 +517,17 @@ mod tests {
         assert_eq!(edit.range.end.character, 0);
     }
 
+    #[test]
+    fn full_document_edit_counts_utf16_units() {
+        let original = "message(cafe)\nmessage(\"é\")\n";
+        let edit = full_document_edit(original, original.to_string());
+        assert_eq!(edit.range.end.line, 1);
+        assert_eq!(
+            edit.range.end.character,
+            "message(\"é\")".encode_utf16().count() as u32
+        );
+    }
+
     // ── handle_formatting ─────────────────────────────────────────────────
 
     #[test]
@@ -558,6 +587,38 @@ mod tests {
             &Config::default(),
         );
         assert!(resp.is_none());
+    }
+
+    #[test]
+    fn handle_range_formatting_ignores_range_start_past_eof() {
+        let uri = "file:///test.cmake";
+        let resp = handle_range_formatting(
+            range_formatting_request(uri, 5, 7),
+            &docs(uri, "message(a)\n"),
+            &Config::default(),
+        )
+        .unwrap();
+        assert!(resp.error.is_none());
+        let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
+        assert!(edits.is_empty());
+    }
+
+    #[test]
+    fn handle_range_formatting_counts_utf16_units() {
+        let uri = "file:///test.cmake";
+        let text = "message(a)\nMESSAGE(\"é\")\n";
+        let resp = handle_range_formatting(
+            range_formatting_request(uri, 1, 1),
+            &docs(uri, text),
+            &Config::default(),
+        )
+        .unwrap();
+        assert!(resp.error.is_none());
+        let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
+        assert_eq!(
+            edits[0].range.end.character,
+            "MESSAGE(\"é\")".encode_utf16().count() as u32
+        );
     }
 
     // ── handle_request routing ────────────────────────────────────────────
