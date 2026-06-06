@@ -1493,6 +1493,48 @@ fn use_tabchars() {
 }
 
 #[test]
+fn use_tabchars_preserves_multiline_literal_content() {
+    // The interior lines of a multi-line bracket argument are literal string
+    // content. Their leading whitespace is part of the value and must NOT be
+    // converted to tabs when `use_tabchars` is enabled — doing so would change
+    // the semantics of the CMake source.
+    let src = "foo([[\n    indented content line\n]])\n";
+    let config = Config {
+        use_tabchars: true,
+        tab_size: 2,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    // The literal content line keeps its four leading spaces verbatim.
+    assert!(
+        formatted.contains("    indented content line"),
+        "literal bracket content must be preserved verbatim, got:\n{formatted}"
+    );
+    // It must not have been rewritten into tab indentation.
+    assert!(
+        !formatted.contains("\t\tindented content line"),
+        "literal bracket content must not be tab-converted, got:\n{formatted}"
+    );
+}
+
+#[test]
+fn use_tabchars_preserves_multiline_quoted_content() {
+    // Same guarantee for a multi-line quoted-string argument: leading spaces on
+    // continuation lines are part of the string value.
+    let src = "foo(\"line one\n    line two with leading spaces\")\n";
+    let config = Config {
+        use_tabchars: true,
+        tab_size: 2,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    assert!(
+        formatted.contains("    line two with leading spaces"),
+        "literal quoted content must be preserved verbatim, got:\n{formatted}"
+    );
+}
+
+#[test]
 fn max_empty_lines_zero() {
     let src = "message(a)\n\n\n\nmessage(b)\n";
     let config = Config {

@@ -988,7 +988,12 @@ fn write_packed_arguments_with_continuation(
                     &mut current_indent_width,
                 );
                 current_width = 0;
-                write_multiline_argument(output, indent_for(used_first_line), argument.as_str());
+                write_multiline_argument(
+                    output,
+                    indent_for(used_first_line),
+                    argument.as_str(),
+                    config.use_tabchars,
+                );
                 used_first_line = true;
                 current_indent_width = continuation_indent.chars().count();
             }
@@ -1355,7 +1360,7 @@ fn write_vertical_arguments(
                 }
             }
             _ if argument_has_newline(argument) => {
-                write_multiline_argument(output, indent, argument.as_str())
+                write_multiline_argument(output, indent, argument.as_str(), config.use_tabchars)
             }
             _ => {
                 output.push_str(indent);
@@ -1366,15 +1371,33 @@ fn write_vertical_arguments(
     }
 }
 
-fn write_multiline_argument(output: &mut String, indent: &str, source: &str) {
+/// Sentinel prepended to the verbatim continuation lines of a multi-line
+/// argument (the interior of a multi-line bracket or quoted literal) so the
+/// `use_tabchars` post-pass (`spaces_to_tabs`) can tell literal content apart
+/// from formatter-generated indentation and leave its leading whitespace
+/// untouched. `\u{1}` cannot begin a formatter-emitted indent line.
+///
+/// The marker is only emitted when `mark_literals` is set — i.e. when
+/// `use_tabchars` is enabled, which is exactly when `spaces_to_tabs` runs and
+/// strips the marker again — so it never leaks into formatted output, and the
+/// common (space-indented) path does no extra work.
+const LITERAL_LINE_MARKER: char = '\u{1}';
+
+fn write_multiline_argument(output: &mut String, indent: &str, source: &str, mark_literals: bool) {
     let normalized = source.replace("\r\n", "\n");
     let mut lines = normalized.split('\n');
 
+    // The first line is prefixed with the formatter's indent, so converting
+    // its leading spaces to tabs later is correct. Only the continuation lines
+    // carry the literal's own leading whitespace and must be protected.
     output.push_str(indent);
     output.push_str(lines.next().unwrap_or_default());
     output.push('\n');
 
     for line in lines {
+        if mark_literals {
+            output.push(LITERAL_LINE_MARKER);
+        }
         output.push_str(line);
         output.push('\n');
     }
@@ -1571,6 +1594,13 @@ fn spaces_to_tabs(output: &str, tab_size: usize, policy: FractionalTabPolicy) ->
     for (i, line) in output.split('\n').enumerate() {
         if i > 0 {
             result.push('\n');
+        }
+        // Verbatim continuation lines of a multi-line literal argument are
+        // tagged with `LITERAL_LINE_MARKER`. Their leading whitespace is part
+        // of the string value, so emit them unchanged (minus the marker).
+        if let Some(literal) = line.strip_prefix(LITERAL_LINE_MARKER) {
+            result.push_str(literal);
+            continue;
         }
         let leading = line.len() - line.trim_start_matches(' ').len();
         let tabs = leading / tab_size;
