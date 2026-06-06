@@ -8,6 +8,12 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Changed
+
+- The crate `homepage` and `documentation` metadata now point at the
+  project site (https://cmakefmt.dev) instead of the GitHub repository
+  and the old github.io docs URL, matching the canonical site used in the
+  README and docs.
 ## 1.6.0 — 2026-05-17
 
 ### Added
