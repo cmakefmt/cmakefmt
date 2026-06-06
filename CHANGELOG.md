@@ -78,6 +78,12 @@ This project follows a simple changelog discipline:
   again (a harmless but noisy double-pass with a spurious status line).
   The post-write modification time is now recorded so the watcher
   ignores its own writes.
+
+- A custom command spec under `commands:` that overrides
+  `layout.wrap_after_first_arg` now takes effect even when the command
+  already has a built-in layout block (for example `set`). The
+  spec-merge step previously dropped this one field, so the override was
+  silently ignored; it is now applied like every other layout field.
 ## 1.6.0 — 2026-05-17
 
 ### Added

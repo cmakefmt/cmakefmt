@@ -584,22 +584,38 @@ fn merge_kwarg(base: &mut KwargSpec, override_kwarg: KwargSpecOverride) {
 }
 
 fn merge_layout(base: &mut LayoutOverrides, override_layout: LayoutOverridesOverride) {
-    if let Some(value) = override_layout.line_width {
+    // Destructure the override so adding a field to `LayoutOverridesOverride`
+    // forces a compile error here until it is handled — a previous version of
+    // this function silently dropped `wrap_after_first_arg`.
+    let LayoutOverridesOverride {
+        line_width,
+        tab_size,
+        dangle_parens,
+        always_wrap,
+        max_pargs_hwrap,
+        wrap_after_first_arg,
+        continuation_align,
+    } = override_layout;
+
+    if let Some(value) = line_width {
         base.line_width = Some(value);
     }
-    if let Some(value) = override_layout.tab_size {
+    if let Some(value) = tab_size {
         base.tab_size = Some(value);
     }
-    if let Some(value) = override_layout.dangle_parens {
+    if let Some(value) = dangle_parens {
         base.dangle_parens = Some(value);
     }
-    if let Some(value) = override_layout.always_wrap {
+    if let Some(value) = always_wrap {
         base.always_wrap = Some(value);
     }
-    if let Some(value) = override_layout.max_pargs_hwrap {
+    if let Some(value) = max_pargs_hwrap {
         base.max_pargs_hwrap = Some(value);
     }
-    if let Some(value) = override_layout.continuation_align {
+    if let Some(value) = wrap_after_first_arg {
+        base.wrap_after_first_arg = Some(value);
+    }
+    if let Some(value) = continuation_align {
         base.continuation_align = Some(value);
     }
 }
@@ -1349,6 +1365,43 @@ nargs = 1
         );
         assert!(form.kwargs.contains_key("PUBLIC"));
         assert_eq!(form.kwargs["LINKER_LANGUAGE"].nargs, NArgs::Fixed(1));
+    }
+
+    #[test]
+    fn merge_layout_override_applies_wrap_after_first_arg() {
+        // `set` ships `layout.wrap_after_first_arg: true` in builtins.yaml, so
+        // it already has a layout block. A user override of this field must
+        // take effect when merged onto that existing layout (a regression
+        // guard: merge_layout previously dropped this field).
+        let mut registry = CommandRegistry::load().unwrap();
+
+        let CommandSpec::Single(form) = registry.get("set") else {
+            panic!("set should be a single-form command")
+        };
+        assert_eq!(
+            form.layout.as_ref().and_then(|l| l.wrap_after_first_arg),
+            Some(true),
+            "precondition: builtin set has wrap_after_first_arg = true"
+        );
+
+        registry
+            .merge_override_str(
+                r#"
+[commands.set.layout]
+wrap_after_first_arg = false
+"#,
+                PathBuf::from("test-overrides.toml"),
+            )
+            .unwrap();
+
+        let CommandSpec::Single(form) = registry.get("set") else {
+            panic!("set should still be a single-form command")
+        };
+        assert_eq!(
+            form.layout.as_ref().and_then(|l| l.wrap_after_first_arg),
+            Some(false),
+            "user override of wrap_after_first_arg must win over the builtin"
+        );
     }
 
     #[test]
