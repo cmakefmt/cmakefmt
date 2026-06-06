@@ -195,6 +195,11 @@ pub(crate) fn run_watch(
                 Ok(msg) => eprintln!("{msg}"),
                 Err(e) => eprintln!("error: {}: {e}", path.display()),
             }
+
+            // Formatting may have rewritten the file in place, bumping its
+            // mtime. Refresh the recorded mtime so the next poll does not
+            // treat our own write as a fresh change and reformat it again.
+            record_current_mtime(&mut known_mtimes, &path);
         }
     }
 
@@ -258,6 +263,20 @@ fn watch_modified_time(path: &Path) -> Option<std::time::SystemTime> {
     std::fs::metadata(path)
         .and_then(|metadata| metadata.modified())
         .ok()
+}
+
+/// Record `path`'s current modification time in `known_mtimes`.
+///
+/// Called right after the watcher rewrites a file in place: the rewrite bumps
+/// the file's mtime, so without this the next [`poll_watch_changes`] would see
+/// that change and reformat the file again (a harmless but noisy double-pass).
+/// Refreshing the stored mtime to the post-write value suppresses that
+/// self-retrigger.
+fn record_current_mtime(
+    known_mtimes: &mut HashMap<PathBuf, Option<std::time::SystemTime>>,
+    path: &Path,
+) {
+    known_mtimes.insert(path.to_path_buf(), watch_modified_time(path));
 }
 
 fn watch_format_file(cli: &Cli, path: &Path, colorize: bool) -> Result<String, cmakefmt::Error> {
@@ -484,25 +503,70 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
 
 fn explain_config(cli: &Cli, path: &Path) -> Result<u8, cmakefmt::Error> {
     let (config, _, config_context) = build_context(cli, Some(path))?;
-    println!("target: {}", path.display());
-    println!("config mode: {}", describe_config_mode(config_context.mode));
+    writeln!(io::stdout(), "target: {}", path.display()).map_err(cmakefmt::Error::Io)?;
+    writeln!(
+        io::stdout(),
+        "config mode: {}",
+        describe_config_mode(config_context.mode)
+    )
+    .map_err(cmakefmt::Error::Io)?;
     if config_context.sources.is_empty() {
-        println!("config files: none");
+        writeln!(io::stdout(), "config files: none").map_err(cmakefmt::Error::Io)?;
     } else {
-        println!("config files:");
+        writeln!(io::stdout(), "config files:").map_err(cmakefmt::Error::Io)?;
         for source in &config_context.sources {
-            println!("  - {}", source.display());
+            writeln!(io::stdout(), "  - {}", source.display()).map_err(cmakefmt::Error::Io)?;
         }
     }
 
     let cli_overrides = describe_cli_overrides(cli);
-    println!("{cli_overrides}");
-    println!();
-    println!("effective config:");
+    writeln!(io::stdout(), "{cli_overrides}").map_err(cmakefmt::Error::Io)?;
+    writeln!(io::stdout()).map_err(cmakefmt::Error::Io)?;
+    writeln!(io::stdout(), "effective config:").map_err(cmakefmt::Error::Io)?;
     let rendered = render_effective_config(&config, DumpConfigFormat::Yaml)?;
-    print!("{rendered}");
+    write!(io::stdout(), "{rendered}").map_err(cmakefmt::Error::Io)?;
     if !rendered.ends_with('\n') {
-        println!();
+        writeln!(io::stdout()).map_err(cmakefmt::Error::Io)?;
     }
     Ok(EXIT_OK)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread::sleep;
+    use std::time::Duration;
+
+    #[test]
+    fn record_current_mtime_suppresses_self_retrigger_after_write() {
+        // Simulates the watch loop: a file was seen with some mtime, then the
+        // formatter rewrote it (bumping the mtime). After `record_current_mtime`
+        // the stored mtime must match the file's current mtime, so the next
+        // poll does not treat the formatter's own write as a fresh change.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("CMakeLists.txt");
+        std::fs::write(&path, "message(a)\n").unwrap();
+
+        let mut known_mtimes: HashMap<PathBuf, Option<std::time::SystemTime>> = HashMap::new();
+        // The watcher recorded the original mtime when it first saw the file.
+        known_mtimes.insert(path.clone(), watch_modified_time(&path));
+
+        // The formatter rewrites the file in place; ensure the mtime advances.
+        sleep(Duration::from_millis(10));
+        std::fs::write(&path, "message(b)\n").unwrap();
+
+        // Precondition: the stored mtime is now stale relative to the file.
+        let stale = known_mtimes.get(&path).copied().flatten();
+        let current = watch_modified_time(&path);
+        assert_ne!(stale, current, "precondition: the write advanced the mtime");
+
+        // The fix: record the post-write mtime.
+        record_current_mtime(&mut known_mtimes, &path);
+
+        assert_eq!(
+            known_mtimes.get(&path).copied().flatten(),
+            current,
+            "after recording, the stored mtime matches the file's current mtime"
+        );
+    }
 }

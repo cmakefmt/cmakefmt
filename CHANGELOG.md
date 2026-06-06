@@ -71,6 +71,13 @@ This project follows a simple changelog discipline:
   the working tree against `HEAD`). Previously `--since` used a three-dot
   `<ref>...HEAD` merge-base comparison that silently excluded
   working-tree edits, making the two `--changed` modes inconsistent.
+
+- Watch mode no longer reformats a file an extra time immediately after
+  writing it. Rewriting a file bumps its modification time, which the
+  watcher previously mistook for a new external change and processed
+  again (a harmless but noisy double-pass with a spurious status line).
+  The post-write modification time is now recorded so the watcher
+  ignores its own writes.
 ## 1.6.0 — 2026-05-17
 
 ### Added
