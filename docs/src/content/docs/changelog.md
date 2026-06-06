@@ -65,6 +65,13 @@ This project follows a simple changelog discipline:
   their output is piped into a command that closes early, such as `head`.
   These paths now write through a checked stdout handle and exit cleanly,
   matching the main formatting output.
+
+- Format-barrier regions (`# cmakefmt: off`/`on` and `# ~~~` fences)
+  inside a control-flow block (`if()`, `foreach()`, etc.) no longer
+  reset the indentation of the formatted region that follows them. The
+  block-nesting depth is now carried across barrier boundaries,
+  including the net effect of any block-opening or block-closing
+  commands inside the disabled region.
 ## 1.6.0 — 2026-05-17
 
 ### Added

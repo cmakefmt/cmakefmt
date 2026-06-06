@@ -183,10 +183,33 @@ fn format_parsed_file_with_debug(
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
 ) -> Result<String> {
+    let mut block_depth = 0usize;
+    format_parsed_file_from_depth(file, config, registry, debug, &mut block_depth)
+}
+
+/// Format a parsed chunk, starting from `*block_depth_io` and updating it to
+/// the nesting level left open at the end of the chunk.
+///
+/// Threading the depth in and out lets the formatter keep correct indentation
+/// across format-barrier boundaries: a `# fmt: off`/`on` region (or a `# ~~~`
+/// fence) placed between an `if()` and its `endif()` splits the file into
+/// separate parsed chunks. The block-opening/closing commands live in the
+/// enabled chunks on either side of the barrier, so carrying the depth across
+/// the boundary keeps the chunk after the barrier indented inside the block
+/// instead of restarting at column zero. (Disabled regions are emitted
+/// verbatim and deliberately do not affect the depth — they often contain
+/// intentionally unbalanced CMake.)
+fn format_parsed_file_from_depth(
+    file: &File,
+    config: &Config,
+    registry: &CommandRegistry,
+    debug: &mut DebugLog<'_>,
+    block_depth_io: &mut usize,
+) -> Result<String> {
     let patterns = config.compiled_patterns().map_err(runtime_config_error)?;
     let mut output = String::new();
     let mut previous_was_content = false;
-    let mut block_depth = 0usize;
+    let mut block_depth = *block_depth_io;
 
     for statement in &file.statements {
         match statement {
@@ -281,6 +304,10 @@ fn format_parsed_file_with_debug(
         }
     }
 
+    // Hand the nesting level reached in this chunk back to the caller so the
+    // next chunk after a format barrier continues at the right indentation.
+    *block_depth_io = block_depth;
+
     if !output.ends_with('\n') {
         output.push('\n');
     }
@@ -352,6 +379,9 @@ fn format_source_impl(
     let mut mode = BarrierMode::Enabled;
     let mut enabled_chunk_start_line = 1usize;
     let mut saw_barrier = false;
+    // Carried across chunks so a barrier inside a control-flow block does not
+    // reset the indentation of the formatted region that follows it.
+    let mut block_depth = 0usize;
 
     for (line_index, line) in source.split_inclusive('\n').enumerate() {
         let line_no = line_index + 1;
@@ -365,6 +395,7 @@ fn format_source_impl(
                     debug,
                     enabled_chunk_start_line,
                     saw_barrier,
+                    &mut block_depth,
                 )?;
                 total_statements += statements;
                 debug.log(format!(
@@ -383,6 +414,7 @@ fn format_source_impl(
                     debug,
                     enabled_chunk_start_line,
                     saw_barrier,
+                    &mut block_depth,
                 )?;
                 total_statements += statements;
                 debug.log(format!(
@@ -403,6 +435,7 @@ fn format_source_impl(
                     debug,
                     enabled_chunk_start_line,
                     saw_barrier,
+                    &mut block_depth,
                 )?;
                 total_statements += statements;
                 let next_mode = if matches!(mode, BarrierMode::DisabledByFence) {
@@ -439,10 +472,12 @@ fn format_source_impl(
         debug,
         enabled_chunk_start_line,
         saw_barrier,
+        &mut block_depth,
     )?;
     Ok((output, total_statements))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn flush_enabled_chunk(
     output: &mut String,
     enabled_chunk: &mut String,
@@ -451,6 +486,7 @@ fn flush_enabled_chunk(
     debug: &mut DebugLog<'_>,
     chunk_start_line: usize,
     barrier_context: bool,
+    block_depth: &mut usize,
 ) -> Result<usize> {
     if enabled_chunk.is_empty() {
         return Ok(0);
@@ -473,7 +509,7 @@ fn flush_enabled_chunk(
     debug.log(format!(
         "formatter: formatting enabled chunk with {statement_count} statement(s) starting at source line {chunk_start_line}"
     ));
-    let formatted = format_parsed_file_with_debug(&file, config, registry, debug)?;
+    let formatted = format_parsed_file_from_depth(&file, config, registry, debug, block_depth)?;
     output.push_str(&formatted);
     enabled_chunk.clear();
     Ok(statement_count)
