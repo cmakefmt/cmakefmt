@@ -372,33 +372,24 @@ fn scan_legacy_make_var(c: &mut Cursor<'_>, start: u32) -> Result<(), ScanError>
     }
 }
 
-fn scan_variable_ref(c: &mut Cursor<'_>) -> Result<(), ScanError> {
-    let start = c.pos();
-    if c.peek_at(1) == Some(b'{') {
-        c.bump();
-        c.bump();
-        scan_var_name(c, start)?;
-        if !c.eat(b'}') {
-            return Err(ScanError::new("unterminated variable reference", start));
-        }
-        return Ok(());
+/// If the cursor sits at the start of a variable-reference opener
+/// (`${`, `$ENV{`, or `$CACHE{`), return the number of bytes that opener
+/// occupies; otherwise return `None`. Shared by `is_variable_ref` and
+/// `scan_variable_ref` so the two can never drift apart.
+fn variable_ref_opener_len(c: &Cursor<'_>) -> Option<u32> {
+    if c.peek() != Some(b'$') {
+        return None;
     }
-
+    if c.peek_at(1) == Some(b'{') {
+        return Some(2);
+    }
     if c.peek_at(1) == Some(b'E')
         && c.peek_at(2) == Some(b'N')
         && c.peek_at(3) == Some(b'V')
         && c.peek_at(4) == Some(b'{')
     {
-        for _ in 0..5 {
-            c.bump();
-        }
-        scan_var_name(c, start)?;
-        if !c.eat(b'}') {
-            return Err(ScanError::new("unterminated variable reference", start));
-        }
-        return Ok(());
+        return Some(5);
     }
-
     if c.peek_at(1) == Some(b'C')
         && c.peek_at(2) == Some(b'A')
         && c.peek_at(3) == Some(b'C')
@@ -406,25 +397,43 @@ fn scan_variable_ref(c: &mut Cursor<'_>) -> Result<(), ScanError> {
         && c.peek_at(5) == Some(b'E')
         && c.peek_at(6) == Some(b'{')
     {
-        for _ in 0..7 {
-            c.bump();
-        }
-        scan_var_name(c, start)?;
-        if !c.eat(b'}') {
-            return Err(ScanError::new("unterminated variable reference", start));
-        }
-        return Ok(());
+        return Some(7);
     }
-
-    Err(ScanError::new("unterminated variable reference", start))
+    None
 }
 
-fn scan_var_name(c: &mut Cursor<'_>, start: u32) -> Result<(), ScanError> {
+/// Scan a `${...}` / `$ENV{...}` / `$CACHE{...}` variable reference,
+/// including arbitrarily nested inner references.
+///
+/// This is written iteratively with an explicit brace-depth counter rather
+/// than via mutual recursion: deeply nested `${${...}}` is valid CMake, and a
+/// recursive scanner would overflow the stack on adversarial input.
+fn scan_variable_ref(c: &mut Cursor<'_>) -> Result<(), ScanError> {
+    let start = c.pos();
+    let Some(initial_opener_len) = variable_ref_opener_len(c) else {
+        return Err(ScanError::new("unterminated variable reference", start));
+    };
+    for _ in 0..initial_opener_len {
+        c.bump();
+    }
+    let mut depth = 1u32;
     loop {
+        if let Some(opener_len) = variable_ref_opener_len(c) {
+            for _ in 0..opener_len {
+                c.bump();
+            }
+            depth += 1;
+            continue;
+        }
         match c.peek() {
-            Some(b'}') => return Ok(()),
+            Some(b'}') => {
+                c.bump();
+                depth -= 1;
+                if depth == 0 {
+                    return Ok(());
+                }
+            }
             None => return Err(ScanError::new("unterminated variable reference", start)),
-            Some(b'$') if c.peek_at(1) == Some(b'{') => scan_variable_ref(c)?,
             _ => c.bump(),
         }
     }
@@ -469,18 +478,7 @@ fn scan_line_comment_inside_parens(c: &mut Cursor<'_>) {
 }
 
 fn is_variable_ref(c: &Cursor<'_>) -> bool {
-    c.peek() == Some(b'$')
-        && (c.peek_at(1) == Some(b'{')
-            || (c.peek_at(1) == Some(b'E')
-                && c.peek_at(2) == Some(b'N')
-                && c.peek_at(3) == Some(b'V')
-                && c.peek_at(4) == Some(b'{'))
-            || (c.peek_at(1) == Some(b'C')
-                && c.peek_at(2) == Some(b'A')
-                && c.peek_at(3) == Some(b'C')
-                && c.peek_at(4) == Some(b'H')
-                && c.peek_at(5) == Some(b'E')
-                && c.peek_at(6) == Some(b'{')))
+    variable_ref_opener_len(c).is_some()
 }
 
 fn is_genex(c: &Cursor<'_>) -> bool {
@@ -613,6 +611,16 @@ mod tests {
     #[test]
     fn nested_cache_variable_reference_is_consumed_as_unquoted() {
         assert_unquoted_consumes_all("$CACHE{${NAME}}");
+    }
+
+    #[test]
+    fn deeply_nested_variable_reference_is_consumed_iteratively() {
+        let depth = 10_000;
+        let mut source = "${".repeat(depth);
+        source.push_str("NAME");
+        source.push_str(&"}".repeat(depth));
+
+        assert_unquoted_consumes_all(&source);
     }
 
     #[test]
