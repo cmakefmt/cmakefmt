@@ -84,6 +84,35 @@ This project follows a simple changelog discipline:
   already has a built-in layout block (for example `set`). The
   spec-merge step previously dropped this one field, so the override was
   silently ignored; it is now applied like every other layout field.
+
+- LSP: text-edit ranges are now reported in UTF-16 code units (the LSP
+  default position encoding) instead of UTF-8 byte offsets. Previously a
+  document whose last line contained non-ASCII characters could produce
+  an end position that overshot the real text, causing editors to drop
+  or duplicate trailing characters on format.
+
+- LSP: range formatting no longer panics when a client sends a range
+  whose start line is at or past the end of the document (for example a
+  stale request after the document shrank) or for an empty document. The
+  server now returns no edit in those cases instead of crashing.
+
+- The parser no longer overflows the stack (and aborts) on deeply
+  nested variable references such as `${${${...}}}`. Nested variable
+  expansion is valid CMake; the scanner now handles arbitrary nesting
+  depth iteratively instead of recursively, so pathological inputs parse
+  cleanly instead of crashing the process.
+
+- `use_tabchars: true` no longer rewrites the leading whitespace inside
+  multi-line literal arguments (multi-line bracket arguments like
+  `[[ ... ]]` and multi-line quoted strings). Previously the
+  space-to-tab indentation pass ran over the entire rendered command,
+  including the verbatim interior lines of these literals, silently
+  changing the bytes of the string value (and breaking the idempotency
+  and semantic-preservation guarantees). Only formatter-generated
+  indentation is converted to tabs now; literal content is preserved
+  exactly. This only affected configurations with `use_tabchars`
+  enabled.
+
 ## 1.6.0 — 2026-05-17
 
 ### Added
