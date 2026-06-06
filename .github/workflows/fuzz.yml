@@ -47,7 +47,7 @@ jobs:
           toolchain: nightly
 
       - name: Install cargo-fuzz
-        uses: taiki-e/install-action@6887963ccf37a9ddcd8c5fa4baeb3e1e5fd61fa1  # v2.81.2
+        uses: taiki-e/install-action@59012be0884e296ca2da49b530610e72c49039ad  # v2.81.6
         with:
           tool: cargo-fuzz
 
