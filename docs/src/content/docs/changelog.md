@@ -36,6 +36,15 @@ This project follows a simple changelog discipline:
   `cmakefmt --verify`. This logic previously lived privately in the CLI;
   it is now the single public source of truth in the `semantic` module
   and is reused by the CLI and the `format_roundtrip` fuzz target.
+
+### Fixed
+
+- The LSP server now resolves configuration per document, discovering
+  `.cmakefmt.*` (and the `.editorconfig` fallback) relative to each
+  file's own location instead of always from the server's working
+  directory. Files in a multi-root workspace are now formatted with
+  their own project's config. Unsaved or non-`file:` documents continue
+  to use the workspace/default config.
 ## 1.6.0 — 2026-05-17
 
 ### Added

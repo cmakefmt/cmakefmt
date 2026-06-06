@@ -9,6 +9,7 @@
 
 use std::collections::HashMap;
 use std::error::Error;
+use std::path::PathBuf;
 
 use lsp_server::{Connection, Message, Request, Response};
 use lsp_types::notification::Notification as _;
@@ -166,6 +167,57 @@ fn format_with_timeout(source: &str, config: &Config) -> Option<String> {
     rx.recv_timeout(FORMAT_TIMEOUT).ok().flatten()
 }
 
+/// Resolve the effective config for a document from its on-disk path.
+///
+/// Discovers `.cmakefmt.*` (and the `.editorconfig` fallback) relative to the
+/// document's own location rather than the server's working directory, so a
+/// multi-root workspace formats each file with its project's config. Falls
+/// back to `fallback` (the workspace/default config) for unsaved or non-`file:`
+/// documents and whenever discovery fails, so behaviour never regresses.
+fn config_for_document(uri: &str, fallback: &Config) -> Config {
+    uri_to_path(uri)
+        .and_then(|path| Config::for_file(&path).ok())
+        .unwrap_or_else(|| fallback.clone())
+}
+
+/// Convert a `file://` URI to a filesystem path, percent-decoding `%XX`
+/// escapes. Returns `None` for non-`file:` URIs (e.g. `untitled:`) or input
+/// without a path component.
+fn uri_to_path(uri: &str) -> Option<PathBuf> {
+    let rest = uri.strip_prefix("file://")?;
+    // After `file://` comes an optional authority then the path; for local
+    // files the authority is empty so `rest` already starts with `/`. Drop a
+    // leading host segment defensively if one is present.
+    let path_part = match rest.find('/') {
+        Some(0) => rest,
+        Some(idx) => &rest[idx..],
+        None => return None,
+    };
+    Some(PathBuf::from(percent_decode(path_part)))
+}
+
+/// Minimal percent-decoder for URI path components (`%20` → space). Invalid or
+/// truncated escapes are passed through verbatim.
+fn percent_decode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            let hi = (bytes[i + 1] as char).to_digit(16);
+            let lo = (bytes[i + 2] as char).to_digit(16);
+            if let (Some(hi), Some(lo)) = (hi, lo) {
+                out.push((hi * 16 + lo) as u8);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 fn handle_formatting(
     req: Request,
     documents: &HashMap<String, String>,
@@ -184,7 +236,8 @@ fn handle_formatting(
             }
         };
     let text = documents.get(params.text_document.uri.as_str())?;
-    let formatted = format_with_timeout(text, config)?;
+    let doc_config = config_for_document(params.text_document.uri.as_str(), config);
+    let formatted = format_with_timeout(text, &doc_config)?;
 
     let edit = full_document_edit(text, formatted);
     let result = match serde_json::to_value(vec![edit]) {
@@ -229,7 +282,8 @@ fn handle_range_formatting(
     let slice_lines = &all_lines[start_line..=clamped_end];
     let slice_text = slice_lines.join("\n") + "\n";
 
-    let formatted = format_with_timeout(&slice_text, config)?;
+    let doc_config = config_for_document(params.text_document.uri.as_str(), config);
+    let formatted = format_with_timeout(&slice_text, &doc_config)?;
 
     // Compute the end character position within the range.
     let last_char = slice_lines.last().map(|l: &&str| l.len()).unwrap_or(0) as u32;
@@ -638,5 +692,68 @@ mod tests {
             params: serde_json::Value::Null,
         };
         handle_notification(notif, &mut docs, &mut Config::default()); // should not panic
+    }
+
+    // ── per-document config (uri_to_path / percent_decode / config_for_document) ──
+
+    #[test]
+    fn uri_to_path_decodes_file_uri() {
+        let path = uri_to_path("file:///home/user/CMakeLists.txt").unwrap();
+        assert_eq!(path, PathBuf::from("/home/user/CMakeLists.txt"));
+    }
+
+    #[test]
+    fn uri_to_path_percent_decodes_spaces() {
+        let path = uri_to_path("file:///home/my%20project/CMakeLists.txt").unwrap();
+        assert_eq!(path, PathBuf::from("/home/my project/CMakeLists.txt"));
+    }
+
+    #[test]
+    fn uri_to_path_rejects_non_file_uri() {
+        // `untitled:` (unsaved buffer) and other non-`file:` schemes have no
+        // filesystem path.
+        assert!(uri_to_path("untitled:Untitled-1").is_none());
+    }
+
+    #[test]
+    fn percent_decode_passes_through_invalid_escape() {
+        // A `%` not followed by two hex digits is left verbatim rather than
+        // dropped or mangled.
+        assert_eq!(percent_decode("100%done"), "100%done");
+        assert_eq!(percent_decode("a%2zb"), "a%2zb");
+    }
+
+    #[test]
+    fn config_for_document_falls_back_for_unsaved_document() {
+        // A non-`file:` URI has no on-disk location, so the fallback
+        // (workspace/default) config is returned unchanged.
+        let fallback = Config {
+            line_width: 42,
+            ..Config::default()
+        };
+        let config = config_for_document("untitled:Untitled-1", &fallback);
+        assert_eq!(config.line_width, 42);
+    }
+
+    #[test]
+    fn config_for_document_uses_nearest_project_config() {
+        // A saved document discovers `.cmakefmt.*` next to it, overriding the
+        // fallback config.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(".cmakefmt.toml"),
+            "[format]\nline_width = 40\n",
+        )
+        .unwrap();
+        let file = dir.path().join("CMakeLists.txt");
+        std::fs::write(&file, "message(hi)\n").unwrap();
+        let uri = format!("file://{}", file.display());
+
+        let fallback = Config {
+            line_width: 100,
+            ..Config::default()
+        };
+        let config = config_for_document(&uri, &fallback);
+        assert_eq!(config.line_width, 40);
     }
 }
