@@ -5,21 +5,30 @@
 //! `.editorconfig` fallback for formatting options.
 //!
 //! When no `.cmakefmt.yaml`/`.yml`/`.toml` config file is found, cmakefmt
-//! reads `indent_style` and `indent_size` from `.editorconfig` as a fallback.
-//! A cmakefmt config file always takes precedence.
+//! reads a small subset of `.editorconfig` properties as a fallback:
+//! `indent_style`/`indent_size` (indentation), `max_line_length` (line width),
+//! and `end_of_line` (line endings). Other properties have no cmakefmt
+//! equivalent and are ignored. A cmakefmt config file always takes precedence.
 
 use std::path::Path;
+
+use crate::config::LineEnding;
 
 /// Properties extracted from `.editorconfig` that cmakefmt can use.
 #[derive(Debug, Default)]
 pub struct EditorConfigOverrides {
     pub tab_size: Option<usize>,
     pub use_tabs: Option<bool>,
+    pub line_width: Option<usize>,
+    pub line_ending: Option<LineEnding>,
 }
 
 impl EditorConfigOverrides {
     pub fn has_any(&self) -> bool {
-        self.tab_size.is_some() || self.use_tabs.is_some()
+        self.tab_size.is_some()
+            || self.use_tabs.is_some()
+            || self.line_width.is_some()
+            || self.line_ending.is_some()
     }
 }
 
@@ -52,7 +61,34 @@ pub fn read_editorconfig(file_path: &Path) -> EditorConfigOverrides {
                 }),
         });
 
-    EditorConfigOverrides { tab_size, use_tabs }
+    // `max_line_length` → `line_width`. Only numeric values map; `off`
+    // (disable the limit) has no cmakefmt equivalent and is skipped.
+    let line_width = properties
+        .get_raw_for_key("max_line_length")
+        .into_option()
+        .and_then(|v| v.parse::<usize>().ok());
+
+    // `end_of_line` → `line_ending`. `lf`/`crlf` map; `cr` (classic Mac) has
+    // no cmakefmt equivalent and is skipped.
+    let line_ending = properties
+        .get_raw_for_key("end_of_line")
+        .into_option()
+        .and_then(|v| {
+            if v.eq_ignore_ascii_case("lf") {
+                Some(LineEnding::Unix)
+            } else if v.eq_ignore_ascii_case("crlf") {
+                Some(LineEnding::Windows)
+            } else {
+                None
+            }
+        });
+
+    EditorConfigOverrides {
+        tab_size,
+        use_tabs,
+        line_width,
+        line_ending,
+    }
 }
 
 #[cfg(test)]
@@ -89,6 +125,84 @@ mod tests {
 
         let overrides = read_editorconfig(&file);
         assert_eq!(overrides.use_tabs, Some(true));
+    }
+
+    #[test]
+    fn reads_max_line_length() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join(".editorconfig"),
+            "[*]\nroot = true\nmax_line_length = 100\n",
+        )
+        .unwrap();
+        let file = dir.path().join("CMakeLists.txt");
+        fs::write(&file, "").unwrap();
+
+        let overrides = read_editorconfig(&file);
+        assert_eq!(overrides.line_width, Some(100));
+    }
+
+    #[test]
+    fn ignores_max_line_length_off() {
+        // `max_line_length = off` disables the limit in editorconfig; cmakefmt
+        // has no equivalent, so it is skipped rather than mapped.
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join(".editorconfig"),
+            "[*]\nroot = true\nmax_line_length = off\n",
+        )
+        .unwrap();
+        let file = dir.path().join("CMakeLists.txt");
+        fs::write(&file, "").unwrap();
+
+        let overrides = read_editorconfig(&file);
+        assert_eq!(overrides.line_width, None);
+    }
+
+    #[test]
+    fn reads_end_of_line_lf() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join(".editorconfig"),
+            "[*]\nroot = true\nend_of_line = lf\n",
+        )
+        .unwrap();
+        let file = dir.path().join("CMakeLists.txt");
+        fs::write(&file, "").unwrap();
+
+        let overrides = read_editorconfig(&file);
+        assert_eq!(overrides.line_ending, Some(LineEnding::Unix));
+    }
+
+    #[test]
+    fn reads_end_of_line_crlf() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join(".editorconfig"),
+            "[*]\nroot = true\nend_of_line = crlf\n",
+        )
+        .unwrap();
+        let file = dir.path().join("CMakeLists.txt");
+        fs::write(&file, "").unwrap();
+
+        let overrides = read_editorconfig(&file);
+        assert_eq!(overrides.line_ending, Some(LineEnding::Windows));
+    }
+
+    #[test]
+    fn ignores_end_of_line_cr() {
+        // Classic-Mac lone-CR endings have no cmakefmt equivalent.
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(
+            dir.path().join(".editorconfig"),
+            "[*]\nroot = true\nend_of_line = cr\n",
+        )
+        .unwrap();
+        let file = dir.path().join("CMakeLists.txt");
+        fs::write(&file, "").unwrap();
+
+        let overrides = read_editorconfig(&file);
+        assert_eq!(overrides.line_ending, None);
     }
 
     #[test]

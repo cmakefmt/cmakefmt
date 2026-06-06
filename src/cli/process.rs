@@ -1050,13 +1050,23 @@ pub(crate) fn build_context(
             if let Some(tab_size) = ec.tab_size {
                 config.tab_size = tab_size;
             }
+            if let Some(line_width) = ec.line_width {
+                config.line_width = line_width;
+            }
+            if let Some(line_ending) = ec.line_ending {
+                config.line_ending = line_ending;
+            }
             if cli.execution.debug && ec.has_any() {
                 log_debug(format!(
-                    "editorconfig fallback: tab_size={}, use_tabs={}",
+                    "editorconfig fallback: tab_size={}, use_tabs={}, line_width={}, line_ending={}",
                     ec.tab_size
                         .map_or("(default)".to_owned(), |v| v.to_string()),
                     ec.use_tabs
                         .map_or("(default)".to_owned(), |v| v.to_string()),
+                    ec.line_width
+                        .map_or("(default)".to_owned(), |v| v.to_string()),
+                    ec.line_ending
+                        .map_or("(default)".to_owned(), |v| format!("{v:?}")),
                 ));
             }
         }

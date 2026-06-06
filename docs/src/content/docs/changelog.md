@@ -22,6 +22,14 @@ This project follows a simple changelog discipline:
   project site (https://cmakefmt.dev) instead of the GitHub repository
   and the old github.io docs URL, matching the canonical site used in the
   README and docs.
+
+### Added
+
+- The `.editorconfig` fallback now also maps `max_line_length` to
+  `line_width` and `end_of_line` to `line_ending` (`lf` → `unix`,
+  `crlf` → `windows`), in addition to the existing `indent_style` and
+  `indent_size` mappings. As before, this fallback only applies when no
+  `.cmakefmt.*` config file is found.
 ## 1.6.0 — 2026-05-17
 
 ### Added
