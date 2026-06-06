@@ -64,6 +64,13 @@ This project follows a simple changelog discipline:
   block-nesting depth is now carried across barrier boundaries,
   including the net effect of any block-opening or block-closing
   commands inside the disabled region.
+
+- `--changed --since <ref>` now compares the working tree against
+  `<ref>` (a two-dot `git diff <ref>`), so uncommitted changes are
+  included — matching the behaviour of `--changed` alone (which compares
+  the working tree against `HEAD`). Previously `--since` used a three-dot
+  `<ref>...HEAD` merge-base comparison that silently excluded
+  working-tree edits, making the two `--changed` modes inconsistent.
 ## 1.6.0 — 2026-05-17
 
 ### Added

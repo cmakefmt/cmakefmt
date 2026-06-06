@@ -55,7 +55,7 @@ Ignore rules only affect:
 | `--sorted` | Sort discovered files by path before processing. |
 | `--staged` | Use staged Git-tracked files instead of explicit input paths. |
 | `--changed` | Use modified Git-tracked files instead of explicit input paths. |
-| `--since <REF>` | Choose the Git base ref used by `--changed`. Without it, `HEAD` is the base. |
+| `--since <REF>` | Choose the Git base ref used by `--changed`. Compares the working tree against `<REF>` (so uncommitted changes are included), consistent with `--changed` alone comparing against `HEAD`. |
 | `--stdin-path <PATH>` | Give stdin formatting a virtual on-disk path for config discovery and diagnostics. |
 | `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges within a single file. |
 
@@ -355,7 +355,7 @@ the entire repository.
 ### Feed Paths From Another Tool
 
 ```bash
-git diff --name-only --diff-filter=ACMR origin/main...HEAD | \
+git diff --name-only --diff-filter=ACMR origin/main | \
   cmakefmt --files-from - --check
 ```
 

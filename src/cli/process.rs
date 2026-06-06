@@ -905,23 +905,10 @@ fn collect_git_paths(
     mode: GitSelectionMode<'_>,
     file_filter: Option<&Regex>,
 ) -> Result<Vec<String>, cmakefmt::Error> {
-    let repo_root = git_command(["rev-parse", "--show-toplevel"])?;
+    let repo_root = git_command(&["rev-parse", "--show-toplevel"])?;
     let repo_root = PathBuf::from(repo_root.trim());
 
-    let diff_output = match mode {
-        GitSelectionMode::Staged => {
-            git_command(["diff", "--name-only", "--cached", "--diff-filter=ACMR"])?
-        }
-        GitSelectionMode::Changed(Some(reference)) => git_command([
-            "diff",
-            "--name-only",
-            "--diff-filter=ACMR",
-            &format!("{reference}...HEAD"),
-        ])?,
-        GitSelectionMode::Changed(None) => {
-            git_command(["diff", "--name-only", "--diff-filter=ACMR", "HEAD"])?
-        }
-    };
+    let diff_output = git_command(&git_diff_args(mode))?;
 
     let mut paths = Vec::new();
     for line in diff_output
@@ -937,7 +924,31 @@ fn collect_git_paths(
     Ok(paths)
 }
 
-fn git_command<const N: usize>(args: [&str; N]) -> Result<String, cmakefmt::Error> {
+/// Build the `git diff` arguments used to list changed files for a selection
+/// mode.
+///
+/// `Changed(Some(reference))` uses a two-dot comparison (`git diff
+/// <reference>`), which compares the working tree against `<reference>` and so
+/// includes uncommitted changes — consistent with `Changed(None)` (`git diff
+/// HEAD`). A three-dot `reference...HEAD` would instead compare the merge-base
+/// of `reference` and `HEAD` against `HEAD`, silently excluding working-tree
+/// edits; that inconsistency between the two `--changed` modes was the bug
+/// this function fixes.
+fn git_diff_args<'a>(mode: GitSelectionMode<'a>) -> Vec<&'a str> {
+    match mode {
+        GitSelectionMode::Staged => {
+            vec!["diff", "--name-only", "--cached", "--diff-filter=ACMR"]
+        }
+        GitSelectionMode::Changed(Some(reference)) => {
+            vec!["diff", "--name-only", "--diff-filter=ACMR", reference]
+        }
+        GitSelectionMode::Changed(None) => {
+            vec!["diff", "--name-only", "--diff-filter=ACMR", "HEAD"]
+        }
+    }
+}
+
+fn git_command(args: &[&str]) -> Result<String, cmakefmt::Error> {
     let output = std::process::Command::new("git")
         .args(args)
         .output()
