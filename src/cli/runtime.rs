@@ -319,6 +319,16 @@ pub(crate) fn atomic_write(path: &Path, contents: &str) -> Result<(), cmakefmt::
     let dir = path.parent().unwrap_or(Path::new("."));
     let mut tmp = tempfile::NamedTempFile::new_in(dir).with_path(dir)?;
     tmp.write_all(contents.as_bytes()).with_path(path)?;
+
+    // Preserve the original file's permissions. `NamedTempFile` creates the
+    // temp file with a restrictive `0o600` mode, so without this an in-place
+    // rewrite would silently strip group/other bits (or the executable bit)
+    // from a file that had a more permissive mode.
+    #[cfg(unix)]
+    if let Ok(metadata) = std::fs::metadata(path) {
+        let _ = tmp.as_file().set_permissions(metadata.permissions());
+    }
+
     tmp.persist(path)
         .map_err(|e| cmakefmt::Error::io_at(path, e.error))?;
     Ok(())
@@ -474,4 +484,26 @@ pub(crate) fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
     }
 
     Ok(())
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::atomic_write;
+    use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn atomic_write_preserves_unix_file_mode() {
+        // tempfile creates 0o600 temp files, so an in-place rewrite must copy
+        // the original file's (more permissive) mode rather than leaving the
+        // temp file's restrictive default.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("CMakeLists.txt");
+        std::fs::write(&path, "message(a)\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        atomic_write(&path, "message(b)\n").unwrap();
+
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o644, "in-place rewrite must preserve the file mode");
+    }
 }

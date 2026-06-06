@@ -44,6 +44,12 @@ This project follows a simple changelog discipline:
   `layout` overrides) from legacy cmake-format configs. Previously these
   were silently dropped and reported as unsupported options even though
   cmakefmt supports them.
+
+- In-place formatting (`-i`/`--in-place`) now preserves the original
+  file's Unix permissions. Previously the atomic temp-file-and-rename
+  write left the file with the temp file's restrictive `0o600` mode,
+  silently dropping group/other or executable bits from files that had a
+  more permissive mode.
 ## 1.6.0 — 2026-05-17
 
 ### Added
