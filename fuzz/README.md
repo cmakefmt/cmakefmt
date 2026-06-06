@@ -24,7 +24,7 @@ ancestor workspace and is the standard cargo-fuzz pattern.
 | Target | What it exercises |
 | --- | --- |
 | `parse` | `cmakefmt::parser::parse` on arbitrary bytes (decoded with `String::from_utf8_lossy`). |
-| `format_roundtrip` | `parser::parse → format_source → parser::parse`. Asserts only the absence of panics — AST equivalence is the verifier's job and is covered by the integration tests. |
+| `format_roundtrip` | `format_source` on arbitrary UTF-8, then asserts three guarantees on any input the formatter accepts: **no panics**, **semantic preservation** (`cmakefmt::semantic::semantic_equivalent` — the same checker behind `--verify` — confirms the formatted output has the same commands and arguments, ignoring comments/whitespace/case), and **idempotency** (`format(format(x)) == format(x)`). `semantic_equivalent` returns `true` when either side fails to parse, so it never false-positives on inputs the parser rejects. |
 
 A small seed corpus lives at `corpus/parse/` and `corpus/format_roundtrip/`,
 copied from `tests/fixtures/basic/` and `tests/fixtures/comments/`.

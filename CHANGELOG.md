@@ -22,6 +22,12 @@ This project follows a simple changelog discipline:
   `crlf` → `windows`), in addition to the existing `indent_style` and
   `indent_size` mappings. As before, this fallback only applies when no
   `.cmakefmt.*` config file is found.
+
+- The `semantic` module now exposes `semantic_equivalent` and
+  `normalize_semantics`, the whole-file equivalence check behind
+  `cmakefmt --verify`. This logic previously lived privately in the CLI;
+  it is now the single public source of truth in the `semantic` module
+  and is reused by the CLI and the `format_roundtrip` fuzz target.
 ## 1.6.0 — 2026-05-17
 
 ### Added

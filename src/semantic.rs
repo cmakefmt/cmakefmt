@@ -29,9 +29,61 @@
 
 use std::collections::BTreeSet;
 
-use crate::parser::ast::{Argument, CommandInvocation};
+use crate::parser::ast::{Argument, CommandInvocation, File, Statement};
+use crate::parser::{self};
 use crate::spec::registry::CommandRegistry;
 use crate::spec::{CommandForm, KwargSpec};
+
+/// Return `true` if `left` and `right` are the same CMake program once
+/// cosmetic-only differences (comments, blank lines, whitespace, line
+/// endings, command-name and keyword casing) are stripped.
+///
+/// This is the equivalence relation behind `cmakefmt --verify`: a
+/// formatter run is safe exactly when `semantic_equivalent(original,
+/// formatted)` holds. It uses the built-in command registry; callers
+/// that need a customised registry (e.g. the CLI, which honours user
+/// override files) should normalise via [`normalize_semantics`] with
+/// their own registry instead.
+///
+/// If *either* side fails to parse the inputs cannot be compared, so
+/// the function conservatively returns `true` — this keeps fuzz and
+/// round-trip callers from false-positiving on inputs the parser
+/// rejects.
+pub fn semantic_equivalent(left: &str, right: &str) -> bool {
+    let registry = CommandRegistry::builtins();
+    match (parser::parse(left), parser::parse(right)) {
+        (Ok(left), Ok(right)) => {
+            normalize_semantics(left, registry) == normalize_semantics(right, registry)
+        }
+        _ => true,
+    }
+}
+
+/// Reduce a parsed file to its semantic skeleton: drop standalone
+/// comments and blank lines, zero out spans, lowercase command names,
+/// and normalise each command's literals and keyword casing. Two files
+/// that behave identically in CMake produce equal skeletons.
+pub fn normalize_semantics(mut file: File, registry: &CommandRegistry) -> File {
+    // Strip standalone comments and blank lines — they have no CMake semantic
+    // meaning and may change structure when the formatter reflows them.
+    file.statements
+        .retain(|s| !matches!(s, Statement::Comment(_) | Statement::BlankLines(_)));
+
+    for statement in &mut file.statements {
+        match statement {
+            Statement::Command(command) => {
+                command.span = (0, 0);
+                command.name.make_ascii_lowercase();
+                normalize_command_literals(command);
+                normalize_keyword_args(command, registry);
+            }
+            Statement::TemplatePlaceholder(value) => normalize_line_endings(value),
+            Statement::Comment(_) | Statement::BlankLines(_) => unreachable!(),
+        }
+    }
+
+    file
+}
 
 /// Strip comment and line-ending differences from a parsed
 /// `CommandInvocation` so two semantically-equivalent commands

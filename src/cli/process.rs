@@ -16,7 +16,7 @@ use cmakefmt::{
     files::{discover_cmake_files_with_options, is_cmake_file, matches_filter, DiscoveryOptions},
     format_source_with_registry, format_source_with_registry_debug, parser,
     render_effective_config,
-    semantic::{normalize_command_literals, normalize_keyword_args, normalize_line_endings},
+    semantic::normalize_semantics,
     Config, DumpConfigFormat, IoResultExt,
 };
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
@@ -769,37 +769,6 @@ fn verify_semantics(
             "{display_name}: semantic verification failed; formatted output changes the parsed CMake structure"
         )))
     }
-}
-
-fn normalize_semantics(
-    mut file: parser::ast::File,
-    registry: &CommandRegistry,
-) -> parser::ast::File {
-    // Strip standalone comments and blank lines — they have no CMake semantic
-    // meaning and may change structure when the formatter reflows them.
-    file.statements.retain(|s| {
-        !matches!(
-            s,
-            parser::ast::Statement::Comment(_) | parser::ast::Statement::BlankLines(_)
-        )
-    });
-
-    for statement in &mut file.statements {
-        match statement {
-            parser::ast::Statement::Command(command) => {
-                command.span = (0, 0);
-                command.name.make_ascii_lowercase();
-                normalize_command_literals(command);
-                normalize_keyword_args(command, registry);
-            }
-            parser::ast::Statement::TemplatePlaceholder(value) => normalize_line_endings(value),
-            parser::ast::Statement::Comment(_) | parser::ast::Statement::BlankLines(_) => {
-                unreachable!()
-            }
-        }
-    }
-
-    file
 }
 
 pub(crate) fn compile_file_filter(pattern: Option<&str>) -> Result<Option<Regex>, cmakefmt::Error> {
