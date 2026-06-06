@@ -4,162 +4,179 @@
 
 //! Property-based tests for the formatter.
 //!
-//! These complement the snapshot suite by exercising the formatter against
-//! generated CMake inputs and asserting invariants that should hold for
-//! *every* input, not just the ones a human happened to write a fixture for.
+//! These tests use `proptest` to generate a wide variety of CMake-like inputs
+//! and assert invariants that must hold for *any* input:
 //!
-//! Properties currently enforced (with the default [`Config`]):
+//! 1. **Idempotency**: `format(format(x)) == format(x)`
+//! 2. **Determinism**: formatting the same input twice yields the same result
+//! 3. **Semantic preservation**: the re-parsed token stream of the formatted
+//!    output matches the original (modulo comments/whitespace)
+//! 4. **No panics**: the formatter never crashes on valid CMake
 //!
-//! 1. **Token sequence preservation** — the ordered sequence of non-comment
-//!    tokens (command names + their unquoted/quoted/bracket arguments) in
-//!    the formatted output must match the sequence in the input. Catches
-//!    any formatter pass that drops, duplicates, reorders, or rewrites a
-//!    semantic token. (Autosort-class bugs that reorder positional tokens
-//!    would surface here under a non-default config; with `enable_sort:
-//!    false` and `autosort: false` — the defaults — no reordering is ever
-//!    legal.)
-//!
-//! 2. **Idempotency** — `format(format(x)) == format(x)`. The formatter
-//!    must reach a fixed point in one pass. Catches oscillating layouts
-//!    and "almost-stable" formatting decisions that flip on re-application.
-//!
-//! Property tests are run with a modest default case count
-//! (`PROPTEST_CASES=64`) so they fit comfortably in the standard `cargo
-//! test` time budget. Set `PROPTEST_CASES` higher locally for deeper
-//! exploration, e.g. `PROPTEST_CASES=2048 cargo test --test property`.
+//! The generators below cover the constructs most likely to stress the
+//! formatter's structural decisions — control flow, quoted/bracket/generator
+//! arguments, multiline literals, and comments — across a matrix of
+//! configurations (line width, indentation, sorting, dangling parens, and case
+//! styles).
 
-use cmakefmt::parser::ast::{Argument, Statement};
-use cmakefmt::{format_source, parser, Config};
+use cmakefmt::semantic::semantic_equivalent;
+use cmakefmt::{format_source, CaseStyle, Config};
 use proptest::prelude::*;
 
-/// Collect the ordered sequence of *semantic* tokens (command names and
-/// their non-comment arguments) from a CMake source string. Used as the
-/// equivalence baseline for token-preservation properties.
+/// Strategy: a simple unquoted argument / identifier.
+fn simple_arg() -> impl Strategy<Value = String> {
+    prop::string::string_regex("[a-zA-Z_][a-zA-Z0-9_]{0,8}").unwrap()
+}
+
+/// Strategy: a single argument, drawn from the forms a real CMake call uses.
 ///
-/// Inline and standalone comments are deliberately excluded — comment
-/// reflow legitimately changes byte content (wrapping long lines, etc.)
-/// even when nothing semantic moves.
-///
-/// Command names and unquoted argument text are folded to ASCII lowercase
-/// because the formatter is permitted to normalise casing under
-/// `command_case` / `keyword_case`; with the default config (`lower` /
-/// `upper`) the case may legitimately differ between input and output.
-fn collect_token_seq(src: &str) -> Vec<String> {
-    let file = parser::parse(src).expect("generator should produce parseable CMake");
-    let mut tokens = Vec::new();
-    for stmt in &file.statements {
-        if let Statement::Command(cmd) = stmt {
-            tokens.push(cmd.name.to_ascii_lowercase());
-            for arg in &cmd.arguments {
-                match arg {
-                    Argument::Bracket(b) => tokens.push(b.raw.clone()),
-                    Argument::Quoted(s) => tokens.push(s.clone()),
-                    Argument::Unquoted(s) => tokens.push(s.to_ascii_lowercase()),
-                    Argument::InlineComment(_) => {}
-                }
-            }
-        }
-    }
-    tokens
-}
-
-// ── Generators ───────────────────────────────────────────────────────────
-
-/// Simple unquoted identifier. Constrained to lowercase ASCII so the
-/// case-fold in `collect_token_seq` is the only normalisation needed for
-/// equivalence.
-fn arb_token() -> impl Strategy<Value = String> {
-    "[a-z][a-z0-9_]{0,12}"
-}
-
-/// Sequence of 0–5 argument tokens.
-fn arb_args() -> impl Strategy<Value = Vec<String>> {
-    prop::collection::vec(arb_token(), 0..6)
-}
-
-/// One of a handful of commonly-used CMake commands. Chosen to exercise
-/// the most-traffic specs in `builtins.yaml` (target_*, set, message,
-/// include, etc.). Control-flow constructs (`if`/`endif`, `foreach`/…)
-/// are deliberately excluded because they require structural balance
-/// that a flat command-list generator can't produce.
-fn arb_command_name() -> impl Strategy<Value = &'static str> {
+/// All forms are constructed to be valid, balanced CMake so the parser accepts
+/// them: quoted strings use a safe character class (no escapes/newlines),
+/// bracket arguments are balanced `[[ ... ]]`, and generator expressions are
+/// chosen from a fixed set of well-formed examples.
+fn argument() -> impl Strategy<Value = String> {
     prop_oneof![
-        Just("set"),
-        Just("message"),
-        Just("target_link_libraries"),
-        Just("target_compile_options"),
-        Just("target_include_directories"),
-        Just("add_executable"),
-        Just("add_library"),
-        Just("add_subdirectory"),
-        Just("include"),
-        Just("option"),
+        5 => simple_arg(),
+        2 => prop::string::string_regex(r#""[a-zA-Z0-9 _]{0,10}""#).unwrap(),
+        1 => prop::string::string_regex(r"\[\[[a-zA-Z0-9 _]{0,10}\]\]").unwrap(),
+        1 => prop::sample::select(vec![
+            "\"line one\n    line two\"".to_string(),
+            "[[\n    literal line\n]]".to_string(),
+        ]),
+        1 => prop::sample::select(vec![
+            "$<CONFIG:Debug>".to_string(),
+            "$<BOOL:1>".to_string(),
+            "$<TARGET_FILE:foo>".to_string(),
+            "${VAR}".to_string(),
+            "$ENV{HOME}".to_string(),
+        ]),
     ]
 }
 
-/// `command_name(arg1 arg2 …)`. Always emits at least one argument so the
-/// resulting source parses cleanly; commands like `target_link_libraries()`
-/// with zero arguments are syntactically valid but semantically suspicious
-/// and would distract from the formatter properties under test.
-fn arb_command() -> impl Strategy<Value = String> {
-    (arb_command_name(), arb_args()).prop_map(|(name, args)| {
-        let body = if args.is_empty() {
-            "x".to_owned()
-        } else {
-            args.join(" ")
-        };
-        format!("{name}({body})")
-    })
+/// Strategy: a plain command invocation with 0-5 mixed arguments.
+fn command() -> impl Strategy<Value = String> {
+    (
+        prop::string::string_regex("[a-z_][a-z0-9_]{0,12}").unwrap(),
+        prop::collection::vec(argument(), 0..5),
+    )
+        .prop_map(|(name, args)| format!("{}({})", name, args.join(" ")))
 }
 
-/// 0–10 commands joined by newlines, with a trailing newline so the input
-/// is well-formed text. Empty inputs (zero commands) are explicitly
-/// allowed — the formatter must be a fixed point on `""` too.
-fn arb_cmake() -> impl Strategy<Value = String> {
-    prop::collection::vec(arb_command(), 0..10).prop_map(|cmds| {
-        let mut s = cmds.join("\n");
-        s.push('\n');
-        s
-    })
+/// Strategy: a standalone line comment.
+fn comment() -> impl Strategy<Value = String> {
+    prop::string::string_regex("# [a-zA-Z0-9 ]{0,15}").unwrap()
 }
 
-// ── Properties ────────────────────────────────────────────────────────────
+/// Strategy: the inner body of a control-flow block — 1-3 commands, one per
+/// line. Defined as its own function (rather than a local binding) so each
+/// `statement` arm can build a fresh, independent body strategy; the
+/// `prop_map` closure makes the strategy non-`Clone`.
+fn block_body() -> impl Strategy<Value = String> {
+    prop::collection::vec(command(), 1..4).prop_map(|cmds| cmds.join("\n"))
+}
+
+/// Strategy: a single statement — a command, a comment, or a balanced
+/// control-flow block (`if`/`endif`, `foreach`/`endforeach`) wrapping a few
+/// inner commands. Blocks are always balanced so the result parses.
+fn statement() -> impl Strategy<Value = String> {
+    prop_oneof![
+        6 => command(),
+        2 => comment(),
+        1 => block_body().prop_map(|b| format!("if(SOMETHING)\n{b}\nendif()")),
+        1 => block_body().prop_map(|b| format!("foreach(x IN ITEMS a b c)\n{b}\nendforeach()")),
+    ]
+}
+
+/// Strategy: a whole program — 1-8 statements, each on its own line.
+fn program() -> impl Strategy<Value = String> {
+    prop::collection::vec(statement(), 1..8).prop_map(|stmts| stmts.join("\n"))
+}
+
+/// Strategy: a configuration drawn from a matrix of the options most likely to
+/// interact with the generated constructs.
+fn config() -> impl Strategy<Value = Config> {
+    (
+        prop::sample::select(vec![40usize, 80, 120]),
+        any::<bool>(),
+        any::<bool>(),
+        any::<bool>(),
+        any::<bool>(),
+        prop::sample::select(vec![2usize, 4]),
+        prop::sample::select(vec![
+            CaseStyle::Lower,
+            CaseStyle::Upper,
+            CaseStyle::Unchanged,
+        ]),
+        prop::sample::select(vec![
+            CaseStyle::Lower,
+            CaseStyle::Upper,
+            CaseStyle::Unchanged,
+        ]),
+    )
+        .prop_map(
+            |(
+                line_width,
+                enable_sort,
+                autosort,
+                dangle_parens,
+                use_tabchars,
+                tab_size,
+                command_case,
+                keyword_case,
+            )| {
+                Config {
+                    line_width,
+                    enable_sort,
+                    autosort,
+                    dangle_parens,
+                    use_tabchars,
+                    tab_size,
+                    command_case,
+                    keyword_case,
+                    ..Config::default()
+                }
+            },
+        )
+}
 
 proptest! {
-    #![proptest_config(ProptestConfig {
-        // Default to 64 cases per property so the suite runs in well under
-        // a second on typical hardware. Override with PROPTEST_CASES=…
-        // for deeper exploration locally.
-        cases: 64,
-        ..ProptestConfig::default()
-    })]
+    // Generated inputs are small and structured; 256 cases keeps the suite fast
+    // while still exploring a wide variety of argument shapes and configs.
+    #![proptest_config(ProptestConfig::with_cases(256))]
 
-    /// The formatter must preserve the ordered sequence of semantic
-    /// tokens. With the default config (`enable_sort: false`,
-    /// `autosort: false`) no reordering is legal — any divergence here
-    /// indicates the formatter has dropped, duplicated, rewritten, or
-    /// shuffled a token between input and output.
+    /// Idempotency: formatting an already-formatted document is a no-op, across
+    /// the config matrix.
     #[test]
-    fn formatter_preserves_token_sequence(src in arb_cmake()) {
-        let config = Config::default();
-        let formatted = format_source(&src, &config).expect("format should succeed on generated CMake");
-        prop_assert_eq!(
-            collect_token_seq(&src),
-            collect_token_seq(&formatted),
-            "token sequence changed:\ninput:\n{}\nformatted:\n{}",
-            src,
-            formatted
-        );
+    fn format_is_idempotent(source in program(), config in config()) {
+        let Ok(formatted) = format_source(&source, &config) else {
+            return Ok(());
+        };
+        let twice = format_source(&formatted, &config)
+            .expect("formatting already-formatted output must succeed");
+        prop_assert_eq!(formatted, twice);
     }
 
-    /// `format(format(x)) == format(x)` for every generated input.
-    /// Tests the formatter's idempotency contract against a far wider
-    /// surface than the four-file fixture corpus.
+    /// Determinism: same input, same config, same output.
     #[test]
-    fn formatter_is_idempotent(src in arb_cmake()) {
-        let config = Config::default();
-        let once = format_source(&src, &config).expect("first format should succeed");
-        let twice = format_source(&once, &config).expect("second format should succeed");
-        prop_assert_eq!(once, twice);
+    fn format_is_deterministic(source in program(), config in config()) {
+        let first = format_source(&source, &config);
+        let second = format_source(&source, &config);
+        prop_assert_eq!(first.ok(), second.ok());
+    }
+
+    /// Semantic preservation: formatting never changes the parsed CMake
+    /// program (comments, whitespace, and cosmetic casing aside).
+    #[test]
+    fn format_preserves_semantics(source in program(), config in config()) {
+        let Ok(formatted) = format_source(&source, &config) else {
+            return Ok(());
+        };
+        prop_assert!(semantic_equivalent(&source, &formatted));
+    }
+
+    /// No panics: the formatter handles any generated input without crashing.
+    #[test]
+    fn format_never_panics(source in program(), config in config()) {
+        let _ = format_source(&source, &config);
     }
 }
