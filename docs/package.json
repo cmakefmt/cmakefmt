@@ -27,7 +27,7 @@
     "chart.js": "^4.5.1",
     "codemirror": "^6.0.2",
     "daisyui": "^5.5.20",
-    "sharp": "^0.34.2",
+    "sharp": "^0.35.1",
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.3.0"
