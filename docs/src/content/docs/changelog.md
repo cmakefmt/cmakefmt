@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 1.7.0 — 2026-06-22
+
 ### Changed
 
 - The crate `homepage` and `documentation` metadata now point at the
