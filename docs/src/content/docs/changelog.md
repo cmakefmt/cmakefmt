@@ -25,6 +25,12 @@ This project follows a simple changelog discipline:
 
 ### Added
 
+- Homebrew tap releases now build macOS bottles for Apple Silicon and
+  Intel runners, upload the bottle tarballs to the tap release, and
+  merge the generated bottle block back into the formula. New releases
+  can therefore install from prebuilt bottles instead of always building
+  `cmakefmt` from source.
+
 - The `.editorconfig` fallback now also maps `max_line_length` to
   `line_width` and `end_of_line` to `line_ending` (`lf` → `unix`,
   `crlf` → `windows`), in addition to the existing `indent_style` and
@@ -45,6 +51,19 @@ This project follows a simple changelog discipline:
   directory. Files in a multi-root workspace are now formatted with
   their own project's config. Unsaved or non-`file:` documents continue
   to use the workspace/default config.
+
+- LSP configuration discovery now handles Windows `file:///C:/...` URIs
+  as native drive paths. Previously the server could turn those URIs into
+  Unix-like `/C:/...` paths on Windows, miss the document's nearest
+  `.cmakefmt.*` config, and format with default settings instead.
+
+- Commands that fit on one line now stay inline even when
+  `max_hanging_wrap_positional_args` is lower than the number of
+  positional arguments. Previously that threshold was applied before the
+  inline-fit check, so a short command such as `set(IS_TOP_LEVEL TRUE)`
+  could be forced into vertical layout; with `dangle_parens: true`, that
+  produced an unexpected dangling closing parenthesis on an otherwise
+  unwrapped command.
 
 - `cmakefmt config convert` now carries over the `enable_sort`,
   `autosort`, `wrap_after_first_arg`, and `continuation_align` format
