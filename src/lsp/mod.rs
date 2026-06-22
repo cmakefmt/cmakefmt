@@ -196,7 +196,8 @@ fn uri_to_path(uri: &str) -> Option<PathBuf> {
     let decoded = percent_decode(path_part);
     #[cfg(windows)]
     {
-        if decoded.as_bytes().get(0) == Some(&b'/') && decoded.as_bytes().get(2) == Some(&b':') {
+        let bytes = decoded.as_bytes();
+        if bytes.first() == Some(&b'/') && bytes.get(2) == Some(&b':') {
             return Some(PathBuf::from(decoded[1..].replace('/', "\\")));
         }
     }
