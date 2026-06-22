@@ -27,6 +27,9 @@ replace = """name = "cmakefmt-rust"
 version = "{new_version}\""""
 
 [[tool.bumpversion.files]]
+filename = "docs/src/content/docs/ci.md"
+
+[[tool.bumpversion.files]]
 filename = "docs/src/content/docs/cli.md"
 
 [[tool.bumpversion.files]]
@@ -39,6 +42,3 @@ filename = "docs/src/content/docs/troubleshooting.md"
 filename = "docs/src/content/docs/index.mdx"
 search = '"softwareVersion": "{current_version}"'
 replace = '"softwareVersion": "{new_version}"'
-
-[[tool.bumpversion.files]]
-filename = "docs/src/content/docs/ci.md"

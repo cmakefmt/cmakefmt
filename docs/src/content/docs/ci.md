@@ -100,7 +100,7 @@ version (e.g. for reproducible CI on long-lived branches):
 ```yaml
 - uses: cmakefmt/cmakefmt-action@v2
   with:
-    version: "1.5.0"
+    version: "1.6.0"
 ```
 
 ### Monorepo subdirectory
@@ -225,7 +225,7 @@ cat CMakeLists.txt | docker run --rm -i ghcr.io/cmakefmt/cmakefmt -
 Pin a specific version:
 
 ```bash
-docker run --rm -v "$(pwd):/work" -w /work ghcr.io/cmakefmt/cmakefmt:1.5.0 --check .
+docker run --rm -v "$(pwd):/work" -w /work ghcr.io/cmakefmt/cmakefmt:1.6.0 --check .
 ```
 
 You can also build the image locally from the repository root:
