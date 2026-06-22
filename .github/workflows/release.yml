@@ -279,7 +279,7 @@ jobs:
         shell: bash
         run: |
           cd dist
-          sha256sum * > SHA256SUMS
+          sha256sum ./* > SHA256SUMS
 
       - name: Generate SBOM
         shell: bash
