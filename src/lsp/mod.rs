@@ -193,7 +193,14 @@ fn uri_to_path(uri: &str) -> Option<PathBuf> {
         Some(idx) => &rest[idx..],
         None => return None,
     };
-    Some(PathBuf::from(percent_decode(path_part)))
+    let decoded = percent_decode(path_part);
+    #[cfg(windows)]
+    {
+        if decoded.as_bytes().get(0) == Some(&b'/') && decoded.as_bytes().get(2) == Some(&b':') {
+            return Some(PathBuf::from(decoded[1..].replace('/', "\\")));
+        }
+    }
+    Some(PathBuf::from(decoded))
 }
 
 /// Minimal percent-decoder for URI path components (`%20` → space). Invalid or
@@ -784,6 +791,16 @@ mod tests {
         assert_eq!(percent_decode("a%2zb"), "a%2zb");
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn uri_to_path_decodes_windows_drive_uri() {
+        let path = uri_to_path("file:///C:/Users/runner/project/CMakeLists.txt").unwrap();
+        assert_eq!(
+            path,
+            PathBuf::from(r"C:\Users\runner\project\CMakeLists.txt")
+        );
+    }
+
     #[test]
     fn config_for_document_falls_back_for_unsaved_document() {
         // A non-`file:` URI has no on-disk location, so the fallback
@@ -808,7 +825,7 @@ mod tests {
         .unwrap();
         let file = dir.path().join("CMakeLists.txt");
         std::fs::write(&file, "message(hi)\n").unwrap();
-        let uri = format!("file://{}", file.display());
+        let uri = file_uri_for_test(&file);
 
         let fallback = Config {
             line_width: 100,
@@ -816,5 +833,14 @@ mod tests {
         };
         let config = config_for_document(&uri, &fallback);
         assert_eq!(config.line_width, 40);
+    }
+
+    fn file_uri_for_test(path: &std::path::Path) -> String {
+        let path = path.display().to_string().replace('\\', "/");
+        if path.starts_with('/') {
+            format!("file://{path}")
+        } else {
+            format!("file:///{path}")
+        }
     }
 }
