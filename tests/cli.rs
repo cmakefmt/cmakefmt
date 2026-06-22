@@ -3730,7 +3730,7 @@ fn wrap_after_first_arg_user_override() {
     // Disable wrap_after_first_arg for set via per-command override
     write_file(
         &dir.path().join(".cmakefmt.yaml"),
-        "per_command_overrides:\n  set:\n    wrap_after_first_arg: false\n",
+        "format:\n  line_width: 40\nper_command_overrides:\n  set:\n    wrap_after_first_arg: false\n",
     );
     let file = dir.path().join("CMakeLists.txt");
     write_file(

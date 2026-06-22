@@ -1271,6 +1271,7 @@ fn if_condition_breaks_before_boolean_operator() {
 fn anonymous_sections_go_vertical_after_max_pargs_hwrap() {
     let src = "my_custom_command(one two three four five six seven)\n";
     let config = Config {
+        line_width: 30,
         max_pargs_hwrap: 6,
         ..Config::default()
     };
@@ -1408,6 +1409,18 @@ fn dangle_parens_true() {
         garply
     )
     ");
+}
+
+#[test]
+fn dangle_parens_does_not_wrap_inline_set() {
+    let src = "set(IS_TOP_LEVEL TRUE)\n";
+    let config = Config {
+        dangle_parens: true,
+        max_pargs_hwrap: 1,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @"set(IS_TOP_LEVEL TRUE)");
 }
 
 #[test]

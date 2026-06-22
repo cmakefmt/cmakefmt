@@ -492,13 +492,6 @@ fn try_format_inline(
         return None;
     }
 
-    if sections
-        .iter()
-        .any(|section| section.arguments.len() > cmd_config.max_pargs_hwrap())
-    {
-        return None;
-    }
-
     let base_indent = cmd_config.indent_str().repeat(block_depth);
     let mut output = format!("{base_indent}{}(", format_name(command, cmd_config));
 
