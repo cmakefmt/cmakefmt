@@ -21,7 +21,7 @@
     "@codemirror/state": "^6.7.0",
     "@codemirror/view": "^6.43.4",
     "@lezer/highlight": "^1.2.3",
-    "@tailwindcss/vite": "^4.3.1",
+    "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.0.3",
     "astro-magic-move": "^0.4.0",
     "chart.js": "^4.5.1",
