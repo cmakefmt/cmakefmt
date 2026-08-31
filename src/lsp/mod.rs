@@ -548,8 +548,8 @@ mod tests {
             &Config::default(),
         )
         .unwrap();
-        assert!(resp.error.is_none());
-        let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
+        let edits: Vec<lsp_types::TextEdit> =
+            serde_json::from_value(resp.response_result.unwrap()).unwrap();
         assert_eq!(edits.len(), 1);
         // Default config lowercases commands
         assert!(edits[0].new_text.starts_with("message("));
@@ -578,8 +578,8 @@ mod tests {
             &Config::default(),
         )
         .unwrap();
-        assert!(resp.error.is_none());
-        let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
+        let edits: Vec<lsp_types::TextEdit> =
+            serde_json::from_value(resp.response_result.unwrap()).unwrap();
         assert_eq!(edits.len(), 1);
         assert!(edits[0].new_text.contains("message(b)"));
         // Edit covers only the requested range
@@ -606,8 +606,8 @@ mod tests {
             &Config::default(),
         )
         .unwrap();
-        assert!(resp.error.is_none());
-        let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
+        let edits: Vec<lsp_types::TextEdit> =
+            serde_json::from_value(resp.response_result.unwrap()).unwrap();
         assert!(edits.is_empty());
     }
 
@@ -621,8 +621,8 @@ mod tests {
             &Config::default(),
         )
         .unwrap();
-        assert!(resp.error.is_none());
-        let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(resp.result.unwrap()).unwrap();
+        let edits: Vec<lsp_types::TextEdit> =
+            serde_json::from_value(resp.response_result.unwrap()).unwrap();
         assert_eq!(
             edits[0].range.end.character,
             "MESSAGE(\"é\")".encode_utf16().count() as u32
@@ -639,11 +639,8 @@ mod tests {
             params: serde_json::Value::Null,
         };
         let resp = handle_request(req, &HashMap::new(), &Config::default()).unwrap();
-        assert!(resp.error.is_some());
-        assert_eq!(
-            resp.error.unwrap().code,
-            lsp_server::ErrorCode::MethodNotFound as i32
-        );
+        let error = resp.response_result.unwrap_err();
+        assert_eq!(error.code, lsp_server::ErrorCode::MethodNotFound as i32);
     }
 
     // ── handle_code_action ────────────────────────────────────────────────
@@ -674,9 +671,8 @@ mod tests {
             params: serde_json::to_value(params).unwrap(),
         };
         let resp = handle_code_action(req).unwrap();
-        assert!(resp.error.is_none());
         let actions: Vec<lsp_types::CodeActionOrCommand> =
-            serde_json::from_value(resp.result.unwrap()).unwrap();
+            serde_json::from_value(resp.response_result.unwrap()).unwrap();
         assert_eq!(actions.len(), 1);
         match &actions[0] {
             lsp_types::CodeActionOrCommand::CodeAction(action) => {
