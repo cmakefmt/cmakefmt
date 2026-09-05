@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
     format_source, format_source_with_registry, CaseStyle, Config, ContinuationAlign, DangleAlign,
-    PerCommandConfig,
+    PerCommandConfig, WrapAfterFirstArgAlign,
 };
 use cmakefmt::{formatter, parser};
 
@@ -1020,6 +1020,109 @@ fn continuation_align_does_not_affect_inline_fits() {
             "unexpected output for {align:?}:\n{formatted}"
         );
     }
+}
+
+#[test]
+fn wrap_after_first_arg_align_default_aligns_under_first_arg() {
+    // Default mode: the first argument stays on the command line and
+    // everything after it aligns under that argument, i.e. just past
+    // the opening paren. This is the layout wrap_after_first_arg has
+    // always produced.
+    let src =
+        "target_compile_definitions(mylib INTERFACE USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n";
+    let config = Config {
+        line_width: 50,
+        wrap_after_first_arg: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    target_compile_definitions(mylib
+                               INTERFACE
+                                 USING_DLL
+                                 COMMON_USING_DLL
+                                 EXTRA_DEFINE)
+    ");
+}
+
+#[test]
+fn wrap_after_first_arg_align_same_indent_uses_tab_stop() {
+    // Opt-in SameIndent: the first argument still stays on the command
+    // line, but the body indents by one tab stop as in the vertical
+    // layout, so a long command name no longer pushes it rightwards.
+    let src =
+        "target_compile_definitions(mylib INTERFACE USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n";
+    let config = Config {
+        line_width: 50,
+        wrap_after_first_arg: true,
+        wrap_after_first_arg_align: WrapAfterFirstArgAlign::SameIndent,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    target_compile_definitions(mylib
+      INTERFACE
+        USING_DLL COMMON_USING_DLL EXTRA_DEFINE)
+    ");
+}
+
+#[test]
+fn wrap_after_first_arg_align_is_inert_without_wrap_after_first_arg() {
+    // The alignment only selects where a wrap_after_first_arg
+    // continuation starts. With the layout itself off, both modes must
+    // produce the ordinary vertical output.
+    let src =
+        "target_compile_definitions(mylib INTERFACE USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n";
+    for align in [
+        WrapAfterFirstArgAlign::SameIndent,
+        WrapAfterFirstArgAlign::UnderFirstArg,
+    ] {
+        let config = Config {
+            line_width: 50,
+            wrap_after_first_arg_align: align,
+            ..Config::default()
+        };
+        let formatted = format_source(src, &config).unwrap();
+        assert_eq!(
+            formatted,
+            "target_compile_definitions(\n  mylib\n  INTERFACE\n    USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n",
+            "unexpected output for {align:?}:\n{formatted}"
+        );
+    }
+}
+
+#[test]
+fn wrap_after_first_arg_align_per_command_override_wins() {
+    // A per-command override must beat the global default, so a project
+    // can opt in everywhere and pin one command back.
+    let src =
+        "target_compile_definitions(mylib INTERFACE USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n";
+    let mut per_command_overrides = HashMap::new();
+    per_command_overrides.insert(
+        "target_compile_definitions".to_string(),
+        PerCommandConfig {
+            wrap_after_first_arg_align: Some(WrapAfterFirstArgAlign::UnderFirstArg),
+            ..Default::default()
+        },
+    );
+    let config = Config {
+        line_width: 50,
+        wrap_after_first_arg: true,
+        wrap_after_first_arg_align: WrapAfterFirstArgAlign::SameIndent,
+        per_command_overrides,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    target_compile_definitions(mylib
+                               INTERFACE
+                                 USING_DLL
+                                 COMMON_USING_DLL
+                                 EXTRA_DEFINE)
+    ");
 }
 
 #[test]

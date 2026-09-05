@@ -8,6 +8,30 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- New `format.wrap_after_first_arg_align` option selecting where the
+  continuation of a `wrap_after_first_arg` layout starts:
+  `under-first-arg` (the default, and the layout `wrap_after_first_arg`
+  has always produced) or `same-indent`, which indents the body by one
+  `tab_size` stop from the command instead of aligning it past the
+  opening paren. Keeping the first argument on the command line and
+  indenting the body by a tab stop were previously inseparable, so
+  projects that write
+
+  ```cmake
+  target_compile_definitions(mylib
+    INTERFACE
+      USING_DLL)
+  ```
+
+  could not be formatted without either losing the first argument from
+  the command line or having the whole body pushed out to the width of
+  the command name. Available globally, per command via
+  `per_command_overrides`, and per command form via
+  `layout.wrap_after_first_arg_align` in a spec. The default preserves
+  existing output byte for byte, including for `set()`.
+
 ## 1.7.0 — 2026-06-22
 
 ### Changed

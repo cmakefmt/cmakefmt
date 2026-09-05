@@ -85,6 +85,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`always_wrap`](#always_wrap)
   - [`require_valid_layout`](#require_valid_layout)
   - [`wrap_after_first_arg`](#wrap_after_first_arg)
+  - [`wrap_after_first_arg_align`](#wrap_after_first_arg_align)
   - [`continuation_align`](#continuation_align)
   - [`enable_sort`](#enable_sort)
   - [`autosort`](#autosort)
@@ -139,6 +140,7 @@ format:
   always_wrap: []
   require_valid_layout: false
   wrap_after_first_arg: false
+  wrap_after_first_arg_align: under-first-arg
   enable_sort: false
   autosort: false
   dangle_parens: false
@@ -400,6 +402,54 @@ commands:
       SOURCES:
         nargs: "+"
 ```
+
+### `wrap_after_first_arg_align`
+
+Where the continuation of a [`wrap_after_first_arg`](#wrap_after_first_arg)
+layout starts. Default: `under-first-arg`.
+
+- `under-first-arg` — continuation aligns under the first argument, i.e. just
+  past the opening paren. This is the layout `wrap_after_first_arg` has always
+  produced.
+- `same-indent` — continuation is indented by one `tab_size` stop from the
+  command, as in the vertical layout.
+
+```yaml
+format:
+  wrap_after_first_arg: true
+  wrap_after_first_arg_align: same-indent
+```
+
+```cmake
+# under-first-arg (default) — a long command name pushes the body right
+target_compile_definitions(mylib
+                           INTERFACE
+                             USING_DLL
+                             COMMON_USING_DLL)
+
+# same-indent — the body indents like every other wrapped call
+target_compile_definitions(mylib
+  INTERFACE
+    USING_DLL
+    COMMON_USING_DLL)
+```
+
+This option has no effect unless `wrap_after_first_arg` applies to the call:
+the layout must be selected first, and it only applies when the command's
+first section is positional.
+
+Because `set()` enables `wrap_after_first_arg` in its built-in spec, a global
+`same-indent` also changes how wrapped `set()` calls indent. Pin it back with
+a per-command override if you want `set()` to keep its documented look:
+
+```yaml
+per_command_overrides:
+  set:
+    wrap_after_first_arg_align: under-first-arg
+```
+
+Or set it for a single custom command in the spec via
+`layout.wrap_after_first_arg_align`.
 
 ### `continuation_align`
 

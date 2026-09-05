@@ -13,7 +13,7 @@ use serde::Serialize;
 
 use crate::config::{
     CaseStyle, Config, ContinuationAlign, DangleAlign, FractionalTabPolicy, LineEnding,
-    PerCommandConfig,
+    PerCommandConfig, WrapAfterFirstArgAlign,
 };
 use crate::error::{Error, IoResultExt, Result};
 
@@ -79,6 +79,8 @@ struct FormatSection {
     require_valid_layout: Option<bool>,
     /// Keep the first positional argument on the command line when wrapping.
     wrap_after_first_arg: Option<bool>,
+    /// Where a `wrap_after_first_arg` continuation starts: `under-first-arg` or `same-indent`.
+    wrap_after_first_arg_align: Option<WrapAfterFirstArgAlign>,
     /// How to indent continuation lines: `same-indent` or `under-first-value`.
     continuation_align: Option<ContinuationAlign>,
     /// Sort arguments in keyword sections marked `sortable` in the command spec.
@@ -245,6 +247,10 @@ fn default_config_template_toml() -> String {
             "# require_valid_layout = true\n\n",
             "# Keep the first positional argument on the command line when wrapping.\n",
             "# wrap_after_first_arg = true\n\n",
+            "# Where a wrap_after_first_arg continuation starts: under-first-arg\n",
+            "# (default, aligned past the opening paren) or same-indent (one tab stop\n",
+            "# in, as in the vertical layout).\n",
+            "# wrap_after_first_arg_align = \"same-indent\"\n\n",
             "# Continuation-line alignment when a wrapped keyword section overflows\n",
             "# line_width: under-first-value (default, cmake-format hanging-indent) or\n",
             "# same-indent (wrap at the keyword's own indent).\n",
@@ -376,6 +382,7 @@ struct EffectiveFormatSection {
     require_valid_layout: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     wrap_after_first_arg: bool,
+    wrap_after_first_arg_align: WrapAfterFirstArgAlign,
     continuation_align: ContinuationAlign,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     enable_sort: bool,
@@ -424,6 +431,7 @@ impl From<&Config> for EffectiveConfigFile {
                 always_wrap: config.always_wrap.clone(),
                 require_valid_layout: config.require_valid_layout,
                 wrap_after_first_arg: config.wrap_after_first_arg,
+                wrap_after_first_arg_align: config.wrap_after_first_arg_align,
                 continuation_align: config.continuation_align,
                 enable_sort: config.enable_sort,
                 autosort: config.autosort,
@@ -489,6 +497,10 @@ fn default_config_template_yaml() -> String {
             "  # require_valid_layout: true\n\n",
             "  # Keep the first positional argument on the command line when wrapping.\n",
             "  # wrap_after_first_arg: true\n\n",
+            "  # Where a wrap_after_first_arg continuation starts: under-first-arg\n",
+            "  # (default, aligned past the opening paren) or same-indent (one tab stop\n",
+            "  # in, as in the vertical layout).\n",
+            "  # wrap_after_first_arg_align: same-indent\n\n",
             "  # Continuation-line alignment when a wrapped keyword section overflows\n",
             "  # line_width: under-first-value (default, cmake-format hanging-indent) or\n",
             "  # same-indent (wrap at the keyword's own indent).\n",
@@ -713,6 +725,9 @@ impl Config {
         }
         if let Some(v) = fc.format.wrap_after_first_arg {
             self.wrap_after_first_arg = v;
+        }
+        if let Some(v) = fc.format.wrap_after_first_arg_align {
+            self.wrap_after_first_arg_align = v;
         }
         if let Some(v) = fc.format.continuation_align {
             self.continuation_align = v;

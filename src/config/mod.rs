@@ -133,6 +133,47 @@ pub enum ContinuationAlign {
     UnderFirstValue,
 }
 
+/// How to indent the continuation of a call laid out with
+/// [`Config::wrap_after_first_arg`].
+///
+/// Only takes effect when `wrap_after_first_arg` keeps the first
+/// positional argument on the command line. It selects the column the
+/// remaining arguments and keyword sections start at:
+///
+/// ```cmake
+/// # UnderFirstArg — continuation aligns under the first argument:
+/// target_compile_definitions(mylib
+///                            INTERFACE
+///                              USING_DLL)
+///
+/// # SameIndent — continuation is indented by one tab stop, as in the
+/// # vertical layout:
+/// target_compile_definitions(mylib
+///   INTERFACE
+///     USING_DLL)
+/// ```
+///
+/// cmakefmt defaults to [`WrapAfterFirstArgAlign::UnderFirstArg`],
+/// which is the layout `wrap_after_first_arg` has always produced.
+/// [`WrapAfterFirstArgAlign::SameIndent`] is available for consumers
+/// who want the first argument kept on the command line without the
+/// deep alignment that follows from a long command name, so that the
+/// body indents like every other wrapped call.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum, schemars::JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub enum WrapAfterFirstArgAlign {
+    /// Continuation lines are indented by one tab stop from the
+    /// command, matching the vertical layout and the way the rest of
+    /// the formatter wraps.
+    SameIndent,
+    /// Continuation lines align under the first argument, i.e. at the
+    /// column just past the opening paren. The default.
+    #[default]
+    UnderFirstArg,
+}
+
 /// How to align the dangling closing paren.
 ///
 /// Only takes effect when [`Config::dangle_parens`] is `true`.
@@ -277,6 +318,12 @@ pub struct Config {
     /// overridden per-command via `per_command_overrides` or the spec's
     /// `layout.wrap_after_first_arg`.
     pub wrap_after_first_arg: bool,
+    /// Where the continuation of a [`Self::wrap_after_first_arg`]
+    /// layout starts: under the first argument, or one tab stop in.
+    /// Has no effect unless `wrap_after_first_arg` applies. Can be
+    /// overridden per-command via `per_command_overrides` or the
+    /// spec's `layout.wrap_after_first_arg_align`.
+    pub wrap_after_first_arg_align: WrapAfterFirstArgAlign,
     /// How to indent continuation lines when a wrapped keyword
     /// section overflows [`Self::line_width`]. Can be overridden
     /// per-command via `per_command_overrides` or the spec's
@@ -378,6 +425,9 @@ pub struct PerCommandConfig {
     pub max_subgroups_hwrap: Option<usize>,
     /// Keep the first positional argument on the command line when wrapping.
     pub wrap_after_first_arg: Option<bool>,
+    /// Override where a `wrap_after_first_arg` continuation starts for
+    /// this command only.
+    pub wrap_after_first_arg_align: Option<WrapAfterFirstArgAlign>,
     /// Override the continuation-alignment rule for this command.
     pub continuation_align: Option<ContinuationAlign>,
 }
@@ -399,6 +449,7 @@ impl Default for Config {
             always_wrap: Vec::new(),
             require_valid_layout: false,
             wrap_after_first_arg: false,
+            wrap_after_first_arg_align: WrapAfterFirstArgAlign::UnderFirstArg,
             continuation_align: ContinuationAlign::UnderFirstValue,
             enable_sort: false,
             autosort: false,
@@ -673,6 +724,21 @@ impl CommandConfig<'_> {
             .unwrap_or(self.global.wrap_after_first_arg)
     }
 
+    /// Effective `wrap_after_first_arg` continuation alignment for the
+    /// current command.
+    ///
+    /// Resolution order: per-command user override > `spec_value` (from
+    /// the command spec's layout overrides) > global config default.
+    pub fn wrap_after_first_arg_align(
+        &self,
+        spec_value: Option<WrapAfterFirstArgAlign>,
+    ) -> WrapAfterFirstArgAlign {
+        self.per_cmd
+            .and_then(|p| p.wrap_after_first_arg_align)
+            .or(spec_value)
+            .unwrap_or(self.global.wrap_after_first_arg_align)
+    }
+
     /// Effective continuation-alignment rule for the current command.
     ///
     /// Resolution order: per-command user override > `spec_value`
@@ -801,6 +867,7 @@ mod tests {
                 max_pargs_hwrap: Some(10),
                 max_subgroups_hwrap: Some(5),
                 wrap_after_first_arg: None,
+                wrap_after_first_arg_align: None,
                 continuation_align: None,
             },
         );

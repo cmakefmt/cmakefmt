@@ -325,6 +325,18 @@
             "null"
           ],
           "default": null
+        },
+        "wrap_after_first_arg_align": {
+          "description": "Where a `wrap_after_first_arg` continuation starts: `under-first-arg` or `same-indent`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WrapAfterFirstArgAlign"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "additionalProperties": false
@@ -541,9 +553,35 @@
             "boolean",
             "null"
           ]
+        },
+        "wrap_after_first_arg_align": {
+          "description": "Override where a `wrap_after_first_arg` continuation starts for\nthis command only.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WrapAfterFirstArgAlign"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
+    },
+    "WrapAfterFirstArgAlign": {
+      "description": "How to indent the continuation of a call laid out with\n[`Config::wrap_after_first_arg`].\n\nOnly takes effect when `wrap_after_first_arg` keeps the first\npositional argument on the command line. It selects the column the\nremaining arguments and keyword sections start at:\n\n```cmake\n# UnderFirstArg — continuation aligns under the first argument:\ntarget_compile_definitions(mylib\n                           INTERFACE\n                             USING_DLL)\n\n# SameIndent — continuation is indented by one tab stop, as in the\n# vertical layout:\ntarget_compile_definitions(mylib\n  INTERFACE\n    USING_DLL)\n```\n\ncmakefmt defaults to [`WrapAfterFirstArgAlign::UnderFirstArg`],\nwhich is the layout `wrap_after_first_arg` has always produced.\n[`WrapAfterFirstArgAlign::SameIndent`] is available for consumers\nwho want the first argument kept on the command line without the\ndeep alignment that follows from a long command name, so that the\nbody indents like every other wrapped call.",
+      "oneOf": [
+        {
+          "description": "Continuation lines are indented by one tab stop from the\ncommand, matching the vertical layout and the way the rest of\nthe formatter wraps.",
+          "type": "string",
+          "const": "same-indent"
+        },
+        {
+          "description": "Continuation lines align under the first argument, i.e. at the\ncolumn just past the opening paren. The default.",
+          "type": "string",
+          "const": "under-first-arg"
+        }
+      ]
     }
   }
 }

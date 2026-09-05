@@ -52,6 +52,7 @@ options, CLI output, and parse tree dumps.
 - **sortable** — A property a command spec attaches to a keyword section to opt that section in to argument sorting under `format.enable_sort`. Example: `target_sources` source lists are commonly marked sortable so they stay alphabetical.
 - **trailing comment** — A comment after the closing `)` on the same line: `set(FOO bar) # trailing`. Long trailing comments are reflowed with continuation lines aligned to the `#`.
 - **wrap_after_first_arg** — A layout hint that keeps the first positional argument on the command line when wrapping. Enabled by default for `set()` so the variable name stays on the `set(` line.
+- **wrap_after_first_arg_align** — A config option that selects where a [wrap_after_first_arg](#formatter-concepts) continuation starts. `under-first-arg` (default) aligns it under the first argument, just past the opening paren; `same-indent` indents it by one `tab_size` stop from the command, as the vertical layout does. Inert unless `wrap_after_first_arg` applies.
 
 ## Parse Tree Node Types
 

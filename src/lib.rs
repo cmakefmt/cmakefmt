@@ -104,7 +104,7 @@ pub mod wasm;
 
 pub use config::{
     CaseStyle, CommandConfig, Config, ContinuationAlign, DangleAlign, FractionalTabPolicy,
-    LineEnding, PerCommandConfig,
+    LineEnding, PerCommandConfig, WrapAfterFirstArgAlign,
 };
 
 pub use config::default_config_template;
