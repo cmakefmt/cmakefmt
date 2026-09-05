@@ -49,6 +49,7 @@ struct WriteCtx<'a> {
     cmd_config: &'a CommandConfig<'a>,
     patterns: &'a CompiledPatterns,
     continuation_align: crate::config::ContinuationAlign,
+    wrap_after_first_arg_align: crate::config::WrapAfterFirstArgAlign,
 }
 
 impl<'a> WriteCtx<'a> {
@@ -56,11 +57,13 @@ impl<'a> WriteCtx<'a> {
         cmd_config: &'a CommandConfig<'a>,
         patterns: &'a CompiledPatterns,
         continuation_align: crate::config::ContinuationAlign,
+        wrap_after_first_arg_align: crate::config::WrapAfterFirstArgAlign,
     ) -> Self {
         Self {
             cmd_config,
             patterns,
             continuation_align,
+            wrap_after_first_arg_align,
         }
     }
 
@@ -128,7 +131,18 @@ pub(crate) fn format_command(
     let spec_continuation = form.layout.as_ref().and_then(|l| l.continuation_align);
     let continuation_align = cmd_config.continuation_align(spec_continuation);
 
-    let ctx = WriteCtx::new(&cmd_config, patterns, continuation_align);
+    let spec_wrap_first_align = form
+        .layout
+        .as_ref()
+        .and_then(|l| l.wrap_after_first_arg_align);
+    let wrap_after_first_arg_align = cmd_config.wrap_after_first_arg_align(spec_wrap_first_align);
+
+    let ctx = WriteCtx::new(
+        &cmd_config,
+        patterns,
+        continuation_align,
+        wrap_after_first_arg_align,
+    );
 
     let output = if force_vertical {
         debug.log(format!(
@@ -615,7 +629,14 @@ fn format_command_vertical(
             .position(|a| !a.is_comment())
             .unwrap_or(0);
         let first_arg = first_section.arguments[first_real_idx];
-        let paren_indent = " ".repeat(base_indent.len() + name.len() + 1);
+        // Where the rest of the call continues: under the first argument,
+        // or one tab stop in, as the vertical layout below does.
+        let continuation_indent = match ctx.wrap_after_first_arg_align {
+            crate::config::WrapAfterFirstArgAlign::SameIndent => indent.clone(),
+            crate::config::WrapAfterFirstArgAlign::UnderFirstArg => {
+                " ".repeat(base_indent.len() + name.len() + 1)
+            }
+        };
 
         output.push('(');
         output.push_str(first_arg.as_str());
@@ -675,25 +696,25 @@ fn format_command_vertical(
                     write_vertical_arguments(
                         &mut output,
                         remaining,
-                        &paren_indent,
+                        &continuation_indent,
                         ctx.config(),
                         ctx.patterns,
                     );
                 } else {
-                    write_packed_arguments(&mut output, remaining, &paren_indent, ctx);
+                    write_packed_arguments(&mut output, remaining, &continuation_indent, ctx);
                 }
             }
         } else if sections.len() > 1 {
             output.push('\n');
         }
 
-        let kw_nested = format!("{paren_indent}{}", cmd_config.indent_str());
+        let kw_nested = format!("{continuation_indent}{}", cmd_config.indent_str());
         write_sections(
             &mut output,
             &sections[1..],
             form,
             ctx,
-            &paren_indent,
+            &continuation_indent,
             &kw_nested,
         );
 

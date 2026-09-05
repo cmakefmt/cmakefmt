@@ -158,6 +158,7 @@ The full schema is at `cmakefmt config schema`.
 - `format.command_case` / `format.keyword_case` — `lower`, `upper`, or `unchanged`
 - `format.dangle_parens` — closing paren on own line
 - `format.wrap_after_first_arg` — keep first arg on command line (default for `set()`)
+- `format.wrap_after_first_arg_align` — where that continuation starts: `under-first-arg` (default) or `same-indent`
 - `format.enable_sort` / `format.autosort` — sort arguments in keyword sections
 - `markup.enable_markup` — controls comment reflow and markup handling
 - `commands:` — user-defined command specs (pargs, kwargs, flags, sortable)

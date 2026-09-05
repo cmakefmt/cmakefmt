@@ -16,7 +16,7 @@ use serde::Serialize;
 
 use crate::config::{
     file::DumpConfigFormat, CaseStyle, ContinuationAlign, DangleAlign, FractionalTabPolicy,
-    LineEnding, PerCommandConfig,
+    LineEnding, PerCommandConfig, WrapAfterFirstArgAlign,
 };
 use crate::error::{Error, IoResultExt, Result};
 use crate::spec::{
@@ -704,6 +704,8 @@ struct OutputFormatSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     wrap_after_first_arg: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    wrap_after_first_arg_align: Option<WrapAfterFirstArgAlign>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     continuation_align: Option<ContinuationAlign>,
 }
 
@@ -733,6 +735,7 @@ impl OutputFormatSection {
             || self.enable_sort.is_some()
             || self.autosort.is_some()
             || self.wrap_after_first_arg.is_some()
+            || self.wrap_after_first_arg_align.is_some()
             || self.continuation_align.is_some()
     }
 }
@@ -878,6 +881,9 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
             "enable_sort" => converted.format.enable_sort = as_bool(value),
             "autosort" => converted.format.autosort = as_bool(value),
             "wrap_after_first_arg" => converted.format.wrap_after_first_arg = as_bool(value),
+            "wrap_after_first_arg_align" => {
+                converted.format.wrap_after_first_arg_align = as_wrap_after_first_arg_align(value)
+            }
             "continuation_align" => {
                 converted.format.continuation_align = as_continuation_align(value)
             }
@@ -1134,6 +1140,9 @@ fn convert_layout_overrides(value: &LegacyValue) -> Option<LayoutOverridesOverri
             "always_wrap" => layout.always_wrap = as_bool(value),
             "max_pargs_hwrap" => layout.max_pargs_hwrap = as_usize(value),
             "wrap_after_first_arg" => layout.wrap_after_first_arg = as_bool(value),
+            "wrap_after_first_arg_align" => {
+                layout.wrap_after_first_arg_align = as_wrap_after_first_arg_align(value)
+            }
             "continuation_align" => layout.continuation_align = as_continuation_align(value),
             _ => {}
         }
@@ -1229,6 +1238,14 @@ fn as_dangle_align(value: &LegacyValue) -> Option<DangleAlign> {
         "prefix" => Some(DangleAlign::Prefix),
         "open" => Some(DangleAlign::Open),
         "close" => Some(DangleAlign::Close),
+        _ => None,
+    }
+}
+
+fn as_wrap_after_first_arg_align(value: &LegacyValue) -> Option<WrapAfterFirstArgAlign> {
+    match value.as_str()?.to_ascii_lowercase().as_str() {
+        "same-indent" => Some(WrapAfterFirstArgAlign::SameIndent),
+        "under-first-arg" => Some(WrapAfterFirstArgAlign::UnderFirstArg),
         _ => None,
     }
 }
