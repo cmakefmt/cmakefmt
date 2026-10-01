@@ -95,6 +95,7 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 
 <script>
   const mediaQuery = matchMedia('(min-width: 50rem)');
+  const sidebar = document.getElementById('starlight__sidebar');
 
   const syncMobileMenuButtons = () => {
     const isOpen = document.body.hasAttribute('data-mobile-menu-expanded');
@@ -106,11 +107,21 @@ const { hasSidebar } = Astro.locals.starlightRoute;
   };
 
   const setMobileMenuOpen = (open: boolean) => {
+    if (sidebar?.hasAttribute('popover')) {
+      if (open) sidebar.showPopover();
+      else if (sidebar.matches(':popover-open')) sidebar.hidePopover();
+    }
     document.body.toggleAttribute('data-mobile-menu-expanded', open);
     syncMobileMenuButtons();
   };
 
   syncMobileMenuButtons();
+
+  // Native Escape/light-dismiss must also update our custom header button.
+  sidebar?.addEventListener('toggle', () => {
+    document.body.toggleAttribute('data-mobile-menu-expanded', sidebar.matches(':popover-open'));
+    syncMobileMenuButtons();
+  });
 
   document.querySelectorAll('[data-mobile-menu-toggle]').forEach((button) => {
     if (button instanceof HTMLButtonElement) {

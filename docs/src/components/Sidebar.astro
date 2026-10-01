@@ -7,7 +7,7 @@ import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.ast
 import SidebarSublist from '@astrojs/starlight/components/SidebarSublist.astro';
 import { Icon } from '@astrojs/starlight/components';
 
-import TableOfContentsList from '../../node_modules/@astrojs/starlight/components-internals/TableOfContents/TableOfContentsList.astro';
+import TableOfContentsList from './MobileTableOfContentsList.astro';
 
 const { sidebar, toc } = Astro.locals.starlightRoute;
 ---
@@ -20,7 +20,7 @@ const { sidebar, toc } = Astro.locals.starlightRoute;
         <Icon name="right-caret" class="mobile-toc-caret" size="1rem" />
       </summary>
       <div class="mobile-toc-dropdown">
-        <TableOfContentsList toc={toc.items} isMobile />
+        <TableOfContentsList toc={toc.items} />
       </div>
     </details>
   ) : null
@@ -35,6 +35,8 @@ const { sidebar, toc } = Astro.locals.starlightRoute;
     anchor.addEventListener('click', () => {
       const group = anchor.closest('.mobile-toc-nav');
       if (group instanceof HTMLDetailsElement) group.open = false;
+      const sidebar = document.getElementById('starlight__sidebar');
+      if (sidebar?.matches(':popover-open')) sidebar.hidePopover();
       document.body.removeAttribute('data-mobile-menu-expanded');
     });
   });

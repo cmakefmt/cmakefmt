@@ -1,0 +1,38 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+// Keep our mobile navigation independent of Starlight's private component paths.
+interface TocItem {
+  slug: string;
+  text: string;
+  children: TocItem[];
+}
+interface Props {
+  toc: TocItem[];
+}
+const { toc } = Astro.props;
+---
+
+<ul>
+  {toc.map((item) => (
+    <li>
+      <a href={`#${item.slug}`}>{item.text}</a>
+      {item.children.length > 0 && <Astro.self toc={item.children} />}
+    </li>
+  ))}
+</ul>
+
+<style>
+  ul { list-style: none; margin: 0; padding: 0; }
+  li > ul { padding-inline-start: 1rem; }
+  a {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    color: var(--sl-color-gray-2);
+    text-decoration: none;
+    border-top: 1px solid var(--sl-color-gray-6);
+  }
+  a:hover, a:focus-visible { color: var(--sl-color-text-accent); }
+</style>
