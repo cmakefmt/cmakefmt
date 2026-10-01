@@ -35,6 +35,34 @@ fn fetchcontent_find_package_args_are_not_autosorted() {
 }
 
 #[test]
+fn add_subdirectory_source_directory_is_not_a_flag() {
+    let config = Config {
+        keyword_case: CaseStyle::Upper,
+        ..Config::default()
+    };
+    let formatted = format_source("add_subdirectory(system)\n", &config).unwrap();
+    insta::assert_snapshot!(formatted, @"add_subdirectory(system)");
+    for source in [
+        "add_subdirectory(exclude_from_all)\n",
+        "add_subdirectory(system binary SYSTEM EXCLUDE_FROM_ALL)\n",
+        "add_subdirectory(\n# source directory\nsystem SYSTEM)\n",
+    ] {
+        let formatted = format_source(source, &config).unwrap();
+        assert!(formatted.contains(if source.contains("exclude_from_all") {
+            "exclude_from_all"
+        } else {
+            "system"
+        }));
+        assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+        assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+    }
+    assert!(!cmakefmt::semantic::semantic_equivalent(
+        "add_subdirectory(system)\n",
+        "add_subdirectory(SYSTEM)\n"
+    ));
+}
+
+#[test]
 fn empty_input_formats_to_empty() {
     assert_eq!(format_source("", &Config::default()).unwrap(), "");
 }

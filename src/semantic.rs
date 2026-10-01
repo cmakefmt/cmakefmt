@@ -113,7 +113,15 @@ pub fn normalize_keyword_args(command: &mut CommandInvocation, registry: &Comman
     let form = spec.form_for(first_arg);
     let keyword_set = collect_keywords(form);
 
-    for arg in &mut command.arguments {
+    // Required leading positional values are not keywords, even when their
+    // spelling matches a flag (for example add_subdirectory(system)).
+    let required_positionals = usize::from(command.name.eq_ignore_ascii_case("add_subdirectory"));
+    for arg in command
+        .arguments
+        .iter_mut()
+        .filter(|argument| !argument.is_comment())
+        .skip(required_positionals)
+    {
         if let Argument::Unquoted(value) = arg {
             let upper = value.to_ascii_uppercase();
             if keyword_set.contains(upper.as_str()) {

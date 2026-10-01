@@ -255,7 +255,9 @@ pub(crate) fn split_sections<'a>(
     // current section, regardless of how they classify. This prevents a
     // subkwarg's value (e.g. `Runtime` after `COMPONENT`) from being
     // mis-parsed as an ancestor kwarg that happens to share the name.
-    let mut pending_consume: usize = 0;
+    // add_subdirectory requires its source directory before any flags.
+    // Do not apply this to all pargs: some commands allow flags first.
+    let mut pending_consume = usize::from(command.name.eq_ignore_ascii_case("add_subdirectory"));
 
     for argument in &command.arguments {
         if argument.is_comment() {
@@ -277,6 +279,13 @@ pub(crate) fn split_sections<'a>(
         let token = argument.as_str();
 
         if pending_consume > 0 {
+            if sections.is_empty() {
+                sections.push(Section {
+                    header: None,
+                    header_kind: None,
+                    arguments: Vec::new(),
+                });
+            }
             sections
                 .last_mut()
                 .expect("section list contains at least one section")
