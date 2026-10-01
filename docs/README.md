@@ -24,6 +24,9 @@ npm run build
 
 ## Rules
 
+- `MagicMove.astro` is the homepage's thin, build-time-tokenized adapter to
+  `shiki-magic-move`. It avoids the Astro 5/6-only wrapper package. Keep the
+  engine on its 1.3 line while using Shiki 3; engine 1.4 requires Shiki 4.
 - keep the sidebar in `docs/astro.config.mjs` aligned with the available pages
 - put published docs pages under `docs/src/content/docs/`
 - keep the site content aligned with `README.md`, `CHANGELOG.md`, and

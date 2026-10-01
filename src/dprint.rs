@@ -289,6 +289,7 @@ impl SyncPluginHandler<ResolvedConfig> for CmakefmtPlugin {
             file_matching: FileMatchingInfo {
                 file_extensions: vec!["cmake".to_owned()],
                 file_names: vec!["CMakeLists.txt".to_owned(), "CMakeLists.txt.in".to_owned()],
+                additive: false,
             },
             diagnostics,
             config: resolved,
@@ -452,6 +453,7 @@ mod tests {
             ArgumentCommentStyle::Standalone
         );
         assert_eq!(result.file_matching.file_extensions, vec!["cmake"]);
+        assert!(!result.file_matching.additive);
         assert!(result
             .file_matching
             .file_names

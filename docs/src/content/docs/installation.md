@@ -26,6 +26,10 @@ brew install cmakefmt/cmakefmt/cmakefmt
 
 Reference install path for developers already using Rust, works on any platform:
 
+The next release and current source checkout require **Rust 1.88 or newer**
+for source builds. Version 1.7.0 declares Rust 1.85 as its minimum.
+Prebuilt binaries and wheels do not require a Rust toolchain.
+
 ```bash
 cargo install cmakefmt-rust
 ```

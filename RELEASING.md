@@ -128,7 +128,7 @@ extra confidence:
 cargo test --locked --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo deny check
-cargo +1.85 check --locked --all-features --all-targets  # MSRV gate
+cargo +1.88 check --locked --all-features --all-targets  # MSRV gate
 python3 scripts/fetch-real-world-corpus.py && cargo test --test idempotency
 ```
 

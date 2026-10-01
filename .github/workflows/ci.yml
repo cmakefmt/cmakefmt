@@ -92,7 +92,7 @@ jobs:
 
       - name: Dependency licences, bans, and advisories
         if: matrix.os == 'ubuntu-latest'
-        run: cargo deny check
+        run: cargo deny --all-features check
 
       - name: Check JSON schema is up to date
         if: matrix.os == 'ubuntu-latest'
@@ -132,7 +132,7 @@ jobs:
         run: bash scripts/test-dprint-plugin.sh
 
   msrv:
-    name: msrv (1.85)
+    name: msrv (1.88)
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -141,7 +141,7 @@ jobs:
       - name: Install Rust toolchain (MSRV)
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable action, pinned toolchain below
         with:
-          toolchain: "1.85"
+          toolchain: "1.88"
 
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4  # v2.9.1

@@ -20,6 +20,8 @@ This project follows a simple changelog discipline:
 
 ### Changed
 
+- Raise the minimum supported Rust version from 1.85 to 1.88 for source
+  builds. Prebuilt binaries and wheels are unaffected.
 - Standalone argument comments now remain on their own lines by default.
   Inline comments stay attached where they fit; `standalone` moves all
   argument comments onto separate lines.
@@ -30,6 +32,8 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Update vulnerable Rust dependencies, resolve the docs installation's Astro
+  peer conflict, and track OpenCV's `5.x` branch in regression CI.
 - Preserve order-sensitive `FetchContent_Declare(FIND_PACKAGE_ARGS ...)`
   values when autosort is enabled (#189).
 - Keep the required source directory in `add_subdirectory()` positional,

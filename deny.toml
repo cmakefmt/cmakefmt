@@ -57,6 +57,9 @@ wildcards = "deny"
 # revisited periodically — if the ecosystem converges, we should
 # drop the entry so future duplications go back to failing.
 skip = [
+  # thiserror-impl 2.0.19 uses syn 3 while serde/clap and other proc macros
+  # still use syn 2. These are independent build-time dependency trees.
+  { name = "syn", version = "2" },
   # `bitflags` v1 / v2 split: many crates have migrated to v2 but a
   # long tail (notably some `windows-*` and `regex-*` transitives)
   # still pull v1. Tracked upstream; nothing we can fix here.

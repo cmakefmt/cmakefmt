@@ -1,0 +1,113 @@
+---
+// SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import { createHighlighter } from "shiki";
+import { createCssVariablesTheme } from "shiki/core";
+import { codeToKeyedTokens, createMagicMoveMachine } from "shiki-magic-move/core";
+import "shiki-magic-move/style.css";
+
+interface Props {
+  before: string;
+  after: string;
+  lang: string;
+  duration: number;
+  stagger: number;
+  class?: string;
+}
+
+const { before, after, lang, duration, stagger, class: className } = Astro.props;
+const theme = createCssVariablesTheme({ name: "css-variables", variablePrefix: "--shiki-", fontStyle: true });
+const highlighter = await createHighlighter({ themes: [theme], langs: [lang] });
+const machine = createMagicMoveMachine(
+  (code) => codeToKeyedTokens(highlighter, code, { lang, theme: "css-variables" }),
+  {},
+);
+const steps = [before, after].map((code) => machine.commit(code).current);
+highlighter.dispose();
+// JSON is embedded in an HTML script element, so escape its closing delimiter.
+const data = JSON.stringify(steps).replace(/</g, "\\u003c");
+---
+
+<magic-move class:list={["magic-move", className]} data-duration={duration} data-stagger={stagger}>
+  <pre class="shiki-magic-move-container"><code>{before}</code></pre>
+  <script is:inline type="application/json" set:html={data} />
+</magic-move>
+
+<script>
+  import { MagicMoveRenderer } from "shiki-magic-move/renderer";
+  import type { KeyedTokensInfo } from "shiki-magic-move/types";
+
+  // Only the manual step API used by FormatMagicShowcase is exposed here.
+  // Tokenization stays at build time; no Astro peer dependency is needed.
+  class MagicMoveElement extends HTMLElement {
+    #renderer: MagicMoveRenderer | null = null;
+    #steps: KeyedTokensInfo[] = [];
+    #currentStep = 0;
+    #animating = false;
+    #pendingStep: number | null = null;
+
+    get step() { return this.#currentStep; }
+    get totalSteps() { return this.#steps.length; }
+    get isReady() { return this.#renderer !== null; }
+
+    set step(value: number) {
+      if (!Number.isInteger(value) || value < 0 || value > 1) return;
+      this.#pendingStep = value;
+      if (this.isReady) void this.#drainSteps();
+    }
+
+    connectedCallback() {
+      if (this.isReady) return;
+      const data = this.querySelector('script[type="application/json"]');
+      const container = this.querySelector("pre");
+      if (!data?.textContent || !container) return;
+      this.#steps = JSON.parse(data.textContent);
+      data.remove();
+      container.textContent = "";
+      this.#renderer = new MagicMoveRenderer(container, {
+        duration: Number(this.dataset.duration),
+        stagger: Number(this.dataset.stagger),
+        animateContainer: true,
+      });
+      this.#renderer.replace(this.#steps[0]);
+      this.dispatchEvent(new CustomEvent("magic-move:ready", { bubbles: true }));
+      void this.#drainSteps();
+    }
+
+    async #drainSteps() {
+      if (this.#animating || !this.#renderer) return;
+      this.#animating = true;
+      try {
+        while (this.#pendingStep !== null) {
+          const step = this.#pendingStep;
+          this.#pendingStep = null;
+          if (step === this.#currentStep) continue;
+          await this.#renderer.render(this.#steps[step]);
+          this.#currentStep = step;
+          this.dispatchEvent(new CustomEvent("magic-move:step", {
+            detail: { step, total: this.totalSteps }, bubbles: true,
+          }));
+        }
+      } finally {
+        this.#animating = false;
+      }
+    }
+  }
+  if (!customElements.get("magic-move")) customElements.define("magic-move", MagicMoveElement);
+</script>
+
+<style is:global>
+  magic-move { display: block; position: relative; }
+  magic-move .shiki-magic-move-container {
+    margin: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    text-align: left;
+    color: var(--shiki-foreground);
+    background: var(--shiki-background);
+  }
+</style>

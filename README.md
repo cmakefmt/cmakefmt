@@ -58,6 +58,9 @@ winget install cmakefmt.cmakefmt          # Windows
 Conda, Docker, pre-built binaries, and full setup notes are documented at
 [Installation](https://cmakefmt.dev/installation/).
 
+Building the current source checkout or next release requires Rust 1.88 or
+newer. Prebuilt binaries and wheels do not require Rust.
+
 ## Quick start
 
 ```bash

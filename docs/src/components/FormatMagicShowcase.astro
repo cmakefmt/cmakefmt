@@ -3,8 +3,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-import { MagicMove } from "astro-magic-move";
-import "astro-magic-move/styles";
+import MagicMove from "./MagicMove.astro";
 
 const before = `CMAKE_MINIMUM_REQUIRED(VERSION 3.20)
 Project(myproject LANGUAGES CXX)
@@ -128,7 +127,6 @@ endif()
       before={before}
       after={after}
       lang="cmake"
-      trigger="none"
       duration={2200}
       stagger={0.18}
       class="format-magic-move"

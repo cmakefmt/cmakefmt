@@ -34,7 +34,7 @@ jobs:
             sparse: llvm/cmake
           - name: OpenCV
             repo: opencv/opencv
-            ref: master
+            ref: 5.x
             sparse: cmake
     steps:
       - name: Check out cmakefmt
