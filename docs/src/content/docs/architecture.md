@@ -48,8 +48,9 @@ File -> Statement* -> CommandInvocation -> Argument*
 ```
 
 `Argument` nodes cover unquoted args, quoted strings, bracket arguments, and
-inline comments. Comments are preserved as `InlineComment` arguments so they
-survive round-tripping through the formatter.
+comments. `InlineComment` and `StandaloneComment` arguments retain whether a
+comment originally followed an argument on the same line, so the formatter can
+preserve that placement.
 
 The public entry point is `parser::parse()` in `src/parser/mod.rs`, which
 coordinates four private layers:

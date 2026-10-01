@@ -173,6 +173,19 @@ pub enum DangleAlign {
     Close,
 }
 
+/// Placement of comments inside command argument lists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "cli", derive(schemars::JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub enum ArgumentCommentStyle {
+    /// Keep standalone comments separate and inline comments attached where they fit.
+    #[default]
+    Preserve,
+    /// Put every argument comment on its own line.
+    Standalone,
+}
+
 /// Full formatter configuration.
 ///
 /// Construct [`Config::default`] and set fields as needed before passing it to
@@ -290,9 +303,9 @@ pub struct Config {
     /// considered sortable if all its arguments are simple unquoted
     /// tokens (no variables, generator expressions, or quoted strings).
     pub autosort: bool,
-    /// Render comments inside a command invocation on their own lines instead
-    /// of attaching them to the preceding argument.
-    pub preserve_argument_comments: bool,
+    /// Preserve original argument comment placement, or put all comments
+    /// inside a command invocation on standalone lines.
+    pub argument_comment_style: ArgumentCommentStyle,
 
     // ── Parenthesis style ───────────────────────────────────────────────
     /// Place the closing `)` on its own line when a call wraps.
@@ -405,7 +418,7 @@ impl Default for Config {
             continuation_align: ContinuationAlign::UnderFirstValue,
             enable_sort: false,
             autosort: false,
-            preserve_argument_comments: false,
+            argument_comment_style: ArgumentCommentStyle::Preserve,
             dangle_parens: false,
             dangle_align: DangleAlign::Prefix,
             min_prefix_chars: 4,

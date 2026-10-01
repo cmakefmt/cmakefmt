@@ -123,6 +123,11 @@ pub fn dump_ast(file: &ast::File, color: bool) -> String {
                             bold_cyan("INLINE_COMMENT", color),
                             dim_green(c.as_str(), color),
                         )),
+                        ast::Argument::StandaloneComment(c) => out.push_str(&format!(
+                            "    {prefix_str}  {conn_str} {}  {}\n",
+                            bold_cyan("STANDALONE_COMMENT", color),
+                            dim_green(c.as_str(), color),
+                        )),
                     }
                 }
                 if let Some(tc) = &cmd.trailing_comment {

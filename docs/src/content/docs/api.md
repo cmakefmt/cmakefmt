@@ -48,6 +48,7 @@ The most important items today:
 - `format_source_with_registry_debug`
 - `Config`
 - `CaseStyle`
+- `ArgumentCommentStyle`
 - `DangleAlign`
 - `PerCommandConfig`
 - `Error`
@@ -98,6 +99,22 @@ target_link_libraries(foo PUBLIC bar baz)
 
 Use this pattern when the application needs to supply formatter policy at
 runtime rather than discovering it from disk.
+
+Argument comment placement is controlled by `ArgumentCommentStyle`:
+
+```rust
+use cmakefmt::{ArgumentCommentStyle, Config};
+
+let config = Config {
+    argument_comment_style: ArgumentCommentStyle::Standalone,
+    ..Config::default()
+};
+```
+
+`ArgumentCommentStyle::Preserve` is the default: standalone comments stay on
+separate lines and inline comments remain attached where they fit.
+`ArgumentCommentStyle::Standalone` puts all argument comments on separate
+lines. Comments after a command's closing `)` are unaffected.
 
 ## Loading Config From Disk
 

@@ -1130,11 +1130,17 @@ fn install_targets_prefix_comment_does_not_swallow_required_positional() {
     // comment. FILE_SET's set name `HEADERS` is the canonical case.
     let src = "install(TARGETS foo FILE_SET # file set comment\n  HEADERS COMPONENT Development)\n";
     let formatted = format_source(src, &Config::default()).unwrap();
+    assert_eq!(
+        format_source(&formatted, &Config::default()).unwrap(),
+        formatted
+    );
+    assert!(cmakefmt::semantic::semantic_equivalent(src, &formatted));
 
     insta::assert_snapshot!(formatted, @r"
     install(
       TARGETS foo
-      FILE_SET HEADERS # file set comment
+      FILE_SET # file set comment
+        HEADERS
         COMPONENT Development)
     ");
 }
@@ -1424,7 +1430,74 @@ fn dangle_parens_does_not_wrap_inline_set() {
 }
 
 #[test]
-fn preserve_argument_comments_keeps_comment_blocks_standalone() {
+fn argument_comment_style_preserve_retains_both_placements() {
+    let source = "custom_command(\n first # explains first\n # explains second\n second\n)\n";
+    let config = Config {
+        dangle_parens: true,
+        ..Config::default()
+    };
+    let formatted = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    custom_command(
+      first # explains first
+      # explains second
+      second
+    )
+    ");
+    assert_eq!(formatted, format_source(&formatted, &config).unwrap());
+}
+
+#[test]
+fn argument_comment_style_standalone_detaches_inline_comments() {
+    let source = "custom_command(\n first # explains first\n # explains second\n second\n)\n";
+    let config = Config {
+        argument_comment_style: cmakefmt::ArgumentCommentStyle::Standalone,
+        dangle_parens: true,
+        ..Config::default()
+    };
+    let formatted = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    custom_command(
+      first
+      # explains first
+      # explains second
+      second
+    )
+    ");
+    assert_eq!(formatted, format_source(&formatted, &config).unwrap());
+}
+
+#[test]
+fn argument_comment_style_preserve_never_attaches_standalone_comments() {
+    let config = Config::default();
+    let source = "custom_command(\n first\n # explains second\n second)\n";
+    let formatted = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    custom_command(
+      first
+      # explains second
+      second)
+    ");
+}
+
+#[test]
+fn argument_comment_style_preserve_wraps_long_inline_comments() {
+    let config = Config {
+        line_width: 25,
+        ..Config::default()
+    };
+    let source = "custom_command(first # a long inline comment that does not fit\n second)\n";
+    let formatted = format_source(source, &config).unwrap();
+    assert!(!formatted.lines().any(|line| line.contains("first #")));
+    assert!(formatted
+        .lines()
+        .all(|line| line.chars().count() <= config.line_width));
+    assert_eq!(formatted, format_source(&formatted, &config).unwrap());
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+}
+
+#[test]
+fn argument_comment_style_keeps_comment_blocks_standalone() {
     let src = r#"FetchContent_Declare(
   example
   # TODO: switch to an official tag
@@ -1433,7 +1506,7 @@ fn preserve_argument_comments_keeps_comment_blocks_standalone() {
 )
 "#;
     let config = Config {
-        preserve_argument_comments: true,
+        argument_comment_style: cmakefmt::ArgumentCommentStyle::Standalone,
         ..Config::default()
     };
     let formatted = format_source(src, &config).unwrap();
@@ -1447,7 +1520,7 @@ fn preserve_argument_comments_keeps_comment_blocks_standalone() {
 }
 
 #[test]
-fn preserve_argument_comments_across_layouts_is_idempotent() {
+fn argument_comment_style_across_layouts_is_idempotent() {
     for source in [
         "custom_command(\n  # leading comment\n  first\n  # middle comment\n  second\n)\n",
         "custom_command(first # note\n second third fourth)\n",
@@ -1458,7 +1531,7 @@ fn preserve_argument_comments_across_layouts_is_idempotent() {
             for max_pargs_hwrap in [0, 6] {
                 for line_width in [35, 120] {
                     let config = Config {
-                        preserve_argument_comments: true,
+                        argument_comment_style: cmakefmt::ArgumentCommentStyle::Standalone,
                         wrap_after_first_arg,
                         max_pargs_hwrap,
                         line_width,

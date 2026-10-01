@@ -112,6 +112,7 @@ syntax nodes throughout the entire formatter pipeline.
 That distinction matters. It means `cmakefmt` can reliably preserve:
 
 - standalone comments above a command
+- standalone comments between arguments
 - inline argument-list comments
 - trailing same-line comments
 - bracket comments
@@ -125,7 +126,13 @@ target_sources(foo
     bar.cc)
 ```
 
-`cmakefmt` keeps the trailing comment attached to the relevant argument.
+With the default `format.argument_comment_style: preserve`, `cmakefmt` keeps
+the inline comment attached to the relevant argument where it fits, and keeps
+originally standalone argument comments on separate lines. Set
+`format.argument_comment_style: standalone` to put all argument comments on
+separate lines, including those originally inline.
+
+See [`argument_comment_style`](/config/#argument_comment_style) for both modes.
 
 ## Comment Markup
 
@@ -292,9 +299,13 @@ config reference for the full option documentation.
 
 ## Trailing Comments
 
-Inline comments (``# text``) that follow an argument stay attached to
-that argument when the command wraps. The comment and argument are kept
+With `format.argument_comment_style: preserve` (the default), inline comments
+(``# text``) that follow an argument stay attached to that argument when the
+command wraps. The comment and argument are kept
 on the same line as long as the combined width fits within `line_width`.
+The `standalone` mode instead moves these comments onto separate lines.
+Neither mode attaches originally standalone comments to a preceding argument.
+This option does not affect comments after a command's closing `)`.
 
 ```cmake
 target_link_libraries(

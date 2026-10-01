@@ -158,6 +158,7 @@ The full schema is at `cmakefmt config schema`.
 - `format.command_case` / `format.keyword_case` — `lower`, `upper`, or `unchanged`
 - `format.dangle_parens` — closing paren on own line
 - `format.wrap_after_first_arg` — keep first arg on command line (default for `set()`)
+- `format.argument_comment_style` — preserve original argument comment placement (default), or put all argument comments on standalone lines
 - `format.enable_sort` / `format.autosort` — sort arguments in keyword sections
 - `markup.enable_markup` — controls comment reflow and markup handling
 - `commands:` — user-defined command specs (pargs, kwargs, flags, sortable)
@@ -194,7 +195,7 @@ The semantic verifier (`verify_semantics` in `src/main.rs`) parses both
 original and formatted output, normalizes them, and compares:
 
 - Strips all `Statement::Comment` and `Statement::BlankLines`
-- Strips `trailing_comment` and `Argument::InlineComment` from commands
+- Strips `trailing_comment`, `Argument::InlineComment` and `Argument::StandaloneComment` from commands
 - Normalizes command names and keyword case
 - Zeroes out spans
 

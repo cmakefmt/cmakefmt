@@ -114,8 +114,8 @@ pub mod dprint;
 // ── Configuration ────────────────────────────────────────────────────────────
 
 pub use config::{
-    CaseStyle, CommandConfig, Config, ContinuationAlign, DangleAlign, FractionalTabPolicy,
-    LineEnding, PerCommandConfig,
+    ArgumentCommentStyle, CaseStyle, CommandConfig, Config, ContinuationAlign, DangleAlign,
+    FractionalTabPolicy, LineEnding, PerCommandConfig,
 };
 
 pub use config::default_config_template;

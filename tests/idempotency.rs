@@ -101,7 +101,7 @@ fn formatter_is_idempotent_and_preserves_parse_tree() {
 #[test]
 fn preserved_argument_comments_are_idempotent_and_semantically_equivalent() {
     let config = Config {
-        preserve_argument_comments: true,
+        argument_comment_style: cmakefmt::ArgumentCommentStyle::Standalone,
         ..Config::default()
     };
     let mut paths = formatter_fixture_paths(Path::new("tests/fixtures"));

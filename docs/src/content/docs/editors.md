@@ -31,7 +31,7 @@ from `dprint.json`, replacing `<version>` with that release's version:
   ],
   "cmakefmt": {
     "lineWidth": 100,
-    "preserveArgumentComments": true
+    "argumentCommentStyle": "preserve"
   }
 }
 ```

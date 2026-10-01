@@ -92,15 +92,13 @@ pub fn normalize_command_literals(command: &mut CommandInvocation) {
     // Strip trailing and inline comments — they have no CMake semantic
     // meaning.
     command.trailing_comment = None;
-    command
-        .arguments
-        .retain(|a| !matches!(a, Argument::InlineComment(_)));
+    command.arguments.retain(|a| !a.is_comment());
 
     for argument in &mut command.arguments {
         match argument {
             Argument::Bracket(bracket) => normalize_line_endings(&mut bracket.raw),
             Argument::Quoted(value) | Argument::Unquoted(value) => normalize_line_endings(value),
-            Argument::InlineComment(_) => unreachable!(),
+            Argument::InlineComment(_) | Argument::StandaloneComment(_) => unreachable!(),
         }
     }
 }
@@ -138,7 +136,10 @@ pub fn normalize_line_endings(value: &mut String) {
 
 fn first_arg_text(argument: &Argument) -> Option<&str> {
     match argument {
-        Argument::Quoted(_) | Argument::Bracket(_) | Argument::InlineComment(_) => None,
+        Argument::Quoted(_)
+        | Argument::Bracket(_)
+        | Argument::InlineComment(_)
+        | Argument::StandaloneComment(_) => None,
         Argument::Unquoted(value) => Some(value.as_str()),
     }
 }

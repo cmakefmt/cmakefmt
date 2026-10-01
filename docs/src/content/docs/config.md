@@ -88,7 +88,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`continuation_align`](#continuation_align)
   - [`enable_sort`](#enable_sort)
   - [`autosort`](#autosort)
-  - [`preserve_argument_comments`](#preserve_argument_comments)
+  - [`argument_comment_style`](#argument_comment_style)
   - [`dangle_parens`](#dangle_parens)
   - [`dangle_align`](#dangle_align)
   - [`min_prefix_length`](#min_prefix_length)
@@ -142,7 +142,7 @@ format:
   wrap_after_first_arg: false
   enable_sort: false
   autosort: false
-  preserve_argument_comments: false
+  argument_comment_style: preserve
   dangle_parens: false
   dangle_align: prefix
   min_prefix_length: 4
@@ -510,16 +510,22 @@ commands:
         no_autosort: true
 ```
 
-### `preserve_argument_comments`
+### `argument_comment_style`
 
-Keep comments within a command invocation on their own lines rather than
-attaching them to the preceding argument. This is useful for explanatory
-comment blocks between arguments, such as a `FetchContent_Declare()` source
-pin. Default: `false`.
+Choose how comments inside command invocations are placed. Default: `preserve`.
+
+- `preserve` keeps standalone comments on separate lines and retains inline
+  comments after their arguments where they fit. Comments that do not fit
+  can wrap onto separate lines.
+- `standalone` puts all argument comments on separate lines, including
+  comments that were originally inline.
+
+Neither mode attaches an originally standalone comment to the preceding
+argument. Comments after a command's closing `)` are unaffected.
 
 ```yaml
 format:
-  preserve_argument_comments: true
+  argument_comment_style: standalone
 ```
 
 ### `dangle_parens`

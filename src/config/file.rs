@@ -12,8 +12,8 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::config::{
-    CaseStyle, Config, ContinuationAlign, DangleAlign, FractionalTabPolicy, LineEnding,
-    PerCommandConfig,
+    ArgumentCommentStyle, CaseStyle, Config, ContinuationAlign, DangleAlign, FractionalTabPolicy,
+    LineEnding, PerCommandConfig,
 };
 use crate::error::{Error, IoResultExt, Result};
 
@@ -85,8 +85,8 @@ struct FormatSection {
     enable_sort: Option<bool>,
     /// Heuristically infer sortability for keyword sections without explicit annotation.
     autosort: Option<bool>,
-    /// Render comments inside a command invocation on their own lines.
-    preserve_argument_comments: Option<bool>,
+    /// Preserve argument comment placement or force standalone lines.
+    argument_comment_style: Option<ArgumentCommentStyle>,
     /// Place the closing `)` on its own line when a call wraps.
     dangle_parens: Option<bool>,
     /// Alignment strategy for a dangling `)`: `prefix`, `open`, or `close`.
@@ -255,8 +255,8 @@ fn default_config_template_toml() -> String {
             "# enable_sort = true\n\n",
             "# Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
             "# autosort = true\n\n",
-            "# Keep comments inside a command on their own lines instead of attaching them to arguments.\n",
-            "# preserve_argument_comments = true\n\n",
+            "# Argument comment placement: preserve (default) or standalone.\n",
+            "argument_comment_style = \"preserve\"\n\n",
             "# Put the closing ')' on its own line when a call wraps.\n",
             "dangle_parens = {dangle_parens}\n\n",
             "# Alignment strategy for a dangling ')': prefix, open, or close.\n",
@@ -385,8 +385,7 @@ struct EffectiveFormatSection {
     enable_sort: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     autosort: bool,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    preserve_argument_comments: bool,
+    argument_comment_style: ArgumentCommentStyle,
     dangle_parens: bool,
     dangle_align: DangleAlign,
     min_prefix_length: usize,
@@ -433,7 +432,7 @@ impl From<&Config> for EffectiveConfigFile {
                 continuation_align: config.continuation_align,
                 enable_sort: config.enable_sort,
                 autosort: config.autosort,
-                preserve_argument_comments: config.preserve_argument_comments,
+                argument_comment_style: config.argument_comment_style,
                 dangle_parens: config.dangle_parens,
                 dangle_align: config.dangle_align,
                 min_prefix_length: config.min_prefix_chars,
@@ -504,8 +503,8 @@ fn default_config_template_yaml() -> String {
             "  # enable_sort: true\n\n",
             "  # Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
             "  # autosort: true\n\n",
-            "  # Keep comments inside a command on their own lines instead of attaching them to arguments.\n",
-            "  # preserve_argument_comments: true\n\n",
+            "  # Argument comment placement: preserve (default) or standalone.\n",
+            "  argument_comment_style: preserve\n\n",
             "  # Put the closing ')' on its own line when a call wraps.\n",
             "  dangle_parens: {dangle_parens}\n\n",
             "  # Alignment strategy for a dangling ')': prefix, open, or close.\n",
@@ -735,8 +734,8 @@ impl Config {
         if let Some(v) = fc.format.autosort {
             self.autosort = v;
         }
-        if let Some(v) = fc.format.preserve_argument_comments {
-            self.preserve_argument_comments = v;
+        if let Some(v) = fc.format.argument_comment_style {
+            self.argument_comment_style = v;
         }
         if let Some(v) = fc.format.dangle_parens {
             self.dangle_parens = v;
@@ -1417,9 +1416,34 @@ per_command_overrides:
     }
 
     #[test]
-    fn from_yaml_str_parses_preserve_argument_comments() {
-        let config = Config::from_yaml_str("format:\n  preserve_argument_comments: true").unwrap();
-        assert!(config.preserve_argument_comments);
+    fn from_yaml_str_parses_argument_comment_style() {
+        let config =
+            Config::from_yaml_str("format:\n  argument_comment_style: standalone").unwrap();
+        assert_eq!(
+            config.argument_comment_style,
+            ArgumentCommentStyle::Standalone
+        );
+    }
+
+    #[test]
+    fn argument_comment_style_rejects_removed_and_invalid_values() {
+        assert_eq!(
+            Config::default().argument_comment_style,
+            ArgumentCommentStyle::Preserve
+        );
+        for yaml in [
+            "format:\n  preserve_argument_comments: true",
+            "format:\n  argument_comment_style: compact",
+            "format:\n  argument_comment_style: true",
+        ] {
+            assert!(Config::from_yaml_str(yaml).is_err(), "{yaml}");
+        }
+        let file: FileConfig =
+            toml::from_str("[format]\nargument_comment_style = 'standalone'").unwrap();
+        assert_eq!(
+            file.format.argument_comment_style,
+            Some(ArgumentCommentStyle::Standalone)
+        );
     }
 
     #[test]

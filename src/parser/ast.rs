@@ -52,7 +52,7 @@ pub struct CommandInvocation {
     pub span: (usize, usize),
 }
 
-/// A single argument (or inline comment) in an argument list.
+/// A single argument (or comment) in an argument list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Argument {
     /// `[[...]]`, `[=[...]=]`, etc. Content is verbatim.
@@ -66,27 +66,32 @@ pub enum Argument {
     /// parenthesised group inside a condition (e.g. `(A OR B)`
     /// inside `if(...)`).
     Unquoted(String),
-    /// A comment that appears inline between arguments.
+    /// A comment following an argument on the same source line.
     InlineComment(Comment),
+    /// A comment on its own line inside an argument list.
+    StandaloneComment(Comment),
 }
 
 impl Argument {
     /// The source text of this argument. For
-    /// [`Argument::InlineComment`] the returned slice includes the
+    /// comment variants the returned slice includes the
     /// leading `#` (and, for bracket comments, the enclosing
     /// `#[[...]]` delimiters).
     pub fn as_str(&self) -> &str {
         match self {
             Argument::Bracket(b) => &b.raw,
             Argument::Quoted(s) | Argument::Unquoted(s) => s,
-            Argument::InlineComment(c) => c.as_str(),
+            Argument::InlineComment(c) | Argument::StandaloneComment(c) => c.as_str(),
         }
     }
 
-    /// Returns `true` when the argument is an inline comment placeholder rather
+    /// Returns `true` when the argument is a comment placeholder rather
     /// than a normal CMake argument token.
     pub fn is_comment(&self) -> bool {
-        matches!(self, Argument::InlineComment(_))
+        matches!(
+            self,
+            Argument::InlineComment(_) | Argument::StandaloneComment(_)
+        )
     }
 }
 

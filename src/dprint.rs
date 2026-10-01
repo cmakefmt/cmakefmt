@@ -18,7 +18,7 @@ use dprint_core::plugins::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{CaseStyle, Config, ContinuationAlign, DangleAlign, LineEnding};
+use crate::{ArgumentCommentStyle, CaseStyle, Config, ContinuationAlign, DangleAlign, LineEnding};
 
 /// dprint protocol handler for CMake source files.
 #[derive(Debug, Clone, Default)]
@@ -44,7 +44,7 @@ pub struct ResolvedConfig {
     continuation_align: ContinuationAlign,
     enable_sort: bool,
     autosort: bool,
-    preserve_argument_comments: bool,
+    argument_comment_style: ArgumentCommentStyle,
     dangle_parens: bool,
     dangle_align: DangleAlign,
     enable_markup: bool,
@@ -71,7 +71,7 @@ impl Default for ResolvedConfig {
             continuation_align: config.continuation_align,
             enable_sort: config.enable_sort,
             autosort: config.autosort,
-            preserve_argument_comments: config.preserve_argument_comments,
+            argument_comment_style: config.argument_comment_style,
             dangle_parens: config.dangle_parens,
             dangle_align: config.dangle_align,
             enable_markup: config.enable_markup,
@@ -103,7 +103,7 @@ impl ResolvedConfig {
             continuation_align: self.continuation_align,
             enable_sort: self.enable_sort,
             autosort: self.autosort,
-            preserve_argument_comments: self.preserve_argument_comments,
+            argument_comment_style: self.argument_comment_style,
             dangle_parens: self.dangle_parens,
             dangle_align: self.dangle_align,
             enable_markup: self.enable_markup,
@@ -234,10 +234,11 @@ impl SyncPluginHandler<ResolvedConfig> for CmakefmtPlugin {
             &mut resolved.autosort,
             &mut diagnostics,
         );
-        apply_value(
+        apply_enum(
             &mut config,
-            "preserveArgumentComments",
-            &mut resolved.preserve_argument_comments,
+            "argumentCommentStyle",
+            &mut resolved.argument_comment_style,
+            parse_argument_comment_style,
             &mut diagnostics,
         );
         apply_value(
@@ -396,6 +397,14 @@ fn parse_case_style(value: &str) -> Result<CaseStyle, String> {
     }
 }
 
+fn parse_argument_comment_style(value: &str) -> Result<ArgumentCommentStyle, String> {
+    match value {
+        "preserve" => Ok(ArgumentCommentStyle::Preserve),
+        "standalone" => Ok(ArgumentCommentStyle::Standalone),
+        _ => Err(format!("expected preserve or standalone; found {value:?}")),
+    }
+}
+
 fn parse_continuation_align(value: &str) -> Result<ContinuationAlign, String> {
     match value {
         "same-indent" => Ok(ContinuationAlign::SameIndent),
@@ -431,19 +440,45 @@ mod tests {
     fn resolves_supported_config_and_file_patterns() {
         let mut config = ConfigKeyMap::new();
         config.insert(
-            "preserveArgumentComments".to_owned(),
-            ConfigKeyValue::Bool(true),
+            "argumentCommentStyle".to_owned(),
+            ConfigKeyValue::String("standalone".into()),
         );
         let mut plugin = CmakefmtPlugin;
         let result = plugin.resolve_config(config, &GlobalConfiguration::default());
 
         assert!(result.diagnostics.is_empty());
-        assert!(result.config.preserve_argument_comments);
+        assert_eq!(
+            result.config.argument_comment_style,
+            ArgumentCommentStyle::Standalone
+        );
         assert_eq!(result.file_matching.file_extensions, vec!["cmake"]);
         assert!(result
             .file_matching
             .file_names
             .contains(&"CMakeLists.txt".to_owned()));
+    }
+
+    #[test]
+    fn argument_comment_style_defaults_to_preserve_and_rejects_compact() {
+        let default =
+            CmakefmtPlugin.resolve_config(ConfigKeyMap::new(), &GlobalConfiguration::default());
+        assert_eq!(
+            default.config.argument_comment_style,
+            ArgumentCommentStyle::Preserve
+        );
+        for (key, value) in [
+            (
+                "argumentCommentStyle",
+                ConfigKeyValue::String("compact".into()),
+            ),
+            ("argumentCommentStyle", ConfigKeyValue::Bool(true)),
+            ("preserveArgumentComments", ConfigKeyValue::Bool(true)),
+        ] {
+            let mut config = ConfigKeyMap::new();
+            config.insert(key.to_owned(), value);
+            let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
+            assert!(!result.diagnostics.is_empty());
+        }
     }
 
     #[test]

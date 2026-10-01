@@ -306,6 +306,34 @@ mod tests {
     }
 
     #[test]
+    fn argument_comments_record_original_placement() {
+        for newline in ["\n", "\r\n"] {
+            let source = format!("custom_command({newline} # leading{newline} first # attached{newline} # standalone{newline} second #[[attached block]]{newline} #[[standalone block]]{newline})");
+            let file = parse_ok(&source);
+            let Statement::Command(command) = &file.statements[0] else {
+                panic!()
+            };
+            assert!(matches!(
+                &command.arguments[0],
+                Argument::StandaloneComment(_)
+            ));
+            assert!(matches!(&command.arguments[2], Argument::InlineComment(_)));
+            assert!(matches!(
+                &command.arguments[3],
+                Argument::StandaloneComment(_)
+            ));
+            assert!(matches!(
+                &command.arguments[5],
+                Argument::InlineComment(ast::Comment::Bracket(_))
+            ));
+            assert!(matches!(
+                &command.arguments[6],
+                Argument::StandaloneComment(ast::Comment::Bracket(_))
+            ));
+        }
+    }
+
+    #[test]
     fn line_comment_between_arguments() {
         let src = "target_sources(foo\n  PRIVATE a.cc # keep grouping\n  b.cc\n)\n";
         let f = parse_ok(src);

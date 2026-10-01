@@ -602,9 +602,7 @@ fn format_command_vertical(
     // positional (no keyword header), keep the first argument on the
     // command line and align the rest to the open parenthesis.
     let first_is_positional = sections.first().is_some_and(|s| {
-        s.header.is_none()
-            && !s.arguments.is_empty()
-            && (!ctx.config().preserve_argument_comments || !s.arguments[0].is_comment())
+        s.header.is_none() && !s.arguments.is_empty() && !s.arguments[0].is_comment()
     });
 
     if wrap_after_first_arg && first_is_positional {
@@ -624,9 +622,8 @@ fn format_command_vertical(
 
         // If the next argument is an inline comment, try to keep it attached.
         let mut consumed = first_real_idx + 1;
-        if !ctx.config().preserve_argument_comments
-            && consumed < first_section.arguments.len()
-            && first_section.arguments[consumed].is_comment()
+        if consumed < first_section.arguments.len()
+            && can_attach_argument_comment(first_section.arguments[consumed], ctx.config())
         {
             let comment = first_section.arguments[consumed].as_str();
             let line_so_far = base_indent.len() + name.len() + 1 + first_arg.as_str().len();
@@ -812,8 +809,9 @@ fn format_section_inline(
     if arguments
         .iter()
         .any(|argument| argument_has_newline(argument))
-        || (config.preserve_argument_comments
-            && arguments.iter().any(|argument| argument.is_comment()))
+        || arguments
+            .iter()
+            .any(|argument| argument.is_comment() && !can_attach_argument_comment(argument, config))
     {
         return None;
     }
@@ -825,7 +823,7 @@ fn format_section_inline(
 
     for (index, argument) in arguments.iter().enumerate() {
         match argument {
-            Argument::InlineComment(comment) => {
+            Argument::InlineComment(comment) | Argument::StandaloneComment(comment) => {
                 if index + 1 != arguments.len() {
                     return None;
                 }
@@ -938,7 +936,7 @@ fn write_packed_arguments_with_continuation(
 
     for argument in arguments {
         match argument {
-            Argument::InlineComment(comment) => {
+            Argument::InlineComment(comment) | Argument::StandaloneComment(comment) => {
                 let comment_lines = comment::format_comment_lines(
                     comment,
                     config,
@@ -946,7 +944,7 @@ fn write_packed_arguments_with_continuation(
                     current_indent_width,
                     line_width,
                 );
-                if !config.preserve_argument_comments
+                if can_attach_argument_comment(argument, config)
                     && comment_lines.len() == 1
                     && !current.is_empty()
                 {
@@ -1118,6 +1116,11 @@ fn is_single_line_inline_comment(argument: &Argument) -> bool {
     )
 }
 
+fn can_attach_argument_comment(argument: &Argument, config: &Config) -> bool {
+    config.argument_comment_style == crate::ArgumentCommentStyle::Preserve
+        && matches!(argument, Argument::InlineComment(comment) if !comment.as_str().contains('\n'))
+}
+
 /// Character width of the last line of `output` (i.e. the part after
 /// the most recent `\n`), used to decide whether an inline trailing
 /// comment still fits within the configured line budget.
@@ -1133,11 +1136,9 @@ fn current_line_char_count(output: &str) -> usize {
 /// onto that same line, then newline and hand the remainder off to the
 /// pair-aware grouped writer.
 ///
-/// Crucially, any comments interleaved *before* the header's required
-/// positionals are emitted *after* the positionals — a line comment
-/// extends to end-of-line in CMake, so placing a positional token
-/// after one would make CMake parse the positional as comment text
-/// and silently change the command's semantics.
+/// Stop at the first comment so required positionals never move across it.
+/// A line comment terminates its line; following values must start on a
+/// new line to preserve both comment placement and CMake semantics.
 fn write_header_line_and_group(
     output: &mut String,
     arguments: &[&Argument],
@@ -1151,11 +1152,8 @@ fn write_header_line_and_group(
     let positional_count = header_positional_count(spec);
 
     // Walk the prefix that would naturally live on the header line,
-    // separating non-comment positional args from any comments found
-    // among them. Comments are deferred so that no positional is ever
-    // emitted after a line comment.
+    // stopping at comments so positionals stay on their original side.
     let mut positionals: Vec<&Argument> = Vec::new();
-    let mut deferred_comments: Vec<&Argument> = Vec::new();
     let mut cut_at = 0usize;
     for (idx, arg) in arguments.iter().enumerate() {
         if positionals.len() == positional_count {
@@ -1164,7 +1162,8 @@ fn write_header_line_and_group(
         }
         cut_at = idx + 1;
         if arg.is_comment() {
-            deferred_comments.push(*arg);
+            cut_at = idx;
+            break;
         } else {
             positionals.push(*arg);
         }
@@ -1177,11 +1176,8 @@ fn write_header_line_and_group(
         output.push_str(arg.as_str());
     }
 
-    // Combine any prefix-deferred comments with leading comments of
-    // the remaining slice so they all flow after the positionals.
+    // Only originally inline comments are candidates for the header line.
     let (leading_rest_comments, rest) = split_leading_inline_line_comments(rest);
-    let mut inline_comments = deferred_comments;
-    inline_comments.extend(leading_rest_comments.iter().copied());
 
     // A line comment terminates its line, so at most one line-comment
     // can stay inline with the header, and only if it fits within the
@@ -1190,9 +1186,12 @@ fn write_header_line_and_group(
     // shared comment formatter so an overlong comment still honours
     // the configured `line_width`.
     let mut header_line_open = true;
-    for arg in inline_comments {
+    for arg in leading_rest_comments {
         let text = arg.as_str();
-        if header_line_open && is_single_line_inline_comment(arg) {
+        if header_line_open
+            && is_single_line_inline_comment(arg)
+            && can_attach_argument_comment(arg, config)
+        {
             let current = current_line_char_count(output);
             if current + 1 + text.chars().count() <= line_width {
                 output.push(' ');
@@ -1206,17 +1205,18 @@ fn write_header_line_and_group(
             output.push('\n');
             header_line_open = false;
         }
-        let reflowed = if let Argument::InlineComment(comment) = arg {
-            comment::format_comment_lines(
-                comment,
-                config,
-                patterns,
-                inner_indent.chars().count(),
-                line_width,
-            )
-        } else {
-            vec![text.to_owned()]
-        };
+        let reflowed =
+            if let Argument::InlineComment(comment) | Argument::StandaloneComment(comment) = arg {
+                comment::format_comment_lines(
+                    comment,
+                    config,
+                    patterns,
+                    inner_indent.chars().count(),
+                    line_width,
+                )
+            } else {
+                vec![text.to_owned()]
+            };
         for line in reflowed {
             output.push_str(inner_indent);
             output.push_str(&line);
@@ -1321,7 +1321,7 @@ fn write_vertical_arguments(
 ) {
     for argument in arguments {
         match argument {
-            Argument::InlineComment(comment) => {
+            Argument::InlineComment(comment) | Argument::StandaloneComment(comment) => {
                 let comment_text = comment.as_str();
 
                 // Try to keep the comment on the same line as the preceding
@@ -1333,7 +1333,7 @@ fn write_vertical_arguments(
                 // comment — appending another `#` segment would merge two
                 // distinct comments into one, breaking idempotency on the
                 // next format pass.
-                if !config.preserve_argument_comments
+                if can_attach_argument_comment(argument, config)
                     && output.ends_with('\n')
                     && !last_output_line_has_comment(output)
                 {

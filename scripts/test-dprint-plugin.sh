@@ -20,7 +20,7 @@ cat > dprint.json <<EOF
   "incremental": false,
   "indentWidth": 4,
   "newLineKind": "crlf",
-  "cmakefmt": {"preserveArgumentComments": true}
+  "cmakefmt": {"argumentCommentStyle": "standalone"}
 }
 EOF
 

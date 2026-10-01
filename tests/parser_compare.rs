@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use cmakefmt::error::ParseDiagnostic;
-use cmakefmt::parser::ast::File;
+use cmakefmt::parser::ast::{Argument, File, Statement};
 use walkdir::WalkDir;
 
 fn parse_new(source: &str) -> std::result::Result<File, ParseDiagnostic> {
@@ -22,7 +22,21 @@ fn parse_new(source: &str) -> std::result::Result<File, ParseDiagnostic> {
 
 fn assert_equivalent(source: &str, label: &str) {
     match (legacy_pest::parse_reference(source), parse_new(source)) {
-        (Ok(a), Ok(b)) => assert_eq!(a, b, "AST divergence for {label}"),
+        (Ok(a), Ok(mut b)) => {
+            // The legacy parser does not record standalone argument-comment
+            // placement. Compare the content and ordering it does represent;
+            // parser unit tests separately verify the new placement metadata.
+            for statement in &mut b.statements {
+                if let Statement::Command(command) = statement {
+                    for argument in &mut command.arguments {
+                        if let Argument::StandaloneComment(comment) = argument {
+                            *argument = Argument::InlineComment(comment.clone());
+                        }
+                    }
+                }
+            }
+            assert_eq!(a, b, "AST divergence for {label}");
+        }
         (Err(a), Err(b)) => assert_eq!(
             (a.line, a.column),
             (b.line, b.column),

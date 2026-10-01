@@ -23,6 +23,21 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "ArgumentCommentStyle": {
+      "description": "Placement of comments inside command argument lists.",
+      "oneOf": [
+        {
+          "description": "Keep standalone comments separate and inline comments attached where they fit.",
+          "type": "string",
+          "const": "preserve"
+        },
+        {
+          "description": "Put every argument comment on its own line.",
+          "type": "string",
+          "const": "standalone"
+        }
+      ]
+    },
     "CaseStyle": {
       "description": "How to normalise command/keyword casing.",
       "oneOf": [
@@ -91,6 +106,18 @@
           "items": {
             "type": "string"
           }
+        },
+        "argument_comment_style": {
+          "description": "Preserve argument comment placement or force standalone lines.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArgumentCommentStyle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "autosort": {
           "description": "Heuristically infer sortability for keyword sections without explicit annotation.",
@@ -275,14 +302,6 @@
           "format": "uint",
           "default": null,
           "minimum": 0
-        },
-        "preserve_argument_comments": {
-          "description": "Render comments inside a command invocation on their own lines.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": null
         },
         "require_valid_layout": {
           "description": "Return an error if any formatted output line exceeds `line_width`.",

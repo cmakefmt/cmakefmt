@@ -23,7 +23,7 @@
         "continuationAlign": { "enum": ["same-indent", "under-first-value"] },
         "enableSort": { "type": "boolean" },
         "autosort": { "type": "boolean" },
-        "preserveArgumentComments": { "type": "boolean" },
+        "argumentCommentStyle": { "enum": ["preserve", "standalone"], "default": "preserve" },
         "dangleParens": { "type": "boolean" },
         "dangleAlign": { "enum": ["prefix", "open", "close"] },
         "enableMarkup": { "type": "boolean" },

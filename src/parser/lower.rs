@@ -100,13 +100,33 @@ fn column_of(offset: u32, source: &str, line_starts: &[u32]) -> u32 {
 }
 
 fn lower_command(source: &str, command: PtCommand) -> CommandInvocation {
+    let mut previous_argument_end = None;
+    let arguments = command
+        .args
+        .into_iter()
+        .map(|arg| {
+            let span = match &arg {
+                PtArg::Quoted(span) | PtArg::Unquoted(span) => *span,
+                PtArg::Bracket { raw, .. } => *raw,
+                PtArg::InlineComment(PtComment::Line(span) | PtComment::Bracket(span)) => *span,
+            };
+            let is_comment = matches!(arg, PtArg::InlineComment(_));
+            let attached = previous_argument_end
+                .is_some_and(|end: u32| !source[end as usize..span.start as usize].contains('\n'));
+            if !is_comment {
+                previous_argument_end = Some(span.end);
+            }
+            match lower_arg(source, arg) {
+                Argument::InlineComment(comment) if !attached => {
+                    Argument::StandaloneComment(comment)
+                }
+                argument => argument,
+            }
+        })
+        .collect();
     CommandInvocation {
         name: source[command.name.range()].to_owned(),
-        arguments: command
-            .args
-            .into_iter()
-            .map(|arg| lower_arg(source, arg))
-            .collect(),
+        arguments,
         trailing_comment: None,
         span: (
             command.full_span.start as usize,
