@@ -410,6 +410,22 @@ pub(crate) fn resolve_parallel_jobs(requested: Option<usize>) -> Result<usize, c
 }
 
 pub(crate) fn validate_cli(cli: &Cli) -> Result<(), cmakefmt::Error> {
+    for path in &cli.input_selection.ignore_paths {
+        if !path.is_file() {
+            return Err(cmakefmt::Error::cli_arg(format!(
+                "--ignore-path expects an existing ignore file, not a file or directory to exclude: {}",
+                path.display()
+            )));
+        }
+        let mut builder = ignore::gitignore::GitignoreBuilder::new(".");
+        if let Some(error) = builder.add(path) {
+            return Err(cmakefmt::Error::cli_arg(format!(
+                "cannot load --ignore-path {}: {error}",
+                path.display()
+            )));
+        }
+    }
+
     if cli.config_overrides.no_config && !cli.config_overrides.config_paths.is_empty() {
         return Err(cmakefmt::Error::cli_arg(
             "--no-config cannot be combined with --config-file",

@@ -1279,6 +1279,51 @@ fn explicit_ignore_path_filters_recursive_discovery() {
 }
 
 #[test]
+fn explicit_ignore_path_rejects_missing_directory_and_invalid_pattern() {
+    let dir = tempfile::tempdir().unwrap();
+    write_file(&dir.path().join("CMakeLists.txt"), "set(FOO bar)\n");
+    let invalid = dir.path().join("invalid.ignore");
+    write_file(&invalid, "[z-a]\n");
+    for path in [
+        dir.path().join("missing.ignore"),
+        dir.path().to_path_buf(),
+        invalid,
+    ] {
+        let output = cmakefmt()
+            .args([
+                "--list-input-files",
+                "--ignore-path",
+                path.to_str().unwrap(),
+                dir.path().to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("--ignore-path"));
+    }
+}
+
+#[test]
+fn explicit_file_argument_bypasses_explicit_ignore_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("ignored.cmake");
+    let ignore_file = dir.path().join("extra.ignore");
+    write_file(&target, "set(FOO bar)\n");
+    write_file(&ignore_file, "ignored.cmake\n");
+    let output = cmakefmt()
+        .args([
+            "--list-input-files",
+            "--ignore-path",
+            ignore_file.to_str().unwrap(),
+            target.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("ignored.cmake"));
+}
+
+#[test]
 fn explicit_file_argument_bypasses_ignore_rules() {
     let dir = tempfile::tempdir().unwrap();
     let ignored = dir.path().join("ignored.cmake");

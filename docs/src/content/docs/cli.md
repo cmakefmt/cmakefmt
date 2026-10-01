@@ -448,6 +448,17 @@ The fastest path through a legacy config migration.
 - `cmakefmt config path`, `cmakefmt config show`, and `cmakefmt config explain` resolve a single target context and make the selected config path(s) visible.
 - `--no-config` disables config discovery entirely.
 
+`--ignore-path` takes an **ignore file**, not a path to exclude. For example,
+put `vendor/` or `cmake/problematic.cmake` in `.cmakefmtignore`, then run
+`cmakefmt --check .`. That ignore file is discovered automatically. To use a
+different filename, run `cmakefmt --check --ignore-path extra.ignore .`.
+Patterns use gitignore syntax. Missing files, directories, and invalid ignore
+patterns passed to `--ignore-path` are reported as errors.
+
+An explicitly named file still wins: `cmakefmt cmake/problematic.cmake`
+processes that file even if an ignore rule matches it. Use a directory input
+when you want ignore rules to filter the files being formatted.
+
 ## Diagnostic Quality
 
 For parse and config failures, `cmakefmt` prints:

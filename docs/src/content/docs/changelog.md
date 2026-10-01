@@ -42,6 +42,8 @@ This project follows a simple changelog discipline:
   values when autosort is enabled (#189).
 - Keep the required source directory in `add_subdirectory()` positional,
   even when its name matches `SYSTEM` or `EXCLUDE_FROM_ALL` (#186).
+- Report invalid `--ignore-path` files instead of silently ignoring them,
+  and clarify ignore-file syntax and direct-file precedence (#188).
 
 ## 1.7.0 — 2026-06-22
 
