@@ -664,7 +664,10 @@ impl Config {
 
     /// Parse a YAML config string and also return a serialized `commands:`
     /// override block for registry merging when present.
-    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", feature = "browser-wasm")),
+        allow(dead_code)
+    )]
     pub(crate) fn from_yaml_str_with_commands(yaml: &str) -> Result<(Self, Option<Box<str>>)> {
         let parsed = parse_yaml_config(yaml)?;
         Ok((parsed.config, parsed.commands_yaml))
@@ -796,7 +799,10 @@ impl Config {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[cfg_attr(
+    not(all(target_arch = "wasm32", feature = "browser-wasm")),
+    allow(dead_code)
+)]
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedYamlConfig {
     pub(crate) config: Config,

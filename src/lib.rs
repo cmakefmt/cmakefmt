@@ -60,10 +60,12 @@
 //! |---------|---------|---------|
 //! | `cli` | ✔ | Enables the `cmakefmt` binary plus CLI-oriented public API (`convert_legacy_config_files`, `default_config_template_for`, `generate_json_schema`, `render_effective_config`, `DumpConfigFormat`). Implies `lsp`. |
 //! | `lsp` | ✔ (via `cli`) | Compiles the `lsp::run` Language Server Protocol entry point. |
+//! | `browser-wasm` | | Enables browser WebAssembly exports via `wasm-bindgen`. |
+//! | `dprint-plugin` | | Enables the dprint plugin adapter and its WebAssembly protocol exports. |
 //!
-//! The crate also has a separate target path: when compiled for
-//! `wasm32`, `wasm::format` and friends are exposed via
-//! `wasm-bindgen` for the browser playground.
+//! The crate also has separate WebAssembly target paths: `browser-wasm`
+//! exposes `wasm::format` for the playground, while `dprint-plugin`
+//! exposes the dprint plugin protocol.
 
 /// Runtime formatter configuration and config-file loading.
 pub mod config;
@@ -95,10 +97,19 @@ pub mod dump;
 #[cfg_attr(docsrs, doc(cfg(feature = "lsp")))]
 pub mod lsp;
 
-// WASM entry point — only compiled for wasm32 targets.
-#[cfg(target_arch = "wasm32")]
-#[cfg_attr(docsrs, doc(cfg(target_arch = "wasm32")))]
+// Browser WASM entry point — only compiled when explicitly requested.
+#[cfg(all(target_arch = "wasm32", feature = "browser-wasm"))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(all(target_arch = "wasm32", feature = "browser-wasm")))
+)]
 pub mod wasm;
+
+// dprint's WASM plugin adapter. The protocol implementation is compiled on
+// native targets too so its configuration and formatting behavior stay tested.
+#[cfg(feature = "dprint-plugin")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dprint-plugin")))]
+pub mod dprint;
 
 // ── Configuration ────────────────────────────────────────────────────────────
 

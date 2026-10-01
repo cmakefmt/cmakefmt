@@ -21,6 +21,16 @@ This project follows a simple changelog discipline:
 - Add `format.preserve_argument_comments` to keep comments within command
   invocations on their own lines. Existing comment placement remains the
   default.
+- Add a dprint WebAssembly plugin, with `dprint-cmakefmt.wasm` and its
+  configuration schema included in GitHub releases. The plugin shares the
+  native formatter and supports dprint's global formatting settings.
+
+### Changed
+
+- Browser WebAssembly exports now require the `browser-wasm` feature so
+  browser and dprint builds can select their own entry points. Build browser
+  bindings with `wasm-pack build --target web --no-default-features
+  --features browser-wasm`.
 
 ## 1.7.0 — 2026-06-22
 

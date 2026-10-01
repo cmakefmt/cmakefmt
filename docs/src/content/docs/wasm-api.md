@@ -20,7 +20,7 @@ in any JavaScript or TypeScript project.
 cargo install wasm-pack
 
 # Build the WASM package
-wasm-pack build --target web
+wasm-pack build --target web --no-default-features --features browser-wasm
 ```
 
 This produces a `pkg/` directory with the WASM module and TypeScript

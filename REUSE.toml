@@ -56,6 +56,7 @@ path = [
   "packaging/conda-forge/meta.yaml",
   "packaging/conda-forge/build.sh",
   "packaging/conda-forge/bld.bat",
+  "packaging/dprint-cmakefmt.schema.json",
   "scripts/*.py",
   "scripts/*.sh",
   "docs/src/styles/*.css",

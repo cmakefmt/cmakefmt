@@ -19,6 +19,36 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 Install `cmakefmt` once, then drop the config snippet for your editor below.
 
+## dprint
+
+Starting with the next cmakefmt release, reference `dprint-cmakefmt.wasm`
+from `dprint.json`, replacing `<version>` with that release's version:
+
+```json
+{
+  "plugins": [
+    "https://github.com/cmakefmt/cmakefmt/releases/download/v<version>/dprint-cmakefmt.wasm"
+  ],
+  "cmakefmt": {
+    "lineWidth": 100,
+    "preserveArgumentComments": true
+  }
+}
+```
+
+The dprint plugin formats `*.cmake`, `CMakeLists.txt`, and
+`CMakeLists.txt.in`. It supports the options listed in the accompanying
+`dprint-cmakefmt.schema.json` release asset and respects dprint's global
+line width, indentation, and newline settings. Plugin settings override
+global settings. Unsupported options produce configuration diagnostics.
+
+The plugin uses `dprint.json` configuration; it does not discover
+`.cmakefmt.yaml` or `.editorconfig` files. Range formatting is not supported.
+
+To try it before the next release, run
+`bash scripts/build-dprint-plugin.sh` from a source checkout and use
+`"./dist/dprint-cmakefmt.wasm"` as the plugin path.
+
 ## VS Code
 
 Install the official extension from the VS Code Marketplace:

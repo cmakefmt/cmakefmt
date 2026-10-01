@@ -34,6 +34,8 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["cli"]
+browser-wasm = ["dep:wasm-bindgen"]
+dprint-plugin = ["dep:dprint-core"]
 lsp = ["lsp-server", "lsp-types"]
 cli = [
   "lsp",
@@ -78,9 +80,10 @@ ctrlc = { version = "3", optional = true }
 schemars = { version = "^1.2", optional = true }
 lsp-server = { version = "0.10", optional = true }
 lsp-types = { version = "0.97", optional = true }
+dprint-core = { version = "0.68.2", features = ["wasm"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2"
+wasm-bindgen = { version = "0.2", optional = true }
 
 [build-dependencies]
 serde_yaml = { package = "serde_yaml_ng", version = "0.10" }

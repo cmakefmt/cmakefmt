@@ -248,6 +248,9 @@ jobs:
       - name: Run tests
         run: cargo test --locked
 
+      - name: Test dprint plugin adapter
+        run: cargo test --locked --features dprint-plugin
+
   assemble-release:
     name: assemble-release
     runs-on: ubuntu-latest
@@ -262,6 +265,7 @@ jobs:
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
+          targets: wasm32-unknown-unknown
 
       - name: Cache Cargo registry and build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
@@ -275,12 +279,6 @@ jobs:
           merge-multiple: true
           path: dist
 
-      - name: Generate checksums
-        shell: bash
-        run: |
-          cd dist
-          sha256sum ./* > SHA256SUMS
-
       - name: Generate SBOM
         shell: bash
         # Pin cargo-cyclonedx so the SBOM tool itself isn't a floating
@@ -290,7 +288,7 @@ jobs:
         # Update by setting `--version` to the latest crates.io release.
         run: |
           cargo install cargo-cyclonedx --locked --quiet --version 0.5.9
-          cargo cyclonedx --format json
+          cargo cyclonedx --format json --all-features
           cp cmakefmt-rust.cdx.json dist/cmakefmt.cdx.json
 
       - name: Generate Homebrew formula
@@ -309,6 +307,7 @@ jobs:
               -o /tmp/cmakefmt-source.tar.gz \
               HEAD
           fi
+
           SOURCE_SHA256="$(sha256sum /tmp/cmakefmt-source.tar.gz | awk '{print $1}')"
           bash scripts/render-homebrew-formula.sh "${VERSION}" "${SOURCE_SHA256}" > dist/cmakefmt.rb
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -318,6 +317,16 @@ jobs:
           GitHub-hosted source tarball used for a tagged release.
           EOF
           fi
+
+      - name: Build dprint plugin
+        shell: bash
+        run: bash scripts/build-dprint-plugin.sh dist
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd dist
+          sha256sum ./* > SHA256SUMS
 
       - name: Upload assembled release bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

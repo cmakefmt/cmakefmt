@@ -10,7 +10,7 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-OUT_DIR="docs/public/wasm"
+OUT_DIR="${CMAKEFMT_WASM_OUT_DIR:-docs/public/wasm}"
 
 # Ensure wasm-pack uses the rustup toolchain (not Homebrew's rustc).
 RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
@@ -24,7 +24,8 @@ wasm-pack build \
   --target web \
   --out-dir "$OUT_DIR" \
   --out-name cmakefmt \
-  --no-default-features
+  --no-default-features \
+  --features browser-wasm
 
 # Remove files not needed for the playground.
 rm -f "$OUT_DIR/.gitignore" "$OUT_DIR/package.json" "$OUT_DIR/README.md"
