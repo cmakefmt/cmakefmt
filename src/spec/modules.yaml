@@ -310,6 +310,8 @@ commands:
     kwargs:
       FIND_PACKAGE_ARGS:
         nargs: "+"
+        # Passed through to find_package(); keyword/value order is significant.
+        no_autosort: true
       # Directories
       SOURCE_DIR:
         nargs: 1

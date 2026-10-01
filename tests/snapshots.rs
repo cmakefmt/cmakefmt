@@ -15,6 +15,26 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn fetchcontent_find_package_args_are_not_autosorted() {
+    let source = "fetchcontent_declare(GTest GIT_REPOSITORY https://example.invalid/gtest.git FIND_PACKAGE_ARGS NAMES GTest)\n";
+    for line_width in [40, 120] {
+        let config = Config {
+            enable_sort: true,
+            autosort: true,
+            line_width,
+            ..Config::default()
+        };
+        let formatted = format_source(source, &config).unwrap();
+        assert!(formatted.contains("NAMES GTest"));
+        assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+        assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+        if line_width == 120 {
+            insta::assert_snapshot!(formatted, @"fetchcontent_declare(GTest GIT_REPOSITORY https://example.invalid/gtest.git FIND_PACKAGE_ARGS NAMES GTest)");
+        }
+    }
+}
+
+#[test]
 fn empty_input_formats_to_empty() {
     assert_eq!(format_source("", &Config::default()).unwrap(), "");
 }

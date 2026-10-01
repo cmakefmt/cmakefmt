@@ -36,6 +36,11 @@ This project follows a simple changelog discipline:
   bindings with `wasm-pack build --target web --no-default-features
   --features browser-wasm`.
 
+### Fixed
+
+- Preserve order-sensitive `FetchContent_Declare(FIND_PACKAGE_ARGS ...)`
+  values when autosort is enabled (#189).
+
 ## 1.7.0 — 2026-06-22
 
 ### Changed
