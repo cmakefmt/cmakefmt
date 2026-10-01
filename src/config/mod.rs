@@ -290,6 +290,9 @@ pub struct Config {
     /// considered sortable if all its arguments are simple unquoted
     /// tokens (no variables, generator expressions, or quoted strings).
     pub autosort: bool,
+    /// Render comments inside a command invocation on their own lines instead
+    /// of attaching them to the preceding argument.
+    pub preserve_argument_comments: bool,
 
     // ── Parenthesis style ───────────────────────────────────────────────
     /// Place the closing `)` on its own line when a call wraps.
@@ -402,6 +405,7 @@ impl Default for Config {
             continuation_align: ContinuationAlign::UnderFirstValue,
             enable_sort: false,
             autosort: false,
+            preserve_argument_comments: false,
             dangle_parens: false,
             dangle_align: DangleAlign::Prefix,
             min_prefix_chars: 4,

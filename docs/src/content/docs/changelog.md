@@ -16,6 +16,12 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- Add `format.preserve_argument_comments` to keep comments within command
+  invocations on their own lines. Existing comment placement remains the
+  default.
+
 ## 1.7.0 — 2026-06-22
 
 ### Changed

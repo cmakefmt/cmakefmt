@@ -601,9 +601,11 @@ fn format_command_vertical(
     // When wrap_after_first_arg is enabled and the first section is
     // positional (no keyword header), keep the first argument on the
     // command line and align the rest to the open parenthesis.
-    let first_is_positional = sections
-        .first()
-        .is_some_and(|s| s.header.is_none() && !s.arguments.is_empty());
+    let first_is_positional = sections.first().is_some_and(|s| {
+        s.header.is_none()
+            && !s.arguments.is_empty()
+            && (!ctx.config().preserve_argument_comments || !s.arguments[0].is_comment())
+    });
 
     if wrap_after_first_arg && first_is_positional {
         let first_section = &sections[0];
@@ -622,7 +624,8 @@ fn format_command_vertical(
 
         // If the next argument is an inline comment, try to keep it attached.
         let mut consumed = first_real_idx + 1;
-        if consumed < first_section.arguments.len()
+        if !ctx.config().preserve_argument_comments
+            && consumed < first_section.arguments.len()
             && first_section.arguments[consumed].is_comment()
         {
             let comment = first_section.arguments[consumed].as_str();
@@ -809,6 +812,8 @@ fn format_section_inline(
     if arguments
         .iter()
         .any(|argument| argument_has_newline(argument))
+        || (config.preserve_argument_comments
+            && arguments.iter().any(|argument| argument.is_comment()))
     {
         return None;
     }
@@ -941,7 +946,10 @@ fn write_packed_arguments_with_continuation(
                     current_indent_width,
                     line_width,
                 );
-                if comment_lines.len() == 1 && !current.is_empty() {
+                if !config.preserve_argument_comments
+                    && comment_lines.len() == 1
+                    && !current.is_empty()
+                {
                     let comment_width = comment_lines[0].chars().count();
                     let candidate_width = current_width + 1 + comment_width;
                     if current_indent_width + candidate_width <= line_width {
@@ -1325,7 +1333,10 @@ fn write_vertical_arguments(
                 // comment — appending another `#` segment would merge two
                 // distinct comments into one, breaking idempotency on the
                 // next format pass.
-                if output.ends_with('\n') && !last_output_line_has_comment(output) {
+                if !config.preserve_argument_comments
+                    && output.ends_with('\n')
+                    && !last_output_line_has_comment(output)
+                {
                     let last_line_start =
                         output[..output.len() - 1].rfind('\n').map_or(0, |p| p + 1);
                     let last_line_width = output[last_line_start..output.len() - 1].chars().count();

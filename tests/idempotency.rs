@@ -97,6 +97,34 @@ fn formatter_is_idempotent_and_preserves_parse_tree() {
     }
 }
 
+/// Exercise standalone argument comments against the same corpus as defaults.
+#[test]
+fn preserved_argument_comments_are_idempotent_and_semantically_equivalent() {
+    let config = Config {
+        preserve_argument_comments: true,
+        ..Config::default()
+    };
+    let mut paths = formatter_fixture_paths(Path::new("tests/fixtures"));
+    if let Some(root) = real_world_corpus_root() {
+        paths.extend(formatter_fixture_paths(&root));
+    }
+    for path in paths {
+        let source = fs::read_to_string(&path).unwrap();
+        let formatted = format_source(&source, &config).unwrap();
+        assert_eq!(
+            formatted,
+            format_source(&formatted, &config).unwrap(),
+            "{}",
+            path.display()
+        );
+        assert!(
+            cmakefmt::semantic::semantic_equivalent(&source, &formatted),
+            "{}",
+            path.display()
+        );
+    }
+}
+
 /// Line-width compliance check, restricted to the curated in-tree
 /// fixtures. The real-world corpus is excluded because upstream
 /// CMakeLists.txt files contain unbreakable constructs (variable

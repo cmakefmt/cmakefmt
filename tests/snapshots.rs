@@ -1424,6 +1424,85 @@ fn dangle_parens_does_not_wrap_inline_set() {
 }
 
 #[test]
+fn preserve_argument_comments_keeps_comment_blocks_standalone() {
+    let src = r#"FetchContent_Declare(
+  example
+  # TODO: switch to an official tag
+  # after upstream fixes land
+  GIT_REPOSITORY https://github.com/example/example.git
+)
+"#;
+    let config = Config {
+        preserve_argument_comments: true,
+        ..Config::default()
+    };
+    let formatted = format_source(src, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    fetchcontent_declare(
+      example
+      # TODO: switch to an official tag
+      # after upstream fixes land
+      GIT_REPOSITORY https://github.com/example/example.git)
+    "#);
+}
+
+#[test]
+fn preserve_argument_comments_across_layouts_is_idempotent() {
+    for source in [
+        "custom_command(\n  # leading comment\n  first\n  # middle comment\n  second\n)\n",
+        "custom_command(first # note\n second third fourth)\n",
+        "target_sources(example PRIVATE\n # source explanation\n first.cpp second.cpp third.cpp)\n",
+        "set(SOURCES\n # source explanation\n first.cpp second.cpp third.cpp)\n",
+    ] {
+        for wrap_after_first_arg in [false, true] {
+            for max_pargs_hwrap in [0, 6] {
+                for line_width in [35, 120] {
+                    let config = Config {
+                        preserve_argument_comments: true,
+                        wrap_after_first_arg,
+                        max_pargs_hwrap,
+                        line_width,
+                        ..Config::default()
+                    };
+                    let formatted = format_source(source, &config).unwrap();
+                    assert_eq!(formatted, format_source(&formatted, &config).unwrap());
+                    assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+                    let original_comments: Vec<_> = source
+                        .lines()
+                        .filter_map(|line| line.find('#').map(|index| line[index..].trim()))
+                        .collect();
+                    let formatted_comments: Vec<_> = formatted
+                        .lines()
+                        .filter_map(|line| {
+                            let trimmed = line.trim();
+                            trimmed.starts_with('#').then_some(trimmed)
+                        })
+                        .collect();
+                    // Markup may reflow a comment at narrow widths. Its words
+                    // must survive and every resulting line must stay standalone.
+                    let comment_words = |comments: Vec<&str>| {
+                        comments
+                            .into_iter()
+                            .flat_map(|comment| {
+                                comment
+                                    .trim_start_matches('#')
+                                    .split_whitespace()
+                                    .map(str::to_owned)
+                            })
+                            .collect::<Vec<_>>()
+                    };
+                    assert_eq!(
+                        comment_words(original_comments),
+                        comment_words(formatted_comments),
+                        "{formatted}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn dangle_parens_false() {
     let src = "target_link_libraries(mylib PUBLIC foo bar baz qux quux corge grault garply)\n";
     let config = Config {

@@ -276,6 +276,14 @@
           "default": null,
           "minimum": 0
         },
+        "preserve_argument_comments": {
+          "description": "Render comments inside a command invocation on their own lines.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
         "require_valid_layout": {
           "description": "Return an error if any formatted output line exceeds `line_width`.",
           "type": [

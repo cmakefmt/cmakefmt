@@ -85,6 +85,8 @@ struct FormatSection {
     enable_sort: Option<bool>,
     /// Heuristically infer sortability for keyword sections without explicit annotation.
     autosort: Option<bool>,
+    /// Render comments inside a command invocation on their own lines.
+    preserve_argument_comments: Option<bool>,
     /// Place the closing `)` on its own line when a call wraps.
     dangle_parens: Option<bool>,
     /// Alignment strategy for a dangling `)`: `prefix`, `open`, or `close`.
@@ -253,6 +255,8 @@ fn default_config_template_toml() -> String {
             "# enable_sort = true\n\n",
             "# Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
             "# autosort = true\n\n",
+            "# Keep comments inside a command on their own lines instead of attaching them to arguments.\n",
+            "# preserve_argument_comments = true\n\n",
             "# Put the closing ')' on its own line when a call wraps.\n",
             "dangle_parens = {dangle_parens}\n\n",
             "# Alignment strategy for a dangling ')': prefix, open, or close.\n",
@@ -381,6 +385,8 @@ struct EffectiveFormatSection {
     enable_sort: bool,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     autosort: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    preserve_argument_comments: bool,
     dangle_parens: bool,
     dangle_align: DangleAlign,
     min_prefix_length: usize,
@@ -427,6 +433,7 @@ impl From<&Config> for EffectiveConfigFile {
                 continuation_align: config.continuation_align,
                 enable_sort: config.enable_sort,
                 autosort: config.autosort,
+                preserve_argument_comments: config.preserve_argument_comments,
                 dangle_parens: config.dangle_parens,
                 dangle_align: config.dangle_align,
                 min_prefix_length: config.min_prefix_chars,
@@ -497,6 +504,8 @@ fn default_config_template_yaml() -> String {
             "  # enable_sort: true\n\n",
             "  # Heuristically sort keyword sections where all arguments are simple unquoted tokens.\n",
             "  # autosort: true\n\n",
+            "  # Keep comments inside a command on their own lines instead of attaching them to arguments.\n",
+            "  # preserve_argument_comments: true\n\n",
             "  # Put the closing ')' on its own line when a call wraps.\n",
             "  dangle_parens: {dangle_parens}\n\n",
             "  # Alignment strategy for a dangling ')': prefix, open, or close.\n",
@@ -722,6 +731,9 @@ impl Config {
         }
         if let Some(v) = fc.format.autosort {
             self.autosort = v;
+        }
+        if let Some(v) = fc.format.preserve_argument_comments {
+            self.preserve_argument_comments = v;
         }
         if let Some(v) = fc.format.dangle_parens {
             self.dangle_parens = v;
@@ -1396,6 +1408,12 @@ per_command_overrides:
         let config = Config::from_yaml_str("format:\n  line_width: 120\n  tab_size: 4").unwrap();
         assert_eq!(config.line_width, 120);
         assert_eq!(config.tab_size, 4);
+    }
+
+    #[test]
+    fn from_yaml_str_parses_preserve_argument_comments() {
+        let config = Config::from_yaml_str("format:\n  preserve_argument_comments: true").unwrap();
+        assert!(config.preserve_argument_comments);
     }
 
     #[test]

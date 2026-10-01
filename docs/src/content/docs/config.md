@@ -88,6 +88,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`continuation_align`](#continuation_align)
   - [`enable_sort`](#enable_sort)
   - [`autosort`](#autosort)
+  - [`preserve_argument_comments`](#preserve_argument_comments)
   - [`dangle_parens`](#dangle_parens)
   - [`dangle_align`](#dangle_align)
   - [`min_prefix_length`](#min_prefix_length)
@@ -141,6 +142,7 @@ format:
   wrap_after_first_arg: false
   enable_sort: false
   autosort: false
+  preserve_argument_comments: false
   dangle_parens: false
   dangle_align: prefix
   min_prefix_length: 4
@@ -506,6 +508,18 @@ commands:
       PROPERTY:
         nargs: "+"
         no_autosort: true
+```
+
+### `preserve_argument_comments`
+
+Keep comments within a command invocation on their own lines rather than
+attaching them to the preceding argument. This is useful for explanatory
+comment blocks between arguments, such as a `FetchContent_Declare()` source
+pin. Default: `false`.
+
+```yaml
+format:
+  preserve_argument_comments: true
 ```
 
 ### `dangle_parens`
