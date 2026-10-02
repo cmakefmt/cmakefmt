@@ -5,8 +5,8 @@
 
 import { createHighlighter } from "shiki";
 import { createCssVariablesTheme } from "shiki/core";
-import { codeToKeyedTokens, createMagicMoveMachine } from "shiki-magic-move/core";
-import "shiki-magic-move/style.css";
+import { codeToKeyedTokens, createMagicMoveMachine } from "@shikijs/magic-move/core";
+import "@shikijs/magic-move/style.css";
 
 interface Props {
   before: string;
@@ -36,8 +36,8 @@ const data = JSON.stringify(steps).replace(/</g, "\\u003c");
 </magic-move>
 
 <script>
-  import { MagicMoveRenderer } from "shiki-magic-move/renderer";
-  import type { KeyedTokensInfo } from "shiki-magic-move/types";
+  import { MagicMoveRenderer } from "@shikijs/magic-move/renderer";
+  import type { KeyedTokensInfo } from "@shikijs/magic-move/types";
 
   // Only the manual step API used by FormatMagicShowcase is exposed here.
   // Tokenization stays at build time; no Astro peer dependency is needed.
