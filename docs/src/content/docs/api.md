@@ -25,7 +25,8 @@ The crate is a strong fit when you want to:
 
 ## Crate Status
 
-The Rust library API is intended to be stable for the `1.x` line.
+The Rust library API follows Rust semver within each major version. See the
+[2.0 migration guide](/upgrading/) when upgrading from 1.x.
 
 The stable contract is:
 

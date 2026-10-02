@@ -155,6 +155,7 @@ export default defineConfig({
           items: [
             { label: "Formatting Cookbook", slug: "cookbook" },
             { label: "Migration from cmake-format", slug: "migration" },
+            { label: "Upgrading to 2.0", slug: "upgrading" },
             { label: "Editor Integration", slug: "editors" },
             { label: "CI Integration", slug: "ci" },
             { label: "Performance", slug: "performance" },

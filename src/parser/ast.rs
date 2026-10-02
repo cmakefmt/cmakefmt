@@ -53,7 +53,34 @@ pub struct CommandInvocation {
 }
 
 /// A single argument (or comment) in an argument list.
+///
+/// This enum is non-exhaustive: downstream matches must handle future variants.
+/// Use [`Argument::is_comment`] when comment placement is not relevant.
+///
+/// ```
+/// use cmakefmt::parser::ast::Argument;
+/// let argument = Argument::Unquoted("value".into());
+/// let kind = match argument {
+///     Argument::InlineComment(_) | Argument::StandaloneComment(_) => "comment",
+///     Argument::Bracket(_) | Argument::Quoted(_) | Argument::Unquoted(_) => "value",
+///     _ => "unsupported variant",
+/// };
+/// assert_eq!(kind, "value");
+/// ```
+///
+/// Exhaustive matches outside the crate are intentionally rejected:
+///
+/// ```compile_fail
+/// use cmakefmt::parser::ast::Argument;
+/// fn is_comment(argument: &Argument) -> bool {
+///     match argument {
+///         Argument::InlineComment(_) | Argument::StandaloneComment(_) => true,
+///         Argument::Bracket(_) | Argument::Quoted(_) | Argument::Unquoted(_) => false,
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Argument {
     /// `[[...]]`, `[=[...]=]`, etc. Content is verbatim.
     Bracket(BracketArgument),

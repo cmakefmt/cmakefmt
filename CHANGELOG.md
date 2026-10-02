@@ -8,6 +8,29 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Breaking changes
+
+- Rust consumers must handle `Argument::StandaloneComment` separately from
+  `Argument::InlineComment`. `Argument` is now non-exhaustive; downstream
+  matches need a fallback arm for future variants. Use `is_comment()` when
+  comment placement does not matter.
+- `Config` gains `argument_comment_style`. Complete struct literals need
+  updating; prefer `Config { ..Config::default() }` with explicit overrides.
+- Standalone argument comments remain on separate lines by default. This can
+  change formatted output and cause existing `--check` jobs to fail until
+  files are reformatted. `preserve` keeps original placement; `standalone`
+  moves all argument comments onto separate lines. Neither mode reproduces
+  the previous behaviour of packing standalone comments onto argument lines.
+- Source builds require Rust 1.88 or later. Prebuilt binaries and Python
+  wheels do not require a local Rust toolchain.
+- Browser WebAssembly consumers must enable `browser-wasm`; use
+  `wasm-pack build --target web --no-default-features --features browser-wasm`.
+  Browser bindings and the dprint plugin are separate build targets.
+
+Existing CLI flag names, configuration-file syntax, and the LSP interface
+remain unchanged. See the [2.0 migration guide](https://cmakefmt.dev/upgrading/)
+for Rust examples and upgrade checks.
+
 ### Added
 
 - Add `format.argument_comment_style` with `preserve` (the default) and

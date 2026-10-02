@@ -8,10 +8,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 This is the maintainer-facing release procedure. It captures the
 information a successor would need to ship a release without prior
-context. The longer working reference (architecture decisions,
-historical rationale, future plans) lives in the
-`cmakefmt/strategy` companion repo; this file holds only the parts
-that are load-bearing for actually cutting a release.
+context, including compatibility checks and publication gates.
 
 ## At a glance
 
@@ -26,8 +23,8 @@ that are load-bearing for actually cutting a release.
 ## Step-by-step
 
 1. Confirm `## Unreleased` in `CHANGELOG.md` has entries for everything
-   that should be in the release. Anything not in `Unreleased` will
-   not appear in the release notes.
+   that should be in the release. This is the source for the curated
+   notes you will add to the GitHub release after publication.
 2. Pick the version bump (patch / minor / major). See "Choosing
    the bump" below.
 3. Trigger **Prepare Release** workflow:
@@ -48,6 +45,11 @@ that are load-bearing for actually cutting a release.
 6. The GitHub Release publication triggers **Publish to winget**
    (`publish-winget.yml`), which submits a winget-pkgs manifest
    via `winget-releaser`.
+7. Immediately after the GitHub release appears, edit its release notes.
+   Prepend the stamped changelog section, including breaking changes and
+   the migration-guide link, to the generated PR notes. Check that the
+   migration guide is deployed before announcing the release. Initial
+   publication notifications may contain only the generated notes.
 
 If any step fails, the tag stays but the published artefacts will
 be incomplete. crates.io and PyPI refuse to re-publish a version
@@ -55,6 +57,18 @@ once it has been yanked, so recovering from a partial publish
 usually means bumping to the next patch and re-cutting.
 
 ## Choosing the bump
+
+For 2.0, review the [migration guide](https://cmakefmt.dev/upgrading/) and
+the Unreleased breaking-change notes before triggering preparation. Audit
+public Rust enums and struct fields, browser WASM feature selection, and
+formatter pins in dependent workflows. Record the release candidate's
+performance and binary-size datapoint before tagging. A Release workflow
+started manually is a rehearsal and does not publish; Prepare Release is
+the workflow that commits the version bump and pushes the release tag.
+
+The workflow publishes GitHub-generated notes. Add the curated changelog
+section manually immediately after publication, as described above;
+breaking changes must not be left only in pull request descriptions.
 
 - **Patch (`1.4.X`)** — bug fixes that change formatter output only
   for inputs that hit the bug, plus internal hygiene with no
