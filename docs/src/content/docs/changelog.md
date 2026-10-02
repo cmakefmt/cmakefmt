@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.0.0 — 2026-10-02
+
 ### Breaking changes
 
 - Rust consumers must handle `Argument::StandaloneComment` separately from
