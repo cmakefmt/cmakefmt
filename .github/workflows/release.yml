@@ -107,7 +107,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: ${{ matrix.target }}
           save-if: false
@@ -241,7 +241,7 @@ jobs:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: "false"
 
@@ -268,7 +268,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: "false"
 
@@ -385,7 +385,7 @@ jobs:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: "false"
 
@@ -506,7 +506,7 @@ jobs:
           toolchain: stable
 
       - name: Cache Cargo registry and build artifacts
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: "false"
 
