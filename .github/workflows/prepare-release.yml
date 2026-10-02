@@ -124,7 +124,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Cargo.toml Cargo.lock README.md docs/src/content/docs/cli.md docs/src/content/docs/troubleshooting.md .bumpversion.toml CHANGELOG.md docs/src/content/docs/changelog.md "docs/public/schemas/v${{ inputs.version }}/schema.json"
+          git add Cargo.toml Cargo.lock README.md docs/src/content/docs/ci.md docs/src/content/docs/cli.md docs/src/content/docs/troubleshooting.md docs/src/content/docs/index.mdx .bumpversion.toml CHANGELOG.md docs/src/content/docs/changelog.md "docs/public/schemas/v${{ inputs.version }}/schema.json"
           git commit -m "Release ${{ inputs.version }}"
 
       - name: Create release tag
