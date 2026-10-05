@@ -50,7 +50,7 @@ Ignore rules only affect:
 | --- | --- |
 | `--files-from <PATH>` | Read more input paths from a file, or `-` for stdin. Accepts newline-delimited or NUL-delimited path lists. |
 | `--path-regex <REGEX>` | Filter discovered CMake paths. Direct file arguments are not filtered out. |
-| `--ignore-path <PATH>` | Add extra ignore files during recursive discovery. Direct file arguments still win. |
+| `--ignore-file <FILE>` | Add extra ignore-rules files during recursive discovery. `--ignore-path` is a compatible alias. Direct file arguments still win. |
 | `--no-gitignore` | Stop honoring `.gitignore` during recursive discovery. |
 | `--sorted` | Sort discovered files by path before processing. |
 | `--staged` | Use staged Git-tracked files instead of explicit input paths. |
@@ -443,17 +443,18 @@ The fastest path through a legacy config migration.
 
 - Direct file arguments are always processed, even if an ignore rule would skip them.
 - Recursive discovery honors `.cmakefmtignore` and, by default, `.gitignore`.
-- `--ignore-path` adds more ignore files for discovered directories only.
+- `--ignore-file` adds more ignore files for discovered directories only.
 - `--files-from`, `--staged`, and `--changed` still pass through normal discovery filters when they produce directories or paths that need filtering.
 - `cmakefmt config path`, `cmakefmt config show`, and `cmakefmt config explain` resolve a single target context and make the selected config path(s) visible.
 - `--no-config` disables config discovery entirely.
 
-`--ignore-path` takes an **ignore file**, not a path to exclude. For example,
+`--ignore-file` takes an **ignore-rules file**, not a path to exclude.
+`--ignore-path` remains available as a backwards-compatible alias. For example,
 put `vendor/` or `cmake/problematic.cmake` in `.cmakefmtignore`, then run
 `cmakefmt --check .`. That ignore file is discovered automatically. To use a
-different filename, run `cmakefmt --check --ignore-path extra.ignore .`.
+different filename, run `cmakefmt --check --ignore-file extra.ignore .`.
 Patterns use gitignore syntax. Missing files, directories, and invalid ignore
-patterns passed to `--ignore-path` are reported as errors.
+patterns passed to `--ignore-file` (or `--ignore-path`) are reported as errors.
 
 An explicitly named file still wins: `cmakefmt cmake/problematic.cmake`
 processes that file even if an ignore rule matches it. Use a directory input

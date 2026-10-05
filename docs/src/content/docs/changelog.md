@@ -16,6 +16,12 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- Add `--ignore-file <FILE>` as the clearer spelling for loading extra
+  ignore-rules files. `--ignore-path` remains a backwards-compatible alias;
+  ignore rules still apply to discovery, not explicitly named input files.
+
 ## 2.0.0 — 2026-10-02
 
 ### Breaking changes

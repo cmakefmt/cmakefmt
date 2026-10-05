@@ -1252,6 +1252,64 @@ fn cmakefmtignore_filters_recursive_discovery() {
 }
 
 #[test]
+fn ignore_file_and_legacy_alias_accumulate_rules() {
+    let dir = tempfile::tempdir().unwrap();
+    for name in ["keep.cmake", "first.cmake", "second.cmake"] {
+        write_file(&dir.path().join(name), "set(FOO bar)\n");
+    }
+    let first = dir.path().join("first.ignore");
+    let second = dir.path().join("second.ignore");
+    write_file(&first, "first.cmake\n");
+    write_file(&second, "second.cmake\n");
+
+    for second_flag in ["--ignore-file", "--ignore-path"] {
+        let output = cmakefmt()
+            .args([
+                "--list-input-files",
+                "--ignore-file",
+                first.to_str().unwrap(),
+                second_flag,
+                second.to_str().unwrap(),
+                dir.path().to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("keep.cmake"));
+        assert!(!stdout.contains("first.cmake"));
+        assert!(!stdout.contains("second.cmake"));
+    }
+}
+
+#[test]
+fn ignore_file_rejects_directory_and_preserves_explicit_file_precedence() {
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("ignored.cmake");
+    let rules = dir.path().join("extra.ignore");
+    write_file(&target, "set(FOO bar)\n");
+    write_file(&rules, "ignored.cmake\n");
+    let output = cmakefmt()
+        .args([
+            "--list-input-files",
+            "--ignore-file",
+            rules.to_str().unwrap(),
+            target.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("ignored.cmake"));
+
+    let output = cmakefmt()
+        .args(["--ignore-file", dir.path().to_str().unwrap(), "."])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("--ignore-file"));
+}
+
+#[test]
 fn explicit_ignore_path_filters_recursive_discovery() {
     let dir = tempfile::tempdir().unwrap();
     let keep = dir.path().join("keep.cmake");
@@ -2289,7 +2347,8 @@ fn help_mentions_config_discovery_and_primary_flags() {
     assert!(stdout.contains("--list-changed-files"));
     assert!(stdout.contains("--list-input-files"));
     assert!(stdout.contains("--path-regex <REGEX>"));
-    assert!(stdout.contains("--ignore-path <PATH>"));
+    assert!(stdout.contains("--ignore-file <FILE>"));
+    assert!(stdout.contains("--ignore-path"));
     assert!(stdout.contains("--no-gitignore"));
     // Subcommands
     assert!(stdout.contains("config"));

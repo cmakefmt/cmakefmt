@@ -144,11 +144,12 @@ struct InputSelectionArgs {
     /// Add one or more extra ignore files during recursive discovery.
     ///
     /// This only affects discovered files, not direct file arguments.
-    /// PATH must name an existing ignore file containing gitignore-style patterns,
+    /// FILE must name an existing ignore file containing gitignore-style patterns,
     /// not the file or directory you want to exclude.
     #[arg(
-        long = "ignore-path",
-        value_name = "PATH",
+        long = "ignore-file",
+        visible_alias = "ignore-path",
+        value_name = "FILE",
         help_heading = "Input Selection"
     )]
     ignore_paths: Vec<PathBuf>,
@@ -1025,7 +1026,7 @@ mod tests {
             "files-from",
             "generate-man-page",
             "help",
-            "ignore-path",
+            "ignore-file",
             "keep-going",
             "cache",
             "cache-location",
