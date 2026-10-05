@@ -467,7 +467,18 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           cd vscode-cmakefmt
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"${VERSION}\"/" package.json
+          RELEASE_VERSION="${VERSION}" node <<'NODE'
+          const fs = require("node:fs");
+          const version = process.env.RELEASE_VERSION;
+          for (const filename of ["package.json", "package-lock.json"]) {
+            const data = JSON.parse(fs.readFileSync(filename, "utf8"));
+            data.version = version;
+            if (filename === "package-lock.json") {
+              data.packages[""].version = version;
+            }
+            fs.writeFileSync(filename, JSON.stringify(data, null, 2) + "\n");
+          }
+          NODE
 
       - name: Commit, tag, and push
         shell: bash
@@ -482,7 +493,7 @@ jobs:
           cd vscode-cmakefmt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json
+          git add package.json package-lock.json
           git commit -m "Bump version to ${GITHUB_REF_NAME#v} for cmakefmt ${GITHUB_REF_NAME}"
           git remote set-url origin "https://x-access-token:${VSCODE_CMAKEFMT_TOKEN}@github.com/cmakefmt/vscode-cmakefmt.git"
           git push origin HEAD:main

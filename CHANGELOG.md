@@ -14,6 +14,11 @@ This project follows a simple changelog discipline:
   ignore-rules files. `--ignore-path` remains a backwards-compatible alias;
   ignore rules still apply to discovery, not explicitly named input files.
 
+### Fixed
+
+- Keep the VS Code extension's npm lockfile version in sync when the release
+  workflow bumps its package version.
+
 ## 2.0.0 — 2026-10-02
 
 ### Breaking changes
