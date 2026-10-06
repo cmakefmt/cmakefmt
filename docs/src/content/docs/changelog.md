@@ -16,6 +16,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.1.0 — 2026-10-06
+
 ### Added
 
 - Add `--ignore-file <FILE>` as the clearer spelling for loading extra
