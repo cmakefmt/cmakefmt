@@ -183,11 +183,12 @@ rises from `14.9 MB` serial to `19.4 MB` at `--parallel 8` on opencv, and from
 
 Single-file performance across every release, measured on the same
 fixture (`mariadb_server/CMakeLists.txt`, 656 lines) using each
-version's official macOS aarch64 binary from GitHub Releases. The `v2.0.0`
-point is a locally built macOS aarch64 release candidate: **6.7ms** median
-and **4.8MiB**, measured with 100 warmups and 200 runs using
-`--shell=none --style basic`. It is a pre-publication measurement, not a
-downloaded release artifact.
+version's official macOS aarch64 binary from GitHub Releases, except for
+the locally built macOS aarch64 release candidates: `v2.0.0` measured
+**6.7ms** median and **4.8MiB**; `v2.1.0` measured **6.4ms** median and
+**4.7MiB**. Both used 100 warmups and 200 runs with
+`--shell=none --style basic`. These are pre-publication measurements, not
+downloaded release artifacts.
 
 The solid line shows formatting time (left axis); the dashed line shows
 binary size (right axis). Hover a point to see the details and what
