@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.2.0 — 2026-10-13
+
 ### Changed
 
 - Replace the unmaintained libyaml-backed YAML dependency with `serde-saphyr`
