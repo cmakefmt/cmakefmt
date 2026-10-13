@@ -283,6 +283,20 @@ format:
 
 Most noticeable on commands with long source or header lists.
 
+This threshold also applies to nested variable-length keyword lists, such
+as `BASE_DIRS` and `FILES` inside `target_sources(FILE_SET ...)`. To put
+each value on its own line in a wrapped call, set it to `0`:
+
+```yaml
+format:
+  always_wrap: [target_sources]
+  max_hanging_wrap_positional_args: 0
+  dangle_parens: true
+```
+
+Required keyword/value pairs such as `FILE_SET HEADERS` and `TYPE HEADERS`
+remain attached. Short calls can still stay inline unless wrapping is forced.
+
 ### `max_hanging_wrap_groups`
 
 Maximum number of keyword/flag subgroups to keep in a hanging-wrap layout.

@@ -1070,6 +1070,35 @@ fn write_grouped_arguments(
         let end = group_end(arguments, i, parent_spec);
         let group = &arguments[i..end];
 
+        // Variable-length nested lists have the same vertical threshold as
+        // top-level keyword lists. Keep fixed header/value pairs attached.
+        let nested_spec = lookup_nested_kwarg_in(parent_spec, group[0].as_str());
+        if nested_spec.is_some_and(|spec| {
+            matches!(
+                spec.nargs,
+                NArgs::ZeroOrMore | NArgs::OneOrMore | NArgs::AtLeast(_)
+            )
+        }) && group[1..].iter().filter(|arg| !arg.is_comment()).count()
+            > ctx.cmd_config.max_pargs_hwrap()
+        {
+            output.push_str(indent);
+            output.push_str(&apply_case(
+                ctx.cmd_config.keyword_case(),
+                group[0].as_str(),
+            ));
+            output.push('\n');
+            let value_indent = format!("{indent}{}", ctx.cmd_config.indent_str());
+            write_vertical_arguments(
+                output,
+                &group[1..],
+                &value_indent,
+                ctx.config(),
+                ctx.patterns,
+            );
+            i = end;
+            continue;
+        }
+
         // Under UnderFirstValue, wrap lines of a subkwarg group land
         // aligned under the column of the first value after the
         // subkwarg token: `indent + subkwarg + " "`.

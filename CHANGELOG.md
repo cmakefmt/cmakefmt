@@ -8,6 +8,13 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- Recognise `target_sources(FILE_SET ...)` names and nested `TYPE`,
+  `BASE_DIRS`, and `FILES` sections, including repeated file sets. Nested
+  variable-length lists now honour `max_hanging_wrap_positional_args` so
+  their values indent beneath their keywords in vertical layouts (#213).
+
 ## 2.1.0 — 2026-10-06
 
 ### Added

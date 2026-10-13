@@ -249,9 +249,16 @@ commands:
         nargs: "*"
   target_sources:
     pargs: 1
-    flags:
-      - FILE_SET
     kwargs:
+      FILE_SET:
+        nargs: 1
+        kwargs:
+          TYPE:
+            nargs: 1
+          BASE_DIRS:
+            nargs: "*"
+          FILES:
+            nargs: "*"
       INTERFACE:
         nargs: "*"
       PRIVATE:

@@ -15,6 +15,84 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn target_sources_file_sets_have_nested_lists() {
+    let source = "target_sources(\n    my_lib\n    INTERFACE\n    FILE_SET\n        HEADERS\n        BASE_DIRS\n            dir1\n            dir2\n        FILES\n            file1\n            file2\n)\n";
+    let config = Config {
+        tab_size: 4,
+        dangle_parens: true,
+        always_wrap: vec!["target_sources".into()],
+        max_pargs_hwrap: 0,
+        ..Config::default()
+    };
+    let formatted = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    target_sources(
+        my_lib
+        INTERFACE
+        FILE_SET HEADERS
+            BASE_DIRS
+                dir1
+                dir2
+            FILES
+                file1
+                file2
+    )
+    ");
+    assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+}
+
+#[test]
+fn target_sources_file_sets_preserve_names_and_repeated_groups() {
+    let source = "target_sources(lib PRIVATE source.cpp FILE_SET headers TYPE HEADERS BASE_DIRS include FILES include/a.h FILE_SET modules TYPE CXX_MODULES FILES src/a.cppm PUBLIC FILE_SET api TYPE HEADERS FILES include/api.h INTERFACE FILE_SET HEADERS FILES include/interface.h)\n";
+    for autosort in [false, true] {
+        let config = Config {
+            line_width: 40,
+            always_wrap: vec!["target_sources".into()],
+            max_pargs_hwrap: 0,
+            autosort,
+            ..Config::default()
+        };
+        let formatted = format_source(source, &config).unwrap();
+        assert!(formatted.contains("FILE_SET headers\n"));
+        assert!(formatted.contains("FILE_SET modules\n"));
+        assert!(formatted.contains("FILE_SET api\n"));
+        assert!(formatted.contains("TYPE HEADERS\n"));
+        assert!(formatted.contains("TYPE CXX_MODULES\n"));
+        assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+        assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+    }
+}
+
+#[test]
+fn target_sources_ordinary_lists_and_inline_file_sets_still_fit() {
+    for source in [
+        "target_sources(lib PRIVATE a.cpp b.cpp PUBLIC api.cpp INTERFACE header.h)\n",
+        "target_sources(lib PUBLIC FILE_SET HEADERS FILES a.h b.h)\n",
+        "target_sources(lib PRIVATE TYPE BASE_DIRS FILES)\n",
+    ] {
+        assert_eq!(format_source(source, &Config::default()).unwrap(), source);
+    }
+}
+
+#[test]
+fn target_sources_file_set_comments_and_keyword_values_round_trip() {
+    let source = "target_sources(lib PUBLIC FILE_SET # set name follows\n headers TYPE HEADERS BASE_DIRS # directories\n include # keep this directory\n generated FILES include/a.h # public header\n generated/b.h PRIVATE FILE_SET private_headers TYPE HEADERS FILES src/private.h)\n";
+    for tab_size in [2, 4] {
+        let config = Config {
+            tab_size,
+            use_tabchars: tab_size == 4,
+            always_wrap: vec!["target_sources".into()],
+            max_pargs_hwrap: 0,
+            ..Config::default()
+        };
+        let formatted = format_source(source, &config).unwrap();
+        assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+        assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+    }
+}
+
+#[test]
 fn fetchcontent_find_package_args_are_not_autosorted() {
     let source = "fetchcontent_declare(GTest GIT_REPOSITORY https://example.invalid/gtest.git FIND_PACKAGE_ARGS NAMES GTest)\n";
     for line_width in [40, 120] {
