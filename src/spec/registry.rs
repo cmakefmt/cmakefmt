@@ -200,7 +200,7 @@ impl CommandRegistry {
     /// [`CommandRegistry::merge_override_file`] which returns
     /// [`Error::Spec`].
     pub fn merge_yaml_overrides(&mut self, yaml_source: &str) -> Result<()> {
-        let mut overrides: SpecOverrideFile = serde_yaml::from_str(yaml_source)
+        let mut overrides: SpecOverrideFile = serde_saphyr::from_str(yaml_source)
             .map_err(|e| Error::Formatter(format!("spec YAML error: {e}")))?;
         self.apply_overrides(&mut overrides);
         Ok(())
@@ -271,14 +271,14 @@ impl CommandRegistry {
                     column,
                 ))
             })?,
-            ConfigFileFormat::Yaml => serde_yaml::from_str(source).map_err(|yaml_err| {
+            ConfigFileFormat::Yaml => serde_saphyr::from_str(source).map_err(|yaml_err| {
                 let location = yaml_err.location();
                 Error::Spec(crate::error::SpecError::new(
                     path.clone(),
                     format.as_str(),
                     yaml_err.to_string(),
-                    location.as_ref().map(|loc| loc.line()),
-                    location.as_ref().map(|loc| loc.column()),
+                    location.as_ref().map(|loc| loc.line() as usize),
+                    location.as_ref().map(|loc| loc.column() as usize),
                 ))
             })?,
         };
@@ -650,6 +650,22 @@ mod tests {
             registry.get("install"),
             CommandSpec::Discriminated { .. }
         ));
+    }
+
+    #[test]
+    fn embedded_specs_preserve_discriminated_form_order() {
+        let registry = CommandRegistry::load().unwrap();
+        for (command, first_form, pargs) in [
+            ("cmake_path", "GET", NArgs::Fixed(2)),
+            ("cmake_policy", "VERSION", NArgs::Fixed(1)),
+        ] {
+            let CommandSpec::Discriminated { forms, .. } = registry.get(command) else {
+                panic!("expected discriminated spec for {command}");
+            };
+            assert_eq!(forms.keys().next().unwrap(), first_form);
+            assert_eq!(registry.get(command).form_for(None).pargs, pargs);
+            assert_eq!(registry.get(command).form_for(Some("UNKNOWN")).pargs, pargs);
+        }
     }
 
     #[test]

@@ -33,7 +33,7 @@ struct FileConfig {
     _schema: Option<String>,
     /// Command spec overrides (parsed separately by the spec registry).
     #[cfg_attr(feature = "cli", schemars(skip))]
-    commands: Option<serde_yaml::Value>,
+    commands: Option<serde_json::Value>,
     /// Formatting options controlling line width, indentation, casing, and layout.
     format: FormatSection,
     /// Comment markup processing options.
@@ -185,7 +185,7 @@ pub fn default_config_template_for(format: DumpConfigFormat) -> String {
 pub fn render_effective_config(config: &Config, format: DumpConfigFormat) -> Result<String> {
     let view = EffectiveConfigFile::from(config);
     match format {
-        DumpConfigFormat::Yaml => serde_yaml::to_string(&view).map_err(|err| Error::Render {
+        DumpConfigFormat::Yaml => serde_saphyr::to_string(&view).map_err(|err| Error::Render {
             format: "effective config (YAML)".to_owned(),
             message: err.to_string(),
         }),
@@ -810,13 +810,13 @@ pub(crate) struct ParsedYamlConfig {
 
 fn parse_yaml_config(yaml: &str) -> Result<ParsedYamlConfig> {
     let yaml_string_path = || std::path::PathBuf::from("<yaml-string>");
-    let file_config: FileConfig = serde_yaml::from_str(yaml).map_err(|source| {
+    let file_config: FileConfig = serde_saphyr::from_str(yaml).map_err(|source| {
         Error::Config(crate::error::ConfigError::new(
             yaml_string_path(),
             "yaml",
             source.to_string(),
-            source.location().map(|loc| loc.line()),
-            source.location().map(|loc| loc.column()),
+            source.location().map(|loc| loc.line() as usize),
+            source.location().map(|loc| loc.column() as usize),
         ))
     })?;
     if !file_config.legacy_per_command.is_empty() {
@@ -851,11 +851,9 @@ fn parse_yaml_config(yaml: &str) -> Result<ParsedYamlConfig> {
     })
 }
 
-fn serialize_commands_yaml(commands: &serde_yaml::Value) -> Result<Box<str>> {
-    let key = serde_yaml::Value::String("commands".into());
-    let mut wrapper = serde_yaml::Mapping::new();
-    wrapper.insert(key, commands.clone());
-    serde_yaml::to_string(&wrapper)
+fn serialize_commands_yaml(commands: &serde_json::Value) -> Result<Box<str>> {
+    let wrapper = serde_json::json!({ "commands": commands });
+    serde_saphyr::to_string(&wrapper)
         .map(|yaml| yaml.into_boxed_str())
         .map_err(|source| {
             Error::Config(crate::error::ConfigError::new(
@@ -881,14 +879,14 @@ fn load_config_file(path: &Path) -> Result<FileConfig> {
                 column,
             ))
         }),
-        ConfigFileFormat::Yaml => serde_yaml::from_str(&contents).map_err(|source| {
+        ConfigFileFormat::Yaml => serde_saphyr::from_str(&contents).map_err(|source| {
             let location = source.location();
             Error::Config(crate::error::ConfigError::new(
                 path.to_path_buf(),
                 ConfigFileFormat::Yaml.as_str(),
                 source.to_string(),
-                location.as_ref().map(|loc| loc.line()),
-                location.as_ref().map(|loc| loc.column()),
+                location.as_ref().map(|loc| loc.line() as usize),
+                location.as_ref().map(|loc| loc.column() as usize),
             ))
         }),
     }?;
@@ -1102,7 +1100,7 @@ command_case = "upper"
     #[test]
     fn default_yaml_config_template_parses() {
         let template = default_config_template();
-        let parsed: FileConfig = serde_yaml::from_str(&template).unwrap();
+        let parsed: FileConfig = serde_saphyr::from_str(&template).unwrap();
         assert_eq!(parsed.format.line_width, Some(Config::default().line_width));
         assert_eq!(
             parsed.format.command_case,
@@ -1407,6 +1405,84 @@ per_command_overrides:
     }
 
     // ── from_yaml_str tests ─────────────────────────────────────────────
+
+    #[test]
+    fn effective_yaml_config_roundtrips_non_default_values() {
+        let original = Config::from_yaml_str(
+            "format:\n  line_width: 100\n  tab_size: 4\n  command_case: upper\n  argument_comment_style: standalone\n",
+        )
+        .unwrap();
+        let yaml = render_effective_config(&original, DumpConfigFormat::Yaml).unwrap();
+        let restored = Config::from_yaml_str(&yaml).unwrap();
+        assert_eq!(restored.line_width, 100);
+        assert_eq!(restored.tab_size, 4);
+        assert_eq!(restored.command_case, CaseStyle::Upper);
+        assert_eq!(
+            restored.argument_comment_style,
+            ArgumentCommentStyle::Standalone
+        );
+        assert_eq!(
+            render_effective_config(&restored, DumpConfigFormat::Yaml).unwrap(),
+            yaml
+        );
+    }
+
+    #[test]
+    fn yaml_aliases_and_merge_keys_work_in_overrides() {
+        let config = Config::from_yaml_str(
+            "format: &defaults\n  line_width: 100\n  tab_size: 4\n\
+             per_command_overrides:\n  message:\n    <<: *defaults\n    line_width: 120\n",
+        )
+        .unwrap();
+        assert_eq!(config.line_width, 100);
+        let options = &config.per_command_overrides["message"];
+        assert_eq!(options.line_width, Some(120));
+        assert_eq!(options.tab_size, Some(4));
+    }
+
+    #[test]
+    fn yaml_commands_roundtrip_preserves_strings_and_nested_specs() {
+        let (_, commands) = Config::from_yaml_str_with_commands(
+            "commands:\n  my_cmd:\n    pargs: '1+'\n    kwargs:\n      FILES:\n        nargs: '*'\n    flags: ['true', 'null', '123']\n",
+        )
+        .unwrap();
+        let yaml = commands.unwrap();
+        let value: serde_json::Value = serde_saphyr::from_str(&yaml).unwrap();
+        assert_eq!(value["commands"]["my_cmd"]["pargs"], "1+");
+        assert_eq!(value["commands"]["my_cmd"]["kwargs"]["FILES"]["nargs"], "*");
+        assert_eq!(
+            value["commands"]["my_cmd"]["flags"],
+            serde_json::json!(["true", "null", "123"])
+        );
+        let mut registry = crate::CommandRegistry::load().unwrap();
+        registry.merge_yaml_overrides(&yaml).unwrap();
+        assert_eq!(registry.get("my_cmd").form_for(None).flags.len(), 3);
+    }
+
+    #[test]
+    fn yaml_commands_roundtrip_preserves_discriminated_form_order() {
+        let (_, commands) = Config::from_yaml_str_with_commands(
+            "commands:\n  my_cmd:\n    forms:\n      ZZZ:\n        pargs: 1\n      AAA:\n        pargs: 2\n",
+        )
+        .unwrap();
+        let mut registry = crate::CommandRegistry::load().unwrap();
+        registry.merge_yaml_overrides(&commands.unwrap()).unwrap();
+        assert_eq!(
+            registry.get("my_cmd").form_for(Some("UNKNOWN")).pargs,
+            crate::spec::NArgs::Fixed(1)
+        );
+    }
+
+    #[test]
+    fn yaml_duplicate_keys_and_multiple_documents_are_rejected() {
+        for yaml in [
+            "format:\n  line_width: 80\n  line_width: 100\n",
+            "format: {}\n---\nformat: {}\n",
+            "commands:\n  my_cmd:\n    pargs: 1\n    pargs: 2\n",
+        ] {
+            assert!(Config::from_yaml_str(yaml).is_err(), "{yaml}");
+        }
+    }
 
     #[test]
     fn from_yaml_str_parses_format_section() {

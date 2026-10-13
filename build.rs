@@ -33,7 +33,7 @@ fn main() {
 /// loads that blob via `rmp-serde`, which is ~20× faster than parsing
 /// YAML at every process startup.
 ///
-/// We deliberately serialise through an opaque `serde_yaml::Value` so the
+/// We deliberately serialise through an opaque `serde_json::Value` so the
 /// build script does not need to know the real `SpecFile` schema —
 /// MessagePack is self-describing and `rmp-serde` happily roundtrips
 /// the generic value tree into the typed structs at runtime, including
@@ -56,8 +56,8 @@ fn pre_serialize_yaml_spec(yaml_path: &str, msgpack_filename: &str) {
     println!("cargo:rerun-if-changed={yaml_path}");
     let yaml =
         std::fs::read_to_string(yaml_path).unwrap_or_else(|e| panic!("read {yaml_path}: {e}"));
-    let value: serde_yaml::Value = serde_yaml::from_str(&yaml)
-        .unwrap_or_else(|e| panic!("parse {yaml_path} as serde_yaml::Value: {e}"));
+    let value: serde_json::Value = serde_saphyr::from_str(&yaml)
+        .unwrap_or_else(|e| panic!("parse {yaml_path} as serde_json::Value: {e}"));
     let bytes = rmp_serde::to_vec(&value)
         .unwrap_or_else(|e| panic!("serialise {yaml_path} as MessagePack: {e}"));
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR set by cargo");

@@ -10,8 +10,12 @@ This project follows a simple changelog discipline:
 
 ### Changed
 
+- Replace the unmaintained libyaml-backed YAML dependency with `serde-saphyr`
+  for configuration files and command specs. Source builds now require Rust
+  1.89 or later; prebuilt binaries and Python wheels are unaffected.
+
 - Update Rust dependencies, documentation-site packages, and pinned CI and
-  publishing actions. Source builds continue to support Rust 1.88.
+  publishing actions.
 
 ### Fixed
 

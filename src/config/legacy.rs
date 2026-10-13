@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::{
     file::DumpConfigFormat, CaseStyle, ContinuationAlign, DangleAlign, FractionalTabPolicy,
@@ -51,7 +51,7 @@ pub fn convert_legacy_config_files(paths: &[PathBuf], format: DumpConfigFormat) 
             })?
         }
         DumpConfigFormat::Yaml => {
-            serde_yaml::to_string(&converted.as_config_file()).map_err(|err| Error::Render {
+            serde_saphyr::to_string(&converted.as_config_file()).map_err(|err| Error::Render {
                 format: "converted config (YAML)".to_owned(),
                 message: err.to_string(),
             })?
@@ -89,6 +89,97 @@ enum LegacyValue {
     Table(BTreeMap<String, LegacyValue>),
 }
 
+impl<'de> Deserialize<'de> for LegacyValue {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        struct LegacyVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for LegacyVisitor {
+            type Value = LegacyValue;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a legacy configuration value")
+            }
+
+            fn visit_unit<E: serde::de::Error>(self) -> std::result::Result<Self::Value, E> {
+                Ok(LegacyValue::Null)
+            }
+
+            fn visit_bool<E: serde::de::Error>(
+                self,
+                value: bool,
+            ) -> std::result::Result<Self::Value, E> {
+                Ok(LegacyValue::Bool(value))
+            }
+
+            fn visit_i64<E: serde::de::Error>(
+                self,
+                value: i64,
+            ) -> std::result::Result<Self::Value, E> {
+                Ok(LegacyValue::Integer(value))
+            }
+
+            fn visit_u64<E: serde::de::Error>(
+                self,
+                value: u64,
+            ) -> std::result::Result<Self::Value, E> {
+                Ok(LegacyValue::Integer(
+                    i64::try_from(value).unwrap_or_default(),
+                ))
+            }
+
+            fn visit_f64<E: serde::de::Error>(
+                self,
+                _value: f64,
+            ) -> std::result::Result<Self::Value, E> {
+                // Match the old converter's handling of non-integer numbers.
+                Ok(LegacyValue::Integer(0))
+            }
+
+            fn visit_str<E: serde::de::Error>(
+                self,
+                value: &str,
+            ) -> std::result::Result<Self::Value, E> {
+                Ok(LegacyValue::String(value.to_owned()))
+            }
+
+            fn visit_string<E: serde::de::Error>(
+                self,
+                value: String,
+            ) -> std::result::Result<Self::Value, E> {
+                Ok(LegacyValue::String(value))
+            }
+
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut sequence: A,
+            ) -> std::result::Result<Self::Value, A::Error> {
+                let mut values = Vec::new();
+                while let Some(value) = sequence.next_element()? {
+                    values.push(value);
+                }
+                Ok(LegacyValue::Array(values))
+            }
+
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut mapping: A,
+            ) -> std::result::Result<Self::Value, A::Error> {
+                let mut values = BTreeMap::new();
+                while let Some((key, value)) = mapping.next_entry::<LegacyValue, LegacyValue>()? {
+                    // Legacy YAML mappings ignored non-string keys rather than
+                    // coercing them into configuration option names.
+                    if let LegacyValue::String(key) = key {
+                        values.insert(key, value);
+                    }
+                }
+                Ok(LegacyValue::Table(values))
+            }
+        }
+
+        deserializer.deserialize_any(LegacyVisitor)
+    }
+}
+
 impl LegacyValue {
     fn as_table(&self) -> Option<&BTreeMap<String, LegacyValue>> {
         match self {
@@ -120,12 +211,19 @@ fn parse_legacy_config(path: &Path, source: &str) -> Result<BTreeMap<String, Leg
                 message: format!("invalid JSON legacy config: {err}"),
             }
         })?),
-        LegacyFormat::Yaml => legacy_from_yaml(serde_yaml::from_str(source).map_err(|err| {
-            Error::LegacyMigration {
-                path: path.to_path_buf(),
-                message: format!("invalid YAML legacy config: {err}"),
-            }
-        })?),
+        LegacyFormat::Yaml => serde_saphyr::from_str_with_options(
+            source,
+            serde_saphyr::options! {
+                // Retain non-finite scalars as strings so unsupported options
+                // can still be skipped. Only legacy conversion is permissive;
+                // ordinary configuration parsing keeps the default policy.
+                reject_non_finite_typeless_float: false,
+            },
+        )
+        .map_err(|err| Error::LegacyMigration {
+            path: path.to_path_buf(),
+            message: format!("invalid YAML legacy config: {err}"),
+        })?,
         LegacyFormat::Python => parse_python_legacy_config(path, source)?,
     };
 
@@ -178,33 +276,6 @@ fn legacy_from_json(value: serde_json::Value) -> LegacyValue {
                 .map(|(key, value)| (key, legacy_from_json(value)))
                 .collect(),
         ),
-    }
-}
-
-fn legacy_from_yaml(value: serde_yaml::Value) -> LegacyValue {
-    match value {
-        serde_yaml::Value::Null => LegacyValue::Null,
-        serde_yaml::Value::Bool(value) => LegacyValue::Bool(value),
-        serde_yaml::Value::Number(value) => {
-            LegacyValue::Integer(value.as_i64().unwrap_or_default())
-        }
-        serde_yaml::Value::String(value) => LegacyValue::String(value),
-        serde_yaml::Value::Sequence(values) => {
-            LegacyValue::Array(values.into_iter().map(legacy_from_yaml).collect())
-        }
-        serde_yaml::Value::Mapping(values) => LegacyValue::Table(
-            values
-                .into_iter()
-                .filter_map(|(key, value)| {
-                    let key = match key {
-                        serde_yaml::Value::String(value) => value,
-                        other => legacy_from_yaml(other).as_str()?.to_owned(),
-                    };
-                    Some((key, legacy_from_yaml(value)))
-                })
-                .collect(),
-        ),
-        serde_yaml::Value::Tagged(tagged) => legacy_from_yaml(tagged.value),
     }
 }
 
@@ -1422,6 +1493,64 @@ markup:
         assert!(converted.contains("[markup]"));
         // reflow_comments is mapped to enable_markup
         assert!(converted.contains("enable_markup = true"));
+    }
+
+    #[test]
+    fn converts_legacy_yaml_aliases_tags_and_quoted_flags() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            "line_width: &width !!int 100\nformat:\n  line_width: *width\n\
+             parse:\n  additional_commands:\n    my_cmd:\n      pargs: '1+'\n      flags: ['true', 'null']\n",
+        )
+        .unwrap();
+        let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Yaml).unwrap();
+        let config = crate::Config::from_yaml_str(&converted).unwrap();
+        assert_eq!(config.line_width, 100);
+        let value: serde_json::Value = serde_saphyr::from_str(&converted).unwrap();
+        assert_eq!(
+            value["commands"]["my_cmd"]["flags"],
+            serde_json::json!(["TRUE", "NULL"])
+        );
+    }
+
+    #[test]
+    fn converts_legacy_yaml_with_non_finite_unsupported_options() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.yaml");
+        std::fs::write(
+            &path,
+            "format:\n  line_width: 100\nunsupported_option: [.inf, -.inf, .nan]\n",
+        )
+        .unwrap();
+        for format in [DumpConfigFormat::Yaml, DumpConfigFormat::Toml] {
+            let converted =
+                convert_legacy_config_files(std::slice::from_ref(&path), format).unwrap();
+            assert!(converted.contains("unsupported legacy option [unsupported_option]"));
+            assert!(converted.contains("line_width"));
+            if format == DumpConfigFormat::Yaml {
+                assert_eq!(
+                    crate::Config::from_yaml_str(&converted).unwrap().line_width,
+                    100
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn legacy_yaml_keeps_numeric_and_mapping_key_handling() {
+        let path = Path::new("legacy.yaml");
+        let values = parse_legacy_config(
+            path,
+            "integer: 42\nfloat: 1.5\nlarge: 18446744073709551615\n1: ignored\n'1': retained\nquoted: '.inf'\n",
+        )
+        .unwrap();
+        assert_eq!(values["integer"], LegacyValue::Integer(42));
+        assert_eq!(values["float"], LegacyValue::Integer(0));
+        assert_eq!(values["large"], LegacyValue::Integer(0));
+        assert_eq!(values["1"], LegacyValue::String("retained".into()));
+        assert_eq!(values["quoted"], LegacyValue::String(".inf".into()));
     }
 
     // ── Phase-16 option tests ─────────────────────────────────────────────

@@ -13,8 +13,7 @@ targets = []
 # Advisories — known vulnerabilities and unmaintained crates
 # ---------------------------------------------------------------------------
 [advisories]
-# Warn on unmaintained crates; promote to deny once the dependency tree is
-# stable and any known unmaintained crates are reviewed.
+# Reject unmaintained dependencies throughout the dependency tree.
 unmaintained = "all"
 yanked = "deny"
 

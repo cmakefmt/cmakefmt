@@ -10,7 +10,7 @@ documentation = "https://cmakefmt.dev"
 readme = "README.md"
 keywords = ["cmake", "formatter", "formatting", "cli", "developer-tools"]
 categories = ["command-line-utilities", "development-tools"]
-rust-version = "1.88"
+rust-version = "1.89"
 include = [
   "/build.rs",
   "/Cargo.toml",
@@ -57,8 +57,8 @@ cli = [
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde-saphyr = "1.3"
 toml = "1.1.2"
 thiserror = "2.0.19"
 indexmap = { version = "2.13", features = ["serde"] }
@@ -86,7 +86,8 @@ dprint-core = { version = "0.70.0", default-features = false, features = ["wasm"
 wasm-bindgen = { version = "0.2", optional = true }
 
 [build-dependencies]
-serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
+serde-saphyr = "1.3"
+serde_json = { version = "1", features = ["preserve_order"] }
 rmp-serde = "1"
 
 [dev-dependencies]

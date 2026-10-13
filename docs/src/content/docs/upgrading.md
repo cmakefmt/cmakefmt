@@ -13,6 +13,18 @@ Version 2.0 introduces breaking Rust API changes, preserves original argument
 comment placement by default, and adds a dprint WebAssembly plugin. CLI flag
 names, configuration-file syntax, and the LSP interface remain unchanged.
 
+## Building the next release from source
+
+The current source checkout and next release require Rust **1.89 or later**.
+The YAML backend has moved to `serde-saphyr`, removing the unmaintained
+libyaml dependency. Existing configuration options and CLI flags are unchanged;
+YAML aliases and merge keys remain supported. Generated YAML may use different
+quoting or indentation, but can still be loaded as configuration.
+
+Prebuilt binaries, Python wheels, and editor integrations do not require a
+local Rust toolchain. The Rust 1.88 requirement below applies to the 2.0 and
+2.1 releases.
+
 ## Rust library consumers
 
 Update the `cmakefmt-rust` dependency requirement to major version `2` when the

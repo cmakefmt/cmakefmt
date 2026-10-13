@@ -300,7 +300,7 @@ match a partial release state.
 
 - `pest`, `pest_derive` — PEG parser
 - `pretty` — Wadler-Lindig pretty-printing
-- `serde`, `serde_yaml_ng`, `toml` — config serialization
+- `serde`, `serde-saphyr`, `toml` — config serialization
 - `clap`, `clap_complete`, `clap_mangen` — CLI
 - `thiserror` — error types
 - `insta` — snapshot testing (dev)
