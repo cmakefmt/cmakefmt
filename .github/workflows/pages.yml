@@ -80,6 +80,9 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
+          # Reruns retain previous attempts' artifacts. Use a distinct name
+          # so deployment finds exactly the artifact from this attempt.
+          name: github-pages-${{ github.run_attempt }}
           path: docs/dist
 
       - name: Deploy to GitHub Pages
@@ -89,3 +92,5 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
