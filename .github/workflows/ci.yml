@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
+    paths:
+      - '**'
+      - '!**.md'
+      - '!docs/**'
+      # Schemas are generated from Rust code and checked by this workflow.
+      - 'docs/public/schemas/**'
   pull_request:
 
 concurrency:
