@@ -16,6 +16,11 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Changed
+
+- Update Rust dependencies, documentation-site packages, and pinned CI and
+  publishing actions. Source builds continue to support Rust 1.88.
+
 ### Fixed
 
 - Recognise `target_sources(FILE_SET ...)` names and nested `TYPE`,
