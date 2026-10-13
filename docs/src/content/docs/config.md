@@ -85,6 +85,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`always_wrap`](#always_wrap)
   - [`require_valid_layout`](#require_valid_layout)
   - [`wrap_after_first_arg`](#wrap_after_first_arg)
+  - [`wrap_after_first_arg_align`](#wrap_after_first_arg_align)
   - [`continuation_align`](#continuation_align)
   - [`enable_sort`](#enable_sort)
   - [`autosort`](#autosort)
@@ -140,6 +141,7 @@ format:
   always_wrap: []
   require_valid_layout: false
   wrap_after_first_arg: false
+  wrap_after_first_arg_align: under-first-arg
   enable_sort: false
   autosort: false
   argument_comment_style: preserve
@@ -417,6 +419,59 @@ commands:
         nargs: "+"
 ```
 
+### `wrap_after_first_arg_align`
+
+Where the continuation of a [`wrap_after_first_arg`](#wrap_after_first_arg)
+layout starts. Default: `under-first-arg`.
+
+- `under-first-arg` — continuation aligns under the first argument, i.e. just
+  past the opening parenthesis. This is the backwards-compatible default.
+- `default-indent` — continuation uses the normal indentation, one level in
+  from the command, as in the vertical layout. The indentation level follows
+  the configured [`tab_size`](#tab_size) and [`use_tabs`](#use_tabs)
+  rather than being a fixed number of spaces.
+
+```yaml
+format:
+  wrap_after_first_arg: true
+  wrap_after_first_arg_align: default-indent
+```
+
+```cmake
+# under-first-arg (default) — a long command name pushes the body right
+target_compile_definitions(mylib
+                           INTERFACE
+                             USING_DLL)
+
+# default-indent — the body indents like every other wrapped call
+target_compile_definitions(mylib
+  INTERFACE
+    USING_DLL)
+```
+
+This option has no effect unless `wrap_after_first_arg` applies to the call:
+the layout must be selected first, and it only applies when the command's
+first section is positional.
+
+It is independent of [`continuation_align`](#continuation_align): this option
+chooses where the arguments following the first one start, i.e. the indentation
+of the whole body of the call, while `continuation_align` only controls how the
+values of a keyword section are wrapped when they overflow `line_width`.
+
+Because `set()` enables `wrap_after_first_arg` in its built-in spec, a global
+`default-indent` also changes how wrapped `set()` calls indent. Pin it back
+with a per-command override if you want to change this but let `set()` keep its
+documented look:
+
+```yaml
+per_command_overrides:
+  set:
+    wrap_after_first_arg_align: under-first-arg
+```
+
+Or set it for a single custom command in the spec via
+`layout.wrap_after_first_arg_align`.
+
 ### `continuation_align`
 
 How to indent continuation lines when a wrapped keyword section (like a
@@ -440,6 +495,10 @@ The knob only affects subkwarg groups inside structural kwarg sections
 (e.g. `PATTERN … PERMISSIONS …` inside `install(DIRECTORY)` or
 `RUNTIME COMPONENT …` inside `install(TARGETS)`); flat-list sections
 like `PUBLIC` in `target_link_libraries` are unaffected.
+It is also unrelated to
+[`wrap_after_first_arg_align`](#wrap_after_first_arg_align), which selects
+where the body of a call starts when its first argument is kept on the command
+line.
 
 With a long `PERMISSIONS` value list inside a `PATTERN` subgroup:
 

@@ -8,6 +8,28 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- New `format.wrap_after_first_arg_align` option selecting where the
+  continuation of a `wrap_after_first_arg` layout starts:
+  `under-first-arg` (the backwards-compatible default) or `default-indent`,
+  which uses the normal continuation indentation, one indentation level in
+  from the command, instead of aligning the body past the opening parenthesis.
+  Keeping the first argument on the command line and aligning the subsequent
+  lines under it were previously inseparable, so projects that write
+
+  ```cmake
+  target_compile_definitions(mylib
+    INTERFACE
+      USING_DLL)
+  ```
+
+  could not be formatted without either putting the first argument on its own
+  line or having the rest of the arguments pushed out to the width of the
+  command name, but now this layout is possible.
+  Available globally, per command via `per_command_overrides`, and per command
+  form via `layout.wrap_after_first_arg_align` in a spec.
+
 ## 2.2.0 — 2026-10-13
 
 ### Changed
