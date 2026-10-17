@@ -326,9 +326,9 @@ pub struct Config {
     /// Return an error when any formatted output line exceeds
     /// [`Self::line_width`].
     pub require_valid_layout: bool,
-    /// When wrapping, keep the first positional argument on the command
-    /// line and align continuation to the open parenthesis. Can be
-    /// overridden per-command via `per_command_overrides` or the spec's
+    /// When wrapping, keep the first positional argument on the command line.
+    /// Continuation indentation is controlled by `wrap_after_first_arg_align`.
+    /// Can be overridden per-command via `per_command_overrides` or the spec's
     /// `layout.wrap_after_first_arg`.
     pub wrap_after_first_arg: bool,
     /// Where the continuation of a [`Self::wrap_after_first_arg`]
