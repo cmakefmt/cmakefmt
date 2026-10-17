@@ -594,6 +594,7 @@ fn merge_layout(base: &mut LayoutOverrides, override_layout: LayoutOverridesOver
         always_wrap,
         max_pargs_hwrap,
         wrap_after_first_arg,
+        wrap_after_first_arg_align,
         continuation_align,
     } = override_layout;
 
@@ -614,6 +615,9 @@ fn merge_layout(base: &mut LayoutOverrides, override_layout: LayoutOverridesOver
     }
     if let Some(value) = wrap_after_first_arg {
         base.wrap_after_first_arg = Some(value);
+    }
+    if let Some(value) = wrap_after_first_arg_align {
+        base.wrap_after_first_arg_align = Some(value);
     }
     if let Some(value) = continuation_align {
         base.continuation_align = Some(value);

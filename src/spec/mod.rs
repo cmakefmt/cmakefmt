@@ -137,10 +137,13 @@ pub struct LayoutOverrides {
     /// Override the positional-argument hanging-wrap threshold for this form.
     pub max_pargs_hwrap: Option<usize>,
     /// Keep the first positional argument on the command line when wrapping.
-    /// When `true`, wrapping happens after the first argument with
-    /// continuation lines aligned to the open parenthesis. When `false`,
-    /// all arguments wrap to the next line at the base indent.
+    /// When `true`, wrapping happens after the first argument and
+    /// `wrap_after_first_arg_align` decides where the continuation starts.
+    /// When `false`, all arguments wrap to the next line at the base indent.
     pub wrap_after_first_arg: Option<bool>,
+    /// Override where a `wrap_after_first_arg` continuation starts for
+    /// this command form.
+    pub wrap_after_first_arg_align: Option<crate::config::WrapAfterFirstArgAlign>,
     /// Override continuation-alignment behaviour for this command form.
     pub continuation_align: Option<crate::config::ContinuationAlign>,
 }
@@ -320,6 +323,9 @@ pub(crate) struct LayoutOverridesOverride {
     /// Keep the first positional argument on the command line when wrapping.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wrap_after_first_arg: Option<bool>,
+    /// Override where a `wrap_after_first_arg` continuation starts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wrap_after_first_arg_align: Option<crate::config::WrapAfterFirstArgAlign>,
     /// Override continuation-alignment behaviour for this command form.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub continuation_align: Option<crate::config::ContinuationAlign>,
@@ -463,6 +469,7 @@ impl LayoutOverridesOverride {
             always_wrap: self.always_wrap,
             max_pargs_hwrap: self.max_pargs_hwrap,
             wrap_after_first_arg: self.wrap_after_first_arg,
+            wrap_after_first_arg_align: self.wrap_after_first_arg_align,
             continuation_align: self.continuation_align,
         }
     }
