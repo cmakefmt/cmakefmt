@@ -36,7 +36,16 @@ This project follows a simple changelog discipline:
   line or having the rest of the arguments pushed out to the width of the
   command name, but now this layout is possible.
   Available globally, per command via `per_command_overrides`, and per command
-  form via `layout.wrap_after_first_arg_align` in a spec.
+  form via `layout.wrap_after_first_arg_align` in a spec, and as
+  `wrapAfterFirstArgAlign` in the dprint plugin.
+
+### Changed
+
+- Rust API: `Config`, `PerCommandConfig`, and `LayoutOverrides` have a new
+  `wrap_after_first_arg_align` field. Callers using exhaustive struct literals
+  must add it or use `..Default::default()`. Use
+  `WrapAfterFirstArgAlign::UnderFirstArg` for `Config` (the existing layout)
+  and `None` for the optional override fields to preserve existing behavior.
 
 ## 2.2.0 — 2026-10-13
 

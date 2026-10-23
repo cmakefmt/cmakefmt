@@ -36,4 +36,26 @@ for file in CMakeLists.txt CMakeLists.txt.in example.cmake; do
 done
 printf 'CUSTOM_COMMAND(first second)\n' | cmp - untouched.txt
 "${DPRINT:-dprint}" check --config dprint.json
+# Exercise alignment through the actual WASM configuration/format protocol.
+cat > dprint.json <<EOF
+{
+  "plugins": ["${plugin_path}"],
+  "includes": ["CMakeLists.txt"],
+  "incremental": false,
+  "cmakefmt": {
+    "lineWidth": 50,
+    "wrapAfterFirstArg": true,
+    "wrapAfterFirstArgAlign": "default-indent"
+  }
+}
+EOF
+printf 'target_compile_definitions(mylib INTERFACE USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n' > CMakeLists.txt
+cat > expected.txt <<'EOF'
+target_compile_definitions(mylib
+  INTERFACE
+    USING_DLL COMMON_USING_DLL EXTRA_DEFINE)
+EOF
+"${DPRINT:-dprint}" fmt --config dprint.json
+diff -u expected.txt CMakeLists.txt
+"${DPRINT:-dprint}" check --config dprint.json
 echo "dprint plugin smoke test passed"

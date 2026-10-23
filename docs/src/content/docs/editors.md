@@ -42,6 +42,21 @@ The dprint plugin formats `*.cmake`, `CMakeLists.txt`, and
 line width, indentation, and newline settings. Plugin settings override
 global settings. Unsupported options produce configuration diagnostics.
 
+To keep the first argument attached while indenting the remaining arguments
+by the normal indentation level, configure:
+
+```json
+{
+  "cmakefmt": {
+    "wrapAfterFirstArg": true,
+    "wrapAfterFirstArgAlign": "default-indent"
+  }
+}
+```
+
+`wrapAfterFirstArgAlign` defaults to `under-first-arg`, preserving the
+existing alignment. It takes effect when a call uses `wrapAfterFirstArg`.
+
 The plugin uses `dprint.json` configuration; it does not discover
 `.cmakefmt.yaml` or `.editorconfig` files. Range formatting is not supported.
 

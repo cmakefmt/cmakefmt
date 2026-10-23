@@ -18,7 +18,10 @@ use dprint_core::plugins::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ArgumentCommentStyle, CaseStyle, Config, ContinuationAlign, DangleAlign, LineEnding};
+use crate::{
+    ArgumentCommentStyle, CaseStyle, Config, ContinuationAlign, DangleAlign, LineEnding,
+    WrapAfterFirstArgAlign,
+};
 
 /// dprint protocol handler for CMake source files.
 #[derive(Debug, Clone, Default)]
@@ -41,6 +44,7 @@ pub struct ResolvedConfig {
     max_rows_cmdline: usize,
     require_valid_layout: bool,
     wrap_after_first_arg: bool,
+    wrap_after_first_arg_align: WrapAfterFirstArgAlign,
     continuation_align: ContinuationAlign,
     enable_sort: bool,
     autosort: bool,
@@ -68,6 +72,7 @@ impl Default for ResolvedConfig {
             max_rows_cmdline: config.max_rows_cmdline,
             require_valid_layout: config.require_valid_layout,
             wrap_after_first_arg: config.wrap_after_first_arg,
+            wrap_after_first_arg_align: config.wrap_after_first_arg_align,
             continuation_align: config.continuation_align,
             enable_sort: config.enable_sort,
             autosort: config.autosort,
@@ -100,6 +105,7 @@ impl ResolvedConfig {
             max_rows_cmdline: self.max_rows_cmdline,
             require_valid_layout: self.require_valid_layout,
             wrap_after_first_arg: self.wrap_after_first_arg,
+            wrap_after_first_arg_align: self.wrap_after_first_arg_align,
             continuation_align: self.continuation_align,
             enable_sort: self.enable_sort,
             autosort: self.autosort,
@@ -213,6 +219,13 @@ impl SyncPluginHandler<ResolvedConfig> for CmakefmtPlugin {
             &mut config,
             "wrapAfterFirstArg",
             &mut resolved.wrap_after_first_arg,
+            &mut diagnostics,
+        );
+        apply_enum(
+            &mut config,
+            "wrapAfterFirstArgAlign",
+            &mut resolved.wrap_after_first_arg_align,
+            parse_wrap_after_first_arg_align,
             &mut diagnostics,
         );
         apply_enum(
@@ -406,6 +419,16 @@ fn parse_argument_comment_style(value: &str) -> Result<ArgumentCommentStyle, Str
     }
 }
 
+fn parse_wrap_after_first_arg_align(value: &str) -> Result<WrapAfterFirstArgAlign, String> {
+    match value {
+        "default-indent" => Ok(WrapAfterFirstArgAlign::DefaultIndent),
+        "under-first-arg" => Ok(WrapAfterFirstArgAlign::UnderFirstArg),
+        _ => Err(format!(
+            "expected default-indent or under-first-arg; found {value:?}"
+        )),
+    }
+}
+
 fn parse_continuation_align(value: &str) -> Result<ContinuationAlign, String> {
     match value {
         "same-indent" => Ok(ContinuationAlign::SameIndent),
@@ -480,6 +503,76 @@ mod tests {
             config.insert(key.to_owned(), value);
             let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
             assert!(!result.diagnostics.is_empty());
+        }
+    }
+
+    #[test]
+    fn wrap_first_alignment_resolves_formats_and_round_trips() {
+        let source =
+            "target_compile_definitions(mylib INTERFACE USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n";
+        let under_first_arg = "target_compile_definitions(mylib\n                           INTERFACE\n                             USING_DLL\n                             COMMON_USING_DLL\n                             EXTRA_DEFINE)\n";
+        let default_indent = "target_compile_definitions(mylib\n  INTERFACE\n    USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n";
+        for (value, expected) in [
+            (None, under_first_arg),
+            (Some("under-first-arg"), under_first_arg),
+            (Some("default-indent"), default_indent),
+        ] {
+            let mut config = ConfigKeyMap::new();
+            config.insert("wrapAfterFirstArg".into(), ConfigKeyValue::Bool(true));
+            config.insert("lineWidth".into(), ConfigKeyValue::Number(50));
+            if let Some(value) = value {
+                config.insert(
+                    "wrapAfterFirstArgAlign".into(),
+                    ConfigKeyValue::String(value.into()),
+                );
+            }
+            let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
+            assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+            // The WASM protocol serializes resolved configuration between calls.
+            let serialized = serde_json::to_string(&result.config).unwrap();
+            let resolved: ResolvedConfig = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(result.config, resolved);
+            let request = |source: &str| SyncFormatRequest {
+                file_path: Path::new("CMakeLists.txt"),
+                file_bytes: source.as_bytes().to_vec(),
+                config_id: FormatConfigId::uninitialized(),
+                config: &resolved,
+                range: None,
+                token: &NullCancellationToken,
+            };
+            assert_eq!(
+                CmakefmtPlugin
+                    .format(request(source), |_| Ok(None))
+                    .unwrap(),
+                Some(expected.as_bytes().to_vec())
+            );
+            assert_eq!(
+                CmakefmtPlugin
+                    .format(request(expected), |_| Ok(None))
+                    .unwrap(),
+                None
+            );
+        }
+    }
+
+    #[test]
+    fn wrap_first_alignment_rejects_invalid_values() {
+        for value in [
+            ConfigKeyValue::String("same-indent".into()),
+            ConfigKeyValue::Bool(true),
+        ] {
+            let mut config = ConfigKeyMap::new();
+            config.insert("wrapAfterFirstArgAlign".into(), value);
+            let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
+            assert_eq!(result.diagnostics.len(), 1);
+            assert_eq!(
+                result.diagnostics[0].property_name,
+                "wrapAfterFirstArgAlign"
+            );
+            assert_eq!(
+                result.config.wrap_after_first_arg_align,
+                WrapAfterFirstArgAlign::UnderFirstArg
+            );
         }
     }
 
