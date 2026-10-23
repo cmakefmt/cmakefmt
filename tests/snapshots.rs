@@ -258,7 +258,7 @@ fn dangle_align_close() {
 }
 
 #[test]
-fn space_before_control_paren_formats_if() {
+fn separate_ctrl_name_with_space_formats_if() {
     let src = "if(TRUE)\nmessage(ok)\nendif()\n";
     let config = Config {
         separate_ctrl_name_with_space: true,

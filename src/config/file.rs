@@ -98,9 +98,10 @@ struct FormatSection {
     /// Upper heuristic bound used when deciding between compact and wrapped layouts. Default: `10`.
     max_prefix_length: Option<usize>,
     /// Insert a space before `(` for structural commands, including function/macro definitions.
-    space_before_control_paren: Option<bool>,
+    #[serde(alias = "space_before_control_paren")]
+    separate_ctrl_name_with_space: Option<bool>,
     /// Insert a space before `(` for ordinary commands and custom function calls.
-    space_before_function_paren: Option<bool>,
+    separate_fn_name_with_space: Option<bool>,
     /// Output casing for command names: `lower`, `upper`, or `unchanged`.
     command_case: Option<CaseStyle>,
     /// Output casing for recognized keywords and flags: `lower`, `upper`, or `unchanged`.
@@ -209,7 +210,27 @@ pub fn default_config_template() -> String {
 /// The output is a pretty-printed JSON string suitable for publishing to
 /// `cmakefmt.dev/schemas/v{version}/schema.json`.
 pub fn generate_json_schema() -> String {
-    let schema = schemars::schema_for!(FileConfig);
+    let mut schema = schemars::schema_for!(FileConfig);
+    // Schemars omits serde input aliases. Keep the released alias valid in
+    // editors while configuration dumps use the canonical name.
+    if let Some(properties) = schema
+        .get_mut("$defs")
+        .and_then(|defs| defs.pointer_mut("/FormatSection/properties"))
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        if let Some(mut alias) = properties.get("separate_ctrl_name_with_space").cloned() {
+            if let Some(object) = alias.as_object_mut() {
+                object.insert("deprecated".into(), serde_json::json!(true));
+                object.insert(
+                    "description".into(),
+                    serde_json::json!(
+                        "Deprecated input alias for `separate_ctrl_name_with_space`."
+                    ),
+                );
+            }
+            properties.insert("space_before_control_paren".into(), alias);
+        }
+    }
     serde_json::to_string_pretty(&schema).expect("JSON schema serialization failed")
 }
 
@@ -272,9 +293,9 @@ fn default_config_template_toml() -> String {
             "# Upper heuristic bound used when deciding between compact and wrapped layouts.\n",
             "max_prefix_length = {max_prefix_chars}\n\n",
             "# Insert a space before '(' for structural commands, including function/macro definitions.\n",
-            "# space_before_control_paren = true\n\n",
+            "# separate_ctrl_name_with_space = true\n\n",
             "# Insert a space before '(' for ordinary command and custom function calls.\n",
-            "# space_before_function_paren = true\n\n",
+            "# separate_fn_name_with_space = true\n\n",
             "# Output casing for command names: lower, upper, or unchanged.\n",
             "command_case = \"{command_case}\"\n\n",
             "# Output casing for recognized keywords and flags: lower, upper, or unchanged.\n",
@@ -397,8 +418,8 @@ struct EffectiveFormatSection {
     dangle_align: DangleAlign,
     min_prefix_length: usize,
     max_prefix_length: usize,
-    space_before_control_paren: bool,
-    space_before_function_paren: bool,
+    separate_ctrl_name_with_space: bool,
+    separate_fn_name_with_space: bool,
     command_case: CaseStyle,
     keyword_case: CaseStyle,
 }
@@ -445,8 +466,8 @@ impl From<&Config> for EffectiveConfigFile {
                 dangle_align: config.dangle_align,
                 min_prefix_length: config.min_prefix_chars,
                 max_prefix_length: config.max_prefix_chars,
-                space_before_control_paren: config.separate_ctrl_name_with_space,
-                space_before_function_paren: config.separate_fn_name_with_space,
+                separate_ctrl_name_with_space: config.separate_ctrl_name_with_space,
+                separate_fn_name_with_space: config.separate_fn_name_with_space,
                 command_case: config.command_case,
                 keyword_case: config.keyword_case,
             },
@@ -526,9 +547,9 @@ fn default_config_template_yaml() -> String {
             "  # Upper heuristic bound used when deciding between compact and wrapped layouts.\n",
             "  max_prefix_length: {max_prefix_chars}\n\n",
             "  # Insert a space before '(' for structural commands, including function/macro definitions.\n",
-            "  # space_before_control_paren: true\n\n",
+            "  # separate_ctrl_name_with_space: true\n\n",
             "  # Insert a space before '(' for ordinary command and custom function calls.\n",
-            "  # space_before_function_paren: true\n\n",
+            "  # separate_fn_name_with_space: true\n\n",
             "  # Output casing for command names: lower, upper, or unchanged.\n",
             "  command_case: {command_case}\n\n",
             "  # Output casing for recognized keywords and flags: lower, upper, or unchanged.\n",
@@ -764,10 +785,10 @@ impl Config {
         if let Some(v) = fc.format.max_prefix_length {
             self.max_prefix_chars = v;
         }
-        if let Some(v) = fc.format.space_before_control_paren {
+        if let Some(v) = fc.format.separate_ctrl_name_with_space {
             self.separate_ctrl_name_with_space = v;
         }
-        if let Some(v) = fc.format.space_before_function_paren {
+        if let Some(v) = fc.format.separate_fn_name_with_space {
             self.separate_fn_name_with_space = v;
         }
         if let Some(v) = fc.format.command_case {
@@ -1039,8 +1060,8 @@ use_tabs = true
 max_empty_lines = 2
 dangle_parens = true
 dangle_align = "open"
-space_before_control_paren = true
-space_before_function_paren = true
+separate_ctrl_name_with_space = true
+separate_fn_name_with_space = true
 max_hanging_wrap_positional_args = 3
 max_hanging_wrap_groups = 1
 command_case = "upper"
@@ -1300,8 +1321,8 @@ format:
   dangle_align: open
   min_prefix_length: 2
   max_prefix_length: 12
-  space_before_control_paren: true
-  space_before_function_paren: true
+  separate_ctrl_name_with_space: true
+  separate_fn_name_with_space: true
   command_case: unchanged
   keyword_case: lower
 markup:

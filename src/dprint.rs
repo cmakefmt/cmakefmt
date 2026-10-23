@@ -43,8 +43,8 @@ pub struct ResolvedConfig {
     max_subgroups_hwrap: usize,
     max_rows_cmdline: usize,
     require_valid_layout: bool,
-    space_before_control_paren: bool,
-    space_before_function_paren: bool,
+    separate_ctrl_name_with_space: bool,
+    separate_fn_name_with_space: bool,
     wrap_after_first_arg: bool,
     wrap_after_first_arg_align: WrapAfterFirstArgAlign,
     continuation_align: ContinuationAlign,
@@ -73,8 +73,8 @@ impl Default for ResolvedConfig {
             max_subgroups_hwrap: config.max_subgroups_hwrap,
             max_rows_cmdline: config.max_rows_cmdline,
             require_valid_layout: config.require_valid_layout,
-            space_before_control_paren: config.separate_ctrl_name_with_space,
-            space_before_function_paren: config.separate_fn_name_with_space,
+            separate_ctrl_name_with_space: config.separate_ctrl_name_with_space,
+            separate_fn_name_with_space: config.separate_fn_name_with_space,
             wrap_after_first_arg: config.wrap_after_first_arg,
             wrap_after_first_arg_align: config.wrap_after_first_arg_align,
             continuation_align: config.continuation_align,
@@ -108,8 +108,8 @@ impl ResolvedConfig {
             max_subgroups_hwrap: self.max_subgroups_hwrap,
             max_rows_cmdline: self.max_rows_cmdline,
             require_valid_layout: self.require_valid_layout,
-            separate_ctrl_name_with_space: self.space_before_control_paren,
-            separate_fn_name_with_space: self.space_before_function_paren,
+            separate_ctrl_name_with_space: self.separate_ctrl_name_with_space,
+            separate_fn_name_with_space: self.separate_fn_name_with_space,
             wrap_after_first_arg: self.wrap_after_first_arg,
             wrap_after_first_arg_align: self.wrap_after_first_arg_align,
             continuation_align: self.continuation_align,
@@ -223,14 +223,14 @@ impl SyncPluginHandler<ResolvedConfig> for CmakefmtPlugin {
         );
         apply_value(
             &mut config,
-            "spaceBeforeControlParen",
-            &mut resolved.space_before_control_paren,
+            "separateCtrlNameWithSpace",
+            &mut resolved.separate_ctrl_name_with_space,
             &mut diagnostics,
         );
         apply_value(
             &mut config,
-            "spaceBeforeFunctionParen",
-            &mut resolved.space_before_function_paren,
+            "separateFnNameWithSpace",
+            &mut resolved.separate_fn_name_with_space,
             &mut diagnostics,
         );
         apply_value(
@@ -536,11 +536,11 @@ mod tests {
             for control_spacing in [false, true] {
                 let mut config = ConfigKeyMap::new();
                 config.insert(
-                    "spaceBeforeFunctionParen".into(),
+                    "separateFnNameWithSpace".into(),
                     ConfigKeyValue::Bool(function_spacing),
                 );
                 config.insert(
-                    "spaceBeforeControlParen".into(),
+                    "separateCtrlNameWithSpace".into(),
                     ConfigKeyValue::Bool(control_spacing),
                 );
                 let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
@@ -574,7 +574,7 @@ mod tests {
             let mut config = ConfigKeyMap::new();
             if let Some(value) = value {
                 config.insert(
-                    "spaceBeforeFunctionParen".into(),
+                    "separateFnNameWithSpace".into(),
                     ConfigKeyValue::Bool(value),
                 );
             }
@@ -595,14 +595,14 @@ mod tests {
         }
         let mut config = ConfigKeyMap::new();
         config.insert(
-            "spaceBeforeFunctionParen".into(),
+            "separateFnNameWithSpace".into(),
             ConfigKeyValue::String("invalid".into()),
         );
         let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
         assert_eq!(result.diagnostics.len(), 1);
         assert_eq!(
             result.diagnostics[0].property_name,
-            "spaceBeforeFunctionParen"
+            "separateFnNameWithSpace"
         );
     }
 

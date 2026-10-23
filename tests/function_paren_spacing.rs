@@ -79,7 +79,7 @@ fn space_can_push_inline_call_over_width() {
 #[test]
 fn spacing_is_stable_across_layouts_and_preserves_comments() {
     let source = "if(ON)\ntarget_compile_definitions(mylib # target\n PRIVATE # visibility\n USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\nset(SOURCES first.cpp second.cpp third.cpp fourth.cpp)\nmy_helper(first second third fourth fifth sixth seventh)\nendif()\n";
-    for space_before_function_paren in [false, true] {
+    for separate_fn_name_with_space in [false, true] {
         for line_width in [35, 80] {
             for use_tabchars in [false, true] {
                 for align in [
@@ -93,7 +93,7 @@ fn spacing_is_stable_across_layouts_and_preserves_comments() {
                         Some(DangleAlign::Close),
                     ] {
                         let config = Config {
-                            separate_fn_name_with_space: space_before_function_paren,
+                            separate_fn_name_with_space,
                             line_width,
                             use_tabchars,
                             wrap_after_first_arg: true,
@@ -124,8 +124,8 @@ fn spacing_is_stable_across_layouts_and_preserves_comments() {
 #[test]
 fn yaml_and_toml_settings_round_trip_and_cli_overrides_them() {
     for (extension, contents) in [
-        ("yaml", "format:\n  space_before_function_paren: true\n"),
-        ("toml", "[format]\nspace_before_function_paren = true\n"),
+        ("yaml", "format:\n  separate_fn_name_with_space: true\n"),
+        ("toml", "[format]\nseparate_fn_name_with_space = true\n"),
     ] {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(format!(".cmakefmt.{extension}"));
@@ -177,7 +177,7 @@ fn cli_flags_match_cmake_format_function_and_control_categories() {
     let config_path = dir.path().join(".cmakefmt.yaml");
     std::fs::write(
         &config_path,
-        "format:\n  space_before_function_paren: true\n  space_before_control_paren: false\n",
+        "format:\n  separate_fn_name_with_space: true\n  separate_ctrl_name_with_space: false\n",
     )
     .unwrap();
     let source = dir.path().join("CMakeLists.txt");
@@ -216,7 +216,6 @@ fn cli_flags_match_cmake_format_function_and_control_categories() {
     let help = String::from_utf8(help.stdout).unwrap();
     assert!(help.contains("--separate-fn-name-with-space"));
     assert!(help.contains("--separate-ctrl-name-with-space"));
-    assert!(!help.contains("--space-before-function-paren"));
 }
 
 #[test]
@@ -227,14 +226,14 @@ fn boolean_config_flags_accept_bare_and_explicit_values() {
     for (flag, key, source, enabled, disabled) in [
         (
             "--separate-fn-name-with-space",
-            "space_before_function_paren",
+            "separate_fn_name_with_space",
             "project(foo)\n",
             "project (foo)\n",
             "project(foo)\n",
         ),
         (
             "--separate-ctrl-name-with-space",
-            "space_before_control_paren",
+            "separate_ctrl_name_with_space",
             "if(ON)\nendif()\n",
             "if (ON)\nendif ()\n",
             "if(ON)\nendif()\n",
@@ -339,48 +338,54 @@ fn legacy_function_and_control_spacing_convert_to_the_right_commands() {
 }
 
 #[test]
-fn renamed_spacing_keys_point_to_the_two_supported_controls() {
+fn released_definition_key_has_a_working_migration_hint() {
     let dir = tempfile::tempdir().unwrap();
     let config = dir.path().join(".cmakefmt.yaml");
     let source = dir.path().join("CMakeLists.txt");
     std::fs::write(&source, "project(foo)\n").unwrap();
-    for (old, replacement) in [
-        ("separate_fn_name_with_space", "space_before_function_paren"),
-        (
-            "space_before_definition_paren",
-            "space_before_control_paren",
-        ),
+    std::fs::write(&config, "format:\n  space_before_definition_paren: true\n").unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
+        .arg("--config-file")
+        .arg(&config)
+        .arg(&source)
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    let stderr = String::from_utf8(result.stderr).unwrap();
+    assert!(
+        stderr.contains("use `separate_ctrl_name_with_space` or run `cmakefmt config convert`"),
+        "{stderr}"
+    );
+    let converted =
+        convert_legacy_config_files(std::slice::from_ref(&config), DumpConfigFormat::Yaml).unwrap();
+    let converted_path = dir.path().join("converted.yaml");
+    std::fs::write(&converted_path, &converted).unwrap();
+    let loaded = Config::from_file(&converted_path).unwrap();
+    assert!(loaded.for_command("function").space_before_paren());
+    assert!(converted.contains("this also affects other structural commands"));
+}
+
+#[test]
+fn released_control_key_is_an_input_alias_but_dumps_use_canonical_names() {
+    for (extension, contents) in [
+        ("yaml", "format:\n  space_before_control_paren: true\n"),
+        ("toml", "[format]\nspace_before_control_paren = true\n"),
     ] {
-        std::fs::write(&config, format!("format:\n  {old}: true\n")).unwrap();
-        let result = Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
-            .arg("--config-file")
-            .arg(&config)
-            .arg(&source)
-            .output()
-            .unwrap();
-        assert!(!result.status.success());
-        let stderr = String::from_utf8(result.stderr).unwrap();
-        assert!(
-            stderr.contains(&format!(
-                "use `{replacement}` or run `cmakefmt config convert`"
-            )),
-            "{stderr}"
-        );
-        let converted =
-            convert_legacy_config_files(std::slice::from_ref(&config), DumpConfigFormat::Yaml)
-                .unwrap();
-        let converted_path = dir.path().join("converted.yaml");
-        std::fs::write(&converted_path, &converted).unwrap();
-        let loaded = Config::from_file(&converted_path).unwrap();
-        let command = if old == "separate_fn_name_with_space" {
-            "project"
-        } else {
-            "function"
-        };
-        assert!(loaded.for_command(command).space_before_paren());
-        if old == "space_before_definition_paren" {
-            assert!(converted.contains("this also affects other structural commands"));
-        }
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(format!(".cmakefmt.{extension}"));
+        std::fs::write(&path, contents).unwrap();
+        let config = Config::from_file(&path).unwrap();
+        assert!(config.separate_ctrl_name_with_space);
+        assert!(!config.separate_fn_name_with_space);
+        assert!(config.for_command("function").space_before_paren());
+        let rendered =
+            cmakefmt::config::render_effective_config(&config, DumpConfigFormat::Yaml).unwrap();
+        let rendered: serde_json::Value = serde_saphyr::from_str(&rendered).unwrap();
+        assert_eq!(rendered["format"]["separate_ctrl_name_with_space"], true);
+        assert_eq!(rendered["format"]["separate_fn_name_with_space"], false);
+        assert!(rendered["format"]
+            .get("space_before_control_paren")
+            .is_none());
     }
 }
 
@@ -395,6 +400,10 @@ fn config_output_and_schemas_expose_exactly_two_spacing_controls() {
         serde_saphyr::from_str(std::str::from_utf8(&result.stdout).unwrap()).unwrap();
     let schema: serde_json::Value =
         serde_json::from_str(&cmakefmt::config::generate_json_schema()).unwrap();
+    assert_eq!(
+        schema["$defs"]["FormatSection"]["properties"]["space_before_control_paren"]["deprecated"],
+        true
+    );
     for properties in [
         shown["format"].as_object().unwrap(),
         schema["$defs"]["FormatSection"]["properties"]
@@ -403,13 +412,16 @@ fn config_output_and_schemas_expose_exactly_two_spacing_controls() {
     ] {
         let mut keys: Vec<_> = properties
             .keys()
-            .filter(|key| key.starts_with("space_before_"))
+            .filter(|key| key.starts_with("separate_"))
             .map(String::as_str)
             .collect();
         keys.sort_unstable();
         assert_eq!(
             keys,
-            ["space_before_control_paren", "space_before_function_paren"]
+            [
+                "separate_ctrl_name_with_space",
+                "separate_fn_name_with_space"
+            ]
         );
     }
     let dprint_schema: serde_json::Value =
@@ -418,12 +430,12 @@ fn config_output_and_schemas_expose_exactly_two_spacing_controls() {
         .as_object()
         .unwrap()
         .keys()
-        .filter(|key| key.starts_with("spaceBefore"))
+        .filter(|key| key.starts_with("separate"))
         .map(String::as_str)
         .collect();
     keys.sort_unstable();
     assert_eq!(
         keys,
-        ["spaceBeforeControlParen", "spaceBeforeFunctionParen"]
+        ["separateCtrlNameWithSpace", "separateFnNameWithSpace"]
     );
 }

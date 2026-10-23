@@ -1150,10 +1150,10 @@ pub(crate) fn describe_cli_overrides(cli: &Cli) -> String {
         parts.push(format!("keyword_case={keyword_case:?}"));
     }
     if let Some(value) = cli.config_overrides.separate_fn_name_with_space {
-        parts.push(format!("space_before_function_paren={value}"));
+        parts.push(format!("separate_fn_name_with_space={value}"));
     }
     if let Some(value) = cli.config_overrides.separate_ctrl_name_with_space {
-        parts.push(format!("space_before_control_paren={value}"));
+        parts.push(format!("separate_ctrl_name_with_space={value}"));
     }
     if let Some(dangle_parens) = cli.config_overrides.dangle_parens {
         parts.push(format!("dangle_parens={dangle_parens}"));

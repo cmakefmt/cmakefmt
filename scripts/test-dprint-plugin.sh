@@ -46,8 +46,8 @@ cat > dprint.json <<EOF
     "lineWidth": 50,
     "wrapAfterFirstArg": true,
     "wrapAfterFirstArgAlign": "default-indent",
-    "spaceBeforeFunctionParen": true,
-    "spaceBeforeControlParen": true
+    "separateFnNameWithSpace": true,
+    "separateCtrlNameWithSpace": true
   }
 }
 EOF

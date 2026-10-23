@@ -176,14 +176,14 @@ target_link_libraries(
 
 ## I want a space before `(` in `if()` / `foreach()`
 
-**Option:** [`space_before_control_paren`](/config/#space_before_control_paren) (default: `false`)
+**Option:** [`separate_ctrl_name_with_space`](/config/#separate_ctrl_name_with_space) (default: `false`)
 
 Some style guides prefer `if (CONDITION)` over `if(CONDITION)` to
 visually distinguish control-flow statements from function calls.
 
 ```yaml
 format:
-  space_before_control_paren: true
+  separate_ctrl_name_with_space: true
 ```
 
 Before:

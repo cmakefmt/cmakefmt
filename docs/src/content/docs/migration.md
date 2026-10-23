@@ -74,10 +74,10 @@ See [Formatter Behavior](/behavior/) for the pragma syntax.
 
 `cmake-format`'s `separate_fn_name_with_space` controls ordinary command calls,
 such as `project (foo)`. The converter maps it to
-`format.space_before_function_paren`, including `break`, `continue`, and
+`format.separate_fn_name_with_space`, including `break`, `continue`, and
 `return`. Its `separate_ctrl_name_with_space`
 also covers `function`/`macro` definitions, so conversion sets
-`space_before_control_paren`. There are two spacing controls: ordinary calls
+`separate_ctrl_name_with_space`. There are two spacing controls: ordinary calls
 and structural commands, including definitions.
 
 If you previously converted a config using `separate_fn_name_with_space`,
@@ -85,7 +85,7 @@ convert it again to restore spacing on ordinary calls. Earlier conversions
 incorrectly mapped this setting to definition spacing only.
 
 `space_before_definition_paren` is no longer accepted. Replace it with
-`space_before_control_paren` to configure spacing on definitions and other
+`separate_ctrl_name_with_space` to configure spacing on definitions and other
 structural commands.
 
 ## Key Differences

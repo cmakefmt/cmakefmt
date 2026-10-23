@@ -94,8 +94,8 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`dangle_align`](#dangle_align)
   - [`min_prefix_length`](#min_prefix_length)
   - [`max_prefix_length`](#max_prefix_length)
-  - [`space_before_control_paren`](#space_before_control_paren)
-  - [`space_before_function_paren`](#space_before_function_paren)
+  - [`separate_ctrl_name_with_space`](#separate_ctrl_name_with_space)
+  - [`separate_fn_name_with_space`](#separate_fn_name_with_space)
 - [Casing Options](#casing-options)
   - [`command_case`](#command_case)
   - [`keyword_case`](#keyword_case)
@@ -149,8 +149,8 @@ format:
   dangle_align: prefix
   min_prefix_length: 4
   max_prefix_length: 10
-  space_before_control_paren: false
-  space_before_function_paren: false
+  separate_ctrl_name_with_space: false
+  separate_fn_name_with_space: false
   command_case: lower
   keyword_case: upper
 
@@ -658,7 +658,7 @@ format:
 
 Like `min_prefix_length`, this is primarily for advanced layout tuning and rarely needs adjustment.
 
-### `space_before_control_paren`
+### `separate_ctrl_name_with_space`
 
 Insert a space before `(` for structural commands such as `if`, `foreach`,
 `while`, and `block`, including `function`/`macro` definitions and their
@@ -668,7 +668,7 @@ closing commands. Default: `false`. This matches cmake-format’s
 
 ```yaml
 format:
-  space_before_control_paren: true
+  separate_ctrl_name_with_space: true
 ```
 
 Effect:
@@ -679,7 +679,7 @@ if (WIN32)
 endif ()
 ```
 
-### `space_before_function_paren`
+### `separate_fn_name_with_space`
 
 Insert a space before `(` for ordinary command calls, including built-in
 commands such as `project` and calls to custom functions or macros.
@@ -687,7 +687,7 @@ Default: `false`.
 
 ```yaml
 format:
-  space_before_function_paren: true
+  separate_fn_name_with_space: true
 ```
 
 ```cmake
@@ -696,12 +696,12 @@ my_helper (first second)
 ```
 
 Structural commands, including function/macro definitions and their closing
-commands, use [`space_before_control_paren`](#space_before_control_paren).
+commands, use [`separate_ctrl_name_with_space`](#separate_ctrl_name_with_space).
 Jump commands (`break`, `continue`, and `return`) use
-`space_before_function_paren`, matching cmake-format.
+`separate_fn_name_with_space`, matching cmake-format.
 
 The CLI override is `--separate-fn-name-with-space true`, matching cmake-format.
-The dprint plugin exposes this option as `spaceBeforeFunctionParen`.
+The dprint plugin exposes this option as `separateFnNameWithSpace`.
 
 ## Casing Options
 
@@ -1131,19 +1131,21 @@ fit within `line_width` would stay on a single line.
 For larger custom specs, YAML requires less punctuation and is easier to read
 with deeply nested structures, which is why the default starter config is YAML.
 
-## Old Draft Key Names
+## Legacy Config Names
 
-The current `cmakefmt` config schema only accepts the clearer names on this
-page. If you have an older local config, rename any of the following before use:
+Use the setting names documented on this page. For older local configs,
+the following names have changed:
 
 | Old key | New key |
 | --- | --- |
 | `use_tabchars` | `use_tabs` |
 | `max_pargs_hwrap` | `max_hanging_wrap_positional_args` |
 | `max_subgroups_hwrap` | `max_hanging_wrap_groups` |
-| `separate_ctrl_name_with_space` | `space_before_control_paren` |
-| `separate_fn_name_with_space` | `space_before_function_paren` |
-| `space_before_definition_paren` | `space_before_control_paren` (also affects other structural commands) |
+| `space_before_definition_paren` | `separate_ctrl_name_with_space` (also affects other structural commands) |
+
+The released `space_before_control_paren` key remains accepted as an input
+alias for `separate_ctrl_name_with_space`. Config dumps and templates use the
+canonical name.
 
 For legacy cmake-format configs, use `cmakefmt config convert` to map the two
 spacing controls automatically. Earlier cmakefmt versions incorrectly used

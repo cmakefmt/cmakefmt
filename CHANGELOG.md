@@ -10,12 +10,12 @@ This project follows a simple changelog discipline:
 
 ### Added
 
-- Add `format.space_before_function_paren` for spaces before parentheses in
+- Add `format.separate_fn_name_with_space` for spaces before parentheses in
   ordinary command and custom function calls, such as `project (foo)`.
   Defaults to `false`. Expose `--separate-fn-name-with-space` and
   `--separate-ctrl-name-with-space` with cmake-format's call/structural
-  distinction, and add dprint `spaceBeforeFunctionParen` and
-  `spaceBeforeControlParen` (#240).
+  distinction, and add dprint `separateFnNameWithSpace` and
+  `separateCtrlNameWithSpace` (#240).
 
 - New `format.wrap_after_first_arg_align` option selecting where the
   continuation of a `wrap_after_first_arg` layout starts:
@@ -54,17 +54,21 @@ This project follows a simple changelog discipline:
 
 ### Changed
 
-- `break`, `continue`, and `return` now use `space_before_function_paren`
-  instead of `space_before_control_paren`, matching cmake-format. Set the new
+- `break`, `continue`, and `return` now use `separate_fn_name_with_space`
+  instead of `separate_ctrl_name_with_space`, matching cmake-format. Set the new
   option to `true` to retain spaces on these commands in existing native configs.
+
+- Use `separate_ctrl_name_with_space` consistently as the canonical config
+  name. The released `space_before_control_paren` key remains accepted as
+  an input alias.
 
 - Align the two Rust spacing fields with cmake-format:
   `Config::separate_fn_name_with_space` controls ordinary calls, while
   `separate_ctrl_name_with_space` controls structural commands, including
   function/macro definitions. The YAML/TOML names are
-  `space_before_function_paren` and `space_before_control_paren`.
+  `separate_fn_name_with_space` and `separate_ctrl_name_with_space`.
   The old `space_before_definition_paren` config key is no longer accepted;
-  use `space_before_control_paren` for definition spacing.
+  use `separate_ctrl_name_with_space` for definition spacing.
 
 - Rust API: `Config`, `PerCommandConfig`, and `LayoutOverrides` have a new
   `wrap_after_first_arg_align` field. Callers using exhaustive struct literals

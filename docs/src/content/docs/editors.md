@@ -57,8 +57,8 @@ by the normal indentation level, configure:
 `wrapAfterFirstArgAlign` defaults to `under-first-arg`, preserving the
 existing alignment. It takes effect when a call uses `wrapAfterFirstArg`.
 
-`spaceBeforeFunctionParen: true` inserts a space before `(` in ordinary
-command calls such as `project (foo)`. `spaceBeforeControlParen: true` adds
+`separateFnNameWithSpace: true` inserts a space before `(` in ordinary
+command calls such as `project (foo)`. `separateCtrlNameWithSpace: true` adds
 spaces to structural commands, including function/macro definitions. Both
 default to `false`.
 

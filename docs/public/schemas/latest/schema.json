@@ -255,7 +255,7 @@
           "minimum": 0,
           "default": null
         },
-        "space_before_control_paren": {
+        "separate_ctrl_name_with_space": {
           "description": "Insert a space before `(` for structural commands, including function/macro definitions.",
           "type": [
             "boolean",
@@ -263,7 +263,7 @@
           ],
           "default": null
         },
-        "space_before_function_paren": {
+        "separate_fn_name_with_space": {
           "description": "Insert a space before `(` for ordinary commands and custom function calls.",
           "type": [
             "boolean",
@@ -294,6 +294,15 @@
             }
           ],
           "default": null
+        },
+        "space_before_control_paren": {
+          "description": "Deprecated input alias for `separate_ctrl_name_with_space`.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null,
+          "deprecated": true
         }
       },
       "additionalProperties": false
