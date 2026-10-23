@@ -217,7 +217,7 @@ fn parse_legacy_config(path: &Path, source: &str) -> Result<BTreeMap<String, Leg
                 // Retain non-finite scalars as strings so unsupported options
                 // can still be skipped. Only legacy conversion is permissive;
                 // ordinary configuration parsing keeps the default policy.
-                reject_non_finite_typeless_float: false,
+                non_finite_float_policy: serde_saphyr::NonFiniteFloatPolicy::AsString,
             },
         )
         .map_err(|err| Error::LegacyMigration {
