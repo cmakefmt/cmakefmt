@@ -220,6 +220,89 @@ fn cli_flags_match_cmake_format_function_and_control_categories() {
 }
 
 #[test]
+fn boolean_config_flags_accept_bare_and_explicit_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("CMakeLists.txt");
+    let config = dir.path().join(".cmakefmt.yaml");
+    for (flag, key, source, enabled, disabled) in [
+        (
+            "--separate-fn-name-with-space",
+            "space_before_function_paren",
+            "project(foo)\n",
+            "project (foo)\n",
+            "project(foo)\n",
+        ),
+        (
+            "--separate-ctrl-name-with-space",
+            "space_before_control_paren",
+            "if(ON)\nendif()\n",
+            "if (ON)\nendif ()\n",
+            "if(ON)\nendif()\n",
+        ),
+        (
+            "--dangle-parens",
+            "dangle_parens",
+            "set(VAR first second third fourth fifth sixth)\n",
+            "set(VAR\n    first second third\n    fourth fifth sixth\n)\n",
+            "set(VAR\n    first second third\n    fourth fifth sixth)\n",
+        ),
+    ] {
+        std::fs::write(&path, source).unwrap();
+        for configured in [false, true] {
+            std::fs::write(
+                &config,
+                format!("format:\n  line_width: 25\n  {key}: {configured}\n"),
+            )
+            .unwrap();
+            for (args, expected) in [
+                (vec![], if configured { enabled } else { disabled }),
+                (vec![flag], enabled),
+                (vec![flag, "true"], enabled),
+                (vec![flag, "false"], disabled),
+            ] {
+                let result = Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
+                    .arg("--config-file")
+                    .arg(&config)
+                    .arg(&path)
+                    .args(&args)
+                    .output()
+                    .unwrap();
+                assert!(
+                    result.status.success(),
+                    "{args:?}: {}",
+                    String::from_utf8_lossy(&result.stderr)
+                );
+                assert_eq!(
+                    String::from_utf8(result.stdout).unwrap(),
+                    expected,
+                    "{args:?}, configured={configured}"
+                );
+            }
+        }
+    }
+    // A following option must leave the previous flag's optional value omitted.
+    std::fs::write(&path, "if(ON)\nproject(foo)\nendif()\n").unwrap();
+    let result = Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
+        .arg("--no-config")
+        .arg(&path)
+        .args([
+            "--separate-fn-name-with-space",
+            "--separate-ctrl-name-with-space",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(result.stdout).unwrap(),
+        "if (ON)\n  project (foo)\nendif ()\n"
+    );
+}
+
+#[test]
 fn legacy_function_and_control_spacing_convert_to_the_right_commands() {
     for function_spacing in [false, true] {
         for control_spacing in [false, true] {

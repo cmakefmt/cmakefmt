@@ -127,9 +127,13 @@ Ignore rules only affect:
 | `--tab-size <N>` | Override `format.tab_size`. |
 | `--command-case <lower\|upper\|unchanged>` | Override `format.command_case`. |
 | `--keyword-case <lower\|upper\|unchanged>` | Override `format.keyword_case`. |
-| `--dangle-parens <true\|false>` | Override `format.dangle_parens`. |
-| `--separate-fn-name-with-space <true\|false>` | Override `format.space_before_function_paren` for ordinary calls, matching cmake-format. |
-| `--separate-ctrl-name-with-space <true\|false>` | Override `format.space_before_control_paren` for structural commands, including definitions. |
+| `--dangle-parens [true\|false]` | Override `format.dangle_parens`. |
+| `--separate-fn-name-with-space [true\|false]` | Override `format.space_before_function_paren` for ordinary calls, matching cmake-format. |
+| `--separate-ctrl-name-with-space [true\|false]` | Override `format.space_before_control_paren` for structural commands, including definitions. |
+
+For these three boolean overrides, a bare flag enables the option. Pass
+`false` explicitly to disable it. When omitting a value, place the flag after
+input paths or before another flag.
 
 ## Exit Codes
 

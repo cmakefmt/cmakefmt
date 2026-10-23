@@ -40,6 +40,10 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Accept bare `--separate-fn-name-with-space`,
+  `--separate-ctrl-name-with-space`, and `--dangle-parens` as `true`,
+  matching cmake-format. Explicit `true` and `false` values remain supported.
+
 - Include the closing parenthesis when checking whether a hanging layout
   fits on one line, including the extra space before `(` when enabled.
 
