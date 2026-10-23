@@ -163,6 +163,18 @@
           ],
           "default": null
         },
+        "wrap_after_first_arg_align": {
+          "description": "Where a `wrap_after_first_arg` continuation starts: `under-first-arg` or `default-indent`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WrapAfterFirstArgAlign"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "continuation_align": {
           "description": "How to indent continuation lines: `same-indent` or `under-first-value`.",
           "anyOf": [
@@ -318,6 +330,21 @@
           "description": "Round fractional indentation up to the next full tab stop (utf-8 0x09).",
           "type": "string",
           "const": "round-up"
+        }
+      ]
+    },
+    "WrapAfterFirstArgAlign": {
+      "description": "How to indent the continuation of a call laid out with\n[`Config::wrap_after_first_arg`].\n\nOnly takes effect when `wrap_after_first_arg` keeps the first\npositional argument on the command line. In this case, it selects\nthe column the remaining arguments and keyword sections start at:\n\n```cmake\n# UnderFirstArg — continuation aligns under the first argument:\ntarget_compile_definitions(mylib\n                           INTERFACE\n                             USING_DLL)\n\n# DefaultIndent — continuation uses the normal indentation, one\n# level in from the command, as in the vertical layout:\ntarget_compile_definitions(mylib\n  INTERFACE\n    USING_DLL)\n```\n\ncmakefmt defaults to [`WrapAfterFirstArgAlign::UnderFirstArg`],\nwhich is the backwards-compatible layout, but\n[`WrapAfterFirstArgAlign::DefaultIndent`] is available for consumers\nwho want the first argument kept on the command line without aligning\nthe rest of the arguments under it.",
+      "oneOf": [
+        {
+          "description": "Continuation lines use the default indentation, i.e. one\nindentation level (as configured by `tab_size` and\n`use_tabchars`) in from the command, matching the vertical\nlayout and the way the rest of the formatter wraps.",
+          "type": "string",
+          "const": "default-indent"
+        },
+        {
+          "description": "Continuation lines align under the first argument, i.e. at the\ncolumn just past the opening parenthesis. The default.",
+          "type": "string",
+          "const": "under-first-arg"
         }
       ]
     },
@@ -556,6 +583,17 @@
           "type": [
             "boolean",
             "null"
+          ]
+        },
+        "wrap_after_first_arg_align": {
+          "description": "Override where a `wrap_after_first_arg` continuation starts for\nthis command only.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WrapAfterFirstArgAlign"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "continuation_align": {
