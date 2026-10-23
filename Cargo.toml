@@ -58,7 +58,7 @@ cli = [
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-serde-saphyr = "1.3"
+serde-saphyr = "2.0"
 toml = "1.1.2"
 thiserror = "2.0.19"
 indexmap = { version = "2.13", features = ["serde"] }
@@ -80,13 +80,13 @@ ctrlc = { version = "3", optional = true }
 schemars = { version = "^1.2", optional = true }
 lsp-server = { version = "0.10", optional = true }
 lsp-types = { version = "0.97", optional = true }
-dprint-core = { version = "0.70.0", default-features = false, features = ["wasm"], optional = true }
+dprint-core = { version = "0.71.0", default-features = false, features = ["wasm"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = { version = "0.2", optional = true }
 
 [build-dependencies]
-serde-saphyr = "1.3"
+serde-saphyr = "2.0"
 serde_json = { version = "1", features = ["preserve_order"] }
 rmp-serde = "1"
 

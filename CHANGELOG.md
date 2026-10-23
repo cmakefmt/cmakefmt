@@ -54,6 +54,8 @@ This project follows a simple changelog discipline:
 
 ### Changed
 
+- Update Rust and documentation-site dependencies and pinned CI actions.
+
 - `break`, `continue`, and `return` now use `separate_fn_name_with_space`
   instead of `separate_ctrl_name_with_space`, matching cmake-format. Set the new
   option to `true` to retain spaces on these commands in existing native configs.
