@@ -315,12 +315,17 @@ impl SyncPluginHandler<ResolvedConfig> for CmakefmtPlugin {
             name: "cmakefmt".to_owned(),
             version: version.to_owned(),
             config_key: "cmakefmt".to_owned(),
-            help_url: concat!(env!("CARGO_PKG_REPOSITORY"), "/blob/main/docs/src/content/docs/editors.md")
-                .to_owned(),
+            help_url: concat!(
+                env!("CARGO_PKG_REPOSITORY"),
+                "/blob/main/docs/src/content/docs/editors.md"
+            )
+            .to_owned(),
             config_schema_url: format!(
-                "https://github.com/cmakefmt/cmakefmt/releases/download/v{version}/dprint-cmakefmt.schema.json"
+                "https://plugins.dprint.dev/cmakefmt/cmakefmt/v{version}/schema.json"
             ),
-            update_url: None,
+            update_url: Some(
+                "https://plugins.dprint.dev/cmakefmt/cmakefmt/latest.json".to_string(),
+            ),
         }
     }
 
