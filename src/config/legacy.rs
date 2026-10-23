@@ -763,7 +763,7 @@ struct OutputFormatSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     space_before_control_paren: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    space_before_definition_paren: Option<bool>,
+    space_before_function_paren: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     command_case: Option<CaseStyle>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -800,7 +800,7 @@ impl OutputFormatSection {
             || self.min_prefix_length.is_some()
             || self.max_prefix_length.is_some()
             || self.space_before_control_paren.is_some()
-            || self.space_before_definition_paren.is_some()
+            || self.space_before_function_paren.is_some()
             || self.command_case.is_some()
             || self.keyword_case.is_some()
             || self.enable_sort.is_some()
@@ -940,8 +940,15 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
             "separate_ctrl_name_with_space" | "space_before_control_paren" => {
                 converted.format.space_before_control_paren = as_bool(value)
             }
-            "separate_fn_name_with_space" | "space_before_definition_paren" => {
-                converted.format.space_before_definition_paren = as_bool(value)
+            "space_before_definition_paren" => {
+                converted.format.space_before_control_paren = as_bool(value);
+                converted.notes.push(format!(
+                    "{}: space_before_definition_paren is now space_before_control_paren; this also affects other structural commands",
+                    path.display()
+                ));
+            }
+            "separate_fn_name_with_space" | "space_before_function_paren" => {
+                converted.format.space_before_function_paren = as_bool(value)
             }
             "command_case" => {
                 converted.format.command_case = convert_case_style(path, converted, key, value)
@@ -2012,6 +2019,7 @@ misc:
 
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
         assert!(converted.contains("space_before_control_paren = true"));
+        assert!(!converted.contains("space_before_definition_paren"));
     }
 
     #[test]
@@ -2021,7 +2029,7 @@ misc:
         std::fs::write(&path, "format:\n  separate_fn_name_with_space: false\n").unwrap();
 
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
-        assert!(converted.contains("space_before_definition_paren = false"));
+        assert!(converted.contains("space_before_function_paren = false"));
     }
 
     #[test]

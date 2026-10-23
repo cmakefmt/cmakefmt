@@ -43,6 +43,8 @@ pub struct ResolvedConfig {
     max_subgroups_hwrap: usize,
     max_rows_cmdline: usize,
     require_valid_layout: bool,
+    space_before_control_paren: bool,
+    space_before_function_paren: bool,
     wrap_after_first_arg: bool,
     wrap_after_first_arg_align: WrapAfterFirstArgAlign,
     continuation_align: ContinuationAlign,
@@ -71,6 +73,8 @@ impl Default for ResolvedConfig {
             max_subgroups_hwrap: config.max_subgroups_hwrap,
             max_rows_cmdline: config.max_rows_cmdline,
             require_valid_layout: config.require_valid_layout,
+            space_before_control_paren: config.separate_ctrl_name_with_space,
+            space_before_function_paren: config.separate_fn_name_with_space,
             wrap_after_first_arg: config.wrap_after_first_arg,
             wrap_after_first_arg_align: config.wrap_after_first_arg_align,
             continuation_align: config.continuation_align,
@@ -104,6 +108,8 @@ impl ResolvedConfig {
             max_subgroups_hwrap: self.max_subgroups_hwrap,
             max_rows_cmdline: self.max_rows_cmdline,
             require_valid_layout: self.require_valid_layout,
+            separate_ctrl_name_with_space: self.space_before_control_paren,
+            separate_fn_name_with_space: self.space_before_function_paren,
             wrap_after_first_arg: self.wrap_after_first_arg,
             wrap_after_first_arg_align: self.wrap_after_first_arg_align,
             continuation_align: self.continuation_align,
@@ -213,6 +219,18 @@ impl SyncPluginHandler<ResolvedConfig> for CmakefmtPlugin {
             &mut config,
             "requireValidLayout",
             &mut resolved.require_valid_layout,
+            &mut diagnostics,
+        );
+        apply_value(
+            &mut config,
+            "spaceBeforeControlParen",
+            &mut resolved.space_before_control_paren,
+            &mut diagnostics,
+        );
+        apply_value(
+            &mut config,
+            "spaceBeforeFunctionParen",
+            &mut resolved.space_before_function_paren,
             &mut diagnostics,
         );
         apply_value(
@@ -509,6 +527,83 @@ mod tests {
             let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
             assert!(!result.diagnostics.is_empty());
         }
+    }
+
+    #[test]
+    fn spacing_controls_match_call_and_structural_categories() {
+        let source = "project(foo)\nfunction(helper)\ncustom_call()\nendfunction()\n";
+        for function_spacing in [false, true] {
+            for control_spacing in [false, true] {
+                let mut config = ConfigKeyMap::new();
+                config.insert(
+                    "spaceBeforeFunctionParen".into(),
+                    ConfigKeyValue::Bool(function_spacing),
+                );
+                config.insert(
+                    "spaceBeforeControlParen".into(),
+                    ConfigKeyValue::Bool(control_spacing),
+                );
+                let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
+                assert!(result.diagnostics.is_empty());
+                let call = if function_spacing { " " } else { "" };
+                let flow = if control_spacing { " " } else { "" };
+                let expected = format!("project{call}(foo)\nfunction{flow}(helper)\n  custom_call{call}()\nendfunction{flow}()\n");
+                let request = SyncFormatRequest {
+                    file_path: Path::new("CMakeLists.txt"),
+                    file_bytes: source.as_bytes().to_vec(),
+                    config_id: FormatConfigId::uninitialized(),
+                    config: &result.config,
+                    range: None,
+                    token: &NullCancellationToken,
+                };
+                assert_eq!(
+                    CmakefmtPlugin.format(request, |_| Ok(None)).unwrap(),
+                    Some(expected.into_bytes())
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn function_paren_spacing_resolves_and_formats() {
+        for (value, source, expected) in [
+            (None, "project (foo)\n", "project(foo)\n"),
+            (Some(false), "project (foo)\n", "project(foo)\n"),
+            (Some(true), "project(foo)\n", "project (foo)\n"),
+        ] {
+            let mut config = ConfigKeyMap::new();
+            if let Some(value) = value {
+                config.insert(
+                    "spaceBeforeFunctionParen".into(),
+                    ConfigKeyValue::Bool(value),
+                );
+            }
+            let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
+            assert!(result.diagnostics.is_empty());
+            let request = SyncFormatRequest {
+                file_path: Path::new("CMakeLists.txt"),
+                file_bytes: source.as_bytes().to_vec(),
+                config_id: FormatConfigId::uninitialized(),
+                config: &result.config,
+                range: None,
+                token: &NullCancellationToken,
+            };
+            assert_eq!(
+                CmakefmtPlugin.format(request, |_| Ok(None)).unwrap(),
+                Some(expected.as_bytes().to_vec())
+            );
+        }
+        let mut config = ConfigKeyMap::new();
+        config.insert(
+            "spaceBeforeFunctionParen".into(),
+            ConfigKeyValue::String("invalid".into()),
+        );
+        let result = CmakefmtPlugin.resolve_config(config, &GlobalConfiguration::default());
+        assert_eq!(result.diagnostics.len(), 1);
+        assert_eq!(
+            result.diagnostics[0].property_name,
+            "spaceBeforeFunctionParen"
+        );
     }
 
     #[test]

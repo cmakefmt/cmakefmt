@@ -592,6 +592,10 @@ fn try_format_hanging(
     }
     if lines.len() == 1 {
         lines[0].push(')');
+        // Token packing does not include the closing parenthesis in its budget.
+        if lines[0].chars().count() > line_width {
+            return None;
+        }
         return Some(lines.remove(0));
     }
 

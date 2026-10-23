@@ -366,9 +366,10 @@ pub struct Config {
     /// Upper bound used by layout heuristics when deciding whether a command
     /// name is long enough to prefer one style over another.
     pub max_prefix_chars: usize,
-    /// Insert a space before `(` for control-flow commands such as `if`.
+    /// Insert a space before `(` for structural commands, including function/macro definitions.
     pub separate_ctrl_name_with_space: bool,
-    /// Insert a space before `(` for `function`/`macro` definitions.
+    /// Insert a space before `(` for ordinary command and custom function calls.
+    /// Matches cmake-format's `separate_fn_name_with_space` setting.
     pub separate_fn_name_with_space: bool,
 
     // ── Casing ──────────────────────────────────────────────────────────
@@ -493,7 +494,9 @@ impl Default for Config {
     }
 }
 
-/// CMake control-flow commands that get `separate_ctrl_name_with_space`.
+/// Structural control-flow commands that get `separate_ctrl_name_with_space`.
+/// Jump commands (`break`, `continue`, `return`) use ordinary call spacing,
+/// matching cmake-format's `separate_fn_name_with_space` classification.
 const CONTROL_FLOW_COMMANDS: &[&str] = &[
     "if",
     "elseif",
@@ -503,16 +506,13 @@ const CONTROL_FLOW_COMMANDS: &[&str] = &[
     "endforeach",
     "while",
     "endwhile",
-    "break",
-    "continue",
-    "return",
+    "function",
+    "endfunction",
+    "macro",
+    "endmacro",
     "block",
     "endblock",
 ];
-
-/// CMake function/macro definition commands that get
-/// `separate_fn_name_with_space`.
-const FN_DEFINITION_COMMANDS: &[&str] = &["function", "endfunction", "macro", "endmacro"];
 
 impl Config {
     /// Returns a `Config` with any per-command overrides applied for the
@@ -523,10 +523,8 @@ impl Config {
 
         let space_before_paren = if CONTROL_FLOW_COMMANDS.contains(&lower.as_str()) {
             self.separate_ctrl_name_with_space
-        } else if FN_DEFINITION_COMMANDS.contains(&lower.as_str()) {
-            self.separate_fn_name_with_space
         } else {
-            false
+            self.separate_fn_name_with_space
         };
 
         CommandConfig {
@@ -799,7 +797,7 @@ mod tests {
             separate_ctrl_name_with_space: true,
             ..Config::default()
         };
-        for cmd in ["if", "elseif", "foreach", "while", "return"] {
+        for cmd in ["if", "elseif", "foreach", "while", "block"] {
             let cc = config.for_command(cmd);
             assert!(
                 cc.space_before_paren(),
@@ -809,17 +807,38 @@ mod tests {
     }
 
     #[test]
-    fn for_command_fn_definition_sets_space_before_paren() {
-        let config = Config {
-            separate_fn_name_with_space: true,
-            ..Config::default()
-        };
-        for cmd in ["function", "endfunction", "macro", "endmacro"] {
-            let cc = config.for_command(cmd);
-            assert!(
-                cc.space_before_paren(),
-                "{cmd} should have space_before_paren=true"
-            );
+    fn jump_commands_use_function_call_spacing() {
+        for separate_fn_name_with_space in [false, true] {
+            let config = Config {
+                separate_fn_name_with_space,
+                separate_ctrl_name_with_space: !separate_fn_name_with_space,
+                ..Config::default()
+            };
+            for command in ["break", "continue", "return", "RETURN"] {
+                assert_eq!(
+                    config.for_command(command).space_before_paren(),
+                    separate_fn_name_with_space,
+                    "{command} must use ordinary call spacing"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn definitions_follow_control_spacing_independently_of_call_spacing() {
+        for control_spacing in [false, true] {
+            let config = Config {
+                separate_ctrl_name_with_space: control_spacing,
+                separate_fn_name_with_space: !control_spacing,
+                ..Config::default()
+            };
+            for command in ["function", "endfunction", "macro", "ENDMACRO"] {
+                assert_eq!(
+                    config.for_command(command).space_before_paren(),
+                    control_spacing,
+                    "{command} must use structural spacing"
+                );
+            }
         }
     }
 
@@ -827,7 +846,6 @@ mod tests {
     fn for_command_regular_command_no_space_before_paren() {
         let config = Config {
             separate_ctrl_name_with_space: true,
-            separate_fn_name_with_space: true,
             ..Config::default()
         };
         let cc = config.for_command("message");

@@ -256,15 +256,15 @@
           "default": null
         },
         "space_before_control_paren": {
-          "description": "Insert a space before `(` for control-flow commands such as `if`, `foreach`, `while`.",
+          "description": "Insert a space before `(` for structural commands, including function/macro definitions.",
           "type": [
             "boolean",
             "null"
           ],
           "default": null
         },
-        "space_before_definition_paren": {
-          "description": "Insert a space before `(` for `function()` and `macro()` definitions.",
+        "space_before_function_paren": {
+          "description": "Insert a space before `(` for ordinary commands and custom function calls.",
           "type": [
             "boolean",
             "null"

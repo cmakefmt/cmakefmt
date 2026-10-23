@@ -19,6 +19,8 @@
         "maxHangingWrapGroups": { "type": "integer", "minimum": 0 },
         "maxRowsCmdline": { "type": "integer", "minimum": 0 },
         "requireValidLayout": { "type": "boolean" },
+        "spaceBeforeControlParen": { "type": "boolean", "default": false },
+        "spaceBeforeFunctionParen": { "type": "boolean", "default": false },
         "wrapAfterFirstArg": { "type": "boolean" },
         "wrapAfterFirstArgAlign": { "enum": ["under-first-arg", "default-indent"], "default": "under-first-arg" },
         "continuationAlign": { "enum": ["same-indent", "under-first-value"] },

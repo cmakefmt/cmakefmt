@@ -514,6 +514,14 @@ struct ConfigOverridesArgs {
     /// Place closing paren on its own line when wrapping.
     #[arg(long, help_heading = "Config Overrides")]
     dangle_parens: Option<bool>,
+
+    /// Insert a space before `(` for ordinary command and custom function calls.
+    #[arg(long, help_heading = "Config Overrides")]
+    separate_fn_name_with_space: Option<bool>,
+
+    /// Insert a space before `(` for structural commands, including definitions.
+    #[arg(long, help_heading = "Config Overrides")]
+    separate_ctrl_name_with_space: Option<bool>,
 }
 
 #[derive(Clone, Debug, Subcommand)]
@@ -1066,7 +1074,11 @@ mod tests {
                 continue;
             }
 
-            let template_key = long.replace('-', "_");
+            let template_key = match long {
+                "separate-fn-name-with-space" => "space_before_function_paren".to_owned(),
+                "separate-ctrl-name-with-space" => "space_before_control_paren".to_owned(),
+                _ => long.replace('-', "_"),
+            };
             assert!(
                 template.contains(&template_key),
                 "CLI flag --{long} is not represented in default_config_template(); \
@@ -1091,7 +1103,7 @@ mod tests {
             "min_prefix_length",
             "max_prefix_length",
             "space_before_control_paren",
-            "space_before_definition_paren",
+            "space_before_function_paren",
             "command_case",
             "keyword_case",
         ] {

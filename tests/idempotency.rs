@@ -125,6 +125,34 @@ fn preserved_argument_comments_are_idempotent_and_semantically_equivalent() {
     }
 }
 
+/// Exercise optional command-name spacing on the fixture and available upstream corpus.
+#[test]
+fn function_paren_spacing_is_idempotent_and_preserves_semantics() {
+    let config = Config {
+        separate_fn_name_with_space: true,
+        ..Config::default()
+    };
+    let mut paths = formatter_fixture_paths(Path::new("tests/fixtures"));
+    if let Some(root) = real_world_corpus_root() {
+        paths.extend(formatter_fixture_paths(&root));
+    }
+    for path in paths {
+        let source = fs::read_to_string(&path).unwrap();
+        let formatted = format_source(&source, &config).unwrap();
+        assert_eq!(
+            formatted,
+            format_source(&formatted, &config).unwrap(),
+            "{}",
+            path.display()
+        );
+        assert!(
+            cmakefmt::semantic::semantic_equivalent(&source, &formatted),
+            "{}",
+            path.display()
+        );
+    }
+}
+
 /// Line-width compliance check, restricted to the curated in-tree
 /// fixtures. The real-world corpus is excluded because upstream
 /// CMakeLists.txt files contain unbreakable constructs (variable

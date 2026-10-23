@@ -95,7 +95,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
   - [`min_prefix_length`](#min_prefix_length)
   - [`max_prefix_length`](#max_prefix_length)
   - [`space_before_control_paren`](#space_before_control_paren)
-  - [`space_before_definition_paren`](#space_before_definition_paren)
+  - [`space_before_function_paren`](#space_before_function_paren)
 - [Casing Options](#casing-options)
   - [`command_case`](#command_case)
   - [`keyword_case`](#keyword_case)
@@ -150,7 +150,7 @@ format:
   min_prefix_length: 4
   max_prefix_length: 10
   space_before_control_paren: false
-  space_before_definition_paren: false
+  space_before_function_paren: false
   command_case: lower
   keyword_case: upper
 
@@ -660,8 +660,11 @@ Like `min_prefix_length`, this is primarily for advanced layout tuning and rarel
 
 ### `space_before_control_paren`
 
-Insert a space before `(` for control-flow commands such as `if`, `foreach`,
-and `while`.
+Insert a space before `(` for structural commands such as `if`, `foreach`,
+`while`, and `block`, including `function`/`macro` definitions and their
+closing commands. Default: `false`. This matches cmake-format’s
+`separate_ctrl_name_with_space`. The CLI override is
+`--separate-ctrl-name-with-space true`.
 
 ```yaml
 format:
@@ -676,22 +679,29 @@ if (WIN32)
 endif ()
 ```
 
-### `space_before_definition_paren`
+### `space_before_function_paren`
 
-Insert a space before `(` for `function` and `macro` definitions.
+Insert a space before `(` for ordinary command calls, including built-in
+commands such as `project` and calls to custom functions or macros.
+Default: `false`.
 
 ```yaml
 format:
-  space_before_definition_paren: true
+  space_before_function_paren: true
 ```
-
-Effect:
 
 ```cmake
-function (my_helper arg)
-  ...
-endfunction ()
+project (foo VERSION ${bar})
+my_helper (first second)
 ```
+
+Structural commands, including function/macro definitions and their closing
+commands, use [`space_before_control_paren`](#space_before_control_paren).
+Jump commands (`break`, `continue`, and `return`) use
+`space_before_function_paren`, matching cmake-format.
+
+The CLI override is `--separate-fn-name-with-space true`, matching cmake-format.
+The dprint plugin exposes this option as `spaceBeforeFunctionParen`.
 
 ## Casing Options
 
@@ -1132,7 +1142,14 @@ page. If you have an older local config, rename any of the following before use:
 | `max_pargs_hwrap` | `max_hanging_wrap_positional_args` |
 | `max_subgroups_hwrap` | `max_hanging_wrap_groups` |
 | `separate_ctrl_name_with_space` | `space_before_control_paren` |
-| `separate_fn_name_with_space` | `space_before_definition_paren` |
+| `separate_fn_name_with_space` | `space_before_function_paren` |
+| `space_before_definition_paren` | `space_before_control_paren` (also affects other structural commands) |
+
+For legacy cmake-format configs, use `cmakefmt config convert` to map the two
+spacing controls automatically. Earlier cmakefmt versions incorrectly used
+`separate_fn_name_with_space` for definitions. Definitions now follow control
+spacing, matching cmake-format; definition-specific spacing is no longer a
+separate setting.
 
 `cmakefmt` fails fast on unknown config keys rather than silently ignoring them
 — so you will know immediately if any remain.

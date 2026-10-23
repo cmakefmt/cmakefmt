@@ -128,6 +128,8 @@ Ignore rules only affect:
 | `--command-case <lower\|upper\|unchanged>` | Override `format.command_case`. |
 | `--keyword-case <lower\|upper\|unchanged>` | Override `format.keyword_case`. |
 | `--dangle-parens <true\|false>` | Override `format.dangle_parens`. |
+| `--separate-fn-name-with-space <true\|false>` | Override `format.space_before_function_paren` for ordinary calls, matching cmake-format. |
+| `--separate-ctrl-name-with-space <true\|false>` | Override `format.space_before_control_paren` for structural commands, including definitions. |
 
 ## Exit Codes
 
