@@ -761,9 +761,9 @@ struct OutputFormatSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     max_prefix_length: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    space_before_control_paren: Option<bool>,
+    separate_ctrl_name_with_space: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    space_before_definition_paren: Option<bool>,
+    separate_fn_name_with_space: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     command_case: Option<CaseStyle>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -799,8 +799,8 @@ impl OutputFormatSection {
             || self.dangle_align.is_some()
             || self.min_prefix_length.is_some()
             || self.max_prefix_length.is_some()
-            || self.space_before_control_paren.is_some()
-            || self.space_before_definition_paren.is_some()
+            || self.separate_ctrl_name_with_space.is_some()
+            || self.separate_fn_name_with_space.is_some()
             || self.command_case.is_some()
             || self.keyword_case.is_some()
             || self.enable_sort.is_some()
@@ -938,10 +938,17 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
                 converted.format.max_prefix_length = as_usize(value)
             }
             "separate_ctrl_name_with_space" | "space_before_control_paren" => {
-                converted.format.space_before_control_paren = as_bool(value)
+                converted.format.separate_ctrl_name_with_space = as_bool(value)
             }
-            "separate_fn_name_with_space" | "space_before_definition_paren" => {
-                converted.format.space_before_definition_paren = as_bool(value)
+            "space_before_definition_paren" => {
+                converted.format.separate_ctrl_name_with_space = as_bool(value);
+                converted.notes.push(format!(
+                    "{}: space_before_definition_paren is now separate_ctrl_name_with_space; this also affects other structural commands",
+                    path.display()
+                ));
+            }
+            "separate_fn_name_with_space" => {
+                converted.format.separate_fn_name_with_space = as_bool(value)
             }
             "command_case" => {
                 converted.format.command_case = convert_case_style(path, converted, key, value)
@@ -2011,7 +2018,8 @@ misc:
         std::fs::write(&path, "format:\n  separate_ctrl_name_with_space: true\n").unwrap();
 
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
-        assert!(converted.contains("space_before_control_paren = true"));
+        assert!(converted.contains("separate_ctrl_name_with_space = true"));
+        assert!(!converted.contains("space_before_definition_paren"));
     }
 
     #[test]
@@ -2021,7 +2029,7 @@ misc:
         std::fs::write(&path, "format:\n  separate_fn_name_with_space: false\n").unwrap();
 
         let converted = convert_legacy_config_files(&[path], DumpConfigFormat::Toml).unwrap();
-        assert!(converted.contains("space_before_definition_paren = false"));
+        assert!(converted.contains("separate_fn_name_with_space = false"));
     }
 
     #[test]

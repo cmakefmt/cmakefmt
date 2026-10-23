@@ -57,6 +57,11 @@ by the normal indentation level, configure:
 `wrapAfterFirstArgAlign` defaults to `under-first-arg`, preserving the
 existing alignment. It takes effect when a call uses `wrapAfterFirstArg`.
 
+`separateFnNameWithSpace: true` inserts a space before `(` in ordinary
+command calls such as `project (foo)`. `separateCtrlNameWithSpace: true` adds
+spaces to structural commands, including function/macro definitions. Both
+default to `false`.
+
 The plugin uses `dprint.json` configuration; it does not discover
 `.cmakefmt.yaml` or `.editorconfig` files. Range formatting is not supported.
 

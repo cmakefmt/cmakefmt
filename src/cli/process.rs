@@ -1064,6 +1064,12 @@ pub(crate) fn build_context(
     if let Some(v) = cli.config_overrides.keyword_case {
         config.keyword_case = v;
     }
+    if let Some(v) = cli.config_overrides.separate_fn_name_with_space {
+        config.separate_fn_name_with_space = v;
+    }
+    if let Some(v) = cli.config_overrides.separate_ctrl_name_with_space {
+        config.separate_ctrl_name_with_space = v;
+    }
     if let Some(v) = cli.config_overrides.dangle_parens {
         config.dangle_parens = v;
     }
@@ -1142,6 +1148,12 @@ pub(crate) fn describe_cli_overrides(cli: &Cli) -> String {
     }
     if let Some(keyword_case) = cli.config_overrides.keyword_case {
         parts.push(format!("keyword_case={keyword_case:?}"));
+    }
+    if let Some(value) = cli.config_overrides.separate_fn_name_with_space {
+        parts.push(format!("separate_fn_name_with_space={value}"));
+    }
+    if let Some(value) = cli.config_overrides.separate_ctrl_name_with_space {
+        parts.push(format!("separate_ctrl_name_with_space={value}"));
     }
     if let Some(dangle_parens) = cli.config_overrides.dangle_parens {
         parts.push(format!("dangle_parens={dangle_parens}"));

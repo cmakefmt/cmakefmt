@@ -45,15 +45,28 @@ cat > dprint.json <<EOF
   "cmakefmt": {
     "lineWidth": 50,
     "wrapAfterFirstArg": true,
-    "wrapAfterFirstArgAlign": "default-indent"
+    "wrapAfterFirstArgAlign": "default-indent",
+    "separateFnNameWithSpace": true,
+    "separateCtrlNameWithSpace": true
   }
 }
 EOF
 printf 'target_compile_definitions(mylib INTERFACE USING_DLL COMMON_USING_DLL EXTRA_DEFINE)\n' > CMakeLists.txt
 cat > expected.txt <<'EOF'
-target_compile_definitions(mylib
+target_compile_definitions (mylib
   INTERFACE
     USING_DLL COMMON_USING_DLL EXTRA_DEFINE)
+EOF
+"${DPRINT:-dprint}" fmt --config dprint.json
+diff -u expected.txt CMakeLists.txt
+"${DPRINT:-dprint}" check --config dprint.json
+printf 'if(ON)\nfunction(helper)\ncustom_call()\nendfunction()\nendif()\n' > CMakeLists.txt
+cat > expected.txt <<'EOF'
+if (ON)
+  function (helper)
+    custom_call ()
+  endfunction ()
+endif ()
 EOF
 "${DPRINT:-dprint}" fmt --config dprint.json
 diff -u expected.txt CMakeLists.txt

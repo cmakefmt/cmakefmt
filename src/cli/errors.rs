@@ -429,8 +429,7 @@ fn renamed_config_key(key: &str) -> Option<&'static str> {
         "max_subgroups_hwrap" => Some("max_hanging_wrap_groups"),
         "min_prefix_chars" => Some("min_prefix_length"),
         "max_prefix_chars" => Some("max_prefix_length"),
-        "separate_ctrl_name_with_space" => Some("space_before_control_paren"),
-        "separate_fn_name_with_space" => Some("space_before_definition_paren"),
+        "space_before_definition_paren" => Some("separate_ctrl_name_with_space"),
         _ => None,
     }
 }

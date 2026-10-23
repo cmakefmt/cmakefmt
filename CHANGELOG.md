@@ -10,6 +10,13 @@ This project follows a simple changelog discipline:
 
 ### Added
 
+- Add `format.separate_fn_name_with_space` for spaces before parentheses in
+  ordinary command and custom function calls, such as `project (foo)`.
+  Defaults to `false`. Expose `--separate-fn-name-with-space` and
+  `--separate-ctrl-name-with-space` with cmake-format's call/structural
+  distinction, and add dprint `separateFnNameWithSpace` and
+  `separateCtrlNameWithSpace` (#240).
+
 - New `format.wrap_after_first_arg_align` option selecting where the
   continuation of a `wrap_after_first_arg` layout starts:
   `under-first-arg` (the backwards-compatible default) or `default-indent`,
@@ -31,7 +38,37 @@ This project follows a simple changelog discipline:
   form via `layout.wrap_after_first_arg_align` in a spec, and as
   `wrapAfterFirstArgAlign` in the dprint plugin.
 
+### Fixed
+
+- Accept bare `--separate-fn-name-with-space`,
+  `--separate-ctrl-name-with-space`, and `--dangle-parens` as `true`,
+  matching cmake-format. Explicit `true` and `false` values remain supported.
+
+- Include the closing parenthesis when checking whether a hanging layout
+  fits on one line, including the extra space before `(` when enabled.
+
+- Convert legacy `separate_fn_name_with_space` to ordinary function-call
+  spacing, instead of definition spacing. Legacy `separate_ctrl_name_with_space`
+  now also configures function/macro definition spacing. Reconvert affected
+  cmake-format configs to apply the corrected mapping (#240).
+
 ### Changed
+
+- `break`, `continue`, and `return` now use `separate_fn_name_with_space`
+  instead of `separate_ctrl_name_with_space`, matching cmake-format. Set the new
+  option to `true` to retain spaces on these commands in existing native configs.
+
+- Use `separate_ctrl_name_with_space` consistently as the canonical config
+  name. The released `space_before_control_paren` key remains accepted as
+  an input alias.
+
+- Align the two Rust spacing fields with cmake-format:
+  `Config::separate_fn_name_with_space` controls ordinary calls, while
+  `separate_ctrl_name_with_space` controls structural commands, including
+  function/macro definitions. The YAML/TOML names are
+  `separate_fn_name_with_space` and `separate_ctrl_name_with_space`.
+  The old `space_before_definition_paren` config key is no longer accepted;
+  use `separate_ctrl_name_with_space` for definition spacing.
 
 - Rust API: `Config`, `PerCommandConfig`, and `LayoutOverrides` have a new
   `wrap_after_first_arg_align` field. Callers using exhaustive struct literals

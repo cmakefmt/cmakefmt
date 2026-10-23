@@ -258,7 +258,7 @@ fn dangle_align_close() {
 }
 
 #[test]
-fn space_before_control_paren_formats_if() {
+fn separate_ctrl_name_with_space_formats_if() {
     let src = "if(TRUE)\nmessage(ok)\nendif()\n";
     let config = Config {
         separate_ctrl_name_with_space: true,
@@ -276,10 +276,10 @@ fn space_before_control_paren_formats_if() {
 }
 
 #[test]
-fn space_before_definition_paren_formats_function() {
+fn control_spacing_formats_function_definition() {
     let src = "function(my_func ARG1)\nmessage(${ARG1})\nendfunction()\n";
     let config = Config {
-        separate_fn_name_with_space: true,
+        separate_ctrl_name_with_space: true,
         ..Config::default()
     };
     let formatted = format_source(src, &config).unwrap();
@@ -1890,15 +1890,15 @@ fn separate_ctrl_name_with_space() {
 
 #[test]
 fn separate_fn_name_with_space() {
-    let src = "function(my_func ARG)\nendfunction()\n";
+    let src = "project(foo)\nmy_func(ARG)\n";
     let config = Config {
         separate_fn_name_with_space: true,
         ..Config::default()
     };
     let formatted = format_source(src, &config).unwrap();
     insta::assert_snapshot!(formatted, @"
-    function (my_func ARG)
-    endfunction ()
+    project (foo)
+    my_func (ARG)
     ");
 }
 

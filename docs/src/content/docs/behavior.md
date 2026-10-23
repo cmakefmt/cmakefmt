@@ -154,7 +154,7 @@ Structured commands — `if`/`elseif`/`else`/`endif`, `foreach`/`endforeach`,
 `block`/`endblock` — are treated as block constructs rather than flat calls.
 This affects indentation and spacing around their parentheses.
 
-With `space_before_control_paren = true`:
+With `separate_ctrl_name_with_space = true`:
 
 ```cmake
 if (WIN32)
