@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/cross-platform.yml'
+      - 'scripts/capture-cross-platform-output.py'
       - 'build.rs'
       - 'Cargo.lock'
       - 'Cargo.toml'
@@ -17,6 +18,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/cross-platform.yml'
+      - 'scripts/capture-cross-platform-output.py'
       - 'build.rs'
       - 'Cargo.lock'
       - 'Cargo.toml'
@@ -44,10 +46,11 @@ jobs:
       - name: Format fixtures and capture output
         shell: bash
         run: |
-          for f in tests/fixtures/**/*.cmake tests/fixtures/**/*.txt; do
-            [ -f "$f" ] || continue
-            ./target/release/cmakefmt "$f" 2>/dev/null || true
-          done > cross-platform-output.txt
+          binary=./target/release/cmakefmt
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            binary="${binary}.exe"
+          fi
+          python scripts/capture-cross-platform-output.py "$binary"
 
       - name: Upload output
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
