@@ -25,7 +25,7 @@
 //! [`Config::for_file`] load these files and return a resolved
 //! runtime [`Config`]. Unknown fields are rejected.
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+#[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
 #[doc(hidden)]
 pub mod editorconfig;
 pub mod file;

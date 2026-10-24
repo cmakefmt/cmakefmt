@@ -36,7 +36,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["cli"]
 browser-wasm = ["dep:wasm-bindgen"]
 dprint-plugin = ["dep:dprint-core"]
-lsp = ["lsp-server", "lsp-types"]
+lsp = ["lsp-server", "lsp-types", "ec4rs"]
 cli = [
   "lsp",
   "clap",

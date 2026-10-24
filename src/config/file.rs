@@ -688,6 +688,20 @@ impl Config {
         Ok(config)
     }
 
+    /// Load formatting options and command specs from the same config files.
+    ///
+    /// Later files override earlier files in both the config and registry.
+    #[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "cli", feature = "lsp"))))]
+    pub fn from_files_with_registry(paths: &[PathBuf]) -> Result<(Self, crate::CommandRegistry)> {
+        let config = Self::from_files(paths)?;
+        let mut registry = crate::CommandRegistry::builtins().clone();
+        for path in paths {
+            registry.merge_override_file(path)?;
+        }
+        Ok((config, registry))
+    }
+
     /// Parse a YAML config string through the same `FileConfig` schema used by
     /// config files and return the resolved runtime [`Config`].
     ///
@@ -1155,6 +1169,7 @@ command_case = "upper"
         );
     }
 
+    #[cfg(feature = "cli")]
     #[test]
     fn toml_config_template_parses() {
         let template = default_config_template_for(DumpConfigFormat::Toml);
@@ -1449,6 +1464,7 @@ per_command_overrides:
 
     // ── from_yaml_str tests ─────────────────────────────────────────────
 
+    #[cfg(feature = "cli")]
     #[test]
     fn effective_yaml_config_roundtrips_non_default_values() {
         let original = Config::from_yaml_str(

@@ -20,7 +20,7 @@ use lsp_types::{
 
 use std::time::Duration;
 
-use crate::Config;
+use crate::{CommandRegistry, Config};
 
 /// Maximum time allowed for a single formatting request before it is aborted.
 const FORMAT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -156,12 +156,16 @@ fn handle_notification(
 
 /// Run `format_source` with a deadline so requests finish even on pathological input.
 /// The worker cannot be cancelled and may finish after the response is sent.
-fn format_with_timeout(source: &str, config: &Config) -> Result<String, String> {
+fn format_with_timeout(
+    source: &str,
+    config: &Config,
+    registry: CommandRegistry,
+) -> Result<String, String> {
     let source = source.to_owned();
     let config = config.clone();
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
-        let result = crate::format_source(&source, &config);
+        let result = crate::format_source_with_registry(&source, &config, &registry);
         let _ = tx.send(result);
     });
     receive_format_result(rx, FORMAT_TIMEOUT)
@@ -187,17 +191,31 @@ fn formatting_failure(id: lsp_server::RequestId, message: String) -> Response {
     Response::new_err(id, lsp_server::ErrorCode::RequestFailed as i32, message)
 }
 
-/// Resolve the effective config for a document from its on-disk path.
-///
-/// Discovers `.cmakefmt.*` (and the `.editorconfig` fallback) relative to the
-/// document's own location rather than the server's working directory, so a
-/// multi-root workspace formats each file with its project's config. Falls
-/// back to `fallback` (the workspace/default config) for unsaved or non-`file:`
-/// documents and whenever discovery fails, so behaviour never regresses.
-fn config_for_document(uri: &str, fallback: &Config) -> Config {
-    uri_to_path(uri)
-        .and_then(|path| Config::for_file(&path).ok())
-        .unwrap_or_else(|| fallback.clone())
+/// Resolve options and command specs relative to the document's location.
+/// Unsaved documents use the workspace config and built-in specs. Invalid
+/// project configs are reported to the client rather than silently ignored.
+fn config_for_document(uri: &str, fallback: &Config) -> crate::Result<(Config, CommandRegistry)> {
+    let Some(path) = uri_to_path(uri) else {
+        return Ok((fallback.clone(), CommandRegistry::builtins().clone()));
+    };
+    let sources = Config::config_sources_for(&path);
+    let (mut config, registry) = Config::from_files_with_registry(&sources)?;
+    if sources.is_empty() {
+        let editorconfig = crate::config::editorconfig::read_editorconfig(&path);
+        if let Some(value) = editorconfig.tab_size {
+            config.tab_size = value;
+        }
+        if let Some(value) = editorconfig.use_tabs {
+            config.use_tabchars = value;
+        }
+        if let Some(value) = editorconfig.line_width {
+            config.line_width = value;
+        }
+        if let Some(value) = editorconfig.line_ending {
+            config.line_ending = value;
+        }
+    }
+    Ok((config, registry))
 }
 
 /// Convert a `file://` URI to a filesystem path, percent-decoding `%XX`
@@ -266,8 +284,12 @@ fn handle_formatting(
     let Some(text) = documents.get(params.text_document.uri.as_str()) else {
         return Some(formatting_failure(id, "document is not open".to_owned()));
     };
-    let doc_config = config_for_document(params.text_document.uri.as_str(), config);
-    let formatted = match format_with_timeout(text, &doc_config) {
+    let (doc_config, registry) =
+        match config_for_document(params.text_document.uri.as_str(), config) {
+            Ok(context) => context,
+            Err(error) => return Some(formatting_failure(id, error.to_string())),
+        };
+    let formatted = match format_with_timeout(text, &doc_config, registry) {
         Ok(formatted) => formatted,
         Err(message) => return Some(formatting_failure(id, message)),
     };
@@ -325,8 +347,12 @@ fn handle_range_formatting(
     let slice_lines = &all_lines[start_line..=clamped_end];
     let slice_text = slice_lines.concat();
 
-    let doc_config = config_for_document(params.text_document.uri.as_str(), config);
-    let formatted = match format_with_timeout(&slice_text, &doc_config) {
+    let (doc_config, registry) =
+        match config_for_document(params.text_document.uri.as_str(), config) {
+            Ok(context) => context,
+            Err(error) => return Some(formatting_failure(id, error.to_string())),
+        };
+    let formatted = match format_with_timeout(&slice_text, &doc_config, registry) {
         Ok(formatted) => formatted,
         Err(message) => return Some(formatting_failure(id, message)),
     };
@@ -965,7 +991,7 @@ mod tests {
             line_width: 42,
             ..Config::default()
         };
-        let config = config_for_document("untitled:Untitled-1", &fallback);
+        let (config, _) = config_for_document("untitled:Untitled-1", &fallback).unwrap();
         assert_eq!(config.line_width, 42);
     }
 
@@ -987,8 +1013,81 @@ mod tests {
             line_width: 100,
             ..Config::default()
         };
-        let config = config_for_document(&uri, &fallback);
+        let (config, _) = config_for_document(&uri, &fallback).unwrap();
         assert_eq!(config.line_width, 40);
+    }
+
+    #[test]
+    fn formatting_uses_project_command_specs_for_full_and_range_requests() {
+        for (name, contents) in [
+            (".cmakefmt.yaml", "format:\n  keyword_case: lower\ncommands:\n  my_command:\n    pargs: 0\n    flags: [LOUD]\n"),
+            (".cmakefmt.toml", "[format]\nkeyword_case = 'lower'\n[commands.my_command]\npargs = 0\nflags = ['LOUD']\n"),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::write(dir.path().join(name), contents).unwrap();
+            let file = dir.path().join("CMakeLists.txt");
+            let uri = file_uri_for_test(&file);
+            let original = "my_command(LOUD)\n";
+            let (config, registry) = Config::from_files_with_registry(&Config::config_sources_for(&file)).unwrap();
+            let expected = crate::format_source_with_registry(original, &config, &registry).unwrap();
+            assert_eq!(expected, "my_command(loud)\n");
+            for request in [formatting_request(&uri), range_formatting_request(&uri, 0, 0)] {
+                let response = handle_request(request, &docs(&uri, original), &Config::default()).unwrap();
+                let edits: Vec<lsp_types::TextEdit> = serde_json::from_value(response.response_result.unwrap()).unwrap();
+                assert_eq!(apply_edit(original, &edits[0]), expected);
+            }
+        }
+    }
+
+    #[test]
+    fn invalid_project_options_and_command_specs_return_errors() {
+        for contents in ["format:\n  line_width: broken\n", "commands: []\n"] {
+            let dir = tempfile::tempdir().unwrap();
+            let config_path = dir.path().join(".cmakefmt.yaml");
+            std::fs::write(&config_path, contents).unwrap();
+            let uri = file_uri_for_test(&dir.path().join("CMakeLists.txt"));
+            for request in [
+                formatting_request(&uri),
+                range_formatting_request(&uri, 0, 0),
+            ] {
+                let id = request.id.clone();
+                let response = handle_request(
+                    request,
+                    &docs(&uri, "my_command(LOUD)\n"),
+                    &Config::default(),
+                )
+                .unwrap();
+                assert_eq!(response.id, id);
+                let error = response.response_result.unwrap_err();
+                assert_eq!(error.code, lsp_server::ErrorCode::RequestFailed as i32);
+                assert!(
+                    error.message.contains(".cmakefmt.yaml"),
+                    "{}",
+                    error.message
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn document_editorconfig_is_a_fallback_for_options() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(".editorconfig"), "root = true\n[*]\nindent_style = tab\nindent_size = 4\nmax_line_length = 100\nend_of_line = crlf\n").unwrap();
+        let uri = file_uri_for_test(&dir.path().join("CMakeLists.txt"));
+        let (config, _) = config_for_document(&uri, &Config::default()).unwrap();
+        assert_eq!(config.tab_size, 4);
+        assert!(config.use_tabchars);
+        assert_eq!(config.line_width, 100);
+        assert_eq!(config.line_ending, crate::LineEnding::Windows);
+        std::fs::write(
+            dir.path().join(".cmakefmt.yaml"),
+            "format:\n  line_width: 60\n",
+        )
+        .unwrap();
+        let (config, _) = config_for_document(&uri, &Config::default()).unwrap();
+        assert_eq!(config.line_width, 60);
+        assert_eq!(config.tab_size, Config::default().tab_size);
+        assert!(!config.use_tabchars);
     }
 
     fn file_uri_for_test(path: &std::path::Path) -> String {

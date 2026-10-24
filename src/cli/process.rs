@@ -1012,11 +1012,7 @@ pub(crate) fn build_context(
 ) -> Result<(Config, CommandRegistry, ConfigContext), cmakefmt::Error> {
     let config_context = resolve_config_context(cli, file_path);
 
-    let mut config = Config::from_files(&config_context.sources)?;
-    let mut registry = CommandRegistry::builtins().clone();
-    for path in &config_context.sources {
-        registry.merge_override_file(path)?;
-    }
+    let (mut config, registry) = Config::from_files_with_registry(&config_context.sources)?;
 
     // Apply .editorconfig fallback when no cmakefmt config file was found.
     if matches!(config_context.mode, ConfigSourceMode::DefaultsOnly)

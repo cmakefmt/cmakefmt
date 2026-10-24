@@ -4,16 +4,16 @@
 
 //! Built-in and override-backed command registry.
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+#[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
 use std::fs;
-#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+#[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use indexmap::{IndexMap, IndexSet};
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+#[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
 use crate::config::file::{detect_config_format, ConfigFileFormat};
 use crate::error::{Error, Result};
 
@@ -103,18 +103,18 @@ impl CommandRegistry {
         })
     }
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+    #[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
     fn load_builtins_impl() -> Result<Self> {
         Self::from_builtins_and_overrides(None::<&Path>)
     }
 
-    #[cfg(any(target_arch = "wasm32", not(feature = "cli")))]
+    #[cfg(any(target_arch = "wasm32", not(any(feature = "cli", feature = "lsp"))))]
     fn load_builtins_impl() -> Result<Self> {
         Ok(Self::from_spec_file(parse_embedded_spec()?))
     }
 
     /// Load the embedded built-ins and optionally merge a user override file.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+    #[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
     pub fn from_builtins_and_overrides(path: Option<impl AsRef<Path>>) -> Result<Self> {
         let mut registry = Self::from_spec_file(parse_embedded_spec()?);
 
@@ -228,8 +228,8 @@ impl CommandRegistry {
     /// including 1-based line and column numbers — suitable for
     /// surfacing to editors and IDE integrations. I/O failures are
     /// reported as [`Error::Io`].
-    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "cli")))]
+    #[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "cli", feature = "lsp"))))]
     pub fn merge_override_file(&mut self, path: &Path) -> Result<()> {
         let source = fs::read_to_string(path)?;
         self.merge_override_source(&source, path.to_path_buf(), detect_config_format(path)?)
@@ -244,13 +244,13 @@ impl CommandRegistry {
     /// structured line/column metadata — unlike
     /// [`merge_toml_overrides`](Self::merge_toml_overrides), which
     /// returns an unstructured [`Error::Formatter`].
-    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
-    #[cfg_attr(docsrs, doc(cfg(feature = "cli")))]
+    #[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "cli", feature = "lsp"))))]
     pub fn merge_override_str(&mut self, source: &str, path: impl Into<PathBuf>) -> Result<()> {
         self.merge_override_source(source, path.into(), ConfigFileFormat::Toml)
     }
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "cli"))]
+    #[cfg(all(not(target_arch = "wasm32"), any(feature = "cli", feature = "lsp")))]
     fn merge_override_source(
         &mut self,
         source: &str,
