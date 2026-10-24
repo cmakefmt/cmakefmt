@@ -40,7 +40,7 @@
   // Benchmark: mariadb_server/CMakeLists.txt (656 lines)
   // hyperfine --warmup 10 --runs 50 --shell=none
   // Historical binaries: macOS aarch64 builds from GitHub Releases.
-  // v2.0.0 and v2.1.0: locally built release candidates, 100 warmups / 200 runs.
+  // v2.0.0, v2.1.0, and v2.3.0: locally built release candidates, 100 warmups / 200 runs.
   const DATA = [
     { version: "v0.1.0", time: 9.6, binary: 4.7 },
     { version: "v0.1.1", time: 9.7, binary: 4.7 },
@@ -60,6 +60,8 @@
     { version: "v1.4.0", time: 6.0, binary: 4.7 },
     { version: "v2.0.0", time: 6.7, binary: 4.8 },
     { version: "v2.1.0", time: 6.4, binary: 4.7 },
+    { version: "v2.2.0", time: 6.7, binary: 5.5 },
+    { version: "v2.3.0", time: 6.5, binary: 5.7 },
   ];
 
   // Annotations for key changes
@@ -73,6 +75,8 @@
     "v1.4.0": "module command coverage",
     "v2.0.0": "release candidate: argument comments + dprint plugin",
     "v2.1.0": "release candidate: clearer --ignore-file flag",
+    "v2.2.0": "YAML backend moved to serde-saphyr",
+    "v2.3.0": "release candidate: call spacing + continuation alignment",
   };
 
   function isDark() {

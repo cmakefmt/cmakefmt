@@ -100,6 +100,9 @@ struct FormatSection {
     /// Insert a space before `(` for structural commands, including function/macro definitions.
     #[serde(alias = "space_before_control_paren")]
     separate_ctrl_name_with_space: Option<bool>,
+    /// Deprecated fallback for structural-command spacing. An explicit control setting takes precedence.
+    #[cfg_attr(feature = "cli", schemars(extend("deprecated" = true)))]
+    space_before_definition_paren: Option<bool>,
     /// Insert a space before `(` for ordinary commands and custom function calls.
     separate_fn_name_with_space: Option<bool>,
     /// Output casing for command names: `lower`, `upper`, or `unchanged`.
@@ -785,7 +788,11 @@ impl Config {
         if let Some(v) = fc.format.max_prefix_length {
             self.max_prefix_chars = v;
         }
-        if let Some(v) = fc.format.separate_ctrl_name_with_space {
+        if let Some(v) = fc
+            .format
+            .separate_ctrl_name_with_space
+            .or(fc.format.space_before_definition_paren)
+        {
             self.separate_ctrl_name_with_space = v;
         }
         if let Some(v) = fc.format.separate_fn_name_with_space {

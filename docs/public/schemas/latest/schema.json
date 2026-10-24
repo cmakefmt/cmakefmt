@@ -263,6 +263,15 @@
           ],
           "default": null
         },
+        "space_before_definition_paren": {
+          "description": "Deprecated fallback for structural-command spacing. An explicit control setting takes precedence.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null,
+          "deprecated": true
+        },
         "separate_fn_name_with_space": {
           "description": "Insert a space before `(` for ordinary commands and custom function calls.",
           "type": [

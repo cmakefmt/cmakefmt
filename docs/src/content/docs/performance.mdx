@@ -186,9 +186,15 @@ fixture (`mariadb_server/CMakeLists.txt`, 656 lines) using each
 version's official macOS aarch64 binary from GitHub Releases, except for
 the locally built macOS aarch64 release candidates: `v2.0.0` measured
 **6.7ms** median and **4.8MiB**; `v2.1.0` measured **6.4ms** median and
-**4.7MiB**. Both used 100 warmups and 200 runs with
+**4.7MiB**; `v2.3.0` measured **6.5ms** median and **5.7MiB** on 24 October 2026.
+These candidates used 100 warmups and 200 runs with
 `--shell=none --style basic`. These are pre-publication measurements, not
 downloaded release artifacts.
+
+The official `v2.2.0` macOS aarch64 binary was measured retrospectively on
+24 October 2026 with the same 100 warmups, 200 runs, and command settings:
+**6.7ms** median and **5.5MiB**. Its size increase coincides with the move from
+libyaml to the Rust `serde-saphyr` YAML backend.
 
 The solid line shows formatting time (left axis); the dashed line shows
 binary size (right axis). Hover a point to see the details and what

@@ -338,31 +338,66 @@ fn legacy_function_and_control_spacing_convert_to_the_right_commands() {
 }
 
 #[test]
-fn released_definition_key_has_a_working_migration_hint() {
-    let dir = tempfile::tempdir().unwrap();
-    let config = dir.path().join(".cmakefmt.yaml");
-    let source = dir.path().join("CMakeLists.txt");
-    std::fs::write(&source, "project(foo)\n").unwrap();
-    std::fs::write(&config, "format:\n  space_before_definition_paren: true\n").unwrap();
-    let result = Command::new(env!("CARGO_BIN_EXE_cmakefmt"))
-        .arg("--config-file")
-        .arg(&config)
-        .arg(&source)
-        .output()
-        .unwrap();
-    assert!(!result.status.success());
-    let stderr = String::from_utf8(result.stderr).unwrap();
-    assert!(
-        stderr.contains("use `separate_ctrl_name_with_space` or run `cmakefmt config convert`"),
-        "{stderr}"
-    );
-    let converted =
-        convert_legacy_config_files(std::slice::from_ref(&config), DumpConfigFormat::Yaml).unwrap();
-    let converted_path = dir.path().join("converted.yaml");
-    std::fs::write(&converted_path, &converted).unwrap();
-    let loaded = Config::from_file(&converted_path).unwrap();
-    assert!(loaded.for_command("function").space_before_paren());
-    assert!(converted.contains("this also affects other structural commands"));
+fn released_definition_key_is_a_fallback_without_duplicate_field_errors() {
+    for extension in ["yaml", "toml"] {
+        for definition in [false, true] {
+            for control in [None, Some(false), Some(true)] {
+                for control_key in [
+                    "space_before_control_paren",
+                    "separate_ctrl_name_with_space",
+                ] {
+                    let contents = match extension {
+                        "yaml" => format!(
+                            "format:\n  space_before_definition_paren: {definition}\n{}",
+                            control
+                                .map(|value| format!("  {control_key}: {value}\n"))
+                                .unwrap_or_default()
+                        ),
+                        _ => format!(
+                            "[format]\nspace_before_definition_paren = {definition}\n{}",
+                            control
+                                .map(|value| format!("{control_key} = {value}\n"))
+                                .unwrap_or_default()
+                        ),
+                    };
+                    let dir = tempfile::tempdir().unwrap();
+                    let path = dir.path().join(format!(".cmakefmt.{extension}"));
+                    std::fs::write(&path, &contents).unwrap();
+                    let config = Config::from_file(&path).unwrap();
+                    let expected = control.unwrap_or(definition);
+                    assert_eq!(
+                        config.for_command("function").space_before_paren(),
+                        expected,
+                        "{contents}"
+                    );
+                    assert_eq!(
+                        config.for_command("if").space_before_paren(),
+                        expected,
+                        "{contents}"
+                    );
+                    assert!(!config.for_command("message").space_before_paren());
+                    for format in [DumpConfigFormat::Yaml, DumpConfigFormat::Toml] {
+                        let rendered =
+                            cmakefmt::config::render_effective_config(&config, format).unwrap();
+                        assert!(!rendered.contains("space_before_definition_paren"));
+                        let output_path = dir.path().join(match format {
+                            DumpConfigFormat::Yaml => "output.yaml",
+                            DumpConfigFormat::Toml => "output.toml",
+                        });
+                        std::fs::write(&output_path, rendered).unwrap();
+                        assert_eq!(Config::from_file(&output_path).unwrap(), config);
+                        if extension == "yaml" {
+                            let converted =
+                                convert_legacy_config_files(std::slice::from_ref(&path), format)
+                                    .unwrap();
+                            std::fs::write(&output_path, converted).unwrap();
+                            assert_eq!(Config::from_file(&output_path).unwrap(), config);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[test]
@@ -402,6 +437,11 @@ fn config_output_and_schemas_expose_exactly_two_spacing_controls() {
         serde_json::from_str(&cmakefmt::config::generate_json_schema()).unwrap();
     assert_eq!(
         schema["$defs"]["FormatSection"]["properties"]["space_before_control_paren"]["deprecated"],
+        true
+    );
+    assert_eq!(
+        schema["$defs"]["FormatSection"]["properties"]["space_before_definition_paren"]
+            ["deprecated"],
         true
     );
     for properties in [

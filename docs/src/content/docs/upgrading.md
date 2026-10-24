@@ -1,6 +1,6 @@
 ---
-title: Upgrading to 2.0
-description: Rust API migration, argument comment behaviour, and build requirements for cmakefmt 2.0.
+title: Upgrading
+description: Configuration migration, Rust API changes, and build requirements for cmakefmt 2.x.
 ---
 
 <!--
@@ -9,15 +9,63 @@ SPDX-FileCopyrightText: Copyright 2026 Puneet Matharu
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
+## Upgrading to 2.3
+
+Source builds continue to require Rust **1.89 or later**.
+
+### Spacing settings
+
+The canonical settings now match cmake-format:
+
+- `separate_fn_name_with_space` controls ordinary calls, including `break`,
+  `continue`, and `return`.
+- `separate_ctrl_name_with_space` controls structural commands, including
+  `function`, `endfunction`, `macro`, and `endmacro`.
+
+The released YAML/TOML key `space_before_control_paren` remains an input alias
+for `separate_ctrl_name_with_space`. `space_before_definition_paren` remains
+a deprecated fallback when neither control spelling is present. If a config
+contains both old keys, the control setting wins, even when it is `false`.
+Definition spacing is now shared with other structural commands. Review the
+output if you previously configured definition and control spacing differently.
+Config dumps and templates use only the canonical names.
+
+The Rust field names remain `separate_fn_name_with_space` and
+`separate_ctrl_name_with_space`, but their command classification now follows
+the rules above. dprint uses `separateFnNameWithSpace` and
+`separateCtrlNameWithSpace`.
+
+### Rust struct literals
+
+`Config` and `PerCommandConfig` gain `wrap_after_first_arg_align`. Existing
+exhaustive struct literals need the new field or `..Default::default()`.
+For the previous layout, use `WrapAfterFirstArgAlign::UnderFirstArg` in
+`Config` and `None` in `PerCommandConfig`. Construction with defaults remains
+supported:
+
+```rust
+use cmakefmt::{Config, WrapAfterFirstArgAlign};
+
+let config = Config {
+    wrap_after_first_arg_align: WrapAfterFirstArgAlign::UnderFirstArg,
+    ..Config::default()
+};
+```
+
+`LayoutOverrides` also gains the optional field, but was already non-exhaustive;
+downstream callers can continue to start with `LayoutOverrides::default()`.
+
+## Upgrading to 2.0
+
 Version 2.0 introduces breaking Rust API changes, preserves original argument
 comment placement by default, and adds a dprint WebAssembly plugin. CLI flag
 names, configuration-file syntax, and the LSP interface remain unchanged.
 
-## Building the next release from source
+## Building from source
 
-The current source checkout and next release require Rust **1.89 or later**.
+Versions 2.2 and later require Rust **1.89 or later**.
 The YAML backend has moved to `serde-saphyr`, removing the unmaintained
-libyaml dependency. Existing configuration options and CLI flags are unchanged;
+libyaml dependency. For the 2.2 update, configuration options and CLI flags were unchanged;
 YAML aliases and merge keys remain supported. Generated YAML may use different
 quoting or indentation, but can still be loaded as configuration.
 
