@@ -154,17 +154,37 @@ fn handle_notification(
     }
 }
 
-/// Run `format_source` with a timeout to prevent pathological inputs from
-/// freezing the editor.
-fn format_with_timeout(source: &str, config: &Config) -> Option<String> {
+/// Run `format_source` with a deadline so requests finish even on pathological input.
+/// The worker cannot be cancelled and may finish after the response is sent.
+fn format_with_timeout(source: &str, config: &Config) -> Result<String, String> {
     let source = source.to_owned();
     let config = config.clone();
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
-        let result = crate::format_source(&source, &config).ok();
+        let result = crate::format_source(&source, &config);
         let _ = tx.send(result);
     });
-    rx.recv_timeout(FORMAT_TIMEOUT).ok().flatten()
+    receive_format_result(rx, FORMAT_TIMEOUT)
+}
+
+fn receive_format_result(
+    rx: std::sync::mpsc::Receiver<crate::Result<String>>,
+    timeout: Duration,
+) -> Result<String, String> {
+    match rx.recv_timeout(timeout) {
+        Ok(result) => result.map_err(|error| error.to_string()),
+        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Err(format!(
+            "formatting timed out after {} seconds",
+            timeout.as_secs_f64()
+        )),
+        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+            Err("formatting worker terminated without a result".to_owned())
+        }
+    }
+}
+
+fn formatting_failure(id: lsp_server::RequestId, message: String) -> Response {
+    Response::new_err(id, lsp_server::ErrorCode::RequestFailed as i32, message)
 }
 
 /// Resolve the effective config for a document from its on-disk path.
@@ -243,9 +263,14 @@ fn handle_formatting(
                 ));
             }
         };
-    let text = documents.get(params.text_document.uri.as_str())?;
+    let Some(text) = documents.get(params.text_document.uri.as_str()) else {
+        return Some(formatting_failure(id, "document is not open".to_owned()));
+    };
     let doc_config = config_for_document(params.text_document.uri.as_str(), config);
-    let formatted = format_with_timeout(text, &doc_config)?;
+    let formatted = match format_with_timeout(text, &doc_config) {
+        Ok(formatted) => formatted,
+        Err(message) => return Some(formatting_failure(id, message)),
+    };
 
     let edit = full_document_edit(text, formatted);
     let result = match serde_json::to_value(vec![edit]) {
@@ -278,7 +303,9 @@ fn handle_range_formatting(
                 ));
             }
         };
-    let text = documents.get(params.text_document.uri.as_str())?;
+    let Some(text) = documents.get(params.text_document.uri.as_str()) else {
+        return Some(formatting_failure(id, "document is not open".to_owned()));
+    };
 
     let range = params.range;
     let start_line = range.start.line as usize;
@@ -299,7 +326,10 @@ fn handle_range_formatting(
     let slice_text = slice_lines.concat();
 
     let doc_config = config_for_document(params.text_document.uri.as_str(), config);
-    let formatted = format_with_timeout(&slice_text, &doc_config)?;
+    let formatted = match format_with_timeout(&slice_text, &doc_config) {
+        Ok(formatted) => formatted,
+        Err(message) => return Some(formatting_failure(id, message)),
+    };
 
     let mut end = end_position(&slice_text);
     end.line += start_line as u32;
@@ -622,6 +652,43 @@ mod tests {
         );
     }
 
+    #[test]
+    fn formatting_failures_return_responses_with_original_errors() {
+        let uri = "untitled:test.cmake";
+        for request in [formatting_request(uri), range_formatting_request(uri, 0, 0)] {
+            let id = request.id.clone();
+            let response = handle_request(request, &docs(uri, "set("), &Config::default()).unwrap();
+            assert_eq!(response.id, id);
+            let error = response.response_result.unwrap_err();
+            assert_eq!(error.code, lsp_server::ErrorCode::RequestFailed as i32);
+            assert!(
+                error.message.contains("unterminated argument list"),
+                "{}",
+                error.message
+            );
+        }
+    }
+
+    #[test]
+    fn formatting_deadline_and_worker_failure_produce_errors() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let timeout = receive_format_result(rx, Duration::ZERO).unwrap_err();
+        assert!(timeout.contains("timed out"));
+        let response = formatting_failure(RequestId::from(42), timeout);
+        assert_eq!(response.id, RequestId::from(42));
+        assert_eq!(
+            response.response_result.unwrap_err().code,
+            lsp_server::ErrorCode::RequestFailed as i32
+        );
+        drop(tx);
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        drop(tx);
+        assert!(receive_format_result(rx, Duration::ZERO)
+            .unwrap_err()
+            .contains("worker terminated"));
+    }
+
     // ── handle_formatting ─────────────────────────────────────────────────
 
     #[test]
@@ -642,13 +709,16 @@ mod tests {
     }
 
     #[test]
-    fn handle_formatting_returns_none_for_unknown_uri() {
+    fn handle_formatting_returns_error_for_unknown_uri() {
         let resp = handle_formatting(
             formatting_request("file:///missing.cmake"),
             &HashMap::new(),
             &Config::default(),
         );
-        assert!(resp.is_none());
+        assert_eq!(
+            resp.unwrap().response_result.unwrap_err().code,
+            lsp_server::ErrorCode::RequestFailed as i32
+        );
     }
 
     // ── handle_range_formatting ───────────────────────────────────────────
@@ -674,13 +744,16 @@ mod tests {
     }
 
     #[test]
-    fn handle_range_formatting_returns_none_for_unknown_uri() {
+    fn handle_range_formatting_returns_error_for_unknown_uri() {
         let resp = handle_range_formatting(
             range_formatting_request("file:///missing.cmake", 0, 0),
             &HashMap::new(),
             &Config::default(),
         );
-        assert!(resp.is_none());
+        assert_eq!(
+            resp.unwrap().response_result.unwrap_err().code,
+            lsp_server::ErrorCode::RequestFailed as i32
+        );
     }
 
     #[test]
