@@ -287,7 +287,7 @@ fn handle_range_formatting(
     // Collect the lines in range (0-based, inclusive). Stale editor requests
     // can refer to lines past EOF after a document shrinks; those ranges are
     // no-ops rather than protocol errors.
-    let all_lines: Vec<&str> = text.lines().collect();
+    let all_lines: Vec<&str> = text.split_inclusive('\n').collect();
     if all_lines.is_empty() || start_line >= all_lines.len() {
         return Some(Response::new_ok(id, serde_json::json!([])));
     }
@@ -296,17 +296,13 @@ fn handle_range_formatting(
         return Some(Response::new_ok(id, serde_json::json!([])));
     }
     let slice_lines = &all_lines[start_line..=clamped_end];
-    let slice_text = slice_lines.join("\n") + "\n";
+    let slice_text = slice_lines.concat();
 
     let doc_config = config_for_document(params.text_document.uri.as_str(), config);
     let formatted = format_with_timeout(&slice_text, &doc_config)?;
 
-    // Compute the end character position within the range. LSP
-    // `Position.character` is in UTF-16 code units, not UTF-8 bytes.
-    let last_char = slice_lines
-        .last()
-        .map(|l: &&str| l.encode_utf16().count())
-        .unwrap_or(0) as u32;
+    let mut end = end_position(&slice_text);
+    end.line += start_line as u32;
 
     let edit = lsp_types::TextEdit {
         range: lsp_types::Range {
@@ -314,10 +310,7 @@ fn handle_range_formatting(
                 line: start_line as u32,
                 character: 0,
             },
-            end: lsp_types::Position {
-                line: clamped_end as u32,
-                character: last_char,
-            },
+            end,
         },
         new_text: formatted,
     };
@@ -412,27 +405,29 @@ fn handle_code_action(req: Request) -> Option<Response> {
 
 /// Build a [`lsp_types::TextEdit`] that replaces the entire document.
 fn full_document_edit(original: &str, formatted: String) -> lsp_types::TextEdit {
-    let lines: Vec<&str> = original.lines().collect();
-    let last_line = lines.len().saturating_sub(1);
-    // LSP `Position.character` is measured in UTF-16 code units by default, so
-    // count UTF-16 units rather than UTF-8 bytes — otherwise a non-ASCII last
-    // line produces an end column that overshoots the real text.
-    let last_char = lines
-        .last()
-        .map(|l: &&str| l.encode_utf16().count())
-        .unwrap_or(0) as u32;
     lsp_types::TextEdit {
         range: lsp_types::Range {
             start: lsp_types::Position {
                 line: 0,
                 character: 0,
             },
-            end: lsp_types::Position {
-                line: last_line as u32,
-                character: last_char,
-            },
+            end: end_position(original),
         },
         new_text: formatted,
+    }
+}
+
+/// Position immediately after the final character, including a final newline.
+fn end_position(text: &str) -> lsp_types::Position {
+    let mut lines = text.split('\n');
+    let last = lines.next_back().unwrap_or("");
+    lsp_types::Position {
+        line: lines.count() as u32,
+        character: last
+            .strip_suffix('\r')
+            .unwrap_or(last)
+            .encode_utf16()
+            .count() as u32,
     }
 }
 
@@ -495,6 +490,97 @@ mod tests {
         }
     }
 
+    fn apply_edit(text: &str, edit: &lsp_types::TextEdit) -> String {
+        fn offset(text: &str, position: lsp_types::Position) -> usize {
+            let mut line = 0;
+            let mut character = 0;
+            for (offset, ch) in text.char_indices() {
+                if line == position.line && character == position.character {
+                    return offset;
+                }
+                if ch == '\n' {
+                    line += 1;
+                    character = 0;
+                } else {
+                    character += ch.len_utf16() as u32;
+                }
+            }
+            assert_eq!((line, character), (position.line, position.character));
+            text.len()
+        }
+        let start = offset(text, edit.range.start);
+        let end = offset(text, edit.range.end);
+        format!("{}{}{}", &text[..start], edit.new_text, &text[end..])
+    }
+
+    #[test]
+    fn formatting_edits_preserve_newline_boundaries_and_are_idempotent() {
+        let uri = "untitled:test.cmake";
+        for original in [
+            "MESSAGE(hello)",
+            "MESSAGE(hello)\n",
+            "MESSAGE(hello)\r\n",
+            "MESSAGE(\"é😀\")\n\n",
+            "",
+        ] {
+            let mut text = original.to_owned();
+            for _ in 0..2 {
+                let response = handle_formatting(
+                    formatting_request(uri),
+                    &docs(uri, &text),
+                    &Config::default(),
+                )
+                .unwrap();
+                let edits: Vec<lsp_types::TextEdit> =
+                    serde_json::from_value(response.response_result.unwrap()).unwrap();
+                let expected = crate::format_source(&text, &Config::default()).unwrap();
+                text = apply_edit(&text, &edits[0]);
+                assert_eq!(text, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn range_edits_preserve_surrounding_lines_and_newlines() {
+        let uri = "untitled:test.cmake";
+        let config = Config {
+            line_ending: crate::LineEnding::Auto,
+            ..Config::default()
+        };
+        for newline in ["\n", "\r\n"] {
+            for suffix in ["", newline] {
+                let original = format!("message(a){newline}MESSAGE(\"é😀\"){suffix}");
+                let response = handle_range_formatting(
+                    range_formatting_request(uri, 1, 1),
+                    &docs(uri, &original),
+                    &config,
+                )
+                .unwrap();
+                let edits: Vec<lsp_types::TextEdit> =
+                    serde_json::from_value(response.response_result.unwrap()).unwrap();
+                let expected =
+                    crate::format_source(&format!("MESSAGE(\"é😀\"){suffix}"), &config).unwrap();
+                assert_eq!(
+                    apply_edit(&original, &edits[0]),
+                    format!("message(a){newline}{expected}")
+                );
+            }
+            let original = format!("message(a){newline}MESSAGE(b){newline}message(c){newline}");
+            let response = handle_range_formatting(
+                range_formatting_request(uri, 1, 1),
+                &docs(uri, &original),
+                &config,
+            )
+            .unwrap();
+            let edits: Vec<lsp_types::TextEdit> =
+                serde_json::from_value(response.response_result.unwrap()).unwrap();
+            assert_eq!(
+                apply_edit(&original, &edits[0]),
+                original.replace("MESSAGE", "message")
+            );
+        }
+    }
+
     // ── full_document_edit ────────────────────────────────────────────────
 
     #[test]
@@ -504,8 +590,8 @@ mod tests {
         let edit = full_document_edit(original, formatted.clone());
         assert_eq!(edit.range.start.line, 0);
         assert_eq!(edit.range.start.character, 0);
-        assert_eq!(edit.range.end.line, 0);
-        assert_eq!(edit.range.end.character, "message(hello)".len() as u32);
+        assert_eq!(edit.range.end.line, 1);
+        assert_eq!(edit.range.end.character, 0);
         assert_eq!(edit.new_text, formatted);
     }
 
@@ -513,8 +599,8 @@ mod tests {
     fn full_document_edit_covers_last_line_of_multi_line_document() {
         let original = "line_one()\nline_two()\n";
         let edit = full_document_edit(original, original.to_string());
-        assert_eq!(edit.range.end.line, 1);
-        assert_eq!(edit.range.end.character, "line_two()".len() as u32);
+        assert_eq!(edit.range.end.line, 2);
+        assert_eq!(edit.range.end.character, 0);
     }
 
     #[test]
@@ -527,7 +613,7 @@ mod tests {
 
     #[test]
     fn full_document_edit_counts_utf16_units() {
-        let original = "message(cafe)\nmessage(\"é\")\n";
+        let original = "message(cafe)\nmessage(\"é\")";
         let edit = full_document_edit(original, original.to_string());
         assert_eq!(edit.range.end.line, 1);
         assert_eq!(
@@ -584,7 +670,7 @@ mod tests {
         assert!(edits[0].new_text.contains("message(b)"));
         // Edit covers only the requested range
         assert_eq!(edits[0].range.start.line, 1);
-        assert_eq!(edits[0].range.end.line, 1);
+        assert_eq!(edits[0].range.end.line, 2);
     }
 
     #[test]
@@ -614,7 +700,7 @@ mod tests {
     #[test]
     fn handle_range_formatting_counts_utf16_units() {
         let uri = "file:///test.cmake";
-        let text = "message(a)\nMESSAGE(\"é\")\n";
+        let text = "message(a)\nMESSAGE(\"é\")";
         let resp = handle_range_formatting(
             range_formatting_request(uri, 1, 1),
             &docs(uri, text),
