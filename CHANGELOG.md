@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.3.0 — 2026-10-24
+
 ### Added
 
 - Add `format.separate_fn_name_with_space` for spaces before parentheses in
