@@ -55,7 +55,15 @@ cmakefmt config dump > .cmakefmt.yaml
 ```
 
 YAML is the recommended format. Open the file and adjust options like
-`format.line_width` and `style.command_case` to match your project's style.
+`format.line_width` and `format.command_case` to match your project's style:
+
+<!-- docs-check -->
+
+```yaml
+format:
+  line_width: 100
+  command_case: lower
+```
 
 <div class="not-content alert alert-info alert-outline" style="margin: 1.25rem 0;">
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-5 w-5 shrink-0 stroke-current">

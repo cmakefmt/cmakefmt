@@ -28,7 +28,7 @@ bindings.
 
 ## API
 
-The WASM module exports a single function:
+The WASM module exports two formatter helpers, alongside initialization functions:
 
 ### `format(source: string, config_yaml: string): string`
 
@@ -43,6 +43,11 @@ Formats a CMake source string using the given YAML config.
 **Returns:** the formatted source code as a string.
 
 **Throws:** if parsing fails or the config is invalid.
+
+### `default_config_yaml(): string`
+
+Returns the default YAML config template, matching `cmakefmt config dump`.
+Pass it directly to `format()` or use it to initialize a config editor.
 
 ## Usage in the browser
 
@@ -62,12 +67,22 @@ Formats a CMake source string using the given YAML config.
 
 ## Usage in Node.js
 
+The same `--target web` package works in Node.js when imported as an ES module.
+Save this example as `format.mjs` next to `pkg/`, then run `node format.mjs`.
+Read the WASM bytes from disk and pass them to `init()` before formatting:
+
+<!-- docs-check -->
+
 ```javascript
-const { format } = require('./pkg/cmakefmt.js');
+import { readFileSync } from 'node:fs';
+import init, { format, default_config_yaml } from './pkg/cmakefmt.js';
+
+const bytes = readFileSync(new URL('./pkg/cmakefmt_bg.wasm', import.meta.url));
+await init({ module_or_path: bytes });
 
 const formatted = format(
   'SET(FOO bar baz)',
-  ''  // use defaults
+  default_config_yaml()
 );
 console.log(formatted);
 // → set(FOO bar baz)

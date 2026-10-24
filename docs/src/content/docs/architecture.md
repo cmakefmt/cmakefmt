@@ -136,7 +136,7 @@ The `Config` struct holds all formatting options: `line_width`, `tab_size`,
 discovery up the directory tree (and a home-directory fallback).
 
 Per-command overrides allow different settings for specific commands via the
-`per_command:` config section, resolved at format time by
+`per_command_overrides:` config section, resolved at format time by
 `config.for_command()`.
 
 Key files:

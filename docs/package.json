@@ -8,6 +8,7 @@
     "dev": "python3 ../scripts/sync-changelog.py && astro dev",
     "start": "python3 ../scripts/sync-changelog.py && astro dev",
     "build": "astro build",
+    "postbuild": "python3 ../scripts/check-doc-links.py dist",
     "preview": "astro preview",
     "astro": "astro",
     "clean": "rm -rf node_modules .astro dist"

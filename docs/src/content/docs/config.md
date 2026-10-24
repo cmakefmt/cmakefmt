@@ -120,7 +120,7 @@ cmakefmt config dump --format toml > .cmakefmt.toml
     - [`layout`](#layout)
   - [Discriminated commands](#discriminated-commands)
   - [A larger example](#a-larger-example)
-- [Old Draft Key Names](#old-draft-key-names)
+- [Legacy Config Names](#legacy-config-names)
 - [Related Reading](#related-reading)
 
 ## Defaults

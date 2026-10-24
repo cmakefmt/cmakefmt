@@ -99,10 +99,10 @@ Ignore rules only affect:
 | `cmakefmt lsp` | Start the LSP server (JSON-RPC on stdio). |
 | `cmakefmt completions <SHELL>` | Print shell completions for bash, zsh, or fish. |
 | `cmakefmt install-hook` | Install a git pre-commit hook that runs `cmakefmt --check --staged`. |
-| `cmakefmt config dump [FORMAT]` | Print a starter config template. Defaults to YAML; pass `toml` for TOML. |
+| `cmakefmt config dump [--format yaml\|toml]` | Print a starter config template. Defaults to YAML. |
 | `cmakefmt config schema` | Print the JSON Schema for the config file. |
 | `cmakefmt config check [PATH]` | Validate a config file without formatting. |
-| `cmakefmt config show [FORMAT]` | Print the effective config for a target. |
+| `cmakefmt config show [--format yaml\|toml] [PATH]` | Print the effective config for a target. |
 | `cmakefmt config path` | Print the selected config file path for a target. |
 | `cmakefmt config explain` | Explain config resolution for a target or the current directory. |
 | `cmakefmt config convert <PATH>...` | Convert legacy cmake-format config files. |
@@ -400,9 +400,11 @@ Typical output:
 
 ### Inspect The Effective Config
 
+<!-- docs-check -->
+
 ```bash
 cmakefmt config show src/CMakeLists.txt
-cmakefmt config show toml src/CMakeLists.txt
+cmakefmt config show --format toml src/CMakeLists.txt
 ```
 
 Prints the fully resolved config after discovery plus any CLI overrides.
@@ -423,15 +425,19 @@ Typical output includes:
 
 ### Generate A Starter Config
 
+<!-- docs-check -->
+
 ```bash
 cmakefmt config init
 ```
 
 Or dump the full template to stdout:
 
+<!-- docs-check -->
+
 ```bash
 cmakefmt config dump > .cmakefmt.yaml
-cmakefmt config dump toml > .cmakefmt.toml
+cmakefmt config dump --format toml > .cmakefmt.toml
 ```
 
 YAML is the default because it is easier to maintain once you start defining

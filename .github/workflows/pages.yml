@@ -76,6 +76,12 @@ jobs:
         working-directory: docs
         run: npm run build
 
+      - name: Build CLI for documentation examples
+        run: cargo build --locked
+
+      - name: Validate runnable documentation examples
+        run: python3 scripts/check-doc-examples.py --binary target/debug/cmakefmt
+
       - name: Upload site artifact
         if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

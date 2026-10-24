@@ -376,7 +376,7 @@ target_link_libraries(
 
 ## I want to override settings for one command
 
-**Section:** [`per_command_overrides`](/config/#per_command_overrides)
+**Section:** [`per_command_overrides`](/config/#per-command-overrides)
 
 Sometimes a single command looks better with different settings — for
 example, `message()` strings are often long and read better with a wider

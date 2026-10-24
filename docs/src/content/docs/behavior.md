@@ -461,7 +461,7 @@ width, enable `markup.enable_markup: true`.
 
 **Config key names.** Several config keys were renamed for clarity. Any key
 `cmakefmt` does not recognise will produce a fast-fail error, not a silent
-no-op. The full renaming table is in [Config Reference](config.md#old-draft-key-names).
+no-op. The full renaming table is in [Config Reference](/config/#legacy-config-names).
 
 When comparing outputs during migration, judge by readability, stability,
 semantic preservation, and ease of automation — not solely by whether every
