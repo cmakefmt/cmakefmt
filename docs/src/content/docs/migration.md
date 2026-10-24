@@ -84,9 +84,11 @@ If you previously converted a config using `separate_fn_name_with_space`,
 convert it again to restore spacing on ordinary calls. Earlier conversions
 incorrectly mapped this setting to definition spacing only.
 
-`space_before_definition_paren` is no longer accepted. Replace it with
-`separate_ctrl_name_with_space` to configure spacing on definitions and other
-structural commands.
+`space_before_definition_paren` remains accepted as a deprecated fallback for
+`separate_ctrl_name_with_space`. An explicit control setting takes precedence,
+including the released `space_before_control_paren` alias. Replace old keys
+with `separate_ctrl_name_with_space` to configure spacing on definitions and
+other structural commands together.
 
 ## Key Differences
 

@@ -1141,11 +1141,18 @@ the following names have changed:
 | `use_tabchars` | `use_tabs` |
 | `max_pargs_hwrap` | `max_hanging_wrap_positional_args` |
 | `max_subgroups_hwrap` | `max_hanging_wrap_groups` |
-| `space_before_definition_paren` | `separate_ctrl_name_with_space` (also affects other structural commands) |
 
 The released `space_before_control_paren` key remains accepted as an input
 alias for `separate_ctrl_name_with_space`. Config dumps and templates use the
 canonical name.
+
+The released `space_before_definition_paren` key is also accepted as a
+deprecated fallback for `separate_ctrl_name_with_space`. It applies only when
+neither `separate_ctrl_name_with_space` nor `space_before_control_paren` is
+present. An explicit control setting wins, including `false`, so configs with
+both old keys still load. This fallback affects all structural commands;
+definition spacing is no longer independently configurable. Config dumps use
+only the canonical names.
 
 For legacy cmake-format configs, use `cmakefmt config convert` to map the two
 spacing controls automatically. Earlier cmakefmt versions incorrectly used

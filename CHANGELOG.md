@@ -69,14 +69,20 @@ This project follows a simple changelog discipline:
   `separate_ctrl_name_with_space` controls structural commands, including
   function/macro definitions. The YAML/TOML names are
   `separate_fn_name_with_space` and `separate_ctrl_name_with_space`.
-  The old `space_before_definition_paren` config key is no longer accepted;
-  use `separate_ctrl_name_with_space` for definition spacing.
+  The released `space_before_definition_paren` config key remains accepted
+  as a deprecated fallback for `separate_ctrl_name_with_space`. An explicit
+  `separate_ctrl_name_with_space` (or `space_before_control_paren`) takes
+  precedence, so existing configs containing both old keys still load.
+  `config convert` uses the same precedence.
+  Definition spacing now follows the same setting as other structural commands.
 
-- Rust API: `Config`, `PerCommandConfig`, and `LayoutOverrides` have a new
+- Rust API: `Config` and `PerCommandConfig` have a new
   `wrap_after_first_arg_align` field. Callers using exhaustive struct literals
   must add it or use `..Default::default()`. Use
   `WrapAfterFirstArgAlign::UnderFirstArg` for `Config` (the existing layout)
-  and `None` for the optional override fields to preserve existing behavior.
+  and `None` for `PerCommandConfig` to preserve existing behavior.
+  `LayoutOverrides` also gains the optional field, but is already
+  non-exhaustive and does not require downstream struct-literal updates.
 
 ## 2.2.0 — 2026-10-13
 

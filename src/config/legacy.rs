@@ -941,9 +941,13 @@ fn merge_format_section(converted: &mut ConvertedConfig, path: &Path, value: &Le
                 converted.format.separate_ctrl_name_with_space = as_bool(value)
             }
             "space_before_definition_paren" => {
-                converted.format.separate_ctrl_name_with_space = as_bool(value);
+                if !table.contains_key("separate_ctrl_name_with_space")
+                    && !table.contains_key("space_before_control_paren")
+                {
+                    converted.format.separate_ctrl_name_with_space = as_bool(value);
+                }
                 converted.notes.push(format!(
-                    "{}: space_before_definition_paren is now separate_ctrl_name_with_space; this also affects other structural commands",
+                    "{}: space_before_definition_paren is a fallback for separate_ctrl_name_with_space; this also affects other structural commands, and an explicit control setting takes precedence",
                     path.display()
                 ));
             }
