@@ -43,7 +43,7 @@ python3 scripts/check-doc-examples.py --binary target/debug/cmakefmt
 
 Run these commands from the repository root. The WASM build requires `wasm-pack`
 and the `wasm32-unknown-unknown` Rust target; the example checks require Python 3.9+
-and Node.js 22+. Each runnable example executes in a temporary directory with a
+and Node.js 24+. Each runnable example executes in a temporary directory with a
 sample `src/CMakeLists.txt`. Add `<!-- docs-check -->` immediately before a
 `bash`, `yaml`, `toml`, or `javascript` fenced block to opt it in. Only mark
 shell examples that need no network access, installed packages, or real Git repo.

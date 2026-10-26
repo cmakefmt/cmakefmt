@@ -37,7 +37,7 @@ Then from the repo root:
 mise install
 ```
 
-This installs Rust (stable), Node 22, Python 3.12, `cargo-audit`,
+This installs Rust (stable), Node 24, Python 3.12, `cargo-audit`,
 `cargo-deny`, `cargo-llvm-cov`, `wasm-pack`, `pre-commit`, `reuse`, and
 `bump-my-version` — and automatically installs the pre-commit and pre-push
 hooks as a post-install step.
