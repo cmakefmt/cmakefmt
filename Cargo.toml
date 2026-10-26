@@ -92,7 +92,7 @@ rmp-serde = "1"
 
 [dev-dependencies]
 insta = "1"
-codspeed-criterion-compat = { version = "5.0", features = ["html_reports"] }
+codspeed-criterion-compat = { version = "6.0", features = ["html_reports"] }
 tempfile = "3"
 pest = "2"
 pest_derive = "2"
