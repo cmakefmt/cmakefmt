@@ -15,6 +15,88 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn target_sources_grouped_hanging_wrap_issue_244() {
+    let source = "target_sources (\n    StateLoader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.cpp\n                          ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.hpp\n)\n";
+    let config = Config {
+        line_width: 100,
+        tab_size: 4,
+        max_pargs_hwrap: 20,
+        max_subgroups_hwrap: 3,
+        dangle_parens: true,
+        separate_ctrl_name_with_space: true,
+        separate_fn_name_with_space: true,
+        enable_markup: false,
+        ..Config::default()
+    };
+    let formatted = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r"
+    target_sources (
+        StateLoader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.hpp
+    )
+    ");
+    assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+
+    assert_eq!(Config::default().max_subgroups_hwrap, 0);
+    let defaults = Config::from_yaml_str(
+        "format:\n  line_width: 100\n  tab_size: 4\n  dangle_parens: true\n  separate_fn_name_with_space: true\n",
+    ).unwrap();
+    assert_eq!(defaults.max_subgroups_hwrap, 0);
+    let vertical = format_source(source, &defaults).unwrap();
+    insta::assert_snapshot!(vertical, @r"
+    target_sources (
+        StateLoader
+        INTERFACE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.hpp
+    )
+    ");
+    assert_eq!(format_source(&vertical, &defaults).unwrap(), vertical);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &vertical));
+
+    for limit in [0, 1, 2, 3] {
+        let mut limited = config.clone();
+        limited.max_subgroups_hwrap = limit;
+        let output = format_source(source, &limited).unwrap();
+        assert_eq!(output == formatted, limit >= 2);
+        assert_eq!(format_source(&output, &limited).unwrap(), output);
+        assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    }
+
+    let mut overridden = config.clone();
+    overridden.max_subgroups_hwrap = 0;
+    overridden.per_command_overrides.insert(
+        "target_sources".into(),
+        PerCommandConfig {
+            max_subgroups_hwrap: Some(2),
+            ..PerCommandConfig::default()
+        },
+    );
+    assert_eq!(format_source(source, &overridden).unwrap(), formatted);
+
+    overridden
+        .per_command_overrides
+        .get_mut("target_sources")
+        .unwrap()
+        .max_subgroups_hwrap = Some(0);
+    assert_ne!(format_source(source, &overridden).unwrap(), formatted);
+
+    let mut always_vertical = config.clone();
+    always_vertical.always_wrap = vec!["target_sources".into()];
+    let mut fewer_arguments = config.clone();
+    fewer_arguments.max_pargs_hwrap = 1;
+    let mut fewer_rows = config.clone();
+    fewer_rows.max_lines_hwrap = 1;
+    for limited in [always_vertical, fewer_arguments, fewer_rows] {
+        let output = format_source(source, &limited).unwrap();
+        assert!(!output.contains("StateLoader INTERFACE"));
+        assert_eq!(format_source(&output, &limited).unwrap(), output);
+        assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    }
+}
+
+#[test]
 fn target_sources_file_sets_have_nested_lists() {
     let source = "target_sources(\n    my_lib\n    INTERFACE\n    FILE_SET\n        HEADERS\n        BASE_DIRS\n            dir1\n            dir2\n        FILES\n            file1\n            file2\n)\n";
     let config = Config {
@@ -222,20 +304,25 @@ fn max_rows_cmdline_one_forces_vertical() {
 
 #[test]
 fn max_subgroups_hwrap_zero_forces_vertical() {
-    // With a narrow line width the command doesn't fit inline.
-    // max_subgroups_hwrap=0 is honoured as a threshold that forces vertical
-    // when the hanging path is already unavailable for multi-section commands.
-    let src = "target_link_libraries(mylib PUBLIC dep1 dep2 dep3 PRIVATE helper1 helper2)\n";
+    // Both layouts wrap the command, but only the grouped layout keeps the
+    // target and PUBLIC on the same line.
+    let src = "target_link_libraries(mylib PUBLIC foo bar baz qux quux)\n";
     let config = Config {
         max_subgroups_hwrap: 0,
         line_width: 40,
         ..Config::default()
     };
     let formatted = format_source(src, &config).unwrap();
-    assert!(
-        formatted.lines().count() > 1,
-        "expected multiline output, got:\n{formatted}"
-    );
+    assert!(formatted.contains("\n  mylib\n  PUBLIC"));
+    let grouped = format_source(
+        src,
+        &Config {
+            max_subgroups_hwrap: 2,
+            ..config
+        },
+    )
+    .unwrap();
+    assert!(grouped.contains("\n  mylib PUBLIC"));
 }
 
 #[test]

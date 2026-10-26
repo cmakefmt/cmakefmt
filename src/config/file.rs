@@ -69,7 +69,7 @@ struct FormatSection {
     max_hanging_wrap_lines: Option<usize>,
     /// Maximum positional arguments to keep in a hanging-wrap layout. Default: `6`.
     max_hanging_wrap_positional_args: Option<usize>,
-    /// Maximum keyword/flag subgroups to keep in a hanging-wrap layout. Default: `2`.
+    /// Maximum argument subgroups to keep together in a hanging-wrap layout. Default: `0` (vertical).
     max_hanging_wrap_groups: Option<usize>,
     /// Maximum rows a hanging-wrap positional group may consume before nesting is forced. Default: `2`.
     max_rows_cmdline: Option<usize>,

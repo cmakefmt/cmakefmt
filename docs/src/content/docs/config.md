@@ -136,7 +136,7 @@ format:
   max_empty_lines: 1
   max_hanging_wrap_lines: 2
   max_hanging_wrap_positional_args: 6
-  max_hanging_wrap_groups: 2
+  max_hanging_wrap_groups: 0
   max_rows_cmdline: 2
   always_wrap: []
   require_valid_layout: false
@@ -301,14 +301,18 @@ remain attached. Short calls can still stay inline unless wrapping is forced.
 
 ### `max_hanging_wrap_groups`
 
-Maximum number of keyword/flag subgroups to keep in a hanging-wrap layout.
+Maximum number of argument subgroups (positional or keyword/flag groups) to
+keep together in a hanging-wrap layout. Defaults to `0`, preserving the
+vertical layout of wrapped grouped calls. Short calls that fit on one line remain inline.
 
 ```yaml
 format:
   max_hanging_wrap_groups: 2
 ```
 
-Lower this to format keyword-heavy commands with vertical layout more readily.
+Set this to `2` or higher to enable compact layouts for simple grouped calls.
+Set it to `0`, globally or in `per_command_overrides`, to restore the previous
+vertical layout if your existing config explicitly enables grouped wrapping.
 
 ### `max_rows_cmdline`
 

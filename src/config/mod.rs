@@ -272,7 +272,7 @@ pub enum ArgumentCommentStyle {
 /// | `max_empty_lines` | `1` |
 /// | `max_lines_hwrap` | `2` |
 /// | `max_pargs_hwrap` | `6` |
-/// | `max_subgroups_hwrap` | `2` |
+/// | `max_subgroups_hwrap` | `0` |
 /// | `max_rows_cmdline` | `2` |
 /// | `command_case` | [`CaseStyle::Lower`] |
 /// | `keyword_case` | [`CaseStyle::Upper`] |
@@ -315,7 +315,8 @@ pub struct Config {
     /// Maximum number of positional arguments to keep in a hanging-wrap layout
     /// before going vertical.
     pub max_pargs_hwrap: usize,
-    /// Maximum number of keyword/flag subgroups to keep in a horizontal wrap.
+    /// Maximum number of argument subgroups to keep together in a horizontal wrap.
+    /// Defaults to `0` to preserve vertical layouts for wrapped grouped calls.
     pub max_subgroups_hwrap: usize,
     /// Maximum rows a hanging-wrap positional group may consume before the
     /// layout is rejected and nesting is forced.
@@ -462,7 +463,7 @@ impl Default for Config {
             max_empty_lines: 1,
             max_lines_hwrap: 2,
             max_pargs_hwrap: 6,
-            max_subgroups_hwrap: 2,
+            max_subgroups_hwrap: 0,
             max_rows_cmdline: 2,
             always_wrap: Vec::new(),
             require_valid_layout: false,

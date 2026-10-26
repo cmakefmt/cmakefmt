@@ -117,7 +117,7 @@
           "default": null
         },
         "max_hanging_wrap_groups": {
-          "description": "Maximum keyword/flag subgroups to keep in a hanging-wrap layout. Default: `2`.",
+          "description": "Maximum argument subgroups to keep together in a hanging-wrap layout. Default: `0` (vertical).",
           "type": [
             "integer",
             "null"

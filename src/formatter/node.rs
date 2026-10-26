@@ -190,6 +190,15 @@ pub(crate) fn format_command(
             cmd_config.max_pargs_hwrap()
         ));
         hanging
+    } else if let Some(grouped) = (!wrap_after_first_arg)
+        .then(|| try_format_grouped(command, &sections, form, &cmd_config, block_depth))
+        .flatten()
+    {
+        debug.log(format!(
+            "formatter: command {} layout=grouped-hanging-wrap",
+            command.name
+        ));
+        grouped
     } else {
         debug.log(format!(
             "formatter: command {} layout=vertical thresholds(line_width={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={}, max_hanging_wrap_groups={})",
@@ -605,6 +614,92 @@ fn try_format_hanging(
         format_name(command, cmd_config).len(),
         cmd_config,
     ))
+}
+
+/// Pack simple argument sections into an indented command body, keeping each
+/// keyword's wrapped values aligned under its first value. Structural groups
+/// and comments retain the dedicated vertical writers below.
+fn try_format_grouped(
+    command: &CommandInvocation,
+    sections: &[Section<'_>],
+    form: &CommandForm,
+    cmd_config: &CommandConfig<'_>,
+    block_depth: usize,
+) -> Option<String> {
+    if sections.len() < 2
+        || sections.len() > cmd_config.max_subgroups_hwrap()
+        || sections.iter().any(|section| {
+            section.arguments.len() > cmd_config.max_pargs_hwrap()
+                || section
+                    .arguments
+                    .iter()
+                    .any(|arg| arg.is_comment() || argument_has_newline(arg))
+                || section.header.is_some_and(|header| {
+                    lookup_kwarg(form, header)
+                        .is_some_and(|spec| !spec.kwargs.is_empty() || !spec.flags.is_empty())
+                })
+        })
+    {
+        return None;
+    }
+
+    let base_indent = cmd_config.indent_str().repeat(block_depth);
+    let indent = format!("{base_indent}{}", cmd_config.indent_str());
+    let name = format_name(command, cmd_config);
+    let mut lines = vec![format!("{base_indent}{name}("), indent.clone()];
+    let mut width = indent.chars().count();
+    for section in sections {
+        let start_line = lines.len();
+        if let Some(header) = section.header {
+            if width > indent.chars().count() {
+                lines.last_mut()?.push(' ');
+                width += 1;
+            }
+            let header = apply_case(cmd_config.keyword_case(), header);
+            lines.last_mut()?.push_str(&header);
+            width += header.chars().count();
+        }
+        let continuation_width = if section.header.is_some() {
+            width + 1
+        } else {
+            width
+        };
+        let continuation = " ".repeat(continuation_width);
+        for (index, argument) in section.arguments.iter().enumerate() {
+            let needs_space = section.header.is_some() || index > 0;
+            let token = argument.as_str();
+            let candidate_width = width + usize::from(needs_space) + token.chars().count();
+            if candidate_width <= cmd_config.line_width() {
+                if needs_space {
+                    lines.last_mut()?.push(' ');
+                }
+                lines.last_mut()?.push_str(token);
+                width = candidate_width;
+            } else {
+                // A keyword must retain at least its first value. If that
+                // pair cannot fit here, let the vertical layout separate groups.
+                if index == 0
+                    || continuation_width + token.chars().count() > cmd_config.line_width()
+                {
+                    return None;
+                }
+                lines.push(format!("{continuation}{token}"));
+                width = continuation_width + token.chars().count();
+            }
+        }
+        let rows = lines.len() - start_line + 1;
+        if rows > cmd_config.global().max_lines_hwrap
+            || (section.header.is_none() && rows > cmd_config.global().max_rows_cmdline)
+            || width > cmd_config.line_width()
+        {
+            return None;
+        }
+    }
+    let output = close_multiline(lines, &base_indent, name.len(), cmd_config);
+    output
+        .lines()
+        .all(|line| line.chars().count() <= cmd_config.line_width())
+        .then_some(output)
 }
 
 fn format_command_vertical(

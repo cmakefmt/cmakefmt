@@ -16,6 +16,20 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- Honor `max_hanging_wrap_groups` when formatting simple argument groups.
+  Wrapped calls can keep positional arguments and keyword groups together,
+  with continued keyword values aligned under the first value, matching
+  cmake-format for the reported `target_sources` layout (#244).
+
+### Changed
+
+- Default `max_hanging_wrap_groups` to `0` to preserve previous vertical
+  formatting for users relying on defaults. Existing configs explicitly setting
+  this option to `2` or higher can now produce compact grouped layouts; set it
+  to `0` globally or per command to retain the previous layout.
+
 ## 2.3.0 — 2026-10-24
 
 ### Added
