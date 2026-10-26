@@ -32,6 +32,11 @@ npm run build
 
 ## Documentation Checks
 
+`bash scripts/check-docs.sh` checks required pages, compares released changelog
+entries, and builds the site when dependencies are installed. It does not
+rewrite the generated changelog; `Unreleased` notes may differ until the release
+workflow stamps and synchronizes them.
+
 `npm run build` checks internal links and fragment anchors in the rendered site.
 The Pages workflow also runs CLI, config, and Node.js WASM examples:
 

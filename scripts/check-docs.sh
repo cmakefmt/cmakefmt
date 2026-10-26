@@ -72,15 +72,28 @@ grep -q "https://cmakefmt.dev" README.md || {
   exit 1
 }
 
-# Verify the docs changelog is in sync with the root CHANGELOG.md.
-python3 scripts/sync-changelog.py
-if ! git diff --quiet docs/src/content/docs/changelog.md 2>/dev/null; then
-  echo "docs changelog is out of sync — run: python3 scripts/sync-changelog.py" >&2
-  exit 1
-fi
+# The release workflow owns changelog generation. Check published entries
+# without changing files; working Unreleased notes may differ until release.
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+def released_entries(path):
+    text = Path(path).read_text()
+    first_release = re.search(r"^## \d+\.\d+\.\d+\b", text, re.MULTILINE)
+    if first_release is None:
+        raise SystemExit(f"no released changelog entries in {path}")
+    return text[first_release.start():].split("\n## Release Process", 1)[0].strip()
+
+if released_entries("CHANGELOG.md") != released_entries("docs/src/content/docs/changelog.md"):
+    raise SystemExit("published docs changelog entries differ from CHANGELOG.md")
+PY
 
 if command -v npm >/dev/null 2>&1 && [[ -d docs/node_modules ]]; then
-  (cd docs && npm run build >/dev/null)
+  # Run the build and link check directly: npm's prebuild hook synchronizes
+  # the changelog, which is intentionally left to the release workflow.
+  (cd docs && npm exec -- astro build >/dev/null)
+  python3 scripts/check-doc-links.py docs/dist
 fi
 
 echo "docs checks passed"

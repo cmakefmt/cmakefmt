@@ -10,6 +10,16 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Correct LSP formatting edit boundaries for files with trailing newlines,
+  CRLF line endings, and UTF-16 character positions, including range formatting.
+- Return LSP error responses for failed formatting requests, timeouts, missing
+  documents, and invalid project configurations instead of leaving requests
+  unanswered or silently falling back to defaults.
+- Honor project-defined command specifications in LSP formatting, using the
+  same config files and override order as the CLI.
+- Keep documentation checks read-only during release preparation, allowing
+  `Unreleased` notes to change before the release workflow generates the docs
+  changelog.
 - Honor `max_hanging_wrap_groups` when formatting simple argument groups.
   Wrapped calls can keep positional arguments and keyword groups together,
   with continued keyword values aligned under the first value, matching
@@ -17,6 +27,13 @@ This project follows a simple changelog discipline:
 
 ### Changed
 
+- Update Rust and documentation dependencies and pinned GitHub Actions,
+  including `serde-saphyr` 2 and CodSpeed benchmark support 6. Preserve the
+  existing non-finite float handling when importing legacy YAML configs.
+- Use Node 24 for Pages and the development environment to satisfy Astro's
+  updated runtime requirement.
+- Validate runnable documentation examples and internal links in Pages CI,
+  and fail cross-platform output capture when the formatter reports an error.
 - Default `max_hanging_wrap_groups` to `0` to preserve previous vertical
   formatting for users relying on defaults. Existing configs explicitly setting
   this option to `2` or higher can now produce compact grouped layouts; set it
