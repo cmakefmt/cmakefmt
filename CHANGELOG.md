@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.3.1 — 2026-10-26
+
 ### Fixed
 
 - Correct LSP formatting edit boundaries for files with trailing newlines,
