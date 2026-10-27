@@ -44,7 +44,12 @@ about the output when you run it across a real codebase.
 
 1. keep a call on one line when it fits
 2. use a hanging-wrap layout when that stays readable
-3. fall back to a more vertical layout when width and grouping thresholds are exceeded
+3. try a compact grouped layout when `max_hanging_wrap_groups` allows it
+4. fall back to a vertical layout when width and grouping thresholds are exceeded
+
+`always_wrap` selects a vertical layout directly. A vertical layout can still
+pack short argument lists on one line. See the [alignment options](/config/#wrap_after_first_arg_align)
+for how command-body indentation and keyword-value continuations combine.
 
 ### Compact Layout
 
@@ -233,8 +238,8 @@ set(FOO)
 
 ### Lists that wrap
 
-The variable name stays attached. Remaining items are aligned to the
-open parenthesis:
+The variable name stays attached. By default, remaining items align just
+past the opening parenthesis:
 
 ```cmake
 set(HEADERS
@@ -294,7 +299,11 @@ set(
   value_two)
 ```
 
-See [`wrap_after_first_arg`](/config/#wrap_after_first_arg) in the
+To keep the variable name attached but indent remaining arguments by one
+normal indentation level, set `format.wrap_after_first_arg_align: default-indent`.
+
+See [`wrap_after_first_arg`](/config/#wrap_after_first_arg) and
+[`wrap_after_first_arg_align`](/config/#wrap_after_first_arg_align) in the
 config reference for the full option documentation.
 
 ## Trailing Comments
@@ -398,6 +407,18 @@ set(FOO bar) # this trailing comment is deliberately long enough to exceed the d
 
 To disable comment reflow entirely, set `markup.enable_markup: false`.
 
+## Opting Files In Gradually
+
+Use `cmakefmt --require-pragma --check .` to process only files containing an
+opt-in marker:
+
+```cmake
+# cmakefmt: enable
+```
+
+`# fmt: enable` and `# cmake-format: enable` are also accepted. Files without
+an opt-in marker are skipped. Disabled regions still apply within opted-in files.
+
 ## Range Formatting
 
 `--lines START:END` formats only selected line ranges. This is mainly for
@@ -455,9 +476,10 @@ deliberately. `cmake-format` without a matching spec entry would often treat
 the same tokens as undifferentiated positional arguments and produce a flatter
 layout.
 
-**Comment reflow.** By default, `cmakefmt` preserves comments without
-modification. If you want comments reflowed to fit within the configured line
-width, enable `markup.enable_markup: true`.
+**Comment reflow.** `markup.enable_markup` is `true` by default, so eligible
+comments are reflowed to fit the configured line width. The first comment block
+is preserved literally by default (`markup.first_comment_is_literal: true`).
+Set `markup.enable_markup: false` to disable markup processing and reflow.
 
 **Config key names.** Several config keys were renamed for clarity. Any key
 `cmakefmt` does not recognise will produce a fast-fail error, not a silent

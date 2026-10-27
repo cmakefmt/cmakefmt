@@ -12,8 +12,8 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 ## How is `cmakefmt` different from cmake-format?
 
 cmakefmt is a from-scratch rewrite in Rust. It is faster (10–100x on large
-codebases), actively maintained, and supports the same config format with
-full conversion via `cmakefmt config convert`. It also includes an LSP server,
+codebases), actively maintained, and uses YAML or TOML configuration, with legacy YAML, JSON, or Python
+configuration converted via `cmakefmt config convert`. It also includes an LSP server,
 JSON Schema for config autocomplete, and a browser playground.
 
 ## How is `cmakefmt` different from gersemi?
@@ -38,8 +38,11 @@ per-command overrides).
 
 ## Does `cmakefmt` change the semantics of my CMake files?
 
-No. `cmakefmt` only changes whitespace, indentation, casing, and comment
-layout. It never modifies command names, arguments, or logic.
+Formatting is intended to preserve CMake semantics while changing whitespace,
+casing, and comment layout. Optional sorting can reorder arguments in sections
+classified as sortable by command specs or the autosort heuristic. `--verify`
+checks parsed semantic equivalence and is enabled by default for in-place
+rewrites. See [Formatter Behavior](/behavior/) for details.
 
 ## How do I disable formatting for a section?
 

@@ -33,7 +33,7 @@ Additional compile-time targets:
 | Module | Path | Feature gate | Purpose |
 |---|---|---|---|
 | LSP Server | `src/lsp/` | `lsp` | JSON-RPC formatting server for editors |
-| WASM | `src/wasm.rs` | `wasm32` target | Browser playground entry points |
+| WASM | `src/wasm.rs` | `wasm32` target + `browser-wasm` | Browser playground entry points |
 
 Each module has a clean boundary. The parser knows nothing about formatting, the
 spec registry knows nothing about config, and the formatter consumes all three.
@@ -108,20 +108,26 @@ before formatting.
 line-by-line, detecting barrier regions (`# cmakefmt: off/on`, `# fmt: off/on`,
 `# cmake-format: off/on`, and fence barriers `# ~~~`). Lines inside a barrier
 region are emitted verbatim. Lines outside barrier regions are collected and
-parsed as chunks, then formatted.
+parsed as chunks, then formatted. `format_parsed_file()` bypasses this source
+scan and does not honor barrier directives; use a source-string entry point
+when disabled regions must be preserved.
 
 ### Command formatting
 
 `format_command()` in `node.rs` handles individual command invocations. It
 splits arguments into sections using the command's `CommandForm`, then tries
-three layouts in order:
+four layouts in order (unless `always_wrap` selects vertical directly):
 
 1. **Inline** -- everything on a single line.
 2. **Hanging** -- continuation lines aligned to the opening parenthesis.
-3. **Vertical** -- one argument (or keyword group) per line.
+3. **Grouped** -- pack simple sections into the body, aligning wrapped
+   keyword values under their first value; enabled by `max_hanging_wrap_groups`.
+4. **Vertical** -- lay out positional and keyword sections on separate lines,
+   packing values or placing them on individual lines according to thresholds.
 
-The first layout that fits within `line_width` wins. This gives stable,
-predictable wrapping without ad-hoc heuristics.
+Layout selection considers `line_width`, argument and row thresholds, comments,
+command specs, and layout hints. `wrap_after_first_arg` can retain the first
+positional argument on the command line within the vertical layout.
 
 Wrapped `target_sources(FILE_SET ...)` calls render each file-set subkeyword
 on its own nested line using the built-in spec. Other keyword sections retain
@@ -182,8 +188,9 @@ embedding API.
 
 ## LSP Server (`src/lsp/`)
 
-The LSP server is a thin wrapper around `format_source()` that speaks JSON-RPC
-on stdio. It is compiled only when the `lsp` feature is enabled.
+The LSP server resolves formatting options and command specs for each document
+and calls `format_source_with_registry()`. It speaks JSON-RPC on stdio and is
+compiled only when the `lsp` feature is enabled.
 
 It handles:
 
@@ -198,7 +205,7 @@ connection lifecycle. A 10-second timeout protects against pathological inputs.
 ## WASM (`src/wasm.rs`)
 
 Entry points for the browser playground, compiled only for `wasm32` targets
-via `wasm-bindgen`:
+with the `browser-wasm` feature via `wasm-bindgen`:
 
 - **`format()`** -- format source with a YAML config string (same schema as
   `.cmakefmt.yaml`).

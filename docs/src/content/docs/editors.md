@@ -21,8 +21,9 @@ Install `cmakefmt` once, then drop the config snippet for your editor below.
 
 ## dprint
 
-Starting with the next cmakefmt release, reference `dprint-cmakefmt.wasm`
-from `dprint.json`, replacing `<version>` with that release's version:
+The official dprint plugin is available starting with cmakefmt 2.0.0.
+Reference `dprint-cmakefmt.wasm` from `dprint.json`, replacing `<version>`
+with the release version you want to pin:
 
 ```json
 {
@@ -65,7 +66,7 @@ default to `false`.
 The plugin uses `dprint.json` configuration; it does not discover
 `.cmakefmt.yaml` or `.editorconfig` files. Range formatting is not supported.
 
-To try it before the next release, run
+To build the plugin from source, run
 `bash scripts/build-dprint-plugin.sh` from a source checkout and use
 `"./dist/dprint-cmakefmt.wasm"` as the plugin path.
 

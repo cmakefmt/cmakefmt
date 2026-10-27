@@ -27,10 +27,21 @@ order — higher layers win over lower ones:
 2. **Explicit `--config-file <PATH>` files**, if provided — later files override earlier ones
 3. **The nearest `.cmakefmt.yaml`, `.cmakefmt.yml`, or `.cmakefmt.toml`** found by walking upward from the target file
 4. **`~/.cmakefmt.yaml`, `~/.cmakefmt.yml`, or `~/.cmakefmt.toml`** — home-directory fallback
-5. **Built-in defaults**
+5. **`.editorconfig` fallback**, only when no cmakefmt config file was found
+6. **Built-in defaults**
+
+Explicit `--config-file` entries replace automatic discovery; they are not
+layered over discovered files. Automatic discovery uses only the nearest
+supported config file, stopping at the Git repository root (or filesystem root).
+The home config is a fallback, not a base merged into a project config.
 
 If multiple supported config filenames exist in the same directory, YAML is
 preferred over TOML.
+
+The CLI's `.editorconfig` fallback supports `indent_style`, `indent_size`
+(and `tab_width` when requested by `indent_size`), `max_line_length`, and
+`end_of_line` (`lf` or `crlf`). Pass `--no-editorconfig` to disable it.
+`--no-config` disables both cmakefmt config loading and this fallback.
 
 When you want to see exactly what happened:
 
@@ -675,6 +686,10 @@ target_link_libraries(
 )
 ```
 
+Even when `dangle_parens` is `false`, a closing parenthesis can move to its own
+line if it would otherwise exceed `line_width` or follow a line comment that
+would swallow it.
+
 ### `dangle_align`
 
 Alignment strategy for a dangling closing `)`.
@@ -692,14 +707,16 @@ format:
 
 ### `min_prefix_length`
 
-Lower heuristic bound used when deciding between compact and wrapped layouts.
+Compatibility setting for cmake-format's lower command-prefix bound. The
+current formatter accepts and preserves this value but does not use it in
+layout selection.
 
 ```yaml
 format:
   min_prefix_length: 4
 ```
 
-Leave this alone unless you are deliberately tuning layout behavior.
+Changing this setting currently has no effect on formatted output.
 
 ### `max_prefix_length`
 
@@ -710,7 +727,11 @@ format:
   max_prefix_length: 10
 ```
 
-Like `min_prefix_length`, this is primarily for advanced layout tuning and rarely needs adjustment.
+The prefix includes the command name, any space before `(`, and the opening
+parenthesis. A hanging layout longer than two completed lines is rejected when
+its prefix exceeds this limit; a dangling closing parenthesis counts as a line.
+Calls that fit on one line are unaffected. `wrap_after_first_arg` can still keep
+the first positional argument attached in the resulting vertical layout.
 
 ### `separate_ctrl_name_with_space`
 

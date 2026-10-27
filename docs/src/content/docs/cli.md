@@ -78,6 +78,7 @@ Ignore rules only affect:
 
 | Flag | Meaning |
 | --- | --- |
+| `-V`, `--version` | Print the formatter version and exit. |
 | `--debug` | Emit discovery, config, barrier, and formatter diagnostics to stderr. |
 | `-q`, `--quiet` | Suppress per-file human output and keep only summaries plus actual errors. |
 | `--keep-going` | Continue processing later files after a file-level parse/format error. |
@@ -97,7 +98,7 @@ Ignore rules only affect:
 | Subcommand | Meaning |
 | --- | --- |
 | `cmakefmt lsp` | Start the LSP server (JSON-RPC on stdio). |
-| `cmakefmt completions <SHELL>` | Print shell completions for bash, zsh, or fish. |
+| `cmakefmt completions <SHELL>` | Print shell completions for bash, elvish, fish, powershell, or zsh. |
 | `cmakefmt install-hook` | Install a git pre-commit hook that runs `cmakefmt --check --staged`. |
 | `cmakefmt config dump [--format yaml\|toml]` | Print a starter config template. Defaults to YAML. |
 | `cmakefmt config schema` | Print the JSON Schema for the config file. |
@@ -122,6 +123,7 @@ Ignore rules only affect:
 | Flag | Meaning |
 | --- | --- |
 | `-c`, `--config-file <PATH>` | Use one or more specific config files instead of config discovery. Later files override earlier ones. `--config` remains a compatibility alias. |
+| `--no-editorconfig` | Disable the `.editorconfig` fallback used when no cmakefmt config file is found. |
 | `--no-config` | Ignore discovered config files and explicit `--config-file` entries. Only built-in defaults plus CLI overrides remain. |
 | `-l`, `--line-width <N>` | Override `format.line_width`. |
 | `--tab-size <N>` | Override `format.tab_size`. |

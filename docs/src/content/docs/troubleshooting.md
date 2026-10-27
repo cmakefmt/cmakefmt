@@ -61,11 +61,10 @@ Common causes:
 If you are migrating from legacy `cmake-format`:
 
 ```bash
-cmakefmt config convert .cmake-format.py > .cmakefmt.toml
+cmakefmt config convert .cmake-format.py --format toml > .cmakefmt.toml
 ```
 
-Then adapt the result to `.cmakefmt.yaml` if you want YAML as your final
-format.
+For YAML instead, omit `--format toml` and redirect to `.cmakefmt.yaml`.
 
 ## Parse Error On Valid-Looking CMake
 

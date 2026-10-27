@@ -137,7 +137,7 @@ comparison data. The recommended pattern:
 4. Pin an explicit version in CI once you are happy:
 
    ```bash
-   cmakefmt --required-version 0.0.1 --check .
+   cmakefmt --required-version 2.3.1 --check .
    ```
 
 **Output will not be identical to `cmake-format`.** The goal is a clean,

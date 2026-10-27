@@ -19,7 +19,7 @@ After 1.0, the following are part of the stability contract:
 
 | Surface | Guarantee |
 |---------|-----------|
-| **Formatted output** | The same source + config produces the same output across patch and minor releases. Formatting changes are introduced as new opt-in config keys with backward-compatible defaults. |
+| **Formatted output** | The same source + config preserves output across patch and minor releases, except for bug fixes and documented default changes described below. Formatting changes are introduced as new opt-in config keys with backward-compatible defaults. |
 | **Config schema** | Existing config keys keep their names and semantics. New keys may be added with backward-compatible defaults. |
 | **CLI flags and exit codes** | Existing flags keep their names and behavior. New flags may be added. Exit codes are stable. |
 | **Rust library API** | Public types, traits, and function signatures in `cmakefmt::*` follow standard Rust semver. |
@@ -52,18 +52,19 @@ output:
    easy to revert via the config key.
 
 Users who pin a formatter version and don't change their config will
-see no output changes across minor releases.
+keep the same formatter output for that pinned version. Upgrading may change
+output through bug fixes or documented default changes.
 
 ## Versioning policy
 
 `cmakefmt` follows [Semantic Versioning](https://semver.org/):
 
 - **Patch** (`0.10.1`): bug fixes, documentation, CI changes. No
-  formatting output changes.
+  intentional style changes; bug fixes may change incorrect output.
 - **Minor** (`0.11.0`): new features, new config options. May change
   formatting output only through new opt-in config keys with
   backward-compatible defaults, or via documented default flips
-  called out in the changelog.
+  called out in the changelog. Bug fixes may also change output.
 - **Major** (`2.0.0`): breaking changes to the config schema, CLI
   flags, or library API. Reserved for rare, well-justified cases.
 

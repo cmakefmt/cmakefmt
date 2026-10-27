@@ -52,6 +52,8 @@ The most important items today:
 - `ArgumentCommentStyle`
 - `DangleAlign`
 - `PerCommandConfig`
+- `ContinuationAlign`
+- `WrapAfterFirstArgAlign`
 - `Error`
 - `Result`
 
@@ -165,6 +167,28 @@ fn main() {
 }
 ```
 
+`Config::from_file()` and `Config::from_files()` load formatting options, but
+`format_source()` always uses the built-in registry. To also apply `commands:`
+entries from config files, load and pass the registry explicitly (available
+with the `cli` or `lsp` feature on native targets):
+
+```rust
+use std::path::PathBuf;
+use cmakefmt::{Config, format_source_with_registry};
+
+fn main() -> Result<(), cmakefmt::Error> {
+    let (config, registry) = Config::from_files_with_registry(&[
+        PathBuf::from(".cmakefmt.yaml"),
+    ])?;
+    let output = format_source_with_registry("my_command(foo)", &config, &registry)?;
+    println!("{output}");
+    Ok(())
+}
+```
+
+The CLI separately applies `.editorconfig` fallback and command-line overrides;
+these are not applied by `Config::from_file()` alone.
+
 ## Formatting With Debug Decisions
 
 Building tooling and want insight into what the formatter decided? Use the
@@ -255,10 +279,11 @@ loading, registry loading, and formatting:
 | `Error::Render` | failure rendering a `Config`, `Spec`, or report (JSON / SARIF / Checkstyle / JUnit / Edit) to text |
 | `Error::LegacyMigration` | failure during legacy cmake-format config migration (parsing, converting, or writing the modernised file); carries the source path |
 | `Error::Formatter` | residual catch-all for genuinely miscellaneous CLI/runtime conditions; most v1.5 sites have migrated to one of the structured variants above |
-| `Error::LayoutTooWide` | the debug layout renderer exceeded the configured line width |
+| `Error::LayoutTooWide` | output exceeded `line_width` with `require_valid_layout` enabled |
 
-All variants are `#[non_exhaustive]`, so further sub-splitting in future
-releases stays patch-safe. The `IoAt`, `InvalidRegex`, and `LegacyMigration`
+The `Error` enum is `#[non_exhaustive]`, so matches need a fallback arm.
+Its structured variants are also non-exhaustive, allowing contextual fields
+to be added without requiring exhaustive field patterns. The `IoAt`, `InvalidRegex`, and `LegacyMigration`
 variants all carry contextual data (path, regex source, file path
 respectively) — the `InvalidRegex` `regex::Error` chain via `#[source]`
 means `std::error::Error::source()` walks into the underlying regex
