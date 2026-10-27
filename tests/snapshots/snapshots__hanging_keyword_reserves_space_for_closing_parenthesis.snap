@@ -1,0 +1,11 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+target_sources(
+    lib
+    INTERFACE aaaaaaaaaaaaaaaa
+              bbbbbbbbbbbbbbbb
+              cccccccccccccccc
+              dddddddddddddddd
+)

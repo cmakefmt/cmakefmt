@@ -1,0 +1,10 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+function(f)
+    get_version_from_git (fullversion
+                          STRIPPED stripped MAJOR MY_PROJECT_MAJOR_VERSION MINOR
+                          MY_PROJECT_MINOR_VERSION PATCH MY_PROJECT_PATCH_VERSION
+    )
+endfunction()

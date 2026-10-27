@@ -15,6 +15,199 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn linebreak_layouts_issue_256() {
+    let config = Config {
+        line_width: 100,
+        tab_size: 4,
+        max_pargs_hwrap: 20,
+        max_subgroups_hwrap: 3,
+        dangle_parens: true,
+        separate_fn_name_with_space: true,
+        enable_markup: false,
+        ..Config::default()
+    };
+    let custom = "get_version_from_git (fullversion STRIPPED stripped MAJOR MY_PROJECT_MAJOR_VERSION MINOR MY_PROJECT_MINOR_VERSION PATCH MY_PROJECT_PATCH_VERSION)\n";
+    let paths = "${CMAKE_CURRENT_SOURCE_DIR}/src/foo/Bar.cpp ".repeat(8);
+    let source = format!("{custom}\ntarget_sources(SharedCode INTERFACE {paths})\n");
+    let output = format_source(&source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+    assert!(cmakefmt::semantic::semantic_equivalent(&source, &output));
+    assert!(output
+        .lines()
+        .all(|line| line.chars().count() <= config.line_width));
+
+    let relaxed = Config {
+        max_prefix_chars: 100,
+        ..config.clone()
+    };
+    let hanging = format_source(custom, &relaxed).unwrap();
+    assert!(hanging.starts_with("get_version_from_git (fullversion"));
+    assert_eq!(format_source(&hanging, &relaxed).unwrap(), hanging);
+    assert!(cmakefmt::semantic::semantic_equivalent(custom, &hanging));
+
+    // A long name does not force an otherwise fitting call to wrap.
+    assert_eq!(
+        format_source("get_version_from_git(x)\n", &config).unwrap(),
+        "get_version_from_git (x)\n"
+    );
+    for align in [
+        ContinuationAlign::UnderFirstValue,
+        ContinuationAlign::SameIndent,
+    ] {
+        for dangle_parens in [false, true] {
+            let variant = Config {
+                continuation_align: align,
+                dangle_parens,
+                ..config.clone()
+            };
+            let nested = format!("function(f)\n{source}endfunction()\n");
+            let output = format_source(&nested, &variant).unwrap();
+            assert!(output.contains("        INTERFACE ${"));
+            let continuation = if align == ContinuationAlign::UnderFirstValue {
+                "                  ${"
+            } else {
+                "        ${"
+            };
+            assert!(output.lines().any(|line| line.starts_with(continuation)));
+            assert!(output
+                .lines()
+                .all(|line| line.chars().count() <= variant.line_width));
+            assert_eq!(format_source(&output, &variant).unwrap(), output);
+            assert!(cmakefmt::semantic::semantic_equivalent(&nested, &output));
+        }
+    }
+
+    for threshold in [0, 6] {
+        let limited = Config {
+            max_pargs_hwrap: threshold,
+            ..config.clone()
+        };
+        let output = format_source(&source, &limited).unwrap();
+        assert!(!output.contains("INTERFACE ${"));
+        assert_eq!(format_source(&output, &limited).unwrap(), output);
+        assert!(cmakefmt::semantic::semantic_equivalent(&source, &output));
+    }
+}
+
+#[test]
+fn wrap_after_first_arg_takes_precedence_over_long_prefix() {
+    let command = "get_version_from_git(fullversion STRIPPED stripped MAJOR MY_PROJECT_MAJOR_VERSION MINOR MY_PROJECT_MINOR_VERSION PATCH MY_PROJECT_PATCH_VERSION)\n";
+    for (label, alignment) in [
+        ("under_first_arg", WrapAfterFirstArgAlign::UnderFirstArg),
+        ("default_indent", WrapAfterFirstArgAlign::DefaultIndent),
+    ] {
+        for nested in [false, true] {
+            let source = if nested {
+                format!("function(f)\n{command}endfunction()\n")
+            } else {
+                command.to_owned()
+            };
+            let config = Config {
+                line_width: 100,
+                tab_size: 4,
+                max_pargs_hwrap: 20,
+                max_prefix_chars: 10,
+                wrap_after_first_arg: true,
+                wrap_after_first_arg_align: alignment,
+                separate_fn_name_with_space: true,
+                dangle_parens: true,
+                ..Config::default()
+            };
+            let output = format_source(&source, &config).unwrap();
+            let scope = if nested { "nested" } else { "top_level" };
+            insta::assert_snapshot!(format!("long_prefix_first_arg_{label}_{scope}"), output);
+            assert!(output.contains("get_version_from_git (fullversion\n"));
+            assert!(output
+                .lines()
+                .all(|line| line.chars().count() <= config.line_width));
+            assert_eq!(format_source(&output, &config).unwrap(), output);
+            assert!(cmakefmt::semantic::semantic_equivalent(&source, &output));
+
+            // Per-command opt-in has the same precedence as the global option.
+            let mut overridden = Config {
+                wrap_after_first_arg: false,
+                ..config.clone()
+            };
+            overridden.per_command_overrides.insert(
+                "get_version_from_git".into(),
+                PerCommandConfig {
+                    wrap_after_first_arg: Some(true),
+                    wrap_after_first_arg_align: Some(alignment),
+                    ..PerCommandConfig::default()
+                },
+            );
+            assert_eq!(format_source(&source, &overridden).unwrap(), output);
+
+            // Without the opt-in, the prefix limit moves the first argument down.
+            overridden.per_command_overrides.clear();
+            let vertical = format_source(&source, &overridden).unwrap();
+            assert!(vertical.contains("get_version_from_git (\n"));
+            assert_eq!(format_source(&vertical, &overridden).unwrap(), vertical);
+            assert!(cmakefmt::semantic::semantic_equivalent(&source, &vertical));
+        }
+    }
+}
+
+#[test]
+fn hanging_keyword_continuation_keeps_equal_width_tokens_separate() {
+    let source = "target_sources(lib INTERFACE aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd)\n";
+    let config = Config {
+        line_width: 30,
+        tab_size: 4,
+        max_pargs_hwrap: 20,
+        max_subgroups_hwrap: 3,
+        continuation_align: ContinuationAlign::SameIndent,
+        dangle_parens: true,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(output.contains("bbbbbbbbbb cccccccccc"));
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
+fn hanging_keyword_reserves_space_for_closing_parenthesis() {
+    let source = "target_sources(lib INTERFACE aaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbb cccccccccccccccc dddddddddddddddd)\n";
+    let config = Config {
+        line_width: 30,
+        tab_size: 4,
+        max_pargs_hwrap: 20,
+        max_subgroups_hwrap: 3,
+        dangle_parens: false,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(output
+        .lines()
+        .all(|line| line.chars().count() <= config.line_width));
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
+fn long_prefix_allows_two_completed_rows_without_dangling_parenthesis() {
+    let source = "get_version_from_git(fullversion STRIPPED stripped MAJOR MY_PROJECT_MAJOR_VERSION MINOR MY_PROJECT_MINOR_VERSION PATCH MY_PROJECT_PATCH_VERSION)\n";
+    let config = Config {
+        line_width: 100,
+        tab_size: 4,
+        max_pargs_hwrap: 20,
+        separate_fn_name_with_space: true,
+        dangle_parens: false,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert_eq!(output.lines().count(), 2);
+    assert!(output.starts_with("get_version_from_git (fullversion"));
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
 fn target_sources_grouped_hanging_wrap_issue_244() {
     let source = "target_sources (\n    StateLoader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.cpp\n                          ${CMAKE_CURRENT_SOURCE_DIR}/src/acoustics/StateLoader.hpp\n)\n";
     let config = Config {

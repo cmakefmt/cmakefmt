@@ -10,6 +10,10 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Honor `max_prefix_length` when wrapping long command names and retain
+  first-value alignment for long keyword lists when grouped layouts are enabled
+  (#256).
+
 - Keep `TYPE`, `BASE_DIRS`, and `FILES` on separate nested lines in wrapped
   `target_sources(FILE_SET ...)` calls, even when the file-set section fits
   on one line. Calls that fit entirely on one line remain unchanged.

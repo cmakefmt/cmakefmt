@@ -612,6 +612,16 @@ fn try_format_hanging(
         return Some(lines.remove(0));
     }
 
+    // Match cmake-format: long prefixes reject un-nested layouts only when
+    // the completed statement occupies more than two rows (including `)`).
+    let completed_rows = lines.len() + usize::from(cmd_config.dangle_parens());
+    if completed_rows > 2
+        && format_name(command, cmd_config).chars().count() + 1
+            > cmd_config.global().max_prefix_chars
+    {
+        return None;
+    }
+
     Some(close_multiline(
         lines,
         &base_indent,
@@ -926,6 +936,12 @@ fn write_sections(
                         nested_indent,
                         ctx,
                     );
+                } else if let Some(wrapped) =
+                    format_section_hanging(&header, &section.arguments, section_indent, ctx)
+                {
+                    output.truncate(output.len() - section_indent.len() - header.len());
+                    output.push_str(&wrapped);
+                    output.push('\n');
                 } else {
                     output.push('\n');
                     write_packed_arguments(output, &section.arguments, nested_indent, ctx);
@@ -933,6 +949,45 @@ fn write_sections(
             }
         }
     }
+}
+
+/// Once the command has nested, a keyword list can still hang from its header.
+/// The command-level row limit does not constrain this vertical section.
+fn format_section_hanging(
+    header: &str,
+    arguments: &[&Argument],
+    indent: &str,
+    ctx: &WriteCtx<'_>,
+) -> Option<String> {
+    // Preserve the default vertical style unless grouped layouts are enabled.
+    if ctx.cmd_config.max_subgroups_hwrap() == 0
+        || arguments
+            .iter()
+            .any(|arg| arg.is_comment() || argument_has_newline(arg))
+    {
+        return None;
+    }
+    let prefix = format!("{indent}{header} ");
+    let tokens: Vec<_> = arguments.iter().map(|arg| arg.as_str()).collect();
+    if prefix.chars().count() + tokens.first()?.chars().count() > ctx.line_width() {
+        return None;
+    }
+    let continuation = match ctx.continuation_align {
+        crate::config::ContinuationAlign::UnderFirstValue => " ".repeat(prefix.chars().count()),
+        crate::config::ContinuationAlign::SameIndent => indent.to_owned(),
+    };
+    let lines = pack_tokens(
+        &prefix,
+        &continuation,
+        &tokens,
+        ctx.line_width(),
+        usize::MAX,
+        &[],
+    )?;
+    lines
+        .iter()
+        .all(|line| line.chars().count() <= ctx.line_width())
+        .then(|| lines.join("\n"))
 }
 
 fn format_section_inline(
@@ -1590,7 +1645,7 @@ fn pack_tokens(
     let mut lines = vec![prefix.to_owned()];
     let mut current_width = prefix_width;
 
-    for &token in tokens {
+    for (index, &token) in tokens.iter().enumerate() {
         if break_before
             .iter()
             .any(|candidate| token.eq_ignore_ascii_case(candidate))
@@ -1606,7 +1661,9 @@ fn pack_tokens(
         }
 
         let current = lines.last_mut().expect("at least one line");
-        let needs_space = current_width != prefix_width && current_width != continuation_width;
+        // Width cannot tell whether a line already contains a token: a
+        // continuation token can end at exactly the original prefix width.
+        let needs_space = index > 0;
         let candidate_width = current_width + usize::from(needs_space) + token.chars().count();
 
         if candidate_width <= line_width {
@@ -1684,7 +1741,12 @@ fn close_command_output(
             }
         }
         output.push(')');
-    } else if last_output_line_has_comment(output) {
+    } else if last_output_line_has_comment(output)
+        || output
+            .lines()
+            .last()
+            .is_some_and(|line| line.chars().count() + 1 > cmd_config.line_width())
+    {
         output.push('\n');
         output.push_str(base_indent);
         output.push(')');
