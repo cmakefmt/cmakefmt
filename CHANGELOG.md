@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.3.2 — 2026-10-27
+
 ### Fixed
 
 - Honor `max_prefix_length` for long command names when a hanging layout would

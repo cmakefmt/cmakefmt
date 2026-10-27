@@ -16,6 +16,31 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.3.2 — 2026-10-27
+
+### Fixed
+
+- Honor `max_prefix_length` for long command names when a hanging layout would
+  occupy more than two lines, including a dangling closing parenthesis. Keep
+  two-line non-dangling calls compact and preserve `wrap_after_first_arg`
+  precedence (#256).
+- Retain first-value alignment for long keyword lists when grouped layouts are
+  enabled, including `target_sources(INTERFACE ...)` lists that exceed the
+  compact grouped layout's row limit (#256).
+- Preserve spaces between arguments in `same-indent` keyword continuations and
+  move closing parentheses onto a separate line when needed to stay within
+  `line_width`.
+- Keep `TYPE`, `BASE_DIRS`, and `FILES` on separate nested lines in wrapped
+  `target_sources(FILE_SET ...)` calls, even when the file-set section fits
+  on one line. Calls that fit entirely on one line remain unchanged
+  (#257, thanks to @tech-alp).
+- Correct documentation for alignment settings, config discovery and
+  `.editorconfig` fallback, comment-reflow defaults, custom command specs in the
+  Rust API, and release stability expectations.
+
+These fixes can change wrapped output for affected calls; no configuration
+schema or public API changes are required.
+
 ## 2.3.1 — 2026-10-26
 
 ### Fixed
