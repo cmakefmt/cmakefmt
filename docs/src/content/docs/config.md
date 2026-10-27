@@ -285,6 +285,10 @@ format:
 
 Most noticeable on commands with long source or header lists.
 
+In wrapped `target_sources(FILE_SET ...)` calls, `TYPE`, `BASE_DIRS`, and
+`FILES` each start a nested line, even when the file-set section would fit on
+one line. Calls that fit entirely on one line stay inline.
+
 This threshold also applies to nested variable-length keyword lists, such
 as `BASE_DIRS` and `FILES` inside `target_sources(FILE_SET ...)`. To put
 each value on its own line in a wrapped call, set it to `0`:

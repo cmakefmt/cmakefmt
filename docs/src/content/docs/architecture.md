@@ -123,6 +123,10 @@ three layouts in order:
 The first layout that fits within `line_width` wins. This gives stable,
 predictable wrapping without ad-hoc heuristics.
 
+Wrapped `target_sources(FILE_SET ...)` calls render each file-set subkeyword
+on its own nested line using the built-in spec. Other keyword sections retain
+their existing compact layout when they fit.
+
 ### Comment handling
 
 `comment.rs` provides comment formatting helpers, including comment reflowing

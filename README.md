@@ -71,6 +71,9 @@ The full CLI reference, configuration schema, editor integrations, and
 migration guide from `cmake-format` all live at
 [**cmakefmt.dev**](https://cmakefmt.dev).
 
+Wrapped `target_sources(FILE_SET ...)` calls keep `TYPE`, `BASE_DIRS`, and `FILES`
+on separate nested lines; calls that fit on one line stay inline.
+
 ## GitHub Action
 
 The official [`cmakefmt-action`](https://github.com/cmakefmt/cmakefmt-action)

@@ -125,6 +125,42 @@ fn target_sources_file_sets_have_nested_lists() {
 }
 
 #[test]
+fn wrapped_file_set_keeps_nested_keywords_on_separate_lines() {
+    let source = include_str!("fixtures/edge_cases/target_sources_file_set.cmake");
+    let config = Config::from_yaml_str(
+        "format:\n  line_width: 100\n  tab_size: 4\n  wrap_after_first_arg: true\n  wrap_after_first_arg_align: default-indent\n  continuation_align: same-indent\n",
+    ).unwrap();
+    let formatted = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(formatted, @r#"
+    function(f target)
+        target_sources("${target}"
+            PUBLIC
+            FILE_SET HEADERS
+                BASE_DIRS "${ARG_PUBLIC_HEADER_BASE_DIR}"
+                FILES ${ARG_PUBLIC_HEADERS})
+    endfunction()
+    "#);
+    assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+
+    let source = "target_sources(lib PUBLIC FILE_SET api TYPE HEADERS BASE_DIRS include FILES include/api.h FILE_SET modules TYPE CXX_MODULES FILES src/api.cppm)\n";
+    for wrap_after_first_arg in [false, true] {
+        let config = Config {
+            wrap_after_first_arg,
+            ..config.clone()
+        };
+        let formatted = format_source(source, &config).unwrap();
+        assert!(formatted.contains("FILE_SET api\n"));
+        assert!(formatted.contains("TYPE HEADERS\n"));
+        assert!(formatted.contains("BASE_DIRS include\n"));
+        assert!(formatted.contains("FILES include/api.h\n"));
+        assert!(formatted.contains("FILE_SET modules\n"));
+        assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+        assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+    }
+}
+
+#[test]
 fn target_sources_file_sets_preserve_names_and_repeated_groups() {
     let source = "target_sources(lib PRIVATE source.cpp FILE_SET headers TYPE HEADERS BASE_DIRS include FILES include/a.h FILE_SET modules TYPE CXX_MODULES FILES src/a.cppm PUBLIC FILE_SET api TYPE HEADERS FILES include/api.h INTERFACE FILE_SET HEADERS FILES include/interface.h)\n";
     for autosort in [false, true] {
