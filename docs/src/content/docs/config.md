@@ -461,10 +461,10 @@ This option has no effect unless `wrap_after_first_arg` applies to the call:
 the layout must be selected first, and it only applies when the command's
 first section is positional.
 
-It is independent of [`continuation_align`](#continuation_align): this option
-chooses where the arguments following the first one start, i.e. the indentation
-of the whole body of the call, while `continuation_align` only controls how the
-values of a keyword section are wrapped when they overflow `line_width`.
+It combines with [`continuation_align`](#continuation_align) at two levels:
+`wrap_after_first_arg_align` chooses where the body of the call starts, including
+its keyword headers; `continuation_align` chooses where wrapped values continue
+relative to a keyword. See the combined example below.
 
 Because `set()` enables `wrap_after_first_arg` in its built-in spec, a global
 `default-indent` also changes how wrapped `set()` calls indent. Pin it back
@@ -499,14 +499,60 @@ format:
   continuation_align: same-indent
 ```
 
-The knob only affects subkwarg groups inside structural kwarg sections
-(e.g. `PATTERN … PERMISSIONS …` inside `install(DIRECTORY)` or
-`RUNTIME COMPONENT …` inside `install(TARGETS)`); flat-list sections
-like `PUBLIC` in `target_link_libraries` are unaffected.
-It is also unrelated to
-[`wrap_after_first_arg_align`](#wrap_after_first_arg_align), which selects
-where the body of a call starts when its first argument is kept on the command
-line.
+This setting applies to nested keyword groups inside structural sections
+(e.g. `PERMISSIONS` inside an `install(DIRECTORY ... PATTERN ...)` section).
+It also applies to flat keyword lists, such as `PRIVATE` in `target_sources`,
+when grouped layouts are enabled (`max_hanging_wrap_groups` greater than `0`)
+and the list needs its own wrapped section after the compact grouped layout
+cannot fit. Compact grouped layouts retain their first-value alignment.
+
+Argument-count thresholds still take precedence: lists exceeding
+[`max_hanging_wrap_positional_args`](#max_hanging_wrap_positional_args) put
+values on separate indented lines instead. With grouped layouts disabled
+(the default), flat keyword lists retain their existing vertical layout.
+
+Together with [`wrap_after_first_arg_align`](#wrap_after_first_arg_align),
+the settings select the body indentation first and the keyword-value
+continuation second. For example:
+
+```yaml
+format:
+  line_width: 55
+  tab_size: 2
+  wrap_after_first_arg: true
+  wrap_after_first_arg_align: default-indent
+  continuation_align: under-first-value
+  max_hanging_wrap_positional_args: 20
+  max_hanging_wrap_groups: 3
+  dangle_parens: true
+```
+
+```cmake
+# default-indent + under-first-value
+target_sources(lib
+  PRIVATE source_alpha.cpp source_bravo.cpp
+          source_charlie.cpp
+)
+
+# Changing continuation_align to same-indent
+target_sources(lib
+  PRIVATE source_alpha.cpp source_bravo.cpp
+  source_charlie.cpp
+)
+
+# Changing wrap_after_first_arg_align to under-first-arg,
+# with continuation_align: under-first-value
+target_sources(lib
+               PRIVATE source_alpha.cpp
+                       source_bravo.cpp
+                       source_charlie.cpp
+)
+```
+
+Neither setting forces wrapping by itself. `wrap_after_first_arg_align` only
+applies when a layout keeps the first positional argument on the command line;
+`continuation_align` can also apply when the command's first argument is on a
+separate line.
 
 With a long `PERMISSIONS` value list inside a `PATTERN` subgroup:
 
