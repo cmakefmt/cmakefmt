@@ -46,6 +46,7 @@ pub(crate) struct Section<'a> {
 /// Indent strings vary per call and stay as separate parameters;
 /// they're data being formatted, not context.
 struct WriteCtx<'a> {
+    command_name: &'a str,
     cmd_config: &'a CommandConfig<'a>,
     patterns: &'a CompiledPatterns,
     continuation_align: crate::config::ContinuationAlign,
@@ -54,12 +55,14 @@ struct WriteCtx<'a> {
 
 impl<'a> WriteCtx<'a> {
     fn new(
+        command_name: &'a str,
         cmd_config: &'a CommandConfig<'a>,
         patterns: &'a CompiledPatterns,
         continuation_align: crate::config::ContinuationAlign,
         wrap_after_first_arg_align: crate::config::WrapAfterFirstArgAlign,
     ) -> Self {
         Self {
+            command_name,
             cmd_config,
             patterns,
             continuation_align,
@@ -138,6 +141,7 @@ pub(crate) fn format_command(
     let wrap_after_first_arg_align = cmd_config.wrap_after_first_arg_align(spec_wrap_first_align);
 
     let ctx = WriteCtx::new(
+        &command.name,
         &cmd_config,
         patterns,
         continuation_align,
@@ -880,7 +884,11 @@ fn write_sections(
                 output.push_str(&header);
                 let parent_spec = lookup_kwarg(form, header_raw);
                 let grouped_spec = parent_spec.filter(|s| !s.kwargs.is_empty());
-                if section.arguments.len() > cmd_config.max_pargs_hwrap() {
+                // File-set subgroups stay distinct even when the entire section fits.
+                let file_set = ctx.command_name.eq_ignore_ascii_case("target_sources")
+                    && header_raw.eq_ignore_ascii_case("FILE_SET")
+                    && grouped_spec.is_some();
+                if file_set || section.arguments.len() > cmd_config.max_pargs_hwrap() {
                     if let Some(spec) = grouped_spec {
                         write_header_line_and_group(
                             output,
