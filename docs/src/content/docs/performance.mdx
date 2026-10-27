@@ -196,6 +196,12 @@ The locally built `v2.3.1` release candidate measured **6.2ms** median and
 of 200 samples produced medians of 6.1ms and 6.2ms; the chart records the
 second run. The binary size was 5,982,544 bytes.
 
+The locally built `v2.3.2` release candidate measured **6.7ms** median and
+**5.8MiB** (6,032,240 bytes) on 27 October 2026, using the same fixture,
+100 warmups, and 200 runs with `--shell=none --style basic`. This measurement
+also loads the newly tracked default `.cmakefmt.yaml`, so its configuration
+loading work differs from earlier candidates.
+
 The official `v2.2.0` macOS aarch64 binary was measured retrospectively on
 24 October 2026 with the same 100 warmups, 200 runs, and command settings:
 **6.7ms** median and **5.5MiB**. Its size increase coincides with the move from
