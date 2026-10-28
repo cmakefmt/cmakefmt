@@ -138,3 +138,47 @@ fn invalid_library_ranges_are_rejected() {
         .is_err());
     }
 }
+
+#[test]
+fn range_replacement_rejects_new_trailing_comment_ownership() {
+    // The formatted trailing hash would align with a previously standalone comment.
+    let mut errors = Vec::new();
+    for (source, line) in [
+        ("set( A x ) # tail\n         # independent\nset( B y )\n", 1),
+        (
+            "set( A x ) # tail\r\n         # independent\r\nset( B y )",
+            1,
+        ),
+        (
+            "if(ON)\n    set( A x ) # tail\n           # independent\nendif()\n",
+            2,
+        ),
+    ] {
+        let result = format_source_ranges_with_registry(
+            source,
+            &Config::default(),
+            CommandRegistry::builtins(),
+            &[line..=line],
+        );
+        let error = result.expect_err("must not change ownership of an untouched comment");
+        errors.push(error.to_string());
+    }
+    insta::assert_debug_snapshot!(errors, @r#"
+    [
+        "formatter error: range formatting would change comment ownership at source line 1",
+        "formatter error: range formatting would change comment ownership at source line 1",
+        "formatter error: range formatting would change comment ownership at source line 2",
+    ]
+    "#);
+}
+
+#[test]
+fn range_replacement_preserves_unaligned_standalone_comment_on_repeat() {
+    let source = "set( A x ) # tail\n        # independent\nset( B y )\n";
+    let output = format(source, &[1..=1]);
+    assert_eq!(
+        output,
+        "set(A x) # tail\n        # independent\nset( B y )\n"
+    );
+    assert_eq!(format(&output, &[1..=1]), output);
+}

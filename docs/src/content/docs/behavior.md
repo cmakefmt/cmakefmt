@@ -435,7 +435,15 @@ apply inside selected commands; they do not rewrite the rest of the file.
 
 `--verify` checks the final combined output. Range runs bypass the whole-file
 cache so cached formatting cannot widen their scope. LSP range formatting uses
-the same command selection and retains document context.
+the same command selection and retains document context. Its end position is
+exclusive: an end at column zero excludes that line. An empty selection formats
+the command on the cursor's line.
+
+Range formatting rejects a replacement if reparsing it would change comment
+ownership, such as aligning a trailing `#` with an untouched standalone comment
+and turning that comment into a continuation. This check also applies without
+`--verify`, whose semantic comparison excludes comments. Syntax errors in
+unselected enabled source can still prevent a range request.
 
 ## Debug Mode
 

@@ -2203,6 +2203,44 @@ fn line_ranges_format_complete_commands_and_preserve_surrounding_source() {
 }
 
 #[test]
+fn line_ranges_reject_comment_ownership_change_before_emitting_output() {
+    let source = "set( A x ) # tail\n         # independent\nset( B y )\n";
+    for verify in [false, true] {
+        let mut command = cmakefmt();
+        command.args(["--no-config", "--lines=1:1", "-"]);
+        if verify {
+            command.arg("--verify");
+        }
+        let mut child = command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(source.as_bytes())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("comment ownership"));
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, source);
+    let output = cmakefmt()
+        .args(["--no-config", "--verify", "--lines=1:1", "-i"])
+        .arg(&file)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(std::fs::read_to_string(file).unwrap(), source);
+}
+
+#[test]
 fn line_ranges_do_not_reuse_or_poison_whole_file_cache() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");

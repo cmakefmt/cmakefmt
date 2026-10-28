@@ -337,7 +337,16 @@ fn handle_range_formatting(
 
     let range = params.range;
     let start_line = range.start.line as usize;
-    let end_line = range.end.line as usize;
+    // LSP ends are exclusive. An end at column zero on a later line does not
+    // select that line; an empty selection still formats the cursor's line.
+    let end_line = if range.end.character == 0 && range.end.line > range.start.line {
+        range.end.line as usize - 1
+    } else {
+        range.end.line as usize
+    };
+    if range.end < range.start {
+        return Some(Response::new_ok(id, serde_json::json!([])));
+    }
 
     // Collect the lines in range (0-based, inclusive). Stale editor requests
     // can refer to lines past EOF after a document shrinks; those ranges are
@@ -789,6 +798,49 @@ mod tests {
         // Edit covers only the requested range
         assert_eq!(edits[0].range.start.line, 1);
         assert_eq!(edits[0].range.end.line, 2);
+    }
+
+    #[test]
+    fn handle_range_formatting_respects_half_open_endpoints_and_cursors() {
+        let uri = "file:///test.cmake";
+        let text = "set( A one )\nset( B two )\n";
+        for (start, end, expected) in [
+            ((0, 0), (1, 0), "set(A one)\nset( B two )\n"),
+            ((0, 0), (1, 1), "set(A one)\nset(B two)\n"),
+            ((1, 0), (1, 0), "set( A one )\nset(B two)\n"),
+            ((1, 5), (1, 5), "set( A one )\nset(B two)\n"),
+            ((1, 0), (0, 5), text),
+        ] {
+            let mut request = range_formatting_request(uri, start.0, end.0);
+            request.params["range"]["start"]["character"] = start.1.into();
+            request.params["range"]["end"]["character"] = end.1.into();
+            let response =
+                handle_range_formatting(request, &docs(uri, text), &Config::default()).unwrap();
+            let edits: Vec<lsp_types::TextEdit> =
+                serde_json::from_value(response.response_result.unwrap()).unwrap();
+            let mut output = text.to_owned();
+            for edit in edits.iter().rev() {
+                output = apply_edit(&output, edit);
+            }
+            assert_eq!(output, expected, "selection {start:?}..{end:?}");
+        }
+    }
+
+    #[test]
+    fn handle_range_formatting_expands_half_open_selection_to_multiline_command() {
+        let uri = "file:///test.cmake";
+        let text = "set( A\n one )\nset( B two )\n";
+        for (start, end) in [((0, 0), (1, 0)), ((1, 2), (2, 0)), ((1, 2), (1, 2))] {
+            let mut request = range_formatting_request(uri, start.0, end.0);
+            request.params["range"]["start"]["character"] = start.1.into();
+            request.params["range"]["end"]["character"] = end.1.into();
+            let response =
+                handle_range_formatting(request, &docs(uri, text), &Config::default()).unwrap();
+            let edits: Vec<lsp_types::TextEdit> =
+                serde_json::from_value(response.response_result.unwrap()).unwrap();
+            assert_eq!(edits.len(), 1);
+            assert_eq!(apply_edit(text, &edits[0]), "set(A one)\nset( B two )\n");
+        }
     }
 
     #[test]

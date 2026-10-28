@@ -118,7 +118,8 @@ pub fn format_source_with_registry_debug(
 ///
 /// Unselected source bytes, including standalone comments and line endings,
 /// are preserved. All commands are read to retain block indentation. Disabled
-/// regions are respected. Empty ranges request whole-file formatting.
+/// regions are respected. Empty ranges request whole-file formatting. Replacements
+/// that would change comment ownership on reparse return an error.
 pub fn format_source_ranges_with_registry(
     source: &str,
     config: &Config,
@@ -393,6 +394,7 @@ fn format_parsed_ranges_from_depth(
     line_starts.extend(source.match_indices('\n').map(|(offset, _)| offset + 1));
     let mut output = String::new();
     let mut copied = 0;
+    let mut command_ends = Vec::new();
     for statement in &file.statements {
         let Statement::Command(command) = statement else {
             continue;
@@ -440,9 +442,29 @@ fn format_parsed_ranges_from_depth(
             output.push_str(&apply_line_ending(source, &formatted, config.line_ending));
             copied = end;
         }
+        command_ends.push((output.len() + end - copied, first_line));
         *block_depth += block_indent_after(&command.name);
     }
     output.push_str(&source[copied..]);
+
+    // Moving a trailing hash can align it with an untouched standalone comment.
+    // Reparse the combined output before accepting it: continuation merging must
+    // not move a command boundary across bytes copied from outside that command.
+    let reparsed = parser::parse(&output)?;
+    let mut commands = reparsed.statements.iter().filter_map(|statement| {
+        if let Statement::Command(command) = statement {
+            Some(command)
+        } else {
+            None
+        }
+    });
+    for (end, line) in command_ends {
+        if commands.next().is_none_or(|command| command.span.1 != end) {
+            return Err(Error::Formatter(format!(
+                "range formatting would change comment ownership at source line {line}"
+            )));
+        }
+    }
     Ok(output)
 }
 
