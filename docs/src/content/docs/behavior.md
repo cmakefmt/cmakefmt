@@ -421,12 +421,21 @@ an opt-in marker are skipped. Disabled regions still apply within opted-in files
 
 ## Range Formatting
 
-`--lines START:END` formats only selected line ranges. This is mainly for
-editor workflows and partial-file automation.
+`--lines START:END` selects complete commands intersecting the inclusive,
+1-based **source** line range. Repeat `--lines` to select disjoint ranges.
+Changing one argument can reformat its entire command, including attached
+trailing comments. A selected command can grow or shrink beyond the requested
+lines without changing any other command.
 
-Important: the selected range still lives inside a full CMake file. Surrounding
-structure still applies. Partial formatting is best-effort, not an isolated
-mini-file pass.
+All commands are read to retain block indentation, but unselected source bytes
+are copied verbatim. Standalone comments, blank lines, and disabled regions are
+preserved, even if they contain legacy formatting. Selecting only standalone
+comments, whitespace, or lines past EOF makes no changes. Line-ending settings
+apply inside selected commands; they do not rewrite the rest of the file.
+
+`--verify` checks the final combined output. Range runs bypass the whole-file
+cache so cached formatting cannot widen their scope. LSP range formatting uses
+the same command selection and retains document context.
 
 ## Debug Mode
 

@@ -47,6 +47,8 @@ The most important items today:
 - `format_source_with_debug`
 - `format_source_with_registry`
 - `format_source_with_registry_debug`
+- `format_source_ranges_with_registry`
+- `format_source_ranges_with_registry_debug`
 - `Config`
 - `CaseStyle`
 - `ArgumentCommentStyle`
@@ -76,6 +78,35 @@ fn main() -> Result<(), cmakefmt::Error> {
 ```
 
 The simplest entry point when you already have source text in memory.
+
+## Formatting Selected Commands
+
+`format_source_ranges_with_registry` takes inclusive, 1-based source line
+ranges and formats complete commands intersecting them. It reads the entire
+source for block context and copies all unselected bytes verbatim. Attached
+trailing comments are part of their command; standalone comments, blank lines,
+and disabled regions are preserved. Empty ranges request whole-file formatting.
+Zero-based or reversed ranges return an error. The debug variant adds decision
+logs with the same unstable text contract as other debug entry points.
+
+```rust
+use cmakefmt::{format_source_ranges_with_registry, CommandRegistry, Config};
+
+let source = "set( LEGACY keep )\nset( NEW value )\n";
+let selected = 2..=2;
+let output = format_source_ranges_with_registry(
+    source,
+    &Config::default(),
+    CommandRegistry::builtins(),
+    std::slice::from_ref(&selected),
+)?;
+assert_eq!(output, "set( LEGACY keep )\nset(NEW value)\n");
+# Ok::<(), cmakefmt::Error>(())
+```
+
+Like the other library formatting functions, this produces candidate text;
+callers requiring semantic verification must verify the combined result.
+The CLI's `--verify` does so before publishing output.
 
 ## Formatting With A Tweaked Config
 

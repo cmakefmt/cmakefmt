@@ -38,11 +38,12 @@ pub(crate) mod node;
 #[cfg(feature = "cli")]
 pub(crate) use node::{split_sections, HeaderKind};
 
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 
-use crate::config::{Config, LineEnding};
+use crate::config::{CompiledPatterns, Config, LineEnding};
 use crate::error::{Error, FileParseError, Result};
-use crate::parser::{self, ast::File, ast::Statement};
+use crate::parser::{self, ast::CommandInvocation, ast::File, ast::Statement};
 use crate::spec::registry::CommandRegistry;
 
 /// Format raw CMake source using the built-in command registry.
@@ -101,19 +102,48 @@ pub fn format_source_with_registry(
     config: &Config,
     registry: &CommandRegistry,
 ) -> Result<String> {
-    if config.disable {
-        return Ok(source.to_owned());
-    }
-    validate_runtime_config(config)?;
-    let formatted = format_source_impl(source, config, registry, &mut DebugLog::disabled())?.0;
-    Ok(apply_line_ending(source, &formatted, config.line_ending))
+    format_source_ranges_with_registry(source, config, registry, &[])
 }
 
-/// Format raw CMake source using an explicit registry and return debug output.
+/// Format source using an explicit registry and return debug output.
 pub fn format_source_with_registry_debug(
     source: &str,
     config: &Config,
     registry: &CommandRegistry,
+) -> Result<(String, Vec<String>)> {
+    format_source_ranges_with_registry_debug(source, config, registry, &[])
+}
+
+/// Format complete commands intersecting 1-based inclusive source line ranges.
+///
+/// Unselected source bytes, including standalone comments and line endings,
+/// are preserved. All commands are read to retain block indentation. Disabled
+/// regions are respected. Empty ranges request whole-file formatting.
+pub fn format_source_ranges_with_registry(
+    source: &str,
+    config: &Config,
+    registry: &CommandRegistry,
+    ranges: &[RangeInclusive<usize>],
+) -> Result<String> {
+    if config.disable {
+        return Ok(source.to_owned());
+    }
+    validate_runtime_config(config)?;
+    let formatted =
+        format_source_impl(source, config, registry, &mut DebugLog::disabled(), ranges)?.0;
+    Ok(if ranges.is_empty() {
+        apply_line_ending(source, &formatted, config.line_ending)
+    } else {
+        formatted
+    })
+}
+
+/// Like [`format_source_ranges_with_registry`], collecting debug decisions.
+pub fn format_source_ranges_with_registry_debug(
+    source: &str,
+    config: &Config,
+    registry: &CommandRegistry,
+    ranges: &[RangeInclusive<usize>],
 ) -> Result<(String, Vec<String>)> {
     if config.disable {
         return Ok((source.to_owned(), Vec::new()));
@@ -121,9 +151,13 @@ pub fn format_source_with_registry_debug(
     validate_runtime_config(config)?;
     let mut lines = Vec::new();
     let mut debug = DebugLog::enabled(&mut lines);
-    let (formatted, _) = format_source_impl(source, config, registry, &mut debug)?;
+    let (formatted, _) = format_source_impl(source, config, registry, &mut debug, ranges)?;
     Ok((
-        apply_line_ending(source, &formatted, config.line_ending),
+        if ranges.is_empty() {
+            apply_line_ending(source, &formatted, config.line_ending)
+        } else {
+            formatted
+        },
         lines,
     ))
 }
@@ -220,7 +254,7 @@ fn format_parsed_file_from_depth(
                     output.push('\n');
                 }
 
-                output.push_str(&node::format_command(
+                output.push_str(&format_command_with_comment(
                     command,
                     config,
                     &patterns,
@@ -228,33 +262,6 @@ fn format_parsed_file_from_depth(
                     block_depth,
                     debug,
                 )?);
-
-                if let Some(trailing) = &command.trailing_comment {
-                    let comment_indent_width = output
-                        .rsplit('\n')
-                        .next()
-                        .unwrap_or_default()
-                        .chars()
-                        .count()
-                        + 1;
-                    let comment_lines = comment::format_comment_lines(
-                        trailing,
-                        config,
-                        &patterns,
-                        comment_indent_width,
-                        config.line_width,
-                    );
-                    if let Some((first, rest)) = comment_lines.split_first() {
-                        output.push(' ');
-                        output.push_str(first);
-                        let continuation_indent = " ".repeat(comment_indent_width);
-                        for line in rest {
-                            output.push('\n');
-                            output.push_str(&continuation_indent);
-                            output.push_str(line);
-                        }
-                    }
-                }
 
                 previous_was_content = true;
                 block_depth += block_indent_after(&command.name);
@@ -332,6 +339,113 @@ fn format_parsed_file_from_depth(
     Ok(output)
 }
 
+fn format_command_with_comment(
+    command: &CommandInvocation,
+    config: &Config,
+    patterns: &CompiledPatterns,
+    registry: &CommandRegistry,
+    block_depth: usize,
+    debug: &mut DebugLog<'_>,
+) -> Result<String> {
+    let mut output = node::format_command(command, config, patterns, registry, block_depth, debug)?;
+    if let Some(trailing) = &command.trailing_comment {
+        let comment_indent_width = output
+            .rsplit('\n')
+            .next()
+            .unwrap_or_default()
+            .chars()
+            .count()
+            + 1;
+        let comment_lines = comment::format_comment_lines(
+            trailing,
+            config,
+            patterns,
+            comment_indent_width,
+            config.line_width,
+        );
+        if let Some((first, rest)) = comment_lines.split_first() {
+            output.push(' ');
+            output.push_str(first);
+            let continuation_indent = " ".repeat(comment_indent_width);
+            for line in rest {
+                output.push('\n');
+                output.push_str(&continuation_indent);
+                output.push_str(line);
+            }
+        }
+    }
+    Ok(output)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn format_parsed_ranges_from_depth(
+    source: &str,
+    file: &File,
+    config: &Config,
+    registry: &CommandRegistry,
+    debug: &mut DebugLog<'_>,
+    block_depth: &mut usize,
+    chunk_start_line: usize,
+    ranges: &[RangeInclusive<usize>],
+) -> Result<String> {
+    let patterns = config.compiled_patterns().map_err(runtime_config_error)?;
+    let mut line_starts = vec![0];
+    line_starts.extend(source.match_indices('\n').map(|(offset, _)| offset + 1));
+    let mut output = String::new();
+    let mut copied = 0;
+    for statement in &file.statements {
+        let Statement::Command(command) = statement else {
+            continue;
+        };
+        *block_depth = block_depth.saturating_sub(block_dedent_before(&command.name));
+        let (start, end) = command.span;
+        let first = line_starts.partition_point(|&offset| offset <= start) - 1;
+        let last = line_starts.partition_point(|&offset| offset < end) - 1;
+        let first_line = chunk_start_line + first;
+        let last_line = chunk_start_line + last;
+        if ranges.iter().any(|range| {
+            !range.is_empty() && *range.start() <= last_line && *range.end() >= first_line
+        }) {
+            // Indentation belongs to the selected command; preceding comments and newlines do not.
+            let line_start = line_starts[first];
+            let start = if source[line_start..start]
+                .bytes()
+                .all(|b| b == b' ' || b == b'\t')
+            {
+                line_start
+            } else {
+                start
+            };
+            output.push_str(&source[copied..start]);
+            let formatted = format_command_with_comment(
+                command,
+                config,
+                &patterns,
+                registry,
+                *block_depth,
+                debug,
+            )?;
+            if config.require_valid_layout {
+                for (line, text) in formatted.lines().enumerate() {
+                    let width = text.chars().count();
+                    if width > config.line_width {
+                        return Err(Error::LayoutTooWide {
+                            line_no: first_line + line,
+                            width,
+                            limit: config.line_width,
+                        });
+                    }
+                }
+            }
+            output.push_str(&apply_line_ending(source, &formatted, config.line_ending));
+            copied = end;
+        }
+        *block_depth += block_indent_after(&command.name);
+    }
+    output.push_str(&source[copied..]);
+    Ok(output)
+}
+
 /// Apply the configured line-ending style to `formatted` output.
 ///
 /// The formatter always emits LF internally. `source` is consulted when
@@ -357,7 +471,14 @@ fn format_source_impl(
     config: &Config,
     registry: &CommandRegistry,
     debug: &mut DebugLog<'_>,
+    ranges: &[RangeInclusive<usize>],
 ) -> Result<(String, usize)> {
+    if ranges
+        .iter()
+        .any(|range| *range.start() == 0 || range.is_empty())
+    {
+        return Err(Error::cli_arg("line ranges must be nonempty and 1-based"));
+    }
     // Preserve a leading UTF-8 BOM if the input had one. The parser
     // strips the BOM before parsing, so without re-prepending it here
     // the formatter would silently drop encoding markers used by some
@@ -396,6 +517,7 @@ fn format_source_impl(
                     enabled_chunk_start_line,
                     saw_barrier,
                     &mut block_depth,
+                    ranges,
                 )?;
                 total_statements += statements;
                 debug.log(format!(
@@ -415,6 +537,7 @@ fn format_source_impl(
                     enabled_chunk_start_line,
                     saw_barrier,
                     &mut block_depth,
+                    ranges,
                 )?;
                 total_statements += statements;
                 debug.log(format!(
@@ -436,6 +559,7 @@ fn format_source_impl(
                     enabled_chunk_start_line,
                     saw_barrier,
                     &mut block_depth,
+                    ranges,
                 )?;
                 total_statements += statements;
                 let next_mode = if matches!(mode, BarrierMode::DisabledByFence) {
@@ -473,6 +597,7 @@ fn format_source_impl(
         enabled_chunk_start_line,
         saw_barrier,
         &mut block_depth,
+        ranges,
     )?;
     Ok((output, total_statements))
 }
@@ -487,6 +612,7 @@ fn flush_enabled_chunk(
     chunk_start_line: usize,
     barrier_context: bool,
     block_depth: &mut usize,
+    ranges: &[RangeInclusive<usize>],
 ) -> Result<usize> {
     if enabled_chunk.is_empty() {
         return Ok(0);
@@ -509,7 +635,20 @@ fn flush_enabled_chunk(
     debug.log(format!(
         "formatter: formatting enabled chunk with {statement_count} statement(s) starting at source line {chunk_start_line}"
     ));
-    let formatted = format_parsed_file_from_depth(&file, config, registry, debug, block_depth)?;
+    let formatted = if ranges.is_empty() {
+        format_parsed_file_from_depth(&file, config, registry, debug, block_depth)?
+    } else {
+        format_parsed_ranges_from_depth(
+            enabled_chunk,
+            &file,
+            config,
+            registry,
+            debug,
+            block_depth,
+            chunk_start_line,
+            ranges,
+        )?
+    };
     output.push_str(&formatted);
     enabled_chunk.clear();
     Ok(statement_count)

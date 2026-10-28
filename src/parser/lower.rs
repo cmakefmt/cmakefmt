@@ -39,9 +39,12 @@ pub(super) fn lower(source: &str, tree: ParseTree) -> File {
             PtItem::BracketComment(span) => {
                 trailing_comment_col = None;
                 let comment = Comment::Bracket(source[span.range()].to_owned());
-                if let Some(comment) =
-                    attach_trailing_comment(&mut statements, comment, line_has_content)
-                {
+                if let Some(comment) = attach_trailing_comment(
+                    &mut statements,
+                    comment,
+                    line_has_content,
+                    span.end as usize,
+                ) {
                     flush_blank_lines(&mut statements, &mut pending_blank_lines);
                     statements.push(Statement::Comment(comment));
                 }
@@ -53,9 +56,12 @@ pub(super) fn lower(source: &str, tree: ParseTree) -> File {
                 let comment = Comment::Line(body.clone());
 
                 if line_has_content {
-                    if let Some(comment) =
-                        attach_trailing_comment(&mut statements, comment, line_has_content)
-                    {
+                    if let Some(comment) = attach_trailing_comment(
+                        &mut statements,
+                        comment,
+                        line_has_content,
+                        span.end as usize,
+                    ) {
                         flush_blank_lines(&mut statements, &mut pending_blank_lines);
                         statements.push(Statement::Comment(comment));
                         trailing_comment_col = None;
@@ -64,7 +70,11 @@ pub(super) fn lower(source: &str, tree: ParseTree) -> File {
                     }
                 } else if pending_blank_lines == 0
                     && trailing_comment_col == Some(col)
-                    && merge_trailing_comment_continuation(&mut statements, &body)
+                    && merge_trailing_comment_continuation(
+                        &mut statements,
+                        &body,
+                        span.end as usize,
+                    )
                 {
                 } else {
                     trailing_comment_col = None;
@@ -156,6 +166,7 @@ fn attach_trailing_comment(
     statements: &mut [Statement],
     comment: Comment,
     line_has_content: bool,
+    end: usize,
 ) -> Option<Comment> {
     if !line_has_content {
         return Some(comment);
@@ -163,6 +174,7 @@ fn attach_trailing_comment(
 
     match statements.last_mut() {
         Some(Statement::Command(command)) if command.trailing_comment.is_none() => {
+            command.span.1 = end;
             command.trailing_comment = Some(comment);
             None
         }
@@ -170,13 +182,18 @@ fn attach_trailing_comment(
     }
 }
 
-fn merge_trailing_comment_continuation(statements: &mut [Statement], continuation: &str) -> bool {
+fn merge_trailing_comment_continuation(
+    statements: &mut [Statement],
+    continuation: &str,
+    end: usize,
+) -> bool {
     let Some(Statement::Command(command)) = statements.last_mut() else {
         return false;
     };
     let Some(Comment::Line(ref mut text)) = command.trailing_comment else {
         return false;
     };
+    command.span.1 = end;
     let body = continuation.trim_start_matches('#').trim_start();
     if !body.is_empty() {
         text.push(' ');
@@ -232,5 +249,6 @@ mod tests {
             command.trailing_comment,
             Some(Comment::Line("# first second".to_owned()))
         );
+        assert_eq!(&source[command.span.0..command.span.1], source.trim_end());
     }
 }

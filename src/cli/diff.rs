@@ -6,8 +6,6 @@
 
 use similar::TextDiff;
 
-use crate::LineRange;
-
 pub(crate) fn highlight_changed_lines(source: &str, formatted: &str) -> String {
     let original_lines = split_lines_with_endings(source);
     let formatted_lines = split_lines_with_endings(formatted);
@@ -163,39 +161,4 @@ pub(crate) fn build_unified_diff(display_name: &str, source: &str, formatted: &s
         .context_radius(3)
         .header(&format!("a/{display_name}"), &format!("b/{display_name}"))
         .to_string()
-}
-
-pub(crate) fn apply_line_ranges(
-    source: &str,
-    formatted: &str,
-    line_ranges: &[LineRange],
-    display_name: &str,
-) -> Result<String, cmakefmt::Error> {
-    if line_ranges.is_empty() {
-        return Ok(formatted.to_owned());
-    }
-
-    let changed_lines = changed_formatted_line_numbers(
-        &split_lines_with_endings(source),
-        &split_lines_with_endings(formatted),
-    );
-    let mut outside = Vec::new();
-    for line in changed_lines {
-        if !line_ranges.iter().any(|range| range.contains(line)) {
-            outside.push(line);
-        }
-    }
-
-    if outside.is_empty() {
-        Ok(formatted.to_owned())
-    } else {
-        Err(cmakefmt::Error::cli_arg(format!(
-            "{display_name}: selected line ranges would affect lines outside the requested ranges ({})",
-            outside
-                .into_iter()
-                .map(|line| line.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        )))
-    }
 }

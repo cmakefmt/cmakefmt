@@ -49,6 +49,7 @@
 //! | [`format_source`] / [`format_source_with_registry`] | Format a source string |
 //! | [`format_parsed_file`] | Format an already-parsed [`parser::ast::File`] |
 //! | [`format_source_with_debug`] / [`format_source_with_registry_debug`] | Format + collect debug decision log |
+//! | [`format_source_ranges_with_registry`] | Format selected complete commands, preserving surrounding source |
 //! | [`Config`], [`CommandConfig`], [`PerCommandConfig`] | Runtime configuration |
 //! | [`CaseStyle`], [`DangleAlign`], [`LineEnding`], [`FractionalTabPolicy`] | Config enums |
 //! | [`CommandRegistry`] | Built-in + user-override command specs |
@@ -134,8 +135,9 @@ pub use error::{Error, IoResultExt, Result};
 // ── Formatting ───────────────────────────────────────────────────────────────
 
 pub use formatter::{
-    format_parsed_file, format_source, format_source_with_debug, format_source_with_registry,
-    format_source_with_registry_debug,
+    format_parsed_file, format_source, format_source_ranges_with_registry,
+    format_source_ranges_with_registry_debug, format_source_with_debug,
+    format_source_with_registry, format_source_with_registry_debug,
 };
 
 // ── Registry ─────────────────────────────────────────────────────────────────

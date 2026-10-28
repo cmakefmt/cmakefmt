@@ -14,7 +14,7 @@ use std::sync::{mpsc, Arc};
 use cmakefmt::spec::registry::CommandRegistry;
 use cmakefmt::{
     files::{discover_cmake_files_with_options, is_cmake_file, matches_filter, DiscoveryOptions},
-    format_source_with_registry, format_source_with_registry_debug, parser,
+    format_source_ranges_with_registry, format_source_ranges_with_registry_debug, parser,
     render_effective_config,
     semantic::normalize_semantics,
     Config, DumpConfigFormat, IoResultExt,
@@ -24,7 +24,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::cli::diff::{
-    apply_line_ranges, build_unified_diff, changed_formatted_line_numbers, highlight_changed_lines,
+    build_unified_diff, changed_formatted_line_numbers, highlight_changed_lines,
     split_lines_with_endings,
 };
 use crate::cli::runtime::{log_debug, needs_debug_lines};
@@ -322,6 +322,12 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         ));
     }
     let (config, registry, config_context) = build_context(cli, stdin_path)?;
+    let line_ranges: Vec<_> = cli
+        .input_selection
+        .line_ranges
+        .iter()
+        .map(|range| range.start..=range.end)
+        .collect();
     let collect_debug = needs_debug_lines(cli);
     let mut debug_lines = if collect_debug {
         vec![
@@ -332,12 +338,12 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
         Vec::new()
     };
     let (formatted, mut formatter_debug) = if collect_debug {
-        match format_source_with_registry_debug(&source, &config, &registry) {
+        match format_source_ranges_with_registry_debug(&source, &config, &registry, &line_ranges) {
             Ok(result) => result,
             Err(err) => return Err(err.with_display_name(&display_name)),
         }
     } else {
-        match format_source_with_registry(&source, &config, &registry) {
+        match format_source_ranges_with_registry(&source, &config, &registry, &line_ranges) {
             Ok(formatted) => (formatted, Vec::new()),
             Err(err) => return Err(err.with_display_name(&display_name)),
         }
@@ -354,13 +360,6 @@ fn process_stdin(cli: &Cli, colorize_stdout: bool) -> Result<ProcessedTarget, cm
             ));
         }
     }
-
-    let formatted = apply_line_ranges(
-        &source,
-        &formatted,
-        &cli.input_selection.line_ranges,
-        &display_name,
-    )?;
 
     let would_change = formatted != source;
     let source_lines = source.lines().count();
@@ -421,6 +420,12 @@ fn process_path(
         ));
     }
     let (config, registry, config_context) = build_context(cli, Some(path))?;
+    let line_ranges: Vec<_> = cli
+        .input_selection
+        .line_ranges
+        .iter()
+        .map(|range| range.start..=range.end)
+        .collect();
     let collect_debug = needs_debug_lines(cli);
     let mut debug_lines = if collect_debug {
         vec![
@@ -431,7 +436,9 @@ fn process_path(
     } else {
         Vec::new()
     };
-    let cache_context = if cli.execution.cache || cli.execution.cache_location.is_some() {
+    let cache_context = if line_ranges.is_empty()
+        && (cli.execution.cache || cli.execution.cache_location.is_some())
+    {
         Some(cache_context(
             path,
             &source,
@@ -465,24 +472,30 @@ fn process_path(
                 ));
             }
             if collect_debug {
-                match format_source_with_registry_debug(&source, &config, &registry) {
+                match format_source_ranges_with_registry_debug(
+                    &source,
+                    &config,
+                    &registry,
+                    &line_ranges,
+                ) {
                     Ok(result) => result,
                     Err(err) => return Err(err.with_display_name(path.display().to_string())),
                 }
             } else {
-                match format_source_with_registry(&source, &config, &registry) {
+                match format_source_ranges_with_registry(&source, &config, &registry, &line_ranges)
+                {
                     Ok(formatted) => (formatted, Vec::new()),
                     Err(err) => return Err(err.with_display_name(path.display().to_string())),
                 }
             }
         }
     } else if collect_debug {
-        match format_source_with_registry_debug(&source, &config, &registry) {
+        match format_source_ranges_with_registry_debug(&source, &config, &registry, &line_ranges) {
             Ok(result) => result,
             Err(err) => return Err(err.with_display_name(path.display().to_string())),
         }
     } else {
-        match format_source_with_registry(&source, &config, &registry) {
+        match format_source_ranges_with_registry(&source, &config, &registry, &line_ranges) {
             Ok(formatted) => (formatted, Vec::new()),
             Err(err) => return Err(err.with_display_name(path.display().to_string())),
         }
@@ -501,12 +514,6 @@ fn process_path(
         }
     }
 
-    let formatted = apply_line_ranges(
-        &source,
-        &formatted,
-        &cli.input_selection.line_ranges,
-        &path.display().to_string(),
-    )?;
     let would_change = formatted != source;
     let source_lines = source.lines().count();
     let formatted_lines = formatted.lines().count();

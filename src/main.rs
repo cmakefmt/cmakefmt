@@ -204,10 +204,10 @@ struct InputSelectionArgs {
     )]
     stdin_path: Option<PathBuf>,
 
-    /// Restrict formatting to one or more 1-based inclusive line ranges.
+    /// Format complete commands intersecting 1-based inclusive source line ranges.
     ///
     /// This is intended for editor integrations and only works on a single
-    /// formatting target.
+    /// formatting target. Unselected source bytes are preserved.
     #[arg(
         long = "lines",
         value_name = "START:END",
@@ -715,12 +715,6 @@ enum CacheStrategy {
 struct LineRange {
     start: usize,
     end: usize,
-}
-
-impl LineRange {
-    fn contains(&self, line: usize) -> bool {
-        self.start <= line && line <= self.end
-    }
 }
 
 impl FromStr for LineRange {
