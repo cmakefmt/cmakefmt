@@ -2146,7 +2146,7 @@ fn line_ranges_format_only_selected_lines() {
 }
 
 #[test]
-fn line_ranges_fail_when_changes_escape_requested_range() {
+fn line_ranges_allow_selected_command_to_wrap() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("CMakeLists.txt");
     write_file(&file, "set(  FOO  a b c d e f g h i )\n");
@@ -2162,9 +2162,109 @@ fn line_ranges_fail_when_changes_escape_requested_range() {
         .output()
         .unwrap();
 
+    assert!(output.status.success(), "{:?}", output);
+    let formatted = String::from_utf8(output.stdout).unwrap();
+    assert!(formatted.lines().count() > 1);
+    assert!(formatted.starts_with("set(FOO"));
+}
+
+#[test]
+fn line_ranges_format_complete_commands_and_preserve_surrounding_source() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    let source = concat!(
+        "set( LEGACY untouched )\n\n",
+        "#  keep   this comment\n",
+        "if( ENABLE_UI )\n",
+        "    target_link_libraries(app PRIVATE\n",
+        "        Qt6::Core   Qt6::Quick\n",
+        "        tvm_options) # tail\n",
+        "    set( OTHER untouched )\n",
+        "endif( )\n",
+    );
+    write_file(&file, source);
+    let output = cmakefmt()
+        .args(["--verify", "--lines=7:7", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{:?}", output);
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        concat!(
+            "set( LEGACY untouched )\n\n",
+            "#  keep   this comment\n",
+            "if( ENABLE_UI )\n",
+            "  target_link_libraries(app PRIVATE Qt6::Core Qt6::Quick tvm_options) # tail\n",
+            "    set( OTHER untouched )\n",
+            "endif( )\n",
+        )
+    );
+    assert_eq!(std::fs::read_to_string(file).unwrap(), source);
+}
+
+#[test]
+fn line_ranges_reject_comment_ownership_change_before_emitting_output() {
+    let source = "set( A x ) # tail\n         # independent\nset( B y )\n";
+    for verify in [false, true] {
+        let mut command = cmakefmt();
+        command.args(["--no-config", "--lines=1:1", "-"]);
+        if verify {
+            command.arg("--verify");
+        }
+        let mut child = command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(source.as_bytes())
+            .unwrap();
+        let output = child.wait_with_output().unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("comment ownership"));
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, source);
+    let output = cmakefmt()
+        .args(["--no-config", "--verify", "--lines=1:1", "-i"])
+        .arg(&file)
+        .output()
+        .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("selected line ranges would affect lines outside the requested ranges"));
+    assert_eq!(std::fs::read_to_string(file).unwrap(), source);
+}
+
+#[test]
+fn line_ranges_do_not_reuse_or_poison_whole_file_cache() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("CMakeLists.txt");
+    write_file(&file, "set( OLD keep )\nset( NEW value )\n");
+    let full = cmakefmt()
+        .args(["--cache", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(full.status.success());
+    let partial = cmakefmt()
+        .args(["--cache", "--lines=2:2", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(partial.status.success());
+    assert_eq!(
+        String::from_utf8(partial.stdout).unwrap(),
+        "set( OLD keep )\nset(NEW value)\n"
+    );
+    let again = cmakefmt()
+        .args(["--cache", file.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(again.status.success());
+    assert_eq!(again.stdout, full.stdout);
 }
 
 #[test]

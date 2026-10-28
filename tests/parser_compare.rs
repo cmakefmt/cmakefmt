@@ -22,7 +22,14 @@ fn parse_new(source: &str) -> std::result::Result<File, ParseDiagnostic> {
 
 fn assert_equivalent(source: &str, label: &str) {
     match (legacy_pest::parse_reference(source), parse_new(source)) {
-        (Ok(a), Ok(mut b)) => {
+        (Ok(mut a), Ok(mut b)) => {
+            // The new parser includes attached comments in command extents;
+            // exact source spans are covered by parser and range tests.
+            for statement in a.statements.iter_mut().chain(b.statements.iter_mut()) {
+                if let Statement::Command(command) = statement {
+                    command.span = (0, 0);
+                }
+            }
             // The legacy parser does not record standalone argument-comment
             // placement. Compare the content and ordering it does represent;
             // parser unit tests separately verify the new placement metadata.

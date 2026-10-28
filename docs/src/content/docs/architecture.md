@@ -195,7 +195,7 @@ compiled only when the `lsp` feature is enabled.
 It handles:
 
 - `textDocument/formatting` -- whole-file formatting
-- `textDocument/rangeFormatting` -- range formatting (backed by `--lines`)
+- `textDocument/rangeFormatting` -- shared command-scoped range formatting
 - `textDocument/codeAction` -- "Disable `cmakefmt` for selection" action
 - `workspace/didChangeConfiguration` -- live config reload
 
@@ -238,8 +238,8 @@ sub-groups (`InputSelectionArgs`, `OutputModesArgs`, `ExecutionArgs`,
   for the binary.
 - **`cli/summary.rs`** -- human + stat summary rendering with
   co-located tests.
-- **`cli/diff.rs`** -- unified diff, syntax highlighting,
-  `apply_line_ranges`.
+- **`cli/diff.rs`** -- unified diff and syntax highlighting. Command-scoped
+  selection lives in `formatter/mod.rs` and is shared with LSP requests.
 - **`cli/spec_coverage.rs`** -- backs the `dump spec-coverage`
   subcommand; reads the CMake-commands snapshot from
   `src/spec/cmake_commands.txt` and classifies registry coverage.

@@ -47,7 +47,8 @@ pub struct CommandInvocation {
     pub arguments: Vec<Argument>,
     /// A comment that appears after the closing paren on the same line.
     pub trailing_comment: Option<Comment>,
-    /// Half-open byte range `[start, end)` into the original source.
+    /// Half-open byte range `[start, end)` into the original source,
+    /// including attached trailing comments and their continuation lines.
     /// `start` is inclusive, `end` is exclusive.
     pub span: (usize, usize),
 }

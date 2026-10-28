@@ -57,7 +57,7 @@ Ignore rules only affect:
 | `--changed` | Use modified Git-tracked files instead of explicit input paths. |
 | `--since <REF>` | Choose the Git base ref used by `--changed`. Compares the working tree against `<REF>` (so uncommitted changes are included), consistent with `--changed` alone comparing against `HEAD`. |
 | `--stdin-path <PATH>` | Give stdin formatting a virtual on-disk path for config discovery and diagnostics. |
-| `--lines <START:END>` | Restrict formatting to one or more inclusive 1-based line ranges within a single file. |
+| `--lines <START:END>` | Format complete commands intersecting inclusive 1-based source line ranges within one file; preserve unselected bytes. |
 
 ## Output Mode Flags
 

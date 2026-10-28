@@ -8,6 +8,21 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- Make `--lines` format complete commands intersecting the requested source
+  lines while preserving unselected bytes. Legacy formatting elsewhere no
+  longer rejects a range request, and wrapped output may grow beyond it.
+  Preserve block indentation, disabled regions, and attached trailing comments;
+  verify the final combined output. LSP ranges use the same formatter.
+- Extend `CommandInvocation.span` through attached trailing comments and their
+  continuation lines so source edits replace them exactly once.
+
+### Added
+
+- Expose `format_source_ranges_with_registry` and its debug variant for
+  command-scoped library formatting with native command specifications.
+
 ## 2.3.2 — 2026-10-27
 
 ### Fixed
