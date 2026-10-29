@@ -166,7 +166,7 @@ pub(crate) fn format_command(
         &sections,
         &cmd_config,
         block_depth,
-        config.line_width,
+        cmd_config.line_width(),
     ) {
         debug.log(format!(
             "formatter: command {} layout=inline sections={} positional_args={}",
@@ -184,7 +184,7 @@ pub(crate) fn format_command(
         &cmd_config,
         patterns,
         block_depth,
-        config.line_width,
+        cmd_config.line_width(),
     ) {
         debug.log(format!(
             "formatter: command {} layout=hanging-wrap thresholds(line_width={}, max_hanging_wrap_lines={}, max_hanging_wrap_positional_args={})",

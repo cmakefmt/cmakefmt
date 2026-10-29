@@ -15,6 +15,51 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn compact_layouts_use_effective_command_width() {
+    let source = "foo(aaaa bbbb cccc dddd)\n";
+    let config = Config::from_yaml_str(
+        "format:\n  line_width: 80\nper_command_overrides:\n  foo:\n    line_width: 15\n",
+    )
+    .unwrap();
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output, @r#"
+    foo(aaaa bbbb
+        cccc dddd)
+    "#);
+    for (global, local) in [(80, 15), (15, 80)] {
+        let config = Config::from_yaml_str(&format!("format:\n  line_width: {global}\nper_command_overrides:\n  foo:\n    line_width: {local}\n")).unwrap();
+        let control = Config {
+            line_width: local,
+            ..Config::default()
+        };
+        for source in [source, "foo(aaaa bbbb cccc dddd eeee ffff)\n"] {
+            for ranges in [vec![], vec![std::ops::RangeInclusive::new(1, 1)]] {
+                let output = cmakefmt::format_source_ranges_with_registry(
+                    source,
+                    &config,
+                    CommandRegistry::builtins(),
+                    &ranges,
+                )
+                .unwrap();
+                assert_eq!(output, format_source(source, &control).unwrap());
+                assert!(output.lines().all(|line| line.chars().count() <= local));
+                assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+                assert_eq!(
+                    cmakefmt::format_source_ranges_with_registry(
+                        &output,
+                        &config,
+                        CommandRegistry::builtins(),
+                        &ranges
+                    )
+                    .unwrap(),
+                    output
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn bracket_comment_continuations_preserve_raw_whitespace() {
     let source = "set(A x) #[=[tail\ntext]=]\n";
     insta::assert_snapshot!(format_source(source, &Config::default()).unwrap(), @r#"

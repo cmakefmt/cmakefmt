@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Use effective per-command line widths when selecting inline and hanging
+  layouts, rather than the global width.
+
 - Preserve raw whitespace in multiline bracket-comment continuations instead
   of adding indentation again on every formatting pass.
 
