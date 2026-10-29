@@ -1180,9 +1180,15 @@ fn write_packed_arguments_with_continuation(
                     &mut current_indent_width,
                 );
                 current_width = 0;
-                for line in comment_lines {
-                    output.push_str(indent_for(used_first_line));
-                    output.push_str(&line);
+                for (index, line) in comment_lines.iter().enumerate() {
+                    comment::write_comment_line(
+                        output,
+                        comment,
+                        line,
+                        index,
+                        indent_for(used_first_line),
+                        config.use_tabchars,
+                    );
                     output.push('\n');
                     used_first_line = true;
                     current_indent_width = continuation_indent.chars().count();
@@ -1589,15 +1595,24 @@ fn write_vertical_arguments(
                 }
 
                 // Comment doesn't fit inline — render on its own line(s).
-                for line in comment::format_comment_lines(
+                for (index, line) in comment::format_comment_lines(
                     comment,
                     config,
                     patterns,
                     indent.chars().count(),
                     config.line_width,
-                ) {
-                    output.push_str(indent);
-                    output.push_str(&line);
+                )
+                .iter()
+                .enumerate()
+                {
+                    comment::write_comment_line(
+                        output,
+                        comment,
+                        line,
+                        index,
+                        indent,
+                        config.use_tabchars,
+                    );
                     output.push('\n');
                 }
             }
@@ -1623,7 +1638,7 @@ fn write_vertical_arguments(
 /// `use_tabchars` is enabled, which is exactly when `spaces_to_tabs` runs and
 /// strips the marker again — so it never leaks into formatted output, and the
 /// common (space-indented) path does no extra work.
-const LITERAL_LINE_MARKER: char = '\u{1}';
+pub(super) const LITERAL_LINE_MARKER: char = '\u{1}';
 
 fn write_multiline_argument(output: &mut String, indent: &str, source: &str, mark_literals: bool) {
     let normalized = source.replace("\r\n", "\n");

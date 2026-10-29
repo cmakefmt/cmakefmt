@@ -304,8 +304,7 @@ fn format_parsed_file_from_depth(
                     if index > 0 {
                         output.push('\n');
                     }
-                    output.push_str(&indent);
-                    output.push_str(line);
+                    comment::write_comment_line(&mut output, c, line, index, &indent, false);
                 }
                 previous_was_content = true;
             }
@@ -368,10 +367,16 @@ fn format_command_with_comment(
             output.push(' ');
             output.push_str(first);
             let continuation_indent = " ".repeat(comment_indent_width);
-            for line in rest {
+            for (index, line) in rest.iter().enumerate() {
                 output.push('\n');
-                output.push_str(&continuation_indent);
-                output.push_str(line);
+                comment::write_comment_line(
+                    &mut output,
+                    trailing,
+                    line,
+                    index + 1,
+                    &continuation_indent,
+                    false,
+                );
             }
         }
     }

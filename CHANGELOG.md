@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Preserve raw whitespace in multiline bracket-comment continuations instead
+  of adding indentation again on every formatting pass.
+
 - Normalize multiline first-argument line endings before CRLF rendering,
   preventing extra carriage returns and changed literal values on repeated runs.
 

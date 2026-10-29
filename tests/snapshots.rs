@@ -15,6 +15,50 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn bracket_comment_continuations_preserve_raw_whitespace() {
+    let source = "set(A x) #[=[tail\ntext]=]\n";
+    insta::assert_snapshot!(format_source(source, &Config::default()).unwrap(), @r#"
+    set(A x) #[=[tail
+    text]=]
+    "#);
+    for source in [
+        source,
+        "set(A #[=[hello\n  text]=]\n x)\n",
+        "if(ON)\n#[=[hello\n  text]=]\nendif()\n",
+    ] {
+        for use_tabchars in [false, true] {
+            for max_pargs_hwrap in [0, 20] {
+                let config = Config {
+                    use_tabchars,
+                    max_pargs_hwrap,
+                    ..Config::default()
+                };
+                for ranges in [vec![], vec![std::ops::RangeInclusive::new(1, 3)]] {
+                    let output = cmakefmt::format_source_ranges_with_registry(
+                        source,
+                        &config,
+                        CommandRegistry::builtins(),
+                        &ranges,
+                    )
+                    .unwrap();
+                    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+                    assert_eq!(
+                        cmakefmt::format_source_ranges_with_registry(
+                            &output,
+                            &config,
+                            CommandRegistry::builtins(),
+                            &ranges
+                        )
+                        .unwrap(),
+                        output
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn attached_first_literal_normalizes_crlf_once() {
     for source in ["message(\"a\r\n  b\")\r\n", "message([=[a\r\n  b]=])\r\n"] {
         for line_ending in [

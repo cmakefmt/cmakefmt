@@ -11,6 +11,26 @@ use crate::parser::ast::Comment;
 ///
 /// Bracket comments are preserved verbatim. Line comments may be reflowed when
 /// markup handling and comment reflow are enabled in [`Config`].
+/// Preserve bracket-comment continuation whitespace; only the opening line
+/// receives formatter indentation. Command writers protect raw lines from tabs.
+pub(super) fn write_comment_line(
+    output: &mut String,
+    comment: &Comment,
+    line: &str,
+    index: usize,
+    indent: &str,
+    protect_tabs: bool,
+) {
+    if index > 0 && matches!(comment, Comment::Bracket(_)) {
+        if protect_tabs {
+            output.push(super::node::LITERAL_LINE_MARKER);
+        }
+    } else {
+        output.push_str(indent);
+    }
+    output.push_str(line);
+}
+
 pub fn format_comment_lines(
     comment: &Comment,
     config: &Config,

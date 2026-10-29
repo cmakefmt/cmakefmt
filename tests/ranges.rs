@@ -71,7 +71,7 @@ fn bracket_trailing_comments_keep_their_complete_extent() {
     let output = format(source, &[2..=2]);
     assert_eq!(
         output,
-        "set(A value) #[=[tail\n             text]=]\n# untouched   comment\nset( B value )\n"
+        "set(A value) #[=[tail\ntext]=]\n# untouched   comment\nset( B value )\n"
     );
 }
 
