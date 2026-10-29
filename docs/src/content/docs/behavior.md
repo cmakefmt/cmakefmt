@@ -193,7 +193,8 @@ All of the following markers work:
 - `# ~~~`
 
 This is the escape hatch for generated blocks, unusual macro DSLs, or legacy
-sections you are not ready to normalize yet.
+sections you are not ready to normalize yet. Markers inside command arguments
+or bracket comments are literal content and do not toggle formatting.
 
 ## Custom Commands
 

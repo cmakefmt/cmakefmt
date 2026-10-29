@@ -531,9 +531,19 @@ fn format_source_impl(
     // reset the indentation of the formatted region that follows it.
     let mut block_depth = 0usize;
 
+    let mut barrier_scanner = parser::BarrierScanner::new(source);
+    let mut source_offset = 0;
     for (line_index, line) in source.split_inclusive('\n').enumerate() {
         let line_no = line_index + 1;
-        match detect_barrier(line) {
+        let line_start = source_offset;
+        source_offset += line.len();
+        // Only scan lexical context when a line looks like a directive. This
+        // keeps ordinary files on the existing fast path, while quoted and
+        // bracket contents cannot split enabled chunks into invalid CMake.
+        let barrier = detect_barrier(line).filter(|_| {
+            !matches!(mode, BarrierMode::Enabled) || barrier_scanner.is_line_start(line_start)
+        });
+        match barrier {
             Some(BarrierEvent::DisableByDirective(kind)) => {
                 let statements = flush_enabled_chunk(
                     &mut output,
@@ -612,6 +622,10 @@ fn format_source_impl(
                     output.push_str(line);
                 }
             }
+        }
+        if !matches!(mode, BarrierMode::Enabled) || barrier.is_some() {
+            // Raw disabled regions may contain invalid or unbalanced syntax.
+            barrier_scanner.skip_to(source_offset);
         }
     }
 

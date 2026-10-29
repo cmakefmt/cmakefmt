@@ -78,7 +78,7 @@ fn parse_file_body(c: &mut Cursor<'_>, items: &mut Vec<PtItem>) -> Result<(), Sc
     Ok(())
 }
 
-fn parse_command(c: &mut Cursor<'_>) -> Result<PtCommand, ScanError> {
+pub(super) fn parse_command(c: &mut Cursor<'_>) -> Result<PtCommand, ScanError> {
     let start = c.pos();
     let name = scanner::scan_identifier(c);
     scanner::skip_horizontal_space(c);

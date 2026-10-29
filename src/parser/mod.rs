@@ -17,6 +17,8 @@ mod grammar;
 mod lower;
 mod scanner;
 
+pub(crate) use scanner::BarrierScanner;
+
 use ast::File;
 
 use crate::error::{Error, ParseDiagnostic, ParseError, Result};

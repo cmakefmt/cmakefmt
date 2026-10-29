@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Ignore formatting-barrier text inside quoted/bracket arguments and bracket
+  comments, while continuing to preserve disabled regions verbatim.
+
 - Include the closing parenthesis in hanging-layout width validation and fall
   back to a fitting vertical layout when it would overflow.
 

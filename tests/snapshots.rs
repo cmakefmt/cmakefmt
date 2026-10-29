@@ -15,6 +15,66 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn barrier_text_inside_literals_is_not_a_directive() {
+    let source = "message([=[\n# fmt: off\n]=])\n";
+    insta::assert_snapshot!(format_source(source, &Config::default()).unwrap(), @r#"
+    message(
+      [=[
+    # fmt: off
+    ]=])
+    "#);
+    for marker in [
+        "# fmt: off",
+        "# fmt: on",
+        "# cmakefmt: off",
+        "# cmakefmt: on",
+        "# cmake-format: off",
+        "# cmake-format: on",
+        "# ~~~",
+    ] {
+        for source in [
+            format!("message([==[\n{marker}\n]==])\n"),
+            format!("message(\"a\n{marker}\nb\")\n"),
+            format!("#[==[\n{marker}\n]==]\nset( A x )\n"),
+            format!("message(\"escaped\\\"quote\n{marker}\nb\")\n"),
+        ] {
+            for ranges in [vec![], vec![std::ops::RangeInclusive::new(1, 5)]] {
+                let config = Config::default();
+                let output = cmakefmt::format_source_ranges_with_registry(
+                    &source,
+                    &config,
+                    CommandRegistry::builtins(),
+                    &ranges,
+                )
+                .unwrap();
+                assert!(cmakefmt::semantic::semantic_equivalent(&source, &output));
+                assert_eq!(
+                    cmakefmt::format_source_ranges_with_registry(
+                        &output,
+                        &config,
+                        CommandRegistry::builtins(),
+                        &ranges
+                    )
+                    .unwrap(),
+                    output
+                );
+            }
+        }
+    }
+    let source = "message(foo([=[))\n# fmt: off\n\"unterminated\n# fmt: on\nset( A x )\n";
+    assert_eq!(
+        format_source(source, &Config::default()).unwrap(),
+        "message(foo([=[))\n# fmt: off\n\"unterminated\n# fmt: on\nset(A x)\n"
+    );
+    // Syntax inside a real disabled region is deliberately not scanned.
+    let source = "# fmt: off\n\"unterminated [=[\n# fmt: on\nset( A x )\n";
+    assert_eq!(
+        format_source(source, &Config::default()).unwrap(),
+        "# fmt: off\n\"unterminated [=[\n# fmt: on\nset(A x)\n"
+    );
+}
+
+#[test]
 fn hanging_layout_budgets_the_closing_parenthesis() {
     let source = "foo(aaaaaaaa bbbbbbbb)\n";
     let config = Config {

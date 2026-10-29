@@ -5,6 +5,47 @@
 use super::cursor::Cursor;
 use super::{ScanError, Span};
 
+/// Lazily locate top-level comment lines using the parser's token boundaries.
+/// Disabled source is skipped by the formatter rather than parsed.
+#[derive(Debug, Clone)]
+pub(crate) struct BarrierScanner<'a> {
+    cursor: Cursor<'a>,
+}
+
+impl<'a> BarrierScanner<'a> {
+    pub(crate) fn new(source: &'a str) -> Self {
+        Self {
+            cursor: Cursor::new(source),
+        }
+    }
+
+    pub(crate) fn skip_to(&mut self, offset: usize) {
+        self.cursor.set_pos(offset as u32);
+    }
+
+    pub(crate) fn is_line_start(&mut self, offset: usize) -> bool {
+        while (self.cursor.pos() as usize) < offset && !self.cursor.at_eof() {
+            // A complete command shields its quoted/bracket arguments and
+            // argument comments. In particular, `[=[` embedded in an unquoted
+            // argument must not be mistaken for a bracket argument opener.
+            // Errors remain the enabled-chunk parser's responsibility.
+            match self.cursor.peek() {
+                Some(b'#') => {
+                    let _ = scan_comment(&mut self.cursor);
+                }
+                Some(b'@') => {
+                    let _ = scan_template_placeholder(&mut self.cursor);
+                }
+                Some(b'_') | Some(b'a'..=b'z') | Some(b'A'..=b'Z') => {
+                    let _ = super::grammar::parse_command(&mut self.cursor);
+                }
+                _ => self.cursor.bump(),
+            }
+        }
+        self.cursor.pos() as usize == offset
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(super) enum ArgumentKind {
     Bracket { level: u32, raw: Span },
