@@ -622,12 +622,18 @@ fn try_format_hanging(
         return None;
     }
 
-    Some(close_multiline(
+    let output = close_multiline(
         lines,
         &base_indent,
         format_name(command, cmd_config).len(),
         cmd_config,
-    ))
+    );
+    // Token packing excludes the closing parenthesis. Reject a candidate that
+    // overflows once closed so the vertical writer can choose a fitting layout.
+    output
+        .lines()
+        .all(|line| line.chars().count() <= line_width)
+        .then_some(output)
 }
 
 /// Pack simple argument sections into an indented command body, keeping each

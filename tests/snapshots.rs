@@ -15,6 +15,52 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn hanging_layout_budgets_the_closing_parenthesis() {
+    let source = "foo(aaaaaaaa bbbbbbbb)\n";
+    let config = Config {
+        line_width: 12,
+        require_valid_layout: true,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output, @r#"
+    foo(
+      aaaaaaaa
+      bbbbbbbb)
+    "#);
+    for width in [12, 13, 14] {
+        for dangle_parens in [false, true] {
+            let config = Config {
+                line_width: width,
+                dangle_parens,
+                ..config.clone()
+            };
+            for ranges in [vec![], vec![std::ops::RangeInclusive::new(1, 1)]] {
+                let output = cmakefmt::format_source_ranges_with_registry(
+                    source,
+                    &config,
+                    CommandRegistry::builtins(),
+                    &ranges,
+                )
+                .unwrap();
+                assert!(output.lines().all(|line| line.chars().count() <= width));
+                assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+                assert_eq!(
+                    cmakefmt::format_source_ranges_with_registry(
+                        &output,
+                        &config,
+                        CommandRegistry::builtins(),
+                        &ranges
+                    )
+                    .unwrap(),
+                    output
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn compact_layouts_use_effective_command_width() {
     let source = "foo(aaaa bbbb cccc dddd)\n";
     let config = Config::from_yaml_str(

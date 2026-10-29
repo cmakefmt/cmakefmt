@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Include the closing parenthesis in hanging-layout width validation and fall
+  back to a fitting vertical layout when it would overflow.
+
 - Use effective per-command line widths when selecting inline and hanging
   layouts, rather than the global width.
 
