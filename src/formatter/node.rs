@@ -763,7 +763,14 @@ fn format_command_vertical(
         output.push('(');
         // The first argument bypasses the regular multiline writer. Protect
         // its literal continuation lines from the indentation-to-tabs pass too.
-        for (index, line) in first_arg.as_str().split('\n').enumerate() {
+        // All command writers emit LF internally; the file-level pass applies
+        // the requested line endings once, including inside literal arguments.
+        let first_arg_text = if first_arg.as_str().contains("\r\n") {
+            std::borrow::Cow::Owned(first_arg.as_str().replace("\r\n", "\n"))
+        } else {
+            std::borrow::Cow::Borrowed(first_arg.as_str())
+        };
+        for (index, line) in first_arg_text.split('\n').enumerate() {
             if index > 0 {
                 output.push('\n');
                 if ctx.config().use_tabchars {

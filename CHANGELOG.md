@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Normalize multiline first-argument line endings before CRLF rendering,
+  preventing extra carriage returns and changed literal values on repeated runs.
+
 - Preserve spaces inside multiline first arguments when tab indentation and
   `wrap_after_first_arg` are enabled.
 

@@ -15,6 +15,68 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn attached_first_literal_normalizes_crlf_once() {
+    for source in ["message(\"a\r\n  b\")\r\n", "message([=[a\r\n  b]=])\r\n"] {
+        for line_ending in [
+            cmakefmt::LineEnding::Auto,
+            cmakefmt::LineEnding::Windows,
+            cmakefmt::LineEnding::Unix,
+        ] {
+            for use_tabchars in [false, true] {
+                let config = Config {
+                    wrap_after_first_arg: true,
+                    line_ending,
+                    use_tabchars,
+                    ..Config::default()
+                };
+                for ranges in [vec![], vec![std::ops::RangeInclusive::new(1, 1)]] {
+                    let output = cmakefmt::format_source_ranges_with_registry(
+                        source,
+                        &config,
+                        CommandRegistry::builtins(),
+                        &ranges,
+                    )
+                    .unwrap();
+                    assert!(!output.contains("\r\r"));
+                    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+                    assert_eq!(
+                        cmakefmt::format_source_ranges_with_registry(
+                            &output,
+                            &config,
+                            CommandRegistry::builtins(),
+                            &ranges
+                        )
+                        .unwrap(),
+                        output
+                    );
+                    let expected = if line_ending == cmakefmt::LineEnding::Unix {
+                        // Range formatting retains the command's original terminating newline.
+                        if ranges.is_empty() {
+                            source.replace("\r\n", "\n")
+                        } else {
+                            source.replacen("\r\n", "\n", 1)
+                        }
+                    } else {
+                        source.to_owned()
+                    };
+                    assert_eq!(output, expected);
+                }
+            }
+        }
+    }
+    let config = Config {
+        wrap_after_first_arg: true,
+        line_ending: cmakefmt::LineEnding::Windows,
+        ..Config::default()
+    };
+    let output = format_source("message(\"a\r\n  b\")\r\n", &config).unwrap();
+    insta::assert_snapshot!(output.replace('\r', "<CR>"), @r#"
+    message("a<CR>
+      b")<CR>
+    "#);
+}
+
+#[test]
 fn attached_first_literal_preserves_spaces_with_tabs() {
     let config = Config {
         use_tabchars: true,
