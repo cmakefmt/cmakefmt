@@ -40,8 +40,8 @@
   // Benchmark: mariadb_server/CMakeLists.txt (656 lines)
   // hyperfine --warmup 10 --runs 50 --shell=none
   // Historical binaries: macOS aarch64 builds from GitHub Releases.
-  // v2.0.0, v2.1.0, v2.3.0, v2.3.1, and v2.3.2: local release candidates, 100 warmups / 200 runs.
-  // v2.3.2 also loads the tracked default .cmakefmt.yaml.
+  // v2.0.0, v2.1.0, v2.3.x, and v2.4.0: local release candidates, 100 warmups / 200 runs.
+  // Candidates from v2.3.2 onward also load the tracked default .cmakefmt.yaml.
   const DATA = [
     { version: "v0.1.0", time: 9.6, binary: 4.7 },
     { version: "v0.1.1", time: 9.7, binary: 4.7 },
@@ -65,6 +65,7 @@
     { version: "v2.3.0", time: 6.5, binary: 5.7 },
     { version: "v2.3.1", time: 6.2, binary: 5.7 },
     { version: "v2.3.2", time: 6.7, binary: 5.8 },
+    { version: "v2.4.0", time: 6.2, binary: 5.8 },
   ];
 
   // Annotations for key changes
@@ -82,6 +83,7 @@
     "v2.3.0": "release candidate: call spacing + continuation alignment",
     "v2.3.1": "release candidate: grouped wrapping + LSP fixes",
     "v2.3.2": "release candidate: prefix + keyword layout fixes; repository config loaded",
+    "v2.4.0": "release candidate: command ranges + literal preservation",
   };
 
   function isDark() {

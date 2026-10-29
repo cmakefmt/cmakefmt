@@ -202,6 +202,11 @@ The locally built `v2.3.2` release candidate measured **6.7ms** median and
 also loads the newly tracked default `.cmakefmt.yaml`, so its configuration
 loading work differs from earlier candidates.
 
+The locally built `v2.4.0` release candidate measured **6.2ms** median and
+**5.8MiB** (6,032,256 bytes) on 29 October 2026, using the same fixture,
+100 warmups, and 200 runs with `--shell=none --style basic`. Like the `v2.3.2`
+candidate, this run loads the tracked default `.cmakefmt.yaml`.
+
 The official `v2.2.0` macOS aarch64 binary was measured retrospectively on
 24 October 2026 with the same 100 warmups, 200 runs, and command settings:
 **6.7ms** median and **5.5MiB**. Its size increase coincides with the move from
