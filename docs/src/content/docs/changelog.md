@@ -16,6 +16,46 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.4.0 — 2026-10-29
+
+### Added
+
+- Expose `format_source_ranges_with_registry` and its debug variant for
+  command-scoped library formatting with native command specifications (#258,
+  thanks to @tech-alp).
+
+### Changed
+
+- Make `--lines` select complete commands intersecting inclusive source line
+  ranges, rather than rejecting changes outside output-line ranges. Selected
+  commands may grow or shrink; unrelated source bytes remain unchanged.
+  Standalone-comment-only and whitespace-only selections are no-ops (#258).
+- Extend the public `CommandInvocation.span` through attached trailing comments
+  and their continuation lines so source edits replace them exactly once.
+
+### Fixed
+
+- Preserve spaces inside multiline arguments when tab indentation and
+  `wrap_after_first_arg` are enabled, including later arguments that follow the
+  attached first argument. Previously, formatting could change literal values;
+  explicit semantic verification rejected the affected output.
+- Normalize multiline first-argument line endings before CRLF rendering,
+  preventing extra carriage returns and changed literal values on repeated runs.
+- Preserve raw whitespace in multiline bracket-comment continuations instead
+  of adding indentation again on every formatting pass.
+- Use effective per-command line widths when selecting inline and hanging
+  layouts, rather than the global width.
+- Include the closing parenthesis in hanging-layout width validation and fall
+  back to a fitting vertical layout when it would overflow.
+- Ignore formatting-barrier text inside quoted/bracket arguments and bracket
+  comments, while continuing to preserve disabled regions verbatim.
+- Preserve block context, disabled regions, and attached trailing comments in
+  range formatting. Bypass whole-file caches for range requests and reject
+  replacements that would capture untouched standalone comments on reparse
+  (#258).
+- Respect exclusive LSP selection endpoints; an end at column zero excludes
+  that line. Empty selections format the command on the cursor's line (#258).
+
 ## 2.3.2 — 2026-10-27
 
 ### Fixed

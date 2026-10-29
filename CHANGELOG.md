@@ -8,6 +8,8 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+## 2.4.0 — 2026-10-29
+
 ### Added
 
 - Expose `format_source_ranges_with_registry` and its debug variant for

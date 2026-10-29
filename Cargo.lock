@@ -324,7 +324,7 @@ dependencies = [
 
 [[package]]
 name = "cmakefmt-rust"
-version = "2.3.2"
+version = "2.4.0"
 dependencies = [
  "clap",
  "clap_complete",
@@ -1704,9 +1704,9 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 
 [[package]]
 name = "unicode-width"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254"
+checksum = "ca718471876992059f251e33aafc334346ada08042b7661dd1fe313a9bced557"
 
 [[package]]
 name = "unit-prefix"

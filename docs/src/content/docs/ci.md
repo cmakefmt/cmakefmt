@@ -100,7 +100,7 @@ version (e.g. for reproducible CI on long-lived branches):
 ```yaml
 - uses: cmakefmt/cmakefmt-action@v2
   with:
-    version: "2.3.2"
+    version: "2.4.0"
 ```
 
 ### Monorepo subdirectory
