@@ -109,6 +109,27 @@ project(example)
 add_library(foo foo.cc)
 ```
 
+## Multiline Literal Whitespace
+
+Whitespace inside quoted strings and bracket arguments is part of their value.
+Tab indentation changes the command's indentation, not spaces inside those
+values. This also applies when `wrap_after_first_arg` keeps a multiline first
+argument beside the command name, or when a later argument spans multiple lines.
+
+For example, with `use_tabs: true` and `wrap_after_first_arg: true`, the two
+spaces before `b` remain two spaces:
+
+```cmake
+message("a
+  b")
+```
+
+CRLF input is normalized internally before the configured output line endings
+are applied once. Repeated formatting must not accumulate carriage returns
+inside a literal. See [`line_ending`](/config/#line_ending) for the available
+styles and [Range Formatting](#range-formatting) for preservation of unselected
+source bytes.
+
 ## Comments
 
 Comments are never discarded and re-inserted later. They are tracked as real
@@ -138,6 +159,19 @@ originally standalone argument comments on separate lines. Set
 separate lines, including those originally inline.
 
 See [`argument_comment_style`](/config/#argument_comment_style) for both modes.
+
+Multiline bracket-comment continuation lines retain their existing whitespace.
+Only the opening line receives formatter indentation; continuation indentation
+is not added again on each pass. This applies to standalone, argument-list,
+and trailing bracket comments, independently of `enable_markup`:
+
+```cmake
+set(A x) #[=[tail
+text]=]
+```
+
+The `text]=]` line stays as written rather than gaining spaces on each run.
+
 
 ## Comment Markup
 

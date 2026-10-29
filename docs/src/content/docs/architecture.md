@@ -107,8 +107,11 @@ before formatting.
 `format_source_impl()` in `mod.rs` handles the full file: it walks the source
 line-by-line, detecting barrier regions (`# cmakefmt: off/on`, `# fmt: off/on`,
 `# cmake-format: off/on`, and fence barriers `# ~~~`). Lines inside a barrier
-region are emitted verbatim. Lines outside barrier regions are collected and
-parsed as chunks, then formatted. `format_parsed_file()` bypasses this source
+region are emitted verbatim. Potential directive lines in enabled source are
+checked lazily against complete parser command/comment boundaries, so markers
+inside arguments or bracket comments cannot split literals. Disabled source is
+not parsed and may remain intentionally unbalanced. Lines outside barrier
+regions are collected and parsed as chunks, then formatted. `format_parsed_file()` bypasses this source
 scan and does not honor barrier directives; use a source-string entry point
 when disabled regions must be preserved.
 

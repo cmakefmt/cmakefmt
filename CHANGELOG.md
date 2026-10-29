@@ -12,22 +12,17 @@ This project follows a simple changelog discipline:
 
 - Ignore formatting-barrier text inside quoted/bracket arguments and bracket
   comments, while continuing to preserve disabled regions verbatim.
-
 - Include the closing parenthesis in hanging-layout width validation and fall
   back to a fitting vertical layout when it would overflow.
-
 - Use effective per-command line widths when selecting inline and hanging
   layouts, rather than the global width.
-
 - Preserve raw whitespace in multiline bracket-comment continuations instead
   of adding indentation again on every formatting pass.
-
 - Normalize multiline first-argument line endings before CRLF rendering,
   preventing extra carriage returns and changed literal values on repeated runs.
-
-- Preserve spaces inside multiline first arguments when tab indentation and
-  `wrap_after_first_arg` are enabled.
-
+- Preserve spaces inside multiline arguments when tab indentation and
+  `wrap_after_first_arg` are enabled, including later arguments that follow the
+  attached first argument.
 - Make `--lines` format complete commands intersecting the requested source
   lines while preserving unselected bytes. Legacy formatting elsewhere no
   longer rejects a range request, and wrapped output may grow beyond it.

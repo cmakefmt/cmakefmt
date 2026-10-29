@@ -208,8 +208,11 @@ format:
   line_ending: windows
 ```
 
-The formatter normalizes line endings internally to LF. This option controls
-only the final output.
+The formatter normalizes line endings internally to LF, including inside
+multiline arguments, before applying this option once to the output. CRLF
+input must not acquire extra carriage returns on subsequent passes. Range
+formatting applies the setting within replaced commands and preserves bytes
+outside their spans, including their original terminating newline.
 
 ### `line_width`
 
@@ -220,7 +223,14 @@ format:
   line_width: 100
 ```
 
-Raise this if your project prefers wider CMake calls.
+Raise this if your project prefers wider CMake calls. A command's
+[per-command overrides](#per-command-overrides) `line_width` takes precedence
+when choosing inline, hanging, grouped, and vertical layouts. The closing
+parenthesis is included when validating compact layout candidates.
+
+This is a wrapping target, not an unconditional guarantee: unbreakable tokens,
+deep indentation, or layout hints that retain an argument can exceed it. Use
+[`require_valid_layout`](#require_valid_layout) to reject over-wide output.
 
 ### `tab_size`
 
