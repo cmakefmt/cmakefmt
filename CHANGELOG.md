@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Preserve spaces inside multiline first arguments when tab indentation and
+  `wrap_after_first_arg` are enabled.
+
 - Make `--lines` format complete commands intersecting the requested source
   lines while preserving unselected bytes. Legacy formatting elsewhere no
   longer rejects a range request, and wrapped output may grow beyond it.

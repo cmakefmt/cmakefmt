@@ -761,7 +761,17 @@ fn format_command_vertical(
         };
 
         output.push('(');
-        output.push_str(first_arg.as_str());
+        // The first argument bypasses the regular multiline writer. Protect
+        // its literal continuation lines from the indentation-to-tabs pass too.
+        for (index, line) in first_arg.as_str().split('\n').enumerate() {
+            if index > 0 {
+                output.push('\n');
+                if ctx.config().use_tabchars {
+                    output.push(LITERAL_LINE_MARKER);
+                }
+            }
+            output.push_str(line);
+        }
 
         // If the next argument is an inline comment, try to keep it attached.
         let mut consumed = first_real_idx + 1;
@@ -790,7 +800,7 @@ fn format_command_vertical(
             let mut candidate_width = line_so_far;
             if fits_inline {
                 for arg in remaining {
-                    if arg.is_comment() {
+                    if arg.is_comment() || argument_has_newline(arg) {
                         fits_inline = false;
                         break;
                     }

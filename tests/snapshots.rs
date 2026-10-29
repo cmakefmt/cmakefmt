@@ -15,6 +15,59 @@ use cmakefmt::{formatter, parser};
 // --- Parser edge-case / coverage tests ---
 
 #[test]
+fn attached_first_literal_preserves_spaces_with_tabs() {
+    let config = Config {
+        use_tabchars: true,
+        wrap_after_first_arg: true,
+        ..Config::default()
+    };
+    let source = "message(\"a\n  b\")\n";
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output, @r#"
+    message("a
+      b")
+    "#);
+    for source in [
+        source,
+        "message([=[a\n  b]=])\n",
+        "set(\"a\n  b\" value)\n",
+        "message(first \"a\n  b\")\n",
+        "set(A [=[a\n  b]=])\n",
+    ] {
+        for align in [
+            WrapAfterFirstArgAlign::UnderFirstArg,
+            WrapAfterFirstArgAlign::DefaultIndent,
+        ] {
+            let config = Config {
+                wrap_after_first_arg_align: align,
+                ..config.clone()
+            };
+            for ranges in [vec![], vec![std::ops::RangeInclusive::new(1, 1)]] {
+                let output = cmakefmt::format_source_ranges_with_registry(
+                    source,
+                    &config,
+                    CommandRegistry::builtins(),
+                    &ranges,
+                )
+                .unwrap();
+                assert!(output.contains("a\n  b"));
+                assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+                assert_eq!(
+                    cmakefmt::format_source_ranges_with_registry(
+                        &output,
+                        &config,
+                        CommandRegistry::builtins(),
+                        &ranges
+                    )
+                    .unwrap(),
+                    output
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn linebreak_layouts_issue_256() {
     let config = Config {
         line_width: 100,
@@ -3114,9 +3167,15 @@ fn bracket_arguments_force_multiline_layout() {
     let formatted = format_source(src, &Config::default()).unwrap();
 
     insta::assert_snapshot!(formatted, @"
-    set(VAR [==[
+    set(VAR
+        [==[
     line one
     line two
     ]==])
     ");
+    assert!(cmakefmt::semantic::semantic_equivalent(src, &formatted));
+    assert_eq!(
+        format_source(&formatted, &Config::default()).unwrap(),
+        formatted
+    );
 }
