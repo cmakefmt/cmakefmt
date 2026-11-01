@@ -16,6 +16,14 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Fixed
+
+- Reject unknown keys in `commands:` overrides. Previously, an unknown key
+  inside a keyword, such as `layout:`, was silently accepted and made the
+  partial override replace the command's whole built-in spec, so its keywords
+  stopped being recognised. Such config files now fail to load with an error
+  pointing at the command.
+
 ## 2.4.0 — 2026-10-29
 
 ### Added

@@ -673,6 +673,21 @@ mod tests {
     }
 
     #[test]
+    fn unknown_kwarg_field_is_rejected_instead_of_replacing_builtin() {
+        // An unknown key used to make the untagged override enum fall back to
+        // an empty `Discriminated` spec, silently replacing the built-in one.
+        let mut registry = CommandRegistry::load().unwrap();
+        let err = registry
+            .merge_yaml_overrides(
+                "commands:\n  add_custom_command:\n    kwargs:\n      COMMAND:\n        layout:\n          max_pargs_hwrap: 99\n",
+            )
+            .unwrap_err();
+        assert!(err.to_string().contains("CommandSpecOverride"), "{err}");
+        let form = registry.get("add_custom_command").form_for(None);
+        assert!(form.kwargs.contains_key("COMMAND"));
+    }
+
+    #[test]
     fn registry_unknown_command_uses_fallback() {
         let registry = CommandRegistry::load().unwrap();
         let spec = registry.get("my_unknown_command");
