@@ -28,6 +28,13 @@ This project follows a simple changelog discipline:
   partial override replace the command's whole built-in spec, so its keywords
   stopped being recognised. Such config files now fail to load with an error
   pointing at the command (#265, thanks to @vadz).
+- Indent the value of a keyword nested inside a keyword section below its
+  keyword when it is too wide to share the keyword's line, as already happens
+  for a keyword at the top level. It used to be written at the column it would
+  have started at on the keyword's line, which, for a spec declaring the
+  `PROPERTIES` properties of `set_source_files_properties`, left a long
+  generator expression stranded far to the right. Values which still fit
+  beside their keyword are unaffected.
 - Recognize `OUTPUT_QUIET`, `ERROR_QUIET`, `OUTPUT_STRIP_TRAILING_WHITESPACE`
   and `ERROR_STRIP_TRAILING_WHITESPACE` as flags of `execute_process()`, and
   `COMMAND_ECHO`, `COMMAND_ERROR_IS_FATAL` and `ENCODING` as its keywords
