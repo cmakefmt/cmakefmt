@@ -810,7 +810,11 @@ fn format_command_vertical(
             let line_so_far = output.lines().last().map_or(0, |l| l.len());
             let mut inline_candidate = String::new();
             let mut fits_inline = !line_has_comment;
-            let mut candidate_width = line_so_far;
+            // If this is the final section, the closing paren must fit too.
+            // Otherwise a full argument line leaves only `)` to wrap.
+            let closing_paren_width =
+                usize::from(sections.len() == 1 && !cmd_config.dangle_parens());
+            let mut candidate_width = line_so_far + closing_paren_width;
             if fits_inline {
                 for arg in remaining {
                     if arg.is_comment() || argument_has_newline(arg) {

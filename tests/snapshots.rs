@@ -121,6 +121,65 @@ fn hanging_layout_budgets_the_closing_parenthesis() {
 }
 
 #[test]
+fn wrap_after_first_arg_budgets_the_closing_parenthesis_issue_259() {
+    let source = "cmd(FATAL_ERROR name \"aaaaaaaaaaaaaaaaa\")\n";
+    let config = Config {
+        line_width: 40,
+        wrap_after_first_arg: true,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output, @r#"
+    cmd(FATAL_ERROR
+        name "aaaaaaaaaaaaaaaaa")
+    "#);
+
+    for width in [39, 40, 41] {
+        for alignment in [
+            WrapAfterFirstArgAlign::UnderFirstArg,
+            WrapAfterFirstArgAlign::DefaultIndent,
+        ] {
+            let variant = Config {
+                line_width: width,
+                wrap_after_first_arg_align: alignment,
+                ..config.clone()
+            };
+            for source in [source.to_owned(), format!("if(ON)\n{source}endif()\n")] {
+                let output = format_source(&source, &variant).unwrap();
+                assert!(!output.lines().any(|line| line.trim() == ")"));
+                assert!(output.lines().all(|line| line.chars().count() <= width));
+                assert!(cmakefmt::semantic::semantic_equivalent(&source, &output));
+                assert_eq!(format_source(&output, &variant).unwrap(), output);
+            }
+        }
+    }
+
+    // Explicitly requested dangling parens still keep the arguments inline.
+    let dangling = Config {
+        dangle_parens: true,
+        ..config
+    };
+    insta::assert_snapshot!(format_source(source, &dangling).unwrap(), @r#"
+    cmd(FATAL_ERROR name "aaaaaaaaaaaaaaaaa"
+    )
+    "#);
+
+    // A following keyword section puts the closer elsewhere, so the first
+    // line can still use the full width for positional arguments.
+    let source = "set(VAR VALUE1 CACHE STRING DOC)\n";
+    let config = Config {
+        line_width: 14,
+        max_lines_hwrap: 0,
+        wrap_after_first_arg: true,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    assert!(output.starts_with("set(VAR VALUE1\n"), "{output}");
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
 fn compact_layouts_use_effective_command_width() {
     let source = "foo(aaaa bbbb cccc dddd)\n";
     let config = Config::from_yaml_str(

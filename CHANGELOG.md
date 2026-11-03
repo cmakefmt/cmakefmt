@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Reserve space for the closing parenthesis when packing arguments with
+  `wrap_after_first_arg`, avoiding an unnecessary standalone `)` when the
+  arguments fill `line_width` exactly (#259).
 - Validate command specifications in `cmakefmt config check`, for both explicit
   config paths and discovered config files. Invalid command overrides now fail
   validation instead of being reported as valid and rejected during formatting.
