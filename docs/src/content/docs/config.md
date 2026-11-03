@@ -1119,6 +1119,43 @@ commands:
           - OPTIONAL
 ```
 
+#### Property/value pairs
+
+The built-in `set_target_properties`, `set_directory_properties`,
+`set_source_files_properties`, `set_tests_properties`, and
+`set_package_properties` specs group the arguments after `PROPERTIES` into
+key/value pairs. Calls that fit on one line remain inline. Wrapped calls put
+each pair on its own line, regardless of the hanging-argument threshold.
+
+```cmake
+set_target_properties(
+  my_library
+  PROPERTIES
+    CXX_STANDARD 20
+    VERSION "1.2.3")
+```
+
+Comments and multiline literals retain their order. A pair may split when it
+cannot fit within `line_width` or a comment or multiline literal requires a
+line break. Property/value tokens are never sorted individually.
+
+Custom commands can declare the same structure with `pairwise: true`:
+
+```yaml
+commands:
+  my_properties:
+    pargs: 1
+    kwargs:
+      PROPERTIES:
+        nargs: "*"
+        pairwise: true
+```
+
+A pairwise section consumes all remaining arguments; keyword-like property
+names and values remain data. Use it only for terminal key/value lists.
+Partial overrides retain a built-in's `pairwise` setting unless explicitly
+changed. Set `pairwise: false` to restore ordinary list wrapping for a section.
+
 #### `layout`
 
 Per-command layout hints that override the global config for this command only.

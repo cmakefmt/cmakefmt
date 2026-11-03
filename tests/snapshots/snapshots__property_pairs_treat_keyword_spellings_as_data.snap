@@ -1,0 +1,11 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+set_source_files_properties(
+  file.cpp
+  directory src
+  properties
+    CUSTOM DIRECTORY
+    PROPERTIES TARGET_DIRECTORY
+    DIRECTORY properties)

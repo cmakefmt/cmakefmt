@@ -1,0 +1,20 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+set_target_properties(
+  lib
+  PROPERTIES
+    A one # first pair
+    # next pair
+    B # between key and value
+    "two words"
+    C "a;b"
+    D "$<IF:$<BOOL:${flag}>,yes,no>"
+    E
+    [=[first
+second]=]
+    F ""
+    G
+    "a long value that cannot fit beside its property name at this width"
+    ODD)

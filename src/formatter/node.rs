@@ -424,10 +424,12 @@ fn sort_sections(sections: &mut [Section<'_>], form: &CommandForm, autosort: boo
         // whether the sort request came from `sortable = true` in
         // the spec or the autosort heuristic.
         //
+        // Pairwise lists also have positional structure: never sort their
+        // individual keys and values, even with an explicit sortable override.
         // Pure flat-list kwargs (PUBLIC, ITEMS, …) have neither
         // nested kwargs nor nested flags and remain sortable.
-        let structural_section =
-            header_spec.is_some_and(|spec| !spec.kwargs.is_empty() || !spec.flags.is_empty());
+        let structural_section = header_spec
+            .is_some_and(|spec| spec.pairwise || !spec.kwargs.is_empty() || !spec.flags.is_empty());
         if structural_section {
             continue;
         }
@@ -505,12 +507,14 @@ fn nested_token_belongs_to_current_section(
         return false;
     };
 
+    // Pairwise sections consume the rest of the call as data, including
+    // property names or values whose spelling matches a command keyword.
     // A kwarg header that declares nested kwargs/flags (e.g. INCLUDES, or
     // any of the install(TARGETS) artifact-kind subgroups, or FILE_SET
     // after its positional set-name has been force-consumed) accepts
     // nested tokens. Kwargs without nested declarations short-circuit
     // here — is_nested_keyword_or_flag returns false.
-    is_nested_keyword_or_flag(spec, token)
+    spec.pairwise || is_nested_keyword_or_flag(spec, token)
 }
 
 fn try_format_inline(
@@ -655,8 +659,9 @@ fn try_format_grouped(
                     .iter()
                     .any(|arg| arg.is_comment() || argument_has_newline(arg))
                 || section.header.is_some_and(|header| {
-                    lookup_kwarg(form, header)
-                        .is_some_and(|spec| !spec.kwargs.is_empty() || !spec.flags.is_empty())
+                    lookup_kwarg(form, header).is_some_and(|spec| {
+                        spec.pairwise || !spec.kwargs.is_empty() || !spec.flags.is_empty()
+                    })
                 })
         })
     {
@@ -920,6 +925,11 @@ fn write_sections(
                 output.push_str(section_indent);
                 output.push_str(&header);
                 let parent_spec = lookup_kwarg(form, header_raw);
+                if parent_spec.is_some_and(|spec| spec.pairwise) {
+                    output.push('\n');
+                    write_paired_arguments(output, &section.arguments, nested_indent, ctx);
+                    continue;
+                }
                 let grouped_spec = parent_spec.filter(|s| !s.kwargs.is_empty());
                 // File-set subgroups stay distinct even when the entire section fits.
                 let file_set = ctx.command_name.eq_ignore_ascii_case("target_sources")
@@ -1258,6 +1268,31 @@ fn write_packed_arguments_with_continuation(
         &mut used_first_line,
         &mut current_indent_width,
     );
+}
+
+/// Render terminal key/value lists without packing the next key onto the
+/// previous pair's line. Comments do not consume a slot, and trailing inline
+/// comments stay with the pair. The packed writer handles overlong pairs,
+/// comments between a key and its value, and multiline literals as usual.
+fn write_paired_arguments(
+    output: &mut String,
+    arguments: &[&Argument],
+    indent: &str,
+    ctx: &WriteCtx<'_>,
+) {
+    let mut start = 0;
+    while start < arguments.len() {
+        let mut end = if arguments[start].is_comment() {
+            start + 1
+        } else {
+            advance_by_non_comment(arguments, start, 2)
+        };
+        while end < arguments.len() && matches!(arguments[end], Argument::InlineComment(_)) {
+            end += 1;
+        }
+        write_packed_arguments(output, &arguments[start..end], indent, ctx);
+        start = end;
+    }
 }
 
 /// Pair-aware writer used when the surrounding section header declares

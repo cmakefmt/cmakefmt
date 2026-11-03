@@ -8,6 +8,13 @@ This project follows a simple changelog discipline:
 
 ## Unreleased
 
+### Added
+
+- Keep property/value pairs together in wrapped `set_target_properties`,
+  `set_directory_properties`, `set_source_files_properties`,
+  `set_tests_properties`, and `set_package_properties` calls. Custom command
+  specs can declare terminal key/value lists with `pairwise: true` (#266).
+
 ### Fixed
 
 - Reserve space for the closing parenthesis when packing arguments with

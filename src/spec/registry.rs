@@ -567,6 +567,9 @@ fn merge_form(base: &mut CommandForm, override_form: CommandFormOverride) {
 }
 
 fn merge_kwarg(base: &mut KwargSpec, override_kwarg: KwargSpecOverride) {
+    if let Some(pairwise) = override_kwarg.pairwise {
+        base.pairwise = pairwise;
+    }
     if let Some(nargs) = override_kwarg.nargs {
         base.nargs = nargs;
     }
@@ -1374,6 +1377,25 @@ mod tests {
         assert!(form.flags.contains("GET_RAW"));
         assert!(form.flags.contains("STRING_ENCODE"));
         assert!(form.kwargs.contains_key("ERROR_VARIABLE"));
+    }
+
+    #[test]
+    fn pairwise_overrides_merge_and_preserve_builtin_grouping() {
+        for (format, source) in [
+            ("YAML", "commands:\n  custom:\n    kwargs:\n      PAIRS:\n        pairwise: true\n  set_target_properties:\n    kwargs:\n      PROPERTIES:\n        nargs: '+'\n"),
+            ("TOML", "[commands.custom.kwargs.PAIRS]\npairwise = true\n[commands.set_target_properties.kwargs.PROPERTIES]\nnargs = '+'\n"),
+        ] {
+            let mut registry = CommandRegistry::load().unwrap();
+            if format == "YAML" {
+                registry.merge_yaml_overrides(source).unwrap();
+            } else {
+                registry.merge_toml_overrides(source).unwrap();
+            }
+            assert!(registry.get("custom").form_for(None).kwargs["PAIRS"].pairwise);
+            assert!(registry.get("set_target_properties").form_for(None).kwargs["PROPERTIES"].pairwise);
+            registry.merge_yaml_overrides("commands:\n  set_target_properties:\n    kwargs:\n      PROPERTIES:\n        pairwise: false\n").unwrap();
+            assert!(!registry.get("set_target_properties").form_for(None).kwargs["PROPERTIES"].pairwise);
+        }
     }
 
     #[test]

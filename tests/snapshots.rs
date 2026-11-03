@@ -2952,6 +2952,140 @@ fn target_compile_features_visibility_kwargs_separate_when_wrapping() {
 }
 
 #[test]
+fn property_pairs_wrap_together_issue_266() {
+    let source = r#"set_target_properties(curl PROPERTIES
+    IMPORTED_LOCATION "${CURL_INSTALL_DIR}/build/lib/libcurl.so"
+    INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}"
+)
+"#;
+    let config = Config {
+        line_width: 100,
+        tab_size: 4,
+        command_case: CaseStyle::Unchanged,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
+fn custom_pairwise_sections_preserve_pair_order() {
+    for source in [
+        "commands:\n  custom:\n    kwargs:\n      PAIRS:\n        pairwise: true\n        sortable: true\n",
+        "[commands.custom.kwargs.PAIRS]\npairwise = true\nsortable = true\n",
+    ] {
+        let mut registry = CommandRegistry::load().unwrap();
+        if source.starts_with('[') {
+            registry.merge_toml_overrides(source).unwrap();
+        } else {
+            registry.merge_yaml_overrides(source).unwrap();
+        }
+        let config = Config {
+            always_wrap: vec!["custom".to_owned()],
+            enable_sort: true,
+            autosort: true,
+            ..Config::default()
+        };
+        let input = "custom(PAIRS Z last A first)\n";
+        let output = format_source_with_registry(input, &config, &registry).unwrap();
+        insta::allow_duplicates! {
+            insta::assert_snapshot!(output, @r#"
+            custom(
+              PAIRS
+                Z last
+                A first)
+            "#);
+        }
+        assert!(cmakefmt::semantic::semantic_equivalent(input, &output));
+        assert_eq!(format_source_with_registry(&output, &config, &registry).unwrap(), output);
+    }
+}
+
+#[test]
+fn property_pairs_keep_comments_and_literals() {
+    let source = r#"set_target_properties(lib PROPERTIES
+    A one # first pair
+    # next pair
+    B # between key and value
+    "two words"
+    C "a;b"
+    D "$<IF:$<BOOL:${flag}>,yes,no>"
+    E [=[first
+second]=]
+    F ""
+    G "a long value that cannot fit beside its property name at this width"
+    ODD
+)
+"#;
+    let config = Config {
+        line_width: 48,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
+fn property_pairs_apply_to_related_commands_and_layouts() {
+    for (name, leading) in [
+        ("set_target_properties", "lib"),
+        ("set_directory_properties", ""),
+        ("set_source_files_properties", "file.cpp DIRECTORY src"),
+        ("set_tests_properties", "test DIRECTORY tests"),
+        ("set_package_properties", "Package"),
+    ] {
+        let source = format!("{name}({leading} PROPERTIES Z last A first)\n");
+        let inline = format_source(&source, &Config::default()).unwrap();
+        assert_eq!(inline.lines().count(), 1, "{inline}");
+        for max_pargs_hwrap in [0, 20] {
+            for wrap_after_first_arg in [false, true] {
+                let config = Config {
+                    always_wrap: vec![name.to_owned()],
+                    max_pargs_hwrap,
+                    max_subgroups_hwrap: 20,
+                    wrap_after_first_arg,
+                    enable_sort: true,
+                    autosort: true,
+                    ..Config::default()
+                };
+                let output = format_source(&source, &config).unwrap();
+                assert!(
+                    output.lines().any(|line| line.trim() == "Z last"),
+                    "{output}"
+                );
+                assert!(
+                    output.lines().any(|line| line.trim() == "A first)"),
+                    "{output}"
+                );
+                assert!(cmakefmt::semantic::semantic_equivalent(&source, &output));
+                assert_eq!(format_source(&output, &config).unwrap(), output);
+            }
+        }
+    }
+}
+
+#[test]
+fn property_pairs_treat_keyword_spellings_as_data() {
+    let source = "set_source_files_properties(file.cpp DIRECTORY src PROPERTIES CUSTOM DIRECTORY PROPERTIES TARGET_DIRECTORY DIRECTORY properties)\n";
+    let config = Config {
+        always_wrap: vec!["set_source_files_properties".to_owned()],
+        keyword_case: CaseStyle::Lower,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(output.contains("CUSTOM DIRECTORY\n"), "{output}");
+    assert!(output.contains("PROPERTIES TARGET_DIRECTORY\n"), "{output}");
+    assert!(output.contains("DIRECTORY properties)"), "{output}");
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
 fn set_tests_properties_kwargs_separate_when_wrapping() {
     let src = "set_tests_properties(mytest other_test third_test DIRECTORY some_dir PROPERTIES TIMEOUT 30 LABELS \"slow\" WILL_FAIL TRUE)\n";
     let config = Config {
@@ -2964,7 +3098,9 @@ fn set_tests_properties_kwargs_separate_when_wrapping() {
       mytest other_test third_test
       DIRECTORY some_dir
       PROPERTIES
-        TIMEOUT 30 LABELS "slow" WILL_FAIL TRUE)
+        TIMEOUT 30
+        LABELS "slow"
+        WILL_FAIL TRUE)
     "#);
 }
 

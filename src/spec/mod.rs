@@ -175,6 +175,10 @@ pub struct KwargSpec {
     /// explicitly marked sortable, that's a deliberate opt-in.
     #[serde(default)]
     pub no_autosort: bool,
+    /// Remaining arguments form a terminal list of key/value pairs. Wrapped
+    /// calls put each pair on its own line and never sort individual tokens.
+    #[serde(default)]
+    pub pairwise: bool,
 }
 
 /// One fully resolved command form.
@@ -352,6 +356,10 @@ pub(crate) struct KwargSpecOverride {
     /// Mark this keyword section as exempt from autosort.
     #[serde(default)]
     pub no_autosort: bool,
+    /// Override terminal key/value-pair grouping, retaining the built-in
+    /// setting when this field is omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pairwise: Option<bool>,
 }
 
 /// Partial override for a command form.
@@ -460,6 +468,7 @@ impl KwargSpecOverride {
                 .collect(),
             sortable: self.sortable,
             no_autosort: self.no_autosort,
+            pairwise: self.pairwise.unwrap_or(false),
         }
     }
 }

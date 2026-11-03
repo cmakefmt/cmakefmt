@@ -1,0 +1,9 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+set_target_properties(
+    curl
+    PROPERTIES
+        IMPORTED_LOCATION "${CURL_INSTALL_DIR}/build/lib/libcurl.so"
+        INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}")

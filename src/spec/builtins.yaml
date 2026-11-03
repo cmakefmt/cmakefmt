@@ -271,6 +271,7 @@ commands:
       PROPERTIES:
         nargs: "*"
         no_autosort: true
+        pairwise: true
   find_package:
     pargs: "1+"
     flags:
@@ -508,6 +509,7 @@ commands:
       PROPERTIES:
         nargs: "*"
         no_autosort: true
+        pairwise: true
   add_feature_info:
     pargs: 3
   print_enabled_features:
@@ -2076,6 +2078,7 @@ commands:
       PROPERTIES:
         nargs: "+"
         no_autosort: true
+        pairwise: true
   set_property:
     pargs: 0
     flags:
@@ -2112,6 +2115,7 @@ commands:
       PROPERTIES:
         nargs: "+"
         no_autosort: true
+        pairwise: true
   set_tests_properties:
     pargs: "+"
     kwargs:
@@ -2120,6 +2124,7 @@ commands:
       PROPERTIES:
         nargs: "+"
         no_autosort: true
+        pairwise: true
   site_name:
     pargs: 1
   source_group:
