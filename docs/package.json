@@ -31,7 +31,7 @@
     "shiki": "^4.4.3",
     "@shikijs/magic-move": "^4.4.3",
     "tailwind-merge": "^3.7.0",
-    "tailwind-variants": "^4.0.0",
+    "tailwind-variants": "^4.0.1",
     "tailwindcss": "^4.3.3"
   }
 }
