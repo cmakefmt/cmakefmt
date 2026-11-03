@@ -375,8 +375,13 @@ pub(crate) struct CommandFormOverride {
 }
 
 /// Partial override for a full command spec.
+///
+/// `deny_unknown_fields` matters here beyond catching typos: without it a
+/// mapping that fails to parse as `Single` (e.g. because of an unknown key in
+/// one of its kwargs) silently matches `Discriminated` with no forms, which
+/// then replaces the whole built-in spec of the command.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(untagged)]
+#[serde(untagged, deny_unknown_fields)]
 pub(crate) enum CommandSpecOverride {
     /// Override a single-form command.
     Single(CommandFormOverride),
