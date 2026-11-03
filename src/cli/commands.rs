@@ -475,7 +475,7 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
                 path.display()
             )));
         }
-        match Config::from_files(&[path.to_path_buf()]) {
+        match Config::from_files_with_registry(&[path.to_path_buf()]) {
             Ok(_) => {
                 writeln!(io::stdout(), "config is valid: {}", path.display())
                     .map_err(cmakefmt::Error::Io)?;
@@ -488,7 +488,7 @@ fn run_check_config(cli: &Cli, path_arg: &str) -> Result<u8, cmakefmt::Error> {
         if context.sources.is_empty() {
             return Err(cmakefmt::Error::cli_arg("no config file found"));
         }
-        match Config::from_files(&context.sources) {
+        match Config::from_files_with_registry(&context.sources) {
             Ok(_) => {
                 for source in &context.sources {
                     writeln!(io::stdout(), "config is valid: {}", source.display())

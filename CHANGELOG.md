@@ -10,6 +10,9 @@ This project follows a simple changelog discipline:
 
 ### Fixed
 
+- Validate command specifications in `cmakefmt config check`, for both explicit
+  config paths and discovered config files. Invalid command overrides now fail
+  validation instead of being reported as valid and rejected during formatting.
 - Reject unknown keys in `commands:` overrides. Previously, an unknown key
   inside a keyword, such as `layout:`, was silently accepted and made the
   partial override replace the command's whole built-in spec, so its keywords

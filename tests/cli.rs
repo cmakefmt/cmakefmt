@@ -2663,6 +2663,80 @@ fn check_config_with_explicit_path() {
 }
 
 #[test]
+fn check_config_rejects_invalid_command_specs() {
+    for commands in [
+        serde_json::json!({"add_custom_command": {"typo": true}}),
+        serde_json::json!({"add_custom_command": {"kwargs": {"COMMAND": {"layout": {"max_pargs_hwrap": 99}}}}}),
+        serde_json::json!({"my_command": {"pargs": true}}),
+        serde_json::json!({"install": {"forms": {"TARGETS": {"typo": true}}}}),
+    ] {
+        let config = serde_json::json!({"commands": commands});
+        for (extension, contents) in [
+            ("yaml", serde_saphyr::to_string(&config).unwrap()),
+            ("toml", toml::to_string(&config).unwrap()),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join(format!(".cmakefmt.{extension}"));
+            std::fs::write(&path, &contents).unwrap();
+            for explicit in [false, true] {
+                let mut command = cmakefmt();
+                command.args(["config", "check"]).current_dir(dir.path());
+                if explicit {
+                    command.arg(&path);
+                }
+                let output = command.output().unwrap();
+                assert_eq!(
+                    output.status.code(),
+                    Some(2),
+                    "accepted invalid spec (explicit={explicit}): {contents}"
+                );
+                assert!(output.stdout.is_empty());
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                assert!(stderr.contains("invalid spec file"), "{stderr}");
+                assert!(
+                    stderr.contains(path.file_name().unwrap().to_str().unwrap()),
+                    "{stderr}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn check_config_accepts_valid_command_specs() {
+    let config = serde_json::json!({
+        "format": {"line_width": 100},
+        "commands": {
+            "add_custom_command": {"kwargs": {"COMMAND": {"nargs": "+"}}},
+            "install": {"forms": {"TARGETS": {"layout": {"always_wrap": true}}}},
+            "my_command": {"pargs": 1, "flags": ["VERBOSE"]}
+        }
+    });
+    for (extension, contents) in [
+        ("yaml", serde_saphyr::to_string(&config).unwrap()),
+        ("toml", toml::to_string(&config).unwrap()),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(format!(".cmakefmt.{extension}"));
+        std::fs::write(&path, &contents).unwrap();
+        for explicit in [false, true] {
+            let mut command = cmakefmt();
+            command.args(["config", "check"]).current_dir(dir.path());
+            if explicit {
+                command.arg(&path);
+            }
+            let output = command.output().unwrap();
+            assert!(
+                output.status.success(),
+                "rejected valid spec: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(String::from_utf8_lossy(&output.stdout).contains("config is valid:"));
+        }
+    }
+}
+
+#[test]
 fn check_config_no_config_exits_2() {
     let dir = tempfile::tempdir().unwrap();
 
