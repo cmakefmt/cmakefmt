@@ -3030,6 +3030,16 @@ second]=]
 }
 
 #[test]
+fn property_pair_value_too_wide_indents_below_its_name() {
+    let source = "set_target_properties(mylib PROPERTIES INTERFACE_LINK_LIBRARIES \"a-very-long-value-that-will-not-fit-beside-its-property-name\" FOLDER libs)\n";
+    let config = Config::default();
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
 fn property_pairs_apply_to_related_commands_and_layouts() {
     for (name, leading) in [
         ("set_target_properties", "lib"),
