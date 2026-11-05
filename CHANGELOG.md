@@ -28,6 +28,11 @@ This project follows a simple changelog discipline:
   partial override replace the command's whole built-in spec, so its keywords
   stopped being recognised. Such config files now fail to load with an error
   pointing at the command.
+- Indent a property value which is too wide to share its property's line one
+  level below the property name, instead of wrapping it back to the name's own
+  column where it reads as a further property name. This affects the pairwise
+  layout used by `set_target_properties()` and its siblings; the same rule
+  already applies to keyword values at the top level.
 
 ## 2.4.0 — 2026-10-29
 

@@ -16,5 +16,5 @@ set_target_properties(
 second]=]
     F ""
     G
-    "a long value that cannot fit beside its property name at this width"
+      "a long value that cannot fit beside its property name at this width"
     ODD)
