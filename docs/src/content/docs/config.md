@@ -1137,7 +1137,19 @@ set_target_properties(
 
 Comments and multiline literals retain their order. A pair may split when it
 cannot fit within `line_width` or a comment or multiline literal requires a
-line break. Property/value tokens are never sorted individually.
+line break. A value too wide to share its name's line is written one level
+below the name, so that it is not read as another property name:
+
+```cmake
+set_target_properties(
+  my_library
+  PROPERTIES
+    INTERFACE_LINK_LIBRARIES
+      "a value too long to fit beside the property name it belongs to"
+    FOLDER libs)
+```
+
+Property/value tokens are never sorted individually.
 
 Custom commands can declare the same structure with `pairwise: true`:
 

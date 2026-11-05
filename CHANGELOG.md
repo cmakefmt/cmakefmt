@@ -36,6 +36,11 @@ This project follows a simple changelog discipline:
   of `OUTPUT_VARIABLE`, and the value following `COMMAND_ECHO` or
   `COMMAND_ERROR_IS_FATAL` was separated from it as a trailing positional
   argument.
+- Indent a property value which is too wide to share its property's line one
+  level below the property name, instead of wrapping it back to the name's own
+  column where it reads as a further property name. This affects the pairwise
+  layout used by `set_target_properties()` and its siblings; the same rule
+  already applies to keyword values at the top level.
 
 ## 2.4.0 — 2026-10-29
 

@@ -1,0 +1,10 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+set_target_properties(
+  mylib
+  PROPERTIES
+    INTERFACE_LINK_LIBRARIES
+      "a-very-long-value-that-will-not-fit-beside-its-property-name"
+    FOLDER libs)

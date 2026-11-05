@@ -1290,6 +1290,37 @@ fn write_paired_arguments(
         while end < arguments.len() && matches!(arguments[end], Argument::InlineComment(_)) {
             end += 1;
         }
+        // A value too wide to share its key's line starts one level below the
+        // key, as at the top level (see `write_sections`), rather than being
+        // wrapped back to the key's own column, where it reads as another key.
+        //
+        // Only the key and the value decide this: the trailing inline comments
+        // in `start + 2..end` follow the value, so that the decision is the
+        // same whether or not a comment was reflowed to its own line by the
+        // previous run. A comment that does not fit beside the value goes back
+        // to the key's column, where it stays when parsed again as standalone.
+        if start + 2 <= end
+            && arguments[start..start + 2]
+                .iter()
+                .all(|argument| !argument.is_comment() && !argument_has_newline(argument))
+            && indent.chars().count()
+                + arguments[start].as_str().chars().count()
+                + 1
+                + arguments[start + 1].as_str().chars().count()
+                > ctx.line_width()
+        {
+            write_packed_arguments(output, &arguments[start..start + 1], indent, ctx);
+            let value_indent = format!("{indent}{}", ctx.cmd_config.indent_str());
+            write_packed_arguments_with_continuation(
+                output,
+                &arguments[start + 1..end],
+                &value_indent,
+                indent,
+                ctx,
+            );
+            start = end;
+            continue;
+        }
         write_packed_arguments(output, &arguments[start..end], indent, ctx);
         start = end;
     }

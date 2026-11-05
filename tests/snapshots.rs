@@ -3030,6 +3030,37 @@ second]=]
 }
 
 #[test]
+fn property_pair_value_too_wide_indents_below_its_name() {
+    let source = "set_target_properties(mylib PROPERTIES INTERFACE_LINK_LIBRARIES \"a-very-long-value-that-will-not-fit-beside-its-property-name\" FOLDER libs)\n";
+    let config = Config::default();
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
+fn property_pair_value_too_wide_keeps_its_trailing_comment() {
+    // The first comment fits beside the indented value, the second one has
+    // to go to its own line, and the value must be indented in both cases,
+    // and in the same way on the second run, after the second comment has
+    // become a standalone one.
+    let source = r#"set_target_properties(lib PROPERTIES LONG_PROPERTY_NAME "123456789012345678901234567" # x
+FOLDER libs)
+set_target_properties(lib PROPERTIES LONG_PROPERTY_NAME "123456789012345678901234567890" # xx
+FOLDER libs)
+"#;
+    let config = Config {
+        line_width: 40,
+        ..Config::default()
+    };
+    let output = format_source(source, &config).unwrap();
+    insta::assert_snapshot!(output);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &output));
+    assert_eq!(format_source(&output, &config).unwrap(), output);
+}
+
+#[test]
 fn property_pairs_apply_to_related_commands_and_layouts() {
     for (name, leading) in [
         ("set_target_properties", "lib"),
