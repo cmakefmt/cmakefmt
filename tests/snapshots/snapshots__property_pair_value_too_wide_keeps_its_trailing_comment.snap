@@ -1,0 +1,17 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+set_target_properties(
+  lib
+  PROPERTIES
+    LONG_PROPERTY_NAME
+      "123456789012345678901234567" # x
+    FOLDER libs)
+set_target_properties(
+  lib
+  PROPERTIES
+    LONG_PROPERTY_NAME
+      "123456789012345678901234567890"
+    # xx
+    FOLDER libs)
