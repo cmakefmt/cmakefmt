@@ -467,13 +467,21 @@ commands:
   execute_process:
     pargs: "*"
     flags:
-      - COMMAND_ERROR_IS_FATAL
+      - OUTPUT_QUIET
+      - ERROR_QUIET
+      - OUTPUT_STRIP_TRAILING_WHITESPACE
+      - ERROR_STRIP_TRAILING_WHITESPACE
       - ECHO_OUTPUT_VARIABLE
       - ECHO_ERROR_VARIABLE
-      - COMMAND_ECHO
     kwargs:
       COMMAND:
         nargs: "+"
+      COMMAND_ECHO:
+        nargs: 1
+      COMMAND_ERROR_IS_FATAL:
+        nargs: 1
+      ENCODING:
+        nargs: 1
       ERROR_FILE:
         nargs: 1
       ERROR_VARIABLE:

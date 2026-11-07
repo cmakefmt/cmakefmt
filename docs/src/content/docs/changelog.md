@@ -23,6 +23,14 @@ This project follows a simple changelog discipline:
   partial override replace the command's whole built-in spec, so its keywords
   stopped being recognised. Such config files now fail to load with an error
   pointing at the command.
+- Recognize `OUTPUT_QUIET`, `ERROR_QUIET`, `OUTPUT_STRIP_TRAILING_WHITESPACE`
+  and `ERROR_STRIP_TRAILING_WHITESPACE` as flags of `execute_process()`, and
+  `COMMAND_ECHO`, `COMMAND_ERROR_IS_FATAL` and `ENCODING` as its keywords
+  taking a value. The missing flags were absorbed into the section of whichever
+  keyword preceded them and indented under it, as if they were further values
+  of `OUTPUT_VARIABLE`, and the value following `COMMAND_ECHO` or
+  `COMMAND_ERROR_IS_FATAL` was separated from it as a trailing positional
+  argument.
 
 ## 2.4.0 — 2026-10-29
 

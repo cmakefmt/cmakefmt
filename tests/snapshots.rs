@@ -3631,3 +3631,52 @@ fn bracket_arguments_force_multiline_layout() {
         formatted
     );
 }
+
+// --- Built-in command spec coverage ---
+
+#[test]
+fn execute_process_quiet_and_strip_flags_are_recognized() {
+    let source = "execute_process(\n  COMMAND \"${tool}\" --check\n  OUTPUT_VARIABLE found\n  OUTPUT_STRIP_TRAILING_WHITESPACE\n  ERROR_QUIET\n)\n";
+    let config = Config {
+        max_pargs_hwrap: 0,
+        enable_markup: false,
+        ..Config::default()
+    };
+
+    let formatted = format_source(source, &config).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    execute_process(
+      COMMAND
+        "${tool}"
+        --check
+      OUTPUT_VARIABLE
+        found
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET)
+    "#);
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+    assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+}
+
+#[test]
+fn execute_process_command_echo_and_encoding_take_a_value() {
+    let source = "execute_process(COMMAND some_tool --check OUTPUT_VARIABLE out ENCODING UTF-8 COMMAND_ECHO STDERR ERROR_QUIET COMMAND_ERROR_IS_FATAL ANY)\n";
+
+    let formatted = format_source(source, &Config::default()).unwrap();
+
+    insta::assert_snapshot!(formatted, @r"
+    execute_process(
+      COMMAND some_tool --check
+      OUTPUT_VARIABLE out
+      ENCODING UTF-8
+      COMMAND_ECHO STDERR
+      ERROR_QUIET
+      COMMAND_ERROR_IS_FATAL ANY)
+    ");
+    assert!(cmakefmt::semantic::semantic_equivalent(source, &formatted));
+    assert_eq!(
+        format_source(&formatted, &Config::default()).unwrap(),
+        formatted
+    );
+}
