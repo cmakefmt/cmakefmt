@@ -2255,6 +2255,137 @@ fn anonymous_sections_go_vertical_after_max_pargs_hwrap() {
     "#);
 }
 
+/// Spec for a command whose keyword section has nested single-value
+/// keywords, the shape `set_target_properties(... PROPERTIES ...)` has.
+fn nested_single_value_kwargs_registry() -> CommandRegistry {
+    let mut registry = CommandRegistry::load().unwrap();
+    registry
+        .merge_override_str(
+            r#"
+[commands.my_command]
+pargs = 1
+
+[commands.my_command.kwargs.GROUP]
+nargs = "*"
+
+[commands.my_command.kwargs.GROUP.kwargs]
+SOME_KEYWORD = { nargs = 1 }
+OTHER = { nargs = 1 }
+"#,
+            PathBuf::from("nested-single-value-kwargs.toml"),
+        )
+        .unwrap();
+    registry
+}
+
+#[test]
+fn nested_keyword_value_too_wide_indents_below_its_keyword() {
+    let src = "my_command(target GROUP SOME_KEYWORD \"a-very-long-single-token-value-that-will-not-fit-on-the-keyword-line\" OTHER short)\n";
+    let config = Config {
+        max_pargs_hwrap: 0,
+        wrap_after_first_arg: true,
+        wrap_after_first_arg_align: WrapAfterFirstArgAlign::DefaultIndent,
+        dangle_parens: true,
+        ..Config::default()
+    };
+    let registry = nested_single_value_kwargs_registry();
+    let formatted = format_source_with_registry(src, &config, &registry).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    my_command(target
+      GROUP
+        SOME_KEYWORD
+          "a-very-long-single-token-value-that-will-not-fit-on-the-keyword-line"
+        OTHER short
+    )
+    "#);
+    assert!(cmakefmt::semantic::semantic_equivalent(src, &formatted));
+    assert_eq!(
+        format_source_with_registry(&formatted, &config, &registry).unwrap(),
+        formatted
+    );
+}
+
+#[test]
+fn nested_keyword_value_that_fits_stays_on_the_keyword_line() {
+    let src =
+        "my_command(target GROUP SOME_KEYWORD \"${some_prefix}${name}\" OTHER \"${another_prefix}${name}\")\n";
+    let config = Config {
+        max_pargs_hwrap: 0,
+        wrap_after_first_arg: true,
+        wrap_after_first_arg_align: WrapAfterFirstArgAlign::DefaultIndent,
+        dangle_parens: true,
+        ..Config::default()
+    };
+    let registry = nested_single_value_kwargs_registry();
+    let formatted = format_source_with_registry(src, &config, &registry).unwrap();
+
+    insta::assert_snapshot!(formatted, @r#"
+    my_command(target
+      GROUP
+        SOME_KEYWORD "${some_prefix}${name}"
+        OTHER "${another_prefix}${name}"
+    )
+    "#);
+    assert!(cmakefmt::semantic::semantic_equivalent(src, &formatted));
+    assert_eq!(
+        format_source_with_registry(&formatted, &config, &registry).unwrap(),
+        formatted
+    );
+}
+
+/// Format `install(... COMPONENT <value> ...)`, with a value of
+/// `value_width` characters, at a width at which the value cannot share
+/// its keyword's line, and check that the result fits, is idempotent and
+/// is semantically equivalent to the input.
+fn format_too_wide_component(value_width: usize, continuation_align: ContinuationAlign) -> String {
+    let source = format!(
+        "install(TARGETS lib RUNTIME COMPONENT {} DESTINATION lib)\n",
+        "a".repeat(value_width)
+    );
+    let config = Config {
+        line_width: 40,
+        continuation_align,
+        require_valid_layout: true,
+        ..Config::default()
+    };
+    let formatted = format_source(&source, &config).unwrap();
+    assert!(formatted
+        .lines()
+        .all(|line| line.chars().count() <= config.line_width));
+    assert!(cmakefmt::semantic::semantic_equivalent(&source, &formatted));
+    assert_eq!(format_source(&formatted, &config).unwrap(), formatted);
+    formatted
+}
+
+#[test]
+fn nested_keyword_value_too_wide_keeps_same_indent() {
+    // The value fits at the keyword's own indent, but would not fit one
+    // level below it, so SameIndent must not add that extra level.
+    insta::assert_snapshot!(format_too_wide_component(36, ContinuationAlign::SameIndent), @r"
+    install(
+      TARGETS lib
+      RUNTIME
+        COMPONENT
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        DESTINATION lib)
+    ");
+}
+
+#[test]
+fn nested_keyword_value_too_wide_indents_under_first_value() {
+    // The value fits one level below its keyword, but not under the
+    // column of the first value beside it.
+    insta::assert_snapshot!(format_too_wide_component(34, ContinuationAlign::UnderFirstValue), @r"
+    install(
+      TARGETS lib
+      RUNTIME
+        COMPONENT
+          aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        DESTINATION lib)
+    ");
+}
+
 #[test]
 fn custom_function_spec_sections_are_honored() {
     let src = "my_custom_command(mylib ARG_TYPES networkaccess networkinformation tls SOURCES a.cpp a.h b.cpp b.h c.cpp c.h d.cpp LIBRARIES spdlog::spdlog HIDDEN_LIBRARIES special_hidden_library)\n";

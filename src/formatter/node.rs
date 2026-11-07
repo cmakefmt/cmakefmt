@@ -1381,14 +1381,40 @@ fn write_grouped_arguments(
             continue;
         }
 
+        let under_first_value = nested_spec.is_some()
+            && ctx.continuation_align == crate::config::ContinuationAlign::UnderFirstValue;
+
+        // Under UnderFirstValue, a value too wide to share its keyword's
+        // line starts one level below the keyword, as at the top level (see
+        // `write_sections`), rather than at the column it would have occupied
+        // beside it. SameIndent needs no special case: the packed writer
+        // already wraps such a value at the keyword's own indent.
+        if under_first_value
+            && group
+                .get(1)
+                .is_some_and(|arg| !arg.is_comment() && !argument_has_newline(arg))
+            && indent.chars().count()
+                + group[0].as_str().chars().count()
+                + 1
+                + group[1].as_str().chars().count()
+                > ctx.line_width()
+        {
+            output.push_str(indent);
+            output.push_str(&apply_case(
+                ctx.cmd_config.keyword_case(),
+                group[0].as_str(),
+            ));
+            output.push('\n');
+            let value_indent = format!("{indent}{}", ctx.cmd_config.indent_str());
+            write_packed_arguments(output, &group[1..], &value_indent, ctx);
+            i = end;
+            continue;
+        }
+
         // Under UnderFirstValue, wrap lines of a subkwarg group land
         // aligned under the column of the first value after the
         // subkwarg token: `indent + subkwarg + " "`.
-        let hanging_indent = (ctx.continuation_align
-            == crate::config::ContinuationAlign::UnderFirstValue
-            && group.len() > 1
-            && lookup_nested_kwarg_in(parent_spec, group[0].as_str()).is_some())
-        .then(|| {
+        let hanging_indent = (under_first_value && group.len() > 1).then(|| {
             let header_width = group[0].as_str().chars().count();
             format!("{indent}{}", " ".repeat(header_width + 1))
         });
