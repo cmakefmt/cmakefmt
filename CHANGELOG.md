@@ -27,7 +27,7 @@ This project follows a simple changelog discipline:
   inside a keyword, such as `layout:`, was silently accepted and made the
   partial override replace the command's whole built-in spec, so its keywords
   stopped being recognised. Such config files now fail to load with an error
-  pointing at the command (#265, thanks to @vadz).
+  pointing at the command.
 - Recognize `OUTPUT_QUIET`, `ERROR_QUIET`, `OUTPUT_STRIP_TRAILING_WHITESPACE`
   and `ERROR_STRIP_TRAILING_WHITESPACE` as flags of `execute_process()`, and
   `COMMAND_ECHO`, `COMMAND_ERROR_IS_FATAL` and `ENCODING` as its keywords
@@ -35,12 +35,12 @@ This project follows a simple changelog discipline:
   keyword preceded them and indented under it, as if they were further values
   of `OUTPUT_VARIABLE`, and the value following `COMMAND_ECHO` or
   `COMMAND_ERROR_IS_FATAL` was separated from it as a trailing positional
-  argument (#267, thanks to @vadz).
+  argument.
 - Indent a property value which is too wide to share its property's line one
   level below the property name, instead of wrapping it back to the name's own
   column where it reads as a further property name. This affects the pairwise
   layout used by `set_target_properties()` and its siblings; the same rule
-  already applies to keyword values at the top level (#268, thanks to @vadz).
+  already applies to keyword values at the top level.
 
 ## 2.4.0 — 2026-10-29
 
