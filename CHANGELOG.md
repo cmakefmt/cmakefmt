@@ -34,7 +34,7 @@ This project follows a simple changelog discipline:
   have started at on the keyword's line, which, for a spec declaring the
   `PROPERTIES` properties of `set_source_files_properties`, left a long
   generator expression stranded far to the right. Values which still fit
-  beside their keyword are unaffected.
+  beside their keyword are unaffected (#269, thanks to @vadz).
 - Recognize `OUTPUT_QUIET`, `ERROR_QUIET`, `OUTPUT_STRIP_TRAILING_WHITESPACE`
   and `ERROR_STRIP_TRAILING_WHITESPACE` as flags of `execute_process()`, and
   `COMMAND_ECHO`, `COMMAND_ERROR_IS_FATAL` and `ENCODING` as its keywords
