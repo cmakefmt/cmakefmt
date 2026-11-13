@@ -344,6 +344,7 @@ impl SyncPluginHandler<ResolvedConfig> for CmakefmtPlugin {
             update_url: Some(
                 "https://plugins.dprint.dev/cmakefmt/cmakefmt/latest.json".to_string(),
             ),
+            supports_range_formatting: Some(false),
         }
     }
 
@@ -755,6 +756,7 @@ mod tests {
     #[test]
     fn rejects_ranges_and_cancellation() {
         let mut plugin = CmakefmtPlugin;
+        assert_eq!(plugin.plugin_info().supports_range_formatting, Some(false));
         let config = ResolvedConfig::default();
         let range_request = SyncFormatRequest {
             file_path: Path::new("CMakeLists.txt"),
