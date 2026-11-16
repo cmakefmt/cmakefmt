@@ -27,7 +27,7 @@
     "astro": "^7.4.8",
     "chart.js": "^4.6.1",
     "codemirror": "^6.0.2",
-    "daisyui": "^5.7.50",
+    "daisyui": "^5.8.0",
     "sharp": "^0.35.5",
     "shiki": "^4.6.0",
     "tailwind-merge": "^3.7.0",
