@@ -30,7 +30,7 @@
     "daisyui": "^5.7.50",
     "sharp": "^0.35.5",
     "shiki": "^4.6.0",
-    "tailwind-merge": "^3.7.0",
+    "tailwind-merge": "^3.7.1",
     "tailwind-variants": "^4.0.1",
     "tailwindcss": "^4.3.5"
   }
